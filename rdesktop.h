@@ -81,7 +81,8 @@
 /* No need for alignment on x86 and amd64 */
 #if !defined(NEED_ALIGN)
 #if !(defined(__x86__) || defined(__x86_64__) || \
-      defined(__AMD64__) || defined(_M_IX86))
+      defined(__AMD64__) || defined(_M_IX86) || \
+      defined(__i386__))
 #define NEED_ALIGN
 #endif
 #endif
