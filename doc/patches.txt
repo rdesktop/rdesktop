@@ -212,9 +212,9 @@ Not applied.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/rdesktop-new_kb.patch
 Description:
-TDB
+Modifies one of the old keyboard mapping implementations in some way. 
 Status:
-Not yet examined. 
+Not needed anymore, with the new keyboard mapping implementation. 
 
 
 URL:
@@ -228,7 +228,7 @@ Not yet examined.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/rdesktop.vncviewer_patch
 Description:
-TDB
+
 Status:
 Not yet examined. 
 
