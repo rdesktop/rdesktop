@@ -219,9 +219,10 @@ handle_special_keys(uint32 keysym, uint32 ev_time, BOOL pressed)
 	switch (keysym)
 	{
 		case XK_Break:	/* toggle full screen */
-			if (pressed && (get_key_state(XK_Alt_L) || get_key_state(XK_Alt_R)))
+			if (get_key_state(XK_Alt_L) || get_key_state(XK_Alt_R))
 			{
-				xwin_toggle_fullscreen();
+				if (pressed)
+					xwin_toggle_fullscreen();
 				return True;
 			}
 			break;
