@@ -1272,13 +1272,14 @@ xwin_process_events(void)
 int
 ui_select(int rdp_socket)
 {
-	int n = (rdp_socket > g_x_socket) ? rdp_socket : g_x_socket;
+	int n;
 	fd_set rfds, wfds;
 	struct timeval tv;
 	BOOL s_timeout = False;
 
 	while (True)
 	{
+		n = (rdp_socket > g_x_socket) ? rdp_socket : g_x_socket;
 		/* Process any events already waiting */
 		if (!xwin_process_events())
 			/* User quit */
