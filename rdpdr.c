@@ -809,11 +809,13 @@ rdpdr_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv, BOOL * t
 {
 	uint32 select_timeout = 0;	// Timeout value to be used for select() (in millisecons).
 	struct async_iorequest *iorq;
+	char c;
 
 	iorq = g_iorequest;
 	while (iorq != NULL)
 	{
-		if (iorq->fd != 0)
+		/* We need to test that the fd is still valid */
+		if ((iorq->fd != 0) && (read(iorq->fd, &c, 0) == 0))
 		{
 			switch (iorq->major)
 			{
