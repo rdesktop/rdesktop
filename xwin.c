@@ -528,7 +528,7 @@ xwin_process_events(void)
 				break;
 
 			case FocusOut:
-				if (grab_keyboard)
+				if (xevent.xfocus.mode == NotifyWhileGrabbed)
 					XUngrabKeyboard(display, CurrentTime);
 				break;
 
