@@ -72,15 +72,22 @@ static char g_servername[128];
 static char g_title[128] = "";
 static int g_flags = RDP_LOGON_NORMAL;
 
+#ifdef WITH_RDPSND
+extern int g_dsp_busy;
+extern int g_dsp_fd;
+static int g_rdpsnd = 0;
+static QSocketNotifier * g_SoundNotifier = 0;
+#endif
+
 /* qt globals */
-static QSocketNotifier * g_SocketNotifier;
-static QApplication * g_App;
-static QMyMainWindow * g_MW;
-static QMyScrollView * g_SV;
-static QPixmap * g_BS;
-static QPixmap * g_DS;
-static QPainter * g_P1;
-static QPainter * g_P2;
+static QSocketNotifier * g_SocketNotifier = 0;
+static QApplication * g_App = 0;
+static QMyMainWindow * g_MW = 0;
+static QMyScrollView * g_SV = 0;
+static QPixmap * g_BS = 0;
+static QPixmap * g_DS = 0;
+static QPainter * g_P1 = 0;
+static QPainter * g_P2 = 0;
 static QColor g_Color1;
 static QColor g_Color2;
 
@@ -462,6 +469,38 @@ void QMyMainWindow::dataReceived()
   {
     g_SV->close();
   }
+#ifdef WITH_RDPSND
+  if (g_dsp_busy)
+  {
+    if (g_SoundNotifier == 0)
+    {
+      g_SoundNotifier = new QSocketNotifier(g_dsp_fd, QSocketNotifier::Write,
+                                            g_MW);
+      g_MW->connect(g_SoundNotifier, SIGNAL(activated(int)), g_MW,
+                    SLOT(soundSend()));
+    }
+    else
+    {
+      if (!g_SoundNotifier->isEnabled())
+      {
+        g_SoundNotifier->setEnabled(true);
+      }
+    }
+  }
+#endif
+}
+
+/******************************************************************************/
+void QMyMainWindow::soundSend()
+{
+#ifdef WITH_RDPSND
+  g_SoundNotifier->setEnabled(false);
+  wave_out_play();
+  if (g_dsp_busy)
+  {
+    g_SoundNotifier->setEnabled(true);
+  }
+#endif
 }
 
 //*****************************************************************************
@@ -561,6 +600,13 @@ int ui_create_window(void)
 //*****************************************************************************
 void ui_main_loop(void)
 {
+#ifdef WITH_RDPSND
+  // init sound
+  if (g_rdpsnd)
+  {
+    rdpsnd_init();
+  }
+#endif
   // connect
   if (!rdp_connect(g_servername, g_flags, "", "", "", ""))
   {
@@ -1488,15 +1534,16 @@ void out_params(void)
   fprintf(stderr, "QT uiport by Jay Sorg\n");
   fprintf(stderr, "See http://www.rdesktop.org/ for more information.\n\n");
   fprintf(stderr, "Usage: qtrdesktop [options] server\n");
-  fprintf(stderr, "   -g: desktop geometry (WxH)\n");
+  fprintf(stderr, "   -g WxH: desktop geometry\n");
   fprintf(stderr, "   -4: use RDP version 4\n");
   fprintf(stderr, "   -5: use RDP version 5 (default)\n");
-  fprintf(stderr, "   -t: tcp port)\n");
-  fprintf(stderr, "   -a: connection colour depth\n");
-  fprintf(stderr, "   -T: window title\n");
+  fprintf(stderr, "   -t 3389: tcp port)\n");
+  fprintf(stderr, "   -a 8|16|24: connection colour depth\n");
+  fprintf(stderr, "   -T title: window title\n");
   fprintf(stderr, "   -P: use persistent bitmap caching\n");
   fprintf(stderr, "   -0: attach to console\n");
   fprintf(stderr, "   -z: enable rdp compression\n");
+  fprintf(stderr, "   -r sound: enable sound\n");
   fprintf(stderr, "\n");
 }
 
@@ -1718,6 +1765,15 @@ int parse_parameters(int in_argc, char ** in_argv)
     else if (strcmp(in_argv[i], "-z") == 0)
     {
       g_flags |= RDP_COMPRESSION;
+    }
+    else if (strcmp(in_argv[i], "-r") == 0)
+    {
+      if (strcmp(in_argv[i + 1], "sound") == 0)
+      {
+#ifdef WITH_RDPSND
+        g_rdpsnd = 1;
+#endif
+      }
     }
   }
   return 1;

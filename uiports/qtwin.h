@@ -27,5 +27,6 @@ class QMyMainWindow: public QWidget
     bool event(QEvent*);
   public slots:
     void dataReceived();
+    void soundSend();
 };
 

@@ -3,8 +3,8 @@
 # qt should be installed in /usr/local/qt
 #
 CC = g++
-CPPFLAGS = -O2 -Wall -I/usr/local/qt/include
-RESTOBJ = ../tcp.o ../iso.o ../mcs.o ../secure.o ../rdp.o ../rdp5.o ../orders.o ../cache.o ../mppc.o ../licence.o ../bitmap.o ../channels.o ../pstcache.o
+CPPFLAGS = -O2 -Wall -I/usr/local/qt/include -DWITH_RDPSND
+RESTOBJ = ../tcp.o ../iso.o ../mcs.o ../secure.o ../rdp.o ../rdp5.o ../orders.o ../cache.o ../mppc.o ../licence.o ../bitmap.o ../channels.o ../pstcache.o ../rdpsnd.o ../rdpsnd_oss.o
 LD2FLAGS = -L/usr/local/qt/lib -L/usr/X11R6/lib
 LDFLAGS = -lcrypto -lqt -lXext -lX11 -lm
 MOCFILE = /usr/local/qt/bin/moc
