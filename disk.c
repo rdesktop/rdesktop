@@ -104,6 +104,9 @@
 
 #if (defined(SOLARIS) || defined (__hpux) || defined(__BEOS__))
 #include <sys/statvfs.h>	/* solaris statvfs */
+#include <sys/mntent.h>
+#define HAVE_MNTENT_H
+#define MNTENT_PATH "/etc/mnttab"
 #define STATFS_FN(path, buf) (statvfs(path,buf))
 #define STATFS_T statvfs
 #define F_NAMELEN(buf) ((buf).f_namemax)
@@ -117,6 +120,9 @@
 
 #else
 #include <sys/vfs.h>		/* linux statfs */
+#include <mntent.h>
+#define HAVE_MNTENT_H
+#define MNTENT_PATH "/etc/mtab"
 #define STATFS_FN(path, buf) (statfs(path,buf))
 #define STATFS_T statfs
 #define F_NAMELEN(buf) ((buf).f_namelen)
@@ -136,6 +142,15 @@ struct fileinfo
 	BOOL delete_on_close;
 }
 g_fileinfo[MAX_OPEN_FILES];
+
+typedef struct
+{
+	char name[256];
+	char label[256];
+	unsigned long serial;
+	char type[256];
+} FsInfoType;
+
 
 time_t
 get_create_time(struct stat *st)
@@ -703,16 +718,82 @@ disk_set_information(HANDLE handle, uint32 info_class, STREAM in, STREAM out)
 	return STATUS_SUCCESS;
 }
 
+FsInfoType *
+FsVolumeInfo(char *fpath)
+{
+
+#ifdef HAVE_MNTENT_H
+	FILE *fdfs;
+	struct mntent *e;
+	static FsInfoType info;
+
+	/* initialize */
+	memset(&info, 0, sizeof(info));
+	strcpy(info.label, "RDESKTOP");
+	strcpy(info.type, "RDPFS");
+
+	fdfs = setmntent(MNTENT_PATH, "r");
+	if (!fdfs)
+		return &info;
+
+	while ((e = getmntent(fdfs)))
+	{
+		if (strncmp(fpath, e->mnt_dir, strlen(fpath)) == 0)
+		{
+			strcpy(info.type, e->mnt_type);
+			strcpy(info.name, e->mnt_fsname);
+			if (strstr(e->mnt_opts, "vfat") || strstr(e->mnt_opts, "iso9660"))
+			{
+				int fd = open(e->mnt_fsname, O_RDONLY);
+				if (fd >= 0)
+				{
+					unsigned char buf[512];
+					memset(buf, 0, sizeof(buf));
+					if (strstr(e->mnt_opts, "vfat"))
+						 /*FAT*/
+					{
+						strcpy(info.type, "vfat");
+						read(fd, buf, sizeof(buf));
+						info.serial =
+							(buf[42] << 24) + (buf[41] << 16) +
+							(buf[40] << 8) + buf[39];
+						strncpy(info.label, buf + 43, 10);
+						info.label[10] = '\0';
+					}
+					else if (lseek(fd, 32767, SEEK_SET) >= 0)	/* ISO9660 */
+					{
+						read(fd, buf, sizeof(buf));
+						strncpy(info.label, buf + 41, 32);
+						info.label[32] = '\0';
+						//info.Serial = (buf[128]<<24)+(buf[127]<<16)+(buf[126]<<8)+buf[125];
+					}
+					close(fd);
+				}
+			}
+		}
+	}
+	endmntent(fdfs);
+#else
+	static FsInfoType info;
+
+	/* initialize */
+	memset(&info, 0, sizeof(info));
+	strcpy(info.label, "RDESKTOP");
+	strcpy(info.type, "RDPFS");
+
+#endif
+	return &info;
+}
+
+
 NTSTATUS
 disk_query_volume_information(HANDLE handle, uint32 info_class, STREAM out)
 {
-	char *volume, *fs_type;
 	struct STATFS_T stat_fs;
 	struct fileinfo *pfinfo;
+	FsInfoType *fsinfo;
 
 	pfinfo = &(g_fileinfo[handle]);
-	volume = "RDESKTOP";
-	fs_type = "RDPFS";
 
 	if (STATFS_FN(pfinfo->path, &stat_fs) != 0)
 	{
@@ -720,16 +801,20 @@ disk_query_volume_information(HANDLE handle, uint32 info_class, STREAM out)
 		return STATUS_ACCESS_DENIED;
 	}
 
+	fsinfo = FsVolumeInfo(pfinfo->path);
+
 	switch (info_class)
 	{
 		case 1:	/* FileFsVolumeInformation */
 
 			out_uint32_le(out, 0);	/* volume creation time low */
 			out_uint32_le(out, 0);	/* volume creation time high */
-			out_uint32_le(out, 0);	/* serial */
-			out_uint32_le(out, 2 * strlen(volume));	/* length of string */
+			out_uint32_le(out, fsinfo->serial);	/* serial */
+
+			out_uint32_le(out, 2 * strlen(fsinfo->label));	/* length of string */
+
 			out_uint8(out, 0);	/* support objects? */
-			rdp_out_unistr(out, volume, 2 * strlen(volume) - 2);
+			rdp_out_unistr(out, fsinfo->label, 2 * strlen(fsinfo->label) - 2);
 			break;
 
 		case 3:	/* FileFsSizeInformation */
@@ -746,8 +831,9 @@ disk_query_volume_information(HANDLE handle, uint32 info_class, STREAM out)
 
 			out_uint32_le(out, FS_CASE_SENSITIVE | FS_CASE_IS_PRESERVED);	/* fs attributes */
 			out_uint32_le(out, F_NAMELEN(stat_fs));	/* max length of filename */
-			out_uint32_le(out, 2 * strlen(fs_type));	/* length of fs_type */
-			rdp_out_unistr(out, fs_type, 2 * strlen(fs_type) - 2);
+
+			out_uint32_le(out, 2 * strlen(fsinfo->type));	/* length of fs_type */
+			rdp_out_unistr(out, fsinfo->type, 2 * strlen(fsinfo->type) - 2);
 			break;
 
 		case 2:	/* FileFsLabelInformation */
