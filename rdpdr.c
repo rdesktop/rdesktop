@@ -22,7 +22,7 @@
 #define IRP_MN_QUERY_DIRECTORY          0x01
 #define IRP_MN_NOTIFY_CHANGE_DIRECTORY  0x02
 
-#define MAX_ASYNC_IO_REQUESTS   10
+//#define MAX_ASYNC_IO_REQUESTS   10
 
 extern char hostname[16];
 extern DEVICE_FNS serial_fns;
@@ -40,6 +40,7 @@ uint32 g_num_devices;
 /* Table with information about rdpdr devices */
 RDPDR_DEVICE g_rdpdr_device[RDPDR_MAX_DEVICES];
 
+#if 0
 /* Used to store incoming io request, until they are ready to be completed */
 struct async_iorequest
 {
@@ -49,6 +50,7 @@ struct async_iorequest
 	uint8 *buffer;
 	DEVICE_FNS *fns;
 } g_iorequest[MAX_ASYNC_IO_REQUESTS];
+#endif
 
 /* Return device_id for a given handle */
 int
@@ -75,6 +77,7 @@ convert_to_unix_filename(char *filename)
 	}
 }
 
+#if 0
 /* Add a new io request to the table containing pending io requests so it won't block rdesktop */
 BOOL
 add_async_iorequest(uint32 device, uint32 file, uint32 id, uint32 major, uint32 length,
@@ -104,7 +107,7 @@ add_async_iorequest(uint32 device, uint32 file, uint32 id, uint32 major, uint32 
 	error("IO request table full. Increase MAX_ASYNC_IO_REQUESTS in rdpdr.c!\n");
 	return False;
 }
-
+#endif
 
 void
 rdpdr_send_connect(void)
@@ -282,7 +285,6 @@ rdpdr_process_irp(STREAM s)
 	buffer = (uint8 *) xmalloc(1024);
 	buffer[0] = 0;
 
-
 	switch (g_rdpdr_device[device].device_type)
 	{
 		case DEVICE_TYPE_SERIAL:
@@ -296,7 +298,7 @@ rdpdr_process_irp(STREAM s)
 
 			fns = &parallel_fns;
 			/* should be async when aio is finished */
-			/*rw_blocking = False; */
+			/*rw_blocking = False;*/
 			break;
 
 		case DEVICE_TYPE_PRINTER:
@@ -372,14 +374,15 @@ rdpdr_process_irp(STREAM s)
 #if WITH_DEBUG_RDP5
 			DEBUG(("RDPDR IRP Read (length: %d, offset: %d)\n", length, offset));
 #endif
-			if (rw_blocking)	// Complete read immediately
-			{
+//			if (rw_blocking)	// Complete read immediately
+//			{
 				buffer = (uint8 *) xrealloc((void *) buffer, length);
 				status = fns->read(file, buffer, length, offset, &result);
 				buffer_len = result;
 				break;
-			}
+//			}
 
+#if 0
 			// Add request to table
 			pst_buf = (uint8 *) xmalloc(length);
 			serial_get_timeout(file, length, &total_timeout, &interval_timeout);
@@ -393,7 +396,7 @@ rdpdr_process_irp(STREAM s)
 
 			status = STATUS_CANCELLED;
 			break;
-
+#endif
 		case IRP_MJ_WRITE:
 
 			buffer_len = 1;
@@ -410,12 +413,12 @@ rdpdr_process_irp(STREAM s)
 #if WITH_DEBUG_RDP5
 			DEBUG(("RDPDR IRP Write (length: %d)\n", result));
 #endif
-			if (rw_blocking)	// Complete immediately
-			{
+//			if (rw_blocking)	// Complete immediately
+//			{
 				status = fns->write(file, s->p, length, offset, &result);
 				break;
-			}
-
+//			}
+#if 0
 			// Add to table
 			pst_buf = (uint8 *) xmalloc(length);
 			in_uint8a(s, pst_buf, length);
@@ -429,6 +432,7 @@ rdpdr_process_irp(STREAM s)
 
 			status = STATUS_CANCELLED;
 			break;
+#endif
 
 		case IRP_MJ_QUERY_INFORMATION:
 
@@ -672,6 +676,7 @@ rdpdr_init()
 	return (rdpdr_channel != NULL);
 }
 
+#if 0
 /* Add file descriptors of pending io request to select() */
 void
 rdpdr_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv, BOOL * timeout)
@@ -716,6 +721,7 @@ rdpdr_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv, BOOL * t
 		}
 	}
 }
+
 
 /* Check if select() returned with one of the rdpdr file descriptors, and complete io if it did */
 void
@@ -809,3 +815,4 @@ rdpdr_abort_io(uint32 fd, uint32 major, NTSTATUS status)
 	}
 	return False;
 }
+#endif
