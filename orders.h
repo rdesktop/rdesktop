@@ -67,8 +67,8 @@ typedef struct _PATBLT_ORDER
 	uint16 cx;
 	uint16 cy;
 	uint8 opcode;
-	uint8 bgcolour;
-	uint8 fgcolour;
+	uint32 bgcolour;
+	uint32 fgcolour;
 	BRUSH brush;
 
 }
@@ -94,7 +94,7 @@ typedef struct _LINE_ORDER
 	uint16 starty;
 	uint16 endx;
 	uint16 endy;
-	uint8 bgcolour;
+	uint32 bgcolour;
 	uint8 opcode;
 	PEN pen;
 
@@ -107,7 +107,7 @@ typedef struct _RECT_ORDER
 	uint16 y;
 	uint16 cx;
 	uint16 cy;
-	uint8 colour;
+	uint32 colour;
 
 }
 RECT_ORDER;
@@ -135,8 +135,8 @@ typedef struct _TRIBLT_ORDER
 	uint8 opcode;
 	uint16 srcx;
 	uint16 srcy;
-	uint8 bgcolour;
-	uint8 fgcolour;
+	uint32 bgcolour;
+	uint32 fgcolour;
 	BRUSH brush;
 	uint16 cache_idx;
 	uint16 unknown;
@@ -167,7 +167,7 @@ typedef struct _POLYLINE_ORDER
 	uint16 x;
 	uint16 y;
 	uint8 opcode;
-	uint8 fgcolour;
+	uint32 fgcolour;
 	uint8 lines;
 	uint8 datasize;
 	uint8 data[MAX_DATA];
@@ -183,8 +183,8 @@ typedef struct _TEXT2_ORDER
 	uint8 flags;
 	uint8 mixmode;
 	uint8 unknown;
-	uint8 fgcolour;
-	uint8 bgcolour;
+	uint32 fgcolour;
+	uint32 bgcolour;
 	uint16 clipleft;
 	uint16 cliptop;
 	uint16 clipright;

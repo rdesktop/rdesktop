@@ -31,6 +31,7 @@ extern BOOL fullscreen;
 extern BOOL grab_keyboard;
 extern BOOL hide_decorations;
 extern char title[];
+extern int server_bpp;
 BOOL enable_compose = False;
 BOOL focused;
 BOOL mouse_in_wnd;
@@ -88,7 +89,7 @@ BOOL owncolmap = False;
 static Colormap xcolmap;
 static uint32 *colmap;
 
-#define TRANSLATE(col)		( owncolmap ? col : translate_colour(colmap[col]) )
+#define TRANSLATE(col)		( server_bpp != 8 ? col : owncolmap ? col : translate_colour(colmap[col]) )
 #define SET_FOREGROUND(col)	XSetForeground(display, gc, TRANSLATE(col));
 #define SET_BACKGROUND(col)	XSetBackground(display, gc, TRANSLATE(col));
 
@@ -749,6 +750,24 @@ ui_paint_bitmap(int x, int y, int cx, int cy, int width, int height, uint8 * dat
 	XImage *image;
 	uint8 *tdata;
 
+	if (server_bpp == 16)
+	{
+		image = XCreateImage(display, visual, depth, ZPixmap, 0,
+				     (char *) data, width, height, 16, 0);
+
+		if (ownbackstore)
+		{
+			XPutImage(display, backstore, gc, image, 0, 0, x, y, cx, cy);
+			XCopyArea(display, backstore, wnd, gc, x, y, cx, cy, x, y);
+		}
+		else
+		{
+			XPutImage(display, wnd, gc, image, 0, 0, x, y, cx, cy);
+		}
+
+		XFree(image);
+		return;
+	}
 	tdata = (owncolmap ? data : translate_image(width, height, data));
 	image = XCreateImage(display, visual, depth, ZPixmap, 0,
 			     (char *) tdata, width, height, 8, 0);

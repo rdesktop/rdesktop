@@ -45,10 +45,11 @@ char username[16];
 char hostname[16];
 char keymapname[16];
 int keylayout = 0x409;		/* Defaults to US keyboard layout */
-int width = 800;		/* If width or height are reset to zero, the geometry will 
+int width = 800;		/* If width or height are reset to zero, the geometry will
 				   be fetched from _NET_WORKAREA */
 int height = 600;
 int tcp_port_rdp = TCP_PORT_RDP;
+int server_bpp = 8;
 BOOL bitmap_compression = True;
 BOOL sendmotion = True;
 BOOL orders = True;
@@ -84,6 +85,7 @@ usage(char *program)
 	fprintf(stderr, "   -K: keep window manager key bindings\n");
 	fprintf(stderr, "   -T: window title\n");
 	fprintf(stderr, "   -D: hide window manager decorations\n");
+	fprintf(stderr, "   -a: server bpp\n");
 }
 
 static BOOL
@@ -144,7 +146,7 @@ main(int argc, char *argv[])
 	domain[0] = password[0] = shell[0] = directory[0] = 0;
 	strcpy(keymapname, "en-us");
 
-	while ((c = getopt(argc, argv, "u:d:s:c:p:n:k:g:fbemCKT:Dh?")) != -1)
+	while ((c = getopt(argc, argv, "u:d:s:c:p:n:k:g:a:fbemCKT:Dh?")) != -1)
 	{
 		switch (c)
 		{
@@ -237,6 +239,15 @@ main(int argc, char *argv[])
 
 			case 'D':
 				hide_decorations = True;
+				break;
+
+			case 'a':
+				server_bpp = strtol(optarg, NULL, 10);
+				if (server_bpp != 8 && server_bpp != 16)
+				{
+					error("invalid server bpp\n");
+					return 1;
+				}
 				break;
 
 			case 'h':

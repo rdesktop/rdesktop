@@ -68,7 +68,7 @@ typedef struct _PEN
 {
 	uint8 style;
 	uint8 width;
-	uint8 colour;
+	uint32 colour;
 
 }
 PEN;

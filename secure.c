@@ -38,6 +38,7 @@ extern int height;
 extern int keylayout;
 extern BOOL encryption;
 extern BOOL licence_issued;
+extern int server_bpp;
 
 static int rc4_key_len;
 static RC4_KEY rc4_decrypt_key;
@@ -425,7 +426,14 @@ sec_out_mcs_data(STREAM s)
 	out_uint32_le(s, 12);
 	out_uint8s(s, 64);	/* reserved? 4 + 12 doublewords */
 
-	out_uint16_le(s, 0xca01);
+	if (server_bpp == 16)
+	{
+		out_uint16_le(s, 0xca03); /* 16 bit */
+	}
+	else
+	{
+		out_uint16_le(s, 0xca01); /* 8 bit */
+	}
 	out_uint16(s, 0);
 
 	/* Client encryption settings */

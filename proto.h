@@ -1,6 +1,6 @@
 /* bitmap.c */
 BOOL bitmap_decompress(unsigned char *output, int width, int height, unsigned char *input,
-		       int size);
+		       int size, int bpp);
 /* cache.c */
 HBITMAP cache_get_bitmap(uint8 cache_id, uint16 cache_idx);
 void cache_put_bitmap(uint8 cache_id, uint16 cache_idx, HBITMAP bitmap);

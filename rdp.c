@@ -579,10 +579,10 @@ process_bitmap_updates(STREAM s)
 		if (!compress)
 		{
 			int y;
-			bmpdata = xmalloc(width * height);
+			bmpdata = xmalloc(width * height * (bpp / 8));
 			for (y = 0; y < height; y++)
 			{
-				in_uint8a(s, &bmpdata[(height - y - 1) * width], width);
+				in_uint8a(s, &bmpdata[(height - y - 1) * (width * (bpp / 8))], width * (bpp / 8));
 			}
 			ui_paint_bitmap(left, top, cx, cy, width, height, bmpdata);
 			xfree(bmpdata);
@@ -593,13 +593,11 @@ process_bitmap_updates(STREAM s)
 		in_uint16_le(s, size);
 		in_uint8s(s, 4);	/* line_size, final_size */
 		in_uint8p(s, data, size);
-
-		bmpdata = xmalloc(width * height);
-		if (bitmap_decompress(bmpdata, width, height, data, size))
+		bmpdata = xmalloc(width * height * (bpp / 8));
+		if (bitmap_decompress(bmpdata, width, height, data, size, bpp))
 		{
 			ui_paint_bitmap(left, top, cx, cy, width, height, bmpdata);
 		}
-
 		xfree(bmpdata);
 	}
 }

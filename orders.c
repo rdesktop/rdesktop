@@ -71,10 +71,15 @@ rdp_in_coord(STREAM s, uint16 * coord, BOOL delta)
 
 /* Read a colour entry */
 static void
-rdp_in_colour(STREAM s, uint8 * colour)
+rdp_in_colour(STREAM s, uint32 * colour)
 {
-	in_uint8(s, *colour);
-	s->p += 2;
+	uint32 i;
+	in_uint8(s, i);
+	*colour = i;
+	in_uint8(s, i);
+	*colour |= i << 8;
+	in_uint8(s, i);
+	*colour |= i << 16;
 }
 
 /* Parse bounds information */
@@ -279,6 +284,7 @@ process_line(STREAM s, LINE_ORDER * os, uint32 present, BOOL delta)
 static void
 process_rect(STREAM s, RECT_ORDER * os, uint32 present, BOOL delta)
 {
+	uint32 i;
 	if (present & 0x01)
 		rdp_in_coord(s, &os->x, delta);
 
@@ -292,7 +298,22 @@ process_rect(STREAM s, RECT_ORDER * os, uint32 present, BOOL delta)
 		rdp_in_coord(s, &os->cy, delta);
 
 	if (present & 0x10)
-		in_uint8(s, os->colour);
+	{
+		in_uint8(s, i);
+		os->colour = (os->colour & 0xffffff00) | i;
+	}
+
+	if (present & 0x20)
+	{
+		in_uint8(s, i);
+		os->colour = (os->colour & 0xffff00ff) | (i << 8);
+	}
+
+	if (present & 0x40)
+	{
+		in_uint8(s, i);
+		os->colour = (os->colour & 0xff00ffff) | (i << 16);
+	}
 
 	DEBUG(("RECT(x=%d,y=%d,cx=%d,cy=%d,fg=0x%x)\n", os->x, os->y, os->cx, os->cy, os->colour));
 
@@ -632,6 +653,8 @@ process_raw_bmpcache(STREAM s)
 	in_uint16_le(s, bufsize);
 	in_uint16_le(s, cache_idx);
 	in_uint8p(s, data, bufsize);
+	if (bpp != 8) /* todo */
+		return;
 
 	DEBUG(("RAW_BMPCACHE(cx=%d,cy=%d,id=%d,idx=%d)\n", width, height, cache_id, cache_idx));
 	inverted = xmalloc(width * height);
@@ -665,12 +688,14 @@ process_bmpcache(STREAM s)
 	in_uint16_le(s, size);
 	in_uint8s(s, 4);	/* row_size, final_size */
 	in_uint8p(s, data, size);
+	if (bpp != 8) /* todo */
+		return;
 
 	DEBUG(("BMPCACHE(cx=%d,cy=%d,id=%d,idx=%d)\n", width, height, cache_id, cache_idx));
 
 	bmpdata = xmalloc(width * height);
 
-	if (bitmap_decompress(bmpdata, width, height, data, size))
+	if (bitmap_decompress(bmpdata, width, height, data, size, bpp))
 	{
 		bitmap = ui_create_bitmap(width, height, bmpdata);
 		cache_put_bitmap(cache_id, cache_idx, bitmap);
