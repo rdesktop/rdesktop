@@ -425,7 +425,7 @@ sec_out_mcs_data(STREAM s)
 	out_uint16_le(s, 0xc001);
 	out_uint8(s, 0);
 
-	out_uint32_le(s, 0x61637544);	/* "Duca" ?! */
+	out_uint32_le(s, 0x61637544);	/* "Duca", as in Ducati. */
 	out_uint16_be(s, ((length - 14) | 0x8000));	/* remaining length */
 
 	/* Client information */
