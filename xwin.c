@@ -45,7 +45,7 @@ static Screen *g_screen;
 Window g_wnd;
 extern uint32 g_embed_wnd;
 BOOL g_enable_compose = False;
-BOOL g_Unobscured; /* used for screenblt */
+BOOL g_Unobscured;		/* used for screenblt */
 static GC g_gc = NULL;
 static Visual *g_visual;
 static int g_depth;
@@ -252,7 +252,8 @@ translate8to16(uint8 * data, uint8 * out, uint8 * end)
 	uint16 value;
 
 	if (g_arch_match)
-		REPEAT(*(((uint16*)out)++) = g_colmap[*(data++)];)
+		REPEAT(*(((uint16 *) out)++) = g_colmap[*(data++)];
+		)
 	else if (g_xserver_be)
 	{
 		while (out < end)
@@ -307,7 +308,8 @@ translate8to32(uint8 * data, uint8 * out, uint8 * end)
 	uint32 value;
 
 	if (g_arch_match)
-		REPEAT(*(((uint32*)out)++) = g_colmap[*(data++)];)
+		REPEAT(*(((uint32 *) out)++) = g_colmap[*(data++)];
+		)
 	else if (g_xserver_be)
 	{
 		while (out < end)
@@ -1857,12 +1859,14 @@ ui_screenblt(uint8 opcode,
 		if (g_Unobscured)
 		{
 			XCopyArea(g_display, g_wnd, g_wnd, g_gc, srcx, srcy, cx, cy, x, y);
-			XCopyArea(g_display, g_backstore, g_backstore, g_gc, srcx, srcy, cx, cy, x, y);
+			XCopyArea(g_display, g_backstore, g_backstore, g_gc, srcx, srcy, cx, cy, x,
+				  y);
 		}
 		else
 		{
 			XCopyArea(g_display, g_backstore, g_wnd, g_gc, srcx, srcy, cx, cy, x, y);
-			XCopyArea(g_display, g_backstore, g_backstore, g_gc, srcx, srcy, cx, cy, x, y);
+			XCopyArea(g_display, g_backstore, g_backstore, g_gc, srcx, srcy, cx, cy, x,
+				  y);
 		}
 	}
 	else
