@@ -656,7 +656,7 @@ reset_modifier_keys()
 		rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_LALT);
 
 	if (MASK_HAS_BITS(remote_modifier_state, MapRightAltMask) &&
-	    !get_key_state(state, XK_Alt_R) && !get_key_state(state, XK_Mode_switch))
+	    !get_key_state(state, XK_Alt_R) && !get_key_state(state, XK_Mode_switch) && !get_key_state(state, XK_ISO_Level3_Shift))
 		rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_RALT);
 
 	reset_winkey(ev_time);
