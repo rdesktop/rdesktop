@@ -20,11 +20,11 @@ rm -rf $RPM_BUILD_ROOT
 
 %setup -n rdesktop
 %build 
-./configure --prefix=$RPM_BUILD_ROOT/usr
+./configure --prefix=/usr
 make
 
 %install
-make install 
+make install DESTDIR=$RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root)

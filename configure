@@ -22,6 +22,9 @@ case $arg in
   --mandir=*)
     echo "MANDIR   = $optarg" >>Makeconf
     ;;
+  --sharedir=*)
+    echo "SHAREDIR   = $optarg" >>Makeconf
+    ;;
   --with-openssl*)
     echo "CFLAGS  += -DWITH_OPENSSL" >>Makeconf
     echo "LDLIBS  += -lcrypto" >>Makeconf
@@ -45,6 +48,7 @@ case $arg in
     echo " --exec-prefix=EPREFIX  location for architecture-dependent files"
     echo " --bindir=BINDIR        location for program binaries [EPREFIX/bin]"
     echo " --mandir=MANDIR        location for man pages [PREFIX/man]"
+    echo " --sharedir=SHAREDIR    location for architecture-independent shared files [PREFIX/share/rdesktop]"
     echo
     echo "Build configuration:"
     echo " --with-openssl         use system OpenSSL libraries for crypto"

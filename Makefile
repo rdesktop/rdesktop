@@ -34,10 +34,10 @@ Makeconf:
 install: installbin installkeymaps
 
 installbin: rdesktop
-	mkdir -p $(BINDIR)
-	cp rdesktop $(BINDIR)
-	strip $(BINDIR)/rdesktop
-	chmod 755 $(BINDIR)/rdesktop
+	mkdir -p $(DESTDIR)/$(BINDIR)
+	cp rdesktop $(DESTDIR)/$(BINDIR)
+	strip $(DESTDIR)/$(BINDIR)/rdesktop
+	chmod 755 $(DESTDIR)/$(BINDIR)/rdesktop
 
 # installman: rdesktop.1
 #	mkdir -p $(MANDIR)/man1
@@ -45,13 +45,13 @@ installbin: rdesktop
 #	chmod 755 $(MANDIR)/man1/rdesktop.1
 
 installkeymaps:
-	mkdir -p $(KEYMAP_PATH)
+	mkdir -p $(DESTDIR)/$(KEYMAP_PATH)
 # Prevent copying the CVS directory
-	cp keymaps/?? $(KEYMAP_PATH)
-	cp keymaps/common $(KEYMAP_PATH)
-	cp keymaps/modifiers $(KEYMAP_PATH)
-	cp keymaps/README $(KEYMAP_PATH)
-	chmod 644 $(KEYMAP_PATH)/*
+	cp keymaps/?? $(DESTDIR)/$(KEYMAP_PATH)
+	cp keymaps/common $(DESTDIR)/$(KEYMAP_PATH)
+	cp keymaps/modifiers $(DESTDIR)/$(KEYMAP_PATH)
+	cp keymaps/README $(DESTDIR)/$(KEYMAP_PATH)
+	chmod 644 $(DESTDIR)/$(KEYMAP_PATH)/*
 
 proto:
 	cproto -DMAKE_PROTO -o proto.h *.c
