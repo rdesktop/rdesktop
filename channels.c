@@ -87,7 +87,13 @@ channel_send(STREAM s, VCHANNEL * channel)
 	s_pop_layer(s, channel_hdr);
 	length = s->end - s->p - 8;
 
-	thislength = MIN(length, CHANNEL_CHUNK_LENGTH);
+	DEBUG_CLIPBOARD(("channel_send, length = %d\n", length));
+
+	thislength = MIN(length, CHANNEL_CHUNK_LENGTH);  
+/* Note: In the original clipboard implementation, this number was
+   1592, not 1600. However, I don't remember the reason and 1600 seems
+   to work so.. This applies only to *this* length, not the length of
+   continuation or ending packets. */
 	remaining = length - thislength;
 	flags = (remaining == 0) ? CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST : CHANNEL_FLAG_FIRST;
 	if (channel->flags & CHANNEL_OPTION_SHOW_PROTOCOL)
@@ -96,6 +102,7 @@ channel_send(STREAM s, VCHANNEL * channel)
 	out_uint32_le(s, length);
 	out_uint32_le(s, flags);
 	data = s->end = s->p + thislength;
+	DEBUG_CLIPBOARD(("Sending %d bytes with FLAG_FIRST\n", thislength));
 	sec_send_to_channel(s, g_encryption ? SEC_ENCRYPT : 0, channel->mcs_id);
 
 	/* subsequent segments copied (otherwise would have to generate headers backwards) */
@@ -104,6 +111,10 @@ channel_send(STREAM s, VCHANNEL * channel)
 		thislength = MIN(remaining, CHANNEL_CHUNK_LENGTH);
 		remaining -= thislength;
 		flags = (remaining == 0) ? CHANNEL_FLAG_LAST : 0;
+		if (channel->flags & CHANNEL_OPTION_SHOW_PROTOCOL)
+			flags |= CHANNEL_FLAG_SHOW_PROTOCOL;
+
+		DEBUG_CLIPBOARD(("Sending %d bytes with flags %d\n", thislength, flags));
 
 		s = sec_init(g_encryption ? SEC_ENCRYPT : 0, thislength + 8);
 		out_uint32_le(s, length);
