@@ -770,6 +770,7 @@ void QMyScrollView::timerEvent(QTimerEvent * e)
     g_MW->show();
     g_SV->addChild(g_MW);
     g_MW->setMouseTracking(true);
+    g_MW->setCursor((int)10); /* Qt::BlankCursor */
     g_SocketNotifier = new QSocketNotifier(g_global_sock,
                                            QSocketNotifier::Read,
                                            g_MW);
@@ -2423,7 +2424,6 @@ int main(int argc, char ** argv)
   else
   {
     g_SV->timer_id = g_SV->startTimer(1000); /* one sec delay, then dialog */
-    g_MW->setCursor((int)10); /* Qt::BlankCursor */
     g_App->exec();
   }
   delete g_SV;
