@@ -71,6 +71,13 @@ typedef struct
 }
 PropMotifWmHints;
 
+typedef struct
+{
+	uint32 red;
+	uint32 green;
+	uint32 blue;
+}
+PixelColour;
 
 #define FILL_RECTANGLE(x,y,cx,cy)\
 { \
@@ -137,31 +144,58 @@ mwm_hide_decorations(void)
 			(unsigned char *) &motif_hints, PROP_MOTIF_WM_HINTS_ELEMENTS);
 }
 
-uint32
-colour16to24(uint32 colour)
+PixelColour
+split_colour15(uint32 colour)
 {
-	int r;
-	int g;
-	int b;
-	r = (colour & 0xf800) >> 11;
-	r = (r * 0xff) / 0x1f;
-	g = (colour & 0x07e0) >> 5;
-	g = (g * 0xff) / 0x3f;
-	b = (colour & 0x001f);
-	b = (b * 0xff) / 0x1f;
-	return (r << 16) | (g << 8) | b;
+	PixelColour rv;
+	rv.red = (colour & 0x7c00) >> 10;
+	rv.red = (rv.red * 0xff) / 0x1f;
+	rv.green = (colour & 0x03e0) >> 5;
+	rv.green = (rv.green * 0xff) / 0x1f;
+	rv.blue = (colour & 0x1f);
+	rv.blue = (rv.blue * 0xff) / 0x1f;
+	return rv;
 }
 
-uint32
-colour16to32(uint32 colour)
+PixelColour
+split_colour16(uint32 colour)
 {
-	return colour16to24(colour);
+	PixelColour rv;
+	rv.red = (colour & 0xf800) >> 11;
+	rv.red = (rv.red * 0xff) / 0x1f;
+	rv.green = (colour & 0x07e0) >> 5;
+	rv.green = (rv.green * 0xff) / 0x3f;
+	rv.blue = (colour & 0x001f);
+	rv.blue = (rv.blue * 0xff) / 0x1f;
+	return rv;
 }
 
-uint32
-colour24to32(uint32 colour)
+PixelColour
+split_colour24(uint32 colour)
 {
-	return colour;
+	PixelColour rv;
+	rv.blue = (colour & 0xff0000) >> 16;
+	rv.green = (colour & 0xff00) >> 8;
+	rv.red = (colour & 0xff);
+	return rv;
+}
+
+uint32 make_colour16(PixelColour pc)
+{
+	pc.red = (pc.red * 0x1f) / 0xff;
+	pc.green = (pc.green * 0x3f) / 0xff;
+	pc.blue = (pc.blue * 0x1f) / 0xff;
+	return (pc.red << 11) | (pc.green << 5) | pc.blue;
+}
+
+uint32 make_colour24(PixelColour pc)
+{
+	return (pc.red << 16) | (pc.green << 8) | pc.blue;
+}
+
+uint32 make_colour32(PixelColour pc)
+{
+	return (pc.red << 16) | (pc.green << 8) | pc.blue;
 }
 
 #define BSWAP16(x) { x = (((x & 0xff) << 8) | (x >> 8)); }
@@ -174,26 +208,43 @@ translate_colour(uint32 colour)
 {
 	switch (server_bpp)
 	{
+		case 15:
+			switch (bpp)
+			{
+				case 16:
+					colour = make_colour16(split_colour15(colour));
+					break;
+				case 24:
+					colour = make_colour24(split_colour15(colour));
+					break;
+				case 32:
+					colour = make_colour32(split_colour15(colour));
+					break;
+			}
+			break;
 		case 16:
 			switch (bpp)
 			{
 				case 16:
 					break;
 				case 24:
-					colour = colour16to24(colour);
+					colour = make_colour24(split_colour16(colour));
 					break;
 				case 32:
-					colour = colour16to32(colour);
+					colour = make_colour32(split_colour16(colour));
 					break;
 			}
 			break;
 		case 24:
 			switch (bpp)
 			{
+				case 16:
+					colour = make_colour16(split_colour24(colour));
+					break;
 				case 24:
 					break;
 				case 32:
-					colour = colour24to32(colour);
+					colour = make_colour32(split_colour24(colour));
 					break;
 			}
 			break;
@@ -233,13 +284,6 @@ translate8to16(uint8 * data, uint16 * out, uint16 * end)
 		*(out++) = (uint16) colmap[*(data++)];
 }
 
-static void
-translate16to16(uint16 * data, uint16 * out, uint16 * end)
-{
-	while (out < end)
-		*(out++) = (uint16) translate_colour(*(data++));
-}
-
 /* little endian - conversion happens when colourmap is built */
 static void
 translate8to24(uint8 * data, uint8 * out, uint8 * end)
@@ -256,13 +300,29 @@ translate8to24(uint8 * data, uint8 * out, uint8 * end)
 }
 
 static void
-translate16to24(uint16 * data, uint8 * out, uint8 * end)
+translate8to32(uint8 * data, uint32 * out, uint32 * end)
+{
+	while (out < end)
+		*(out++) = colmap[*(data++)];
+}
+
+/* todo the remaining translate function might need some big endian check ?? */
+
+static void
+translate15to16(uint16 * data, uint16 * out, uint16 * end)
+{
+	while (out < end)
+		*(out++) = (uint16) make_colour16(split_colour15(*(data++)));
+}
+
+static void
+translate15to24(uint16 * data, uint8 * out, uint8 * end)
 {
 	uint32 value;
 
 	while (out < end)
 	{
-		value = translate_colour(*(data++));
+		value = make_colour24(split_colour15(*(data++)));
 		*(out++) = value;
 		*(out++) = value >> 8;
 		*(out++) = value >> 16;
@@ -270,17 +330,73 @@ translate16to24(uint16 * data, uint8 * out, uint8 * end)
 }
 
 static void
-translate8to32(uint8 * data, uint32 * out, uint32 * end)
+translate15to32(uint16 * data, uint32 * out, uint32 * end)
 {
 	while (out < end)
-		*(out++) = colmap[*(data++)];
+		*(out++) = make_colour32(split_colour15(*(data++)));
+}
+
+static void
+translate16to16(uint16 * data, uint16 * out, uint16 * end)
+{
+	while (out < end)
+		*(out++) = (uint16) (*(data++));
+}
+
+
+static void
+translate16to24(uint16 * data, uint8 * out, uint8 * end)
+{
+	uint32 value;
+
+	while (out < end)
+	{
+		value = make_colour24(split_colour16(*(data++)));
+		*(out++) = value;
+		*(out++) = value >> 8;
+		*(out++) = value >> 16;
+	}
 }
 
 static void
 translate16to32(uint16 * data, uint32 * out, uint32 * end)
 {
 	while (out < end)
-		*(out++) = translate_colour(*(data++));
+		*(out++) = make_colour32(split_colour16(*(data++)));
+}
+
+static void
+translate24to16(uint8 * data, uint16 * out, uint16 * end)
+{
+	uint32 pixel = 0;
+	while (out < end)
+	{
+		pixel = *(data++) << 16;
+		pixel |= *(data++) << 8;
+		pixel |= *(data++);
+		*(out++) = (uint16) make_colour16(split_colour24(pixel));
+	}
+}
+
+static void
+translate24to24(uint8 * data, uint8 * out, uint8 * end)
+{
+	while (out < end)
+	{
+		*(out++) = (*(data++));
+	}
+}
+
+static void
+translate24to32(uint8 * data, uint32 * out, uint32 * end)
+{
+	uint32 pixel = 0;
+	while (out < end)
+	{
+		memcpy(&pixel, data, 3);
+		data += 3;
+		*(out++) = pixel;
+	}
 }
 
 static uint8 *
@@ -290,36 +406,68 @@ translate_image(int width, int height, uint8 * data)
 	uint8 *out = xmalloc(size);
 	uint8 *end = out + size;
 
-	if (server_bpp == 16)
+	switch (server_bpp)
 	{
-		if (bpp == 16)
-			translate16to16((uint16 *) data, (uint16 *) out, (uint16 *) end);
-		else if (bpp == 24)
-			translate16to24((uint16 *) data, out, end); /* todo, check this one */
-		else if (bpp == 32)
-			translate16to32((uint16 *) data, (uint32 *) out, (uint32 *) end);
-		return out;
-	}
-	/* todo needs server_bpp == 24 */
-	switch (bpp)
-	{
-		case 8:
-			translate8to8(data, out, end);
-			break;
-
-		case 16:
-			translate8to16(data, (uint16 *) out, (uint16 *) end);
-			break;
-
 		case 24:
-			translate8to24(data, out, end);
+			switch (bpp)
+			{
+				case 32:
+					translate24to32(data, (uint32 *) out, (uint32 *) end);
+					break;
+				case 24:
+					translate24to24(data, out, end);
+					break;
+				case 16:
+					translate24to16(data, (uint16 *) out, (uint16 *) end);
+					break;
+			}
 			break;
-
-		case 32:
-			translate8to32(data, (uint32 *) out, (uint32 *) end);
+		case 16:
+			switch (bpp)
+			{
+				case 32:
+					translate16to32((uint16 *) data, (uint32 *) out, (uint32 *) end);
+					break;
+				case 24:
+					translate16to24((uint16 *) data, out, end);
+					break;
+				case 16:
+					translate16to16((uint16 *) data, (uint16 *) out, (uint16 *) end);
+					break;
+			}
+			break;
+		case 15:
+			switch (bpp)
+			{
+				case 32:
+					translate15to32((uint16 *) data, (uint32 *) out, (uint32 *) end);
+					break;
+				case 24:
+					translate15to24((uint16 *) data, out, end);
+					break;
+				case 16:
+					translate15to16((uint16 *) data, (uint16 *) out, (uint16 *) end);
+					break;
+			}
+			break;
+		case 8:
+			switch (bpp)
+			{
+				case 8:
+					translate8to8(data, out, end);
+					break;
+				case 16:
+					translate8to16(data, (uint16 *) out, (uint16 *) end);
+					break;
+				case 24:
+					translate8to24(data, out, end);
+					break;
+				case 32:
+					translate8to32(data, (uint32 *) out, (uint32 *) end);
+					break;
+			}
 			break;
 	}
-
 	return out;
 }
 
@@ -448,6 +596,10 @@ ui_init(void)
 		IM = XOpenIM(display, NULL, NULL, NULL);
 
 	xkeymap_init();
+
+	/* todo take this out when high colour is done */
+	printf("server bpp %d client bpp %d depth %d\n", server_bpp, bpp, depth);
+
 	return True;
 }
 
