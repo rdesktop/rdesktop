@@ -256,6 +256,8 @@ mcs_send_cjrq(uint16 chanid)
 {
 	STREAM s;
 
+	DEBUG_RDP5(("Sending CJRQ for channel #%d\n", chanid));
+
 	s = iso_init(5);
 
 	out_uint8(s, (MCS_CJRQ << 2));
@@ -310,9 +312,9 @@ mcs_init(int length)
 	return s;
 }
 
-/* Send an MCS transport data packet */
+/* Send an MCS transport data packet to a specific channel */
 void
-mcs_send(STREAM s)
+mcs_send_to_channel(STREAM s, uint16 channel)
 {
 	uint16 length;
 
@@ -322,11 +324,18 @@ mcs_send(STREAM s)
 
 	out_uint8(s, (MCS_SDRQ << 2));
 	out_uint16_be(s, g_mcs_userid);
-	out_uint16_be(s, MCS_GLOBAL_CHANNEL);
+	out_uint16_be(s, channel);
 	out_uint8(s, 0x70);	/* flags */
 	out_uint16_be(s, length);
 
 	iso_send(s);
+}
+
+/* Send an MCS transport data packet to the global channel */
+void
+mcs_send(STREAM s)
+{
+	mcs_send_to_channel(s, MCS_GLOBAL_CHANNEL);
 }
 
 /* Receive an MCS transport data packet */
@@ -365,6 +374,8 @@ mcs_recv(uint16 * channel)
 BOOL
 mcs_connect(char *server, STREAM mcs_data, char *username)
 {
+	uint16 num_channels, i;
+	rdp5_channel *channel;
 	if (!iso_connect(server, username))
 		return False;
 
@@ -378,7 +389,8 @@ mcs_connect(char *server, STREAM mcs_data, char *username)
 	if (!mcs_recv_aucf(&g_mcs_userid))
 		goto error;
 
-	mcs_send_cjrq(g_mcs_userid + 1001);
+	mcs_send_cjrq(g_mcs_userid + MCS_USERCHANNEL_BASE);
+
 	if (!mcs_recv_cjcf())
 		goto error;
 
@@ -388,11 +400,14 @@ mcs_connect(char *server, STREAM mcs_data, char *username)
 
 	if (use_rdp5)
 	{
-		/* Note: If we send this cjrq after telling the server we support RDP4 only,
-		   the server won't respond with a cjcf and we will hang. */
-		mcs_send_cjrq(MCS_GLOBAL_CHANNEL + 1);	/* hack - clipboard */
-		if (!mcs_recv_cjcf())
-			goto error;
+		num_channels = get_num_channels();
+		for (i = 0; i < num_channels; i++)
+		{
+			channel = find_channel_by_num(i);
+			mcs_send_cjrq(channel->channelno);
+			if (!mcs_recv_cjcf())
+				goto error;
+		}
 	}
 
 	return True;
