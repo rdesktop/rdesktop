@@ -509,7 +509,9 @@ serial_write(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 *
 static NTSTATUS
 serial_device_control(HANDLE handle, uint32 request, STREAM in, STREAM out)
 {
+#if 0
 	int flush_mask, purge_mask;
+#endif
 	uint32 result;
 	uint8 immediate;
 	SERIAL_DEVICE *pser_inf;
