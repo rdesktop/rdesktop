@@ -248,6 +248,10 @@ HGLYPH ui_create_glyph(int width, int height, uint8 *data)
 
 	image = XCreateImage(display, visual, 1, ZPixmap, 0,
 				data, width, height, 8, scanline);
+	image->byte_order = MSBFirst;
+	image->bitmap_bit_order = MSBFirst;
+	XInitImage(image);
+
 	XSetFunction(display, gc, GXcopy);
 	XPutImage(display, bitmap, gc, image, 0, 0, 0, 0, width, height);
 	XFree(image);

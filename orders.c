@@ -742,27 +742,7 @@ static void process_fontcache(STREAM s)
 		datasize = (height * ((width + 7) / 8) + 3) & ~3;
 		in_uint8p(s, data, datasize);
 
-		/* Need to reverse bit order */
-		rev_data = xmalloc(datasize);
-
-		for (j = 0; j < datasize; j++)
-		{
-			in = data[j];
-			out = 0;
-			if (in & 1) out |= 128;
-			if (in & 2) out |= 64;
-			if (in & 4) out |= 32;
-			if (in & 8) out |= 16;
-			if (in & 16) out |= 8;
-			if (in & 32) out |= 4;
-			if (in & 64) out |= 2;
-			if (in & 128) out |= 1;
-			rev_data[j] = out;
-		}
-
-		bitmap = ui_create_glyph(width, height, rev_data);
-		xfree(rev_data);
-
+		bitmap = ui_create_glyph(width, height, data);
 		cache_put_font(font, character, offset, baseline,
 				width, height, bitmap);
 	}
