@@ -85,9 +85,10 @@ Need to examine if 2) and 3) are still useful. TDB.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/francisco_fix_patblt.html
 Description:
-TDB
+The colors in patterns drawn with "pattern blt" order was inverted (fg
+& bg). (See the background of the yellow help banners)
 Status:
-Not yet examined. 
+Applied (in revision 1.29, 2002/07/14)
 
 
 URL:
