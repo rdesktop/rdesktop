@@ -415,18 +415,27 @@ main(int argc, char *argv[])
 
 				if (strncmp("sound", optarg, 5) == 0)
 				{
-					if (*(optarg + 6) == ':')
-					{
+					optarg += 5;
 
-						if (strncmp("remote", optarg + 7, 6) == 0)
-							flags |= RDP_LOGON_LEAVE_AUDIO;
-						else if (strncmp("on", optarg + 7, 2) == 0)
+					if (*optarg == ':')
+					{
+						*optarg++;
+						while ((p = next_arg(optarg, ',')))
 						{
+							if (strncmp("remote", optarg, 6) == 0)
+								flags |= RDP_LOGON_LEAVE_AUDIO;
+
+							if (strncmp("on", optarg, 2) == 0)
 #ifdef WITH_RDPSND
-							g_rdpsnd = True;
+								g_rdpsnd = True;
 #else
-							warning("Not compiled with sound support");
+								warning("Not compiled with sound support");
 #endif
+
+							if (strncmp("off", optarg, 3) == 0)
+								g_rdpsnd = False;
+
+							optarg = p;
 						}
 					}
 					else
