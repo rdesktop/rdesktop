@@ -345,7 +345,7 @@ ui_create_window(void)
 	}
 
 	input_mask = KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask |
-		VisibilityChangeMask | FocusChangeMask;
+		VisibilityChangeMask | FocusChangeMask | LeaveWindowMask;
 
 	if (sendmotion)
 		input_mask |= PointerMotionMask;
@@ -533,6 +533,10 @@ xwin_process_events(void)
 			case EnterNotify:
 				/* we only register for this event when in fullscreen mode */
 				XSetInputFocus(display, wnd, RevertToPointerRoot, CurrentTime);
+				break;
+
+			case LeaveNotify:
+				XUngrabKeyboard(display, CurrentTime);
 				break;
 
 			case Expose:
