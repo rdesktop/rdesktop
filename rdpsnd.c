@@ -79,6 +79,8 @@ rdpsnd_process_negotiate(STREAM in)
 	WAVEFORMATEX *format;
 	STREAM out;
 	BOOL device_available = False;
+	int readcnt;
+	int discardcnt;
 
 	in_uint8s(in, 14);	/* flags, volume, pitch, UDP port */
 	in_uint16_le(in, in_format_count);
@@ -105,8 +107,8 @@ rdpsnd_process_negotiate(STREAM in)
 			in_uint16_le(in, format->cbSize);
 
 			/* read in the buffer of unknown use */
-			int readcnt = format->cbSize;
-			int discardcnt = 0;
+			readcnt = format->cbSize;
+			discardcnt = 0;
 			if (format->cbSize > MAX_CBSIZE)
 			{
 				fprintf(stderr, "cbSize too large for buffer: %d\n", format->cbSize);
