@@ -864,6 +864,12 @@ process_data_pdu(STREAM s)
 			/* User logged on */
 			break;
 
+		case RDP_DATA_PDU_DISCONNECT:
+			/* Normally received when user logs out or disconnects from a
+			   console session on Windows XP and 2003 Server */
+			DEBUG(("Received disconnect PDU\n"));
+			break;
+
 		default:
 			unimpl("data PDU %d\n", data_pdu_type);
 	}
