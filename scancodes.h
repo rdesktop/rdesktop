@@ -350,9 +350,8 @@
 #define SCANCODE_KEY_123 0x58
 #define SCANCODE_CHAR_F12 SCANCODE_KEY_123
 
-/* FIXME */
-#define SCANCODE_KEY_124 0x0
-#define SCANCODE_CHAR_PRINTSCREEN SCANCODE_KEY_124
+/* Key 124: The Print Screen sequence is complicated, and
+   hardcoded in xkeymap.c */
 
 #define SCANCODE_KEY_125 0x46
 #define SCANCODE_CHAR_SCROLLLOCK SCANCODE_KEY_125
