@@ -1188,7 +1188,7 @@ ui_draw_text(uint8 font, uint8 flags, int mixmode, int x, int y,
 				else
 				{
 					error("this shouldn't be happening\n");
-					break;
+					exit(1);
 				}
 				/* this will move pointer from start to first character after FF command */
 				length -= i + 3;
