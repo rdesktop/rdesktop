@@ -59,6 +59,11 @@ static BOOL xserver_be;
 static BOOL ownbackstore;
 static Pixmap backstore;
 
+/* Moving in single app mode */
+static BOOL moving_wnd;
+static int move_x_offset = 0;
+static int move_y_offset = 0;
+
 /* MWM decorations */
 #define MWM_HINTS_DECORATIONS   (1L << 1)
 #define PROP_MOTIF_WM_HINTS_ELEMENTS    5
@@ -858,7 +863,11 @@ xwin_process_events(void)
 				/* If win_button_size is nonzero, enable single app mode */
 				if (xevent.xbutton.y < win_button_size)
 				{
-					/* Check from right to left: */
+					/* Stop moving window when button is released, regardless of cursor position */
+					if (moving_wnd && (xevent.type == ButtonRelease))
+						moving_wnd = False;
+
+					/*  Check from right to left: */
 
 					if (xevent.xbutton.x >= width - win_button_size)
 					{
@@ -880,12 +889,23 @@ xwin_process_events(void)
 							       DefaultScreen(display));
 						break;
 					}
+					else if (xevent.xbutton.x <= win_button_size)
+					{
+						/* The system menu. Ignore. */
+						break;
+					}
 					else
 					{
-						/* Ignore clicks to the rest of the border. This includes 
-						   the system menu, but also inhibits double clicks on the 
-						   border itself. */
+						/* The title bar. */
+						if ((xevent.type == ButtonPress) && !fullscreen
+						    && hide_decorations)
+						{
+							moving_wnd = True;
+							move_x_offset = xevent.xbutton.x;
+							move_y_offset = xevent.xbutton.y;
+						}
 						break;
+
 					}
 				}
 
@@ -894,6 +914,14 @@ xwin_process_events(void)
 				break;
 
 			case MotionNotify:
+				if (moving_wnd)
+				{
+					XMoveWindow(display, wnd,
+						    xevent.xmotion.x_root - move_x_offset,
+						    xevent.xmotion.y_root - move_y_offset);
+					break;
+				}
+
 				if (fullscreen && !focused)
 					XSetInputFocus(display, wnd, RevertToPointerRoot,
 						       CurrentTime);
