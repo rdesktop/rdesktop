@@ -60,7 +60,7 @@ BOOL g_desktop_save = True;
 BOOL g_fullscreen = False;
 BOOL g_grab_keyboard = True;
 BOOL g_hide_decorations = False;
-BOOL g_use_rdp5 = False;
+BOOL g_use_rdp5 = True;
 extern BOOL g_owncolmap;
 
 #ifdef RDP2VNC
@@ -102,7 +102,8 @@ usage(char *program)
 	fprintf(stderr, "   -T: window title\n");
 	fprintf(stderr, "   -D: hide window manager decorations\n");
 	fprintf(stderr, "   -a: server bpp\n");
-	fprintf(stderr, "   -5: Use RDP5 (EXPERIMENTAL!)\n");
+	fprintf(stderr, "   -4: Use RDP version 4\n");
+	fprintf(stderr, "   -5: Use RDP version 5 (default)\n");
 }
 
 static BOOL
@@ -355,9 +356,14 @@ main(int argc, char *argv[])
 				}
 				break;
 
+			case '4':
+				g_use_rdp5 = False;
+				break;
+
 			case '5':
 				g_use_rdp5 = True;
 				break;
+
 			case 'h':
 			case '?':
 			default:
