@@ -81,7 +81,7 @@ usage(char *program)
 	fprintf(stderr, "Usage: %s [options] server[:port]\n", program);
 #ifdef RDP2VNC
 	fprintf(stderr, "   -V: vnc port\n");
-	fprintf(stderr, "   -E: defer time (ms)\n");
+	fprintf(stderr, "   -Q: defer time (ms)\n");
 #endif
 	fprintf(stderr, "   -u: user name\n");
 	fprintf(stderr, "   -d: domain\n");
@@ -95,7 +95,7 @@ usage(char *program)
 	fprintf(stderr, "   -f: full-screen mode\n");
 	fprintf(stderr, "   -b: force bitmap updates\n");
 	fprintf(stderr, "   -e: disable encryption (French TS)\n");
-	fprintf(stderr, "   -E: disable encryption of everything but the logon packet\n");
+	fprintf(stderr, "   -E: disable encryption from client to server\n");
 	fprintf(stderr, "   -m: do not send motion events\n");
 	fprintf(stderr, "   -C: use private colour map\n");
 	fprintf(stderr, "   -K: keep window manager key bindings\n");
@@ -213,7 +213,7 @@ main(int argc, char *argv[])
 	strcpy(keymapname, "en-us");
 
 #ifdef RDP2VNC
-#define VNCOPT "V:E:"
+#define VNCOPT "V:Q:"
 #else
 #define VNCOPT
 #endif
@@ -229,7 +229,7 @@ main(int argc, char *argv[])
 					rfb_port += 5900;
 				break;
 
-			case 'E':
+			case 'Q':
 				defer_time = strtol(optarg, NULL, 10);
 				if (defer_time < 0)
 					defer_time = 0;
