@@ -794,8 +794,8 @@ serial_device_control(NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 			break;
 		case SERIAL_GET_WAIT_MASK:
 			DEBUG_SERIAL(("serial_ioctl -> SERIAL_GET_WAIT_MASK %X\n",
-				      pser_inf->wait_mask);
-				     out_uint32(out, pser_inf->wait_mask));
+				      pser_inf->wait_mask));
+			out_uint32(out, pser_inf->wait_mask);
 			break;
 		case SERIAL_SET_WAIT_MASK:
 			in_uint32(in, pser_inf->wait_mask);
