@@ -85,7 +85,7 @@ adiaeresis 0x28
 Adiaeresis 0x28 shift
 dead_caron 0x28 shift altgr
 asciicircum 0x29
-dead_circum 0x29
+dead_circumflex 0x29
 degree 0x29 shift
 notsign 0x29 altgr
 numbersign 0x2b
