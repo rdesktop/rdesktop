@@ -143,7 +143,7 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 	uint32 sec_flags = encryption ? (SEC_LOGON_INFO | SEC_ENCRYPT) : SEC_LOGON_INFO;
 	STREAM s;
 
-	if (1 == server_rdp_version)
+	if (!use_rdp5 || 1 == server_rdp_version)
 	{
 		DEBUG_RDP5(("Sending RDP4-style Logon packet\n"));
 
@@ -181,11 +181,11 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 					   with a 0 length block as well */
 		out_uint16_le(s, len_program);
 		out_uint16_le(s, len_directory);
+		rdp_out_unistr(s, domain, len_domain);
 		if (flags & RDP_LOGON_AUTO)
 		{
 			rdp_out_unistr(s, password, len_password);
 		}
-		rdp_out_unistr(s, domain, len_domain);
 		rdp_out_unistr(s, user, len_user);
 		out_uint16(s, 0);
 		out_uint16(s, 0);
