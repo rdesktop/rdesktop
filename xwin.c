@@ -78,6 +78,11 @@ PropMotifWmHints;
 		XFillRectangle(display, backstore, gc, x, y, cx, cy); \
 }
 
+#define FILL_RECTANGLE_FAST(x,y,cx,cy)\
+{ \
+	XFillRectangle(display, ownbackstore ? backstore : wnd, gc, x, y, cx, cy); \
+}
+
 /* colour maps */
 BOOL owncolmap = False;
 static Colormap xcolmap;
@@ -1184,10 +1189,7 @@ ui_draw_glyph(int mixmode,
 	XSetStipple(display, gc, (Pixmap) glyph);
 	XSetTSOrigin(display, gc, x, y);
 
-	if (ownbackstore)
-		XFillRectangle(display, backstore, gc, x, y, cx, cy);
-	else
-		XFillRectangle(display, wnd, gc, x, y, cx, cy);
+	FILL_RECTANGLE_FAST(x, y, cx, cy);
 
 	XSetFillStyle(display, gc, FillSolid);
 }
@@ -1239,11 +1241,11 @@ ui_draw_text(uint8 font, uint8 flags, int mixmode, int x, int y,
 
 	if (boxcx > 1)
 	{
-		FILL_RECTANGLE(boxx, boxy, boxcx, boxcy);
+		FILL_RECTANGLE_FAST(boxx, boxy, boxcx, boxcy);
 	}
 	else if (mixmode == MIX_OPAQUE)
 	{
-		FILL_RECTANGLE(clipx, clipy, clipcx, clipcy);
+		FILL_RECTANGLE_FAST(clipx, clipy, clipcx, clipcy);
 	}
 
 	/* Paint text, character by character */
