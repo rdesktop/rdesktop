@@ -188,29 +188,29 @@ rdpdr_send_available(void)
 		out_uint32_le(s, i);	/* RDP Device ID */
 		out_uint8p(s, g_rdpdr_device[i].name, 8);
 
-		if (g_rdpdr_device[i].device_type == DEVICE_TYPE_PRINTER)
+		switch (g_rdpdr_device[i].device_type)
 		{
-			printerinfo = (PRINTER *) g_rdpdr_device[i].pdevice_data;
+			case DEVICE_TYPE_PRINTER:
+				printerinfo = (PRINTER *) g_rdpdr_device[i].pdevice_data;
 
-			driverlen = 2 * strlen(printerinfo->driver) + 2;
-			printerlen = 2 * strlen(printerinfo->printer) + 2;
-			bloblen = printerinfo->bloblen;
+				driverlen = 2 * strlen(printerinfo->driver) + 2;
+				printerlen = 2 * strlen(printerinfo->printer) + 2;
+				bloblen = printerinfo->bloblen;
 
-			out_uint32_le(s, 24 + driverlen + printerlen + bloblen);	/* length of extra info */
-			out_uint32_le(s, printerinfo->default_printer ? 2 : 0);
-			out_uint8s(s, 8);	/* unknown */
-			out_uint32_le(s, driverlen);
-			out_uint32_le(s, printerlen);
-			out_uint32_le(s, bloblen);
-			rdp_out_unistr(s, printerinfo->driver, driverlen - 2);
-			rdp_out_unistr(s, printerinfo->printer, printerlen - 2);
-			out_uint8a(s, printerinfo->blob, bloblen);
+				out_uint32_le(s, 24 + driverlen + printerlen + bloblen);	/* length of extra info */
+				out_uint32_le(s, printerinfo->default_printer ? 2 : 0);
+				out_uint8s(s, 8);	/* unknown */
+				out_uint32_le(s, driverlen);
+				out_uint32_le(s, printerlen);
+				out_uint32_le(s, bloblen);
+				rdp_out_unistr(s, printerinfo->driver, driverlen - 2);
+				rdp_out_unistr(s, printerinfo->printer, printerlen - 2);
+				out_uint8a(s, printerinfo->blob, bloblen);
 
-			xfree(printerinfo->blob);	/* Blob is sent twice if reconnecting */
-		}
-		else
-		{
-			out_uint32(s, 0);
+				xfree(printerinfo->blob);	/* Blob is sent twice if reconnecting */
+				break;
+			default:
+				out_uint32(s, 0);
 		}
 	}
 #if 0
@@ -288,13 +288,15 @@ rdpdr_process_irp(STREAM s)
 		case DEVICE_TYPE_SERIAL:
 
 			fns = &serial_fns;
-			rw_blocking = False;
+			/* should be async when aio is finished */
+			/*rw_blocking = False; */
 			break;
 
 		case DEVICE_TYPE_PARALLEL:
 
 			fns = &parallel_fns;
-			rw_blocking = False;
+			/* should be async when aio is finished */
+			/*rw_blocking = False; */
 			break;
 
 		case DEVICE_TYPE_PRINTER:
