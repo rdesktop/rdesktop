@@ -179,8 +179,6 @@ else
 fi
 AC_SUBST(SOUNDOBJ)
 
-AC_MSG_CHECKING([checking for sound support])
-
 #
 # dirfd
 #
