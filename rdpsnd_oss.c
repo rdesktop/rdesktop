@@ -45,7 +45,12 @@ static unsigned int queue_hi, queue_lo;
 BOOL
 wave_out_open(void)
 {
-	char *dsp_dev = "/dev/dsp";
+	char *dsp_dev = getenv("AUDIODEV");
+
+	if (dsp_dev == NULL)
+	{
+		dsp_dev = "/dev/dsp";
+	}
 
 	if ((g_dsp_fd = open(dsp_dev, O_WRONLY | O_NONBLOCK)) == -1)
 	{
