@@ -20,7 +20,7 @@ fi
 xdirs="/usr/X11 /usr/X11R6 /usr/openwin /usr /usr/local/X11 /usr/local/X11R6 /usr/local"
 
 for dir in $xdirs; do
-    if [ -e $dir/include/X11/Xlib.h ]; then
+    if [ -f $dir/include/X11/Xlib.h ]; then
 	xdir=$dir
 	break
     fi
