@@ -32,9 +32,9 @@
 #endif
 
 #if defined(WITH_DEBUG_KBD)
-#define DEBUG_KBD(...)  fprintf(stderr, __VA_ARGS__);
+#define DEBUG_KBD(args) printf args;
 #else
-#define DEBUG_KBD(...)
+#define DEBUG_KBD(args)
 #endif
 
 #define STRNCPY(dst,src,n) { strncpy(dst,src,n-1); dst[n-1] = 0; }

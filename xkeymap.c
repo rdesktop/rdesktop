@@ -53,8 +53,8 @@ add_to_keymap(char *keyname, uint8 scancode, uint16 modifiers, char *mapname)
 		return;
 	}
 
-	DEBUG_KBD("Adding translation, keysym=0x%x, scancode=0x%x, "
-		  "modifiers=0x%x\n", (unsigned int) keysym, scancode, modifiers);
+	DEBUG_KBD(("Adding translation, keysym=0x%x, scancode=0x%x, "
+		   "modifiers=0x%x\n", (unsigned int) keysym, scancode, modifiers));
 
 	keymap[keysym & KEYMAP_MASK].scancode = scancode;
 	keymap[keysym & KEYMAP_MASK].modifiers = modifiers;
@@ -116,14 +116,14 @@ xkeymap_read(char *mapname)
 		if (strncmp(line, "map ", 4) == 0)
 		{
 			keylayout = strtol(line + 4, NULL, 16);
-			DEBUG_KBD("Keylayout 0x%x\n", keylayout);
+			DEBUG_KBD(("Keylayout 0x%x\n", keylayout));
 			continue;
 		}
 
 		/* compose */
 		if (strncmp(line, "enable_compose", 15) == 0)
 		{
-			DEBUG_KBD("Enabling compose handling\n");
+			DEBUG_KBD(("Enabling compose handling\n"));
 			enable_compose = True;
 			continue;
 		}
@@ -242,8 +242,8 @@ xkeymap_translate_key(KeySym keysym, unsigned int keycode, unsigned int state)
 	if (tr.scancode != 0)
 	{
 		DEBUG_KBD
-			("Found key translation, scancode=0x%x, modifiers=0x%x\n",
-			 tr.scancode, tr.modifiers);
+			(("Found key translation, scancode=0x%x, modifiers=0x%x\n",
+			  tr.scancode, tr.modifiers));
 		return tr;
 	}
 
@@ -372,7 +372,7 @@ ensure_remote_modifiers(uint32 ev_time, key_translation tr)
 	    != MASK_HAS_BITS(remote_modifier_state, MapNumLockMask))
 	{
 		/* The remote modifier state is not correct */
-		DEBUG_KBD("Remote NumLock state is incorrect. Toggling\n");
+		DEBUG_KBD(("Remote NumLock state is incorrect. Toggling\n"));
 		if (MASK_HAS_BITS(tr.modifiers, MapNumLockMask))
 		{
 			/* Needs this modifier. Toggle */
@@ -394,8 +394,8 @@ static void
 update_modifier_state(uint16 modifiers, BOOL pressed)
 {
 
-	DEBUG_KBD("Before updating modifier_state:0x%x, pressed=0x%x\n",
-		  remote_modifier_state, pressed);
+	DEBUG_KBD(("Before updating modifier_state:0x%x, pressed=0x%x\n",
+		   remote_modifier_state, pressed));
 	switch (modifiers)
 	{
 		case SCANCODE_CHAR_LSHIFT:
@@ -436,7 +436,7 @@ update_modifier_state(uint16 modifiers, BOOL pressed)
 			}
 			break;
 	}
-	DEBUG_KBD("After updating modifier_state:0x%x\n", remote_modifier_state);
+	DEBUG_KBD(("After updating modifier_state:0x%x\n", remote_modifier_state));
 
 }
 
@@ -448,14 +448,14 @@ rdp_send_scancode(uint32 time, uint16 flags, uint16 scancode)
 
 	if (scancode & SCANCODE_EXTENDED)
 	{
-		DEBUG_KBD("Sending extended scancode=0x%x, flags=0x%x\n",
-			  scancode & ~SCANCODE_EXTENDED, flags);
+		DEBUG_KBD(("Sending extended scancode=0x%x, flags=0x%x\n",
+			   scancode & ~SCANCODE_EXTENDED, flags));
 		rdp_send_input(time, RDP_INPUT_SCANCODE, flags | KBD_FLAG_EXT,
 			       scancode & ~SCANCODE_EXTENDED, 0);
 	}
 	else
 	{
-		DEBUG_KBD("Sending scancode=0x%x, flags=0x%x\n", scancode, flags);
-		rdp_send_input(time, RDP_INPUT_SCANCODE, flags, scancode, 0);
+		DEBUG_KBD(("Sending scancode=0x%x, flags=0x%x\n", scancode, flags);
+			  rdp_send_input(time, RDP_INPUT_SCANCODE, flags, scancode, 0));
 	}
 }

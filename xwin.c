@@ -419,7 +419,7 @@ xwin_process_events()
 	{
 		if (enable_compose && (XFilterEvent(&xevent, None) == True))
 		{
-			DEBUG_KBD("Filtering event\n");
+			DEBUG_KBD(("Filtering event\n"));
 			continue;
 		}
 
@@ -445,17 +445,17 @@ xwin_process_events()
 				else
 				{
 					/* Plain old XLookupString */
-					DEBUG_KBD("No input context, using XLookupString\n");
+					DEBUG_KBD(("No input context, using XLookupString\n"));
 					XLookupString((XKeyEvent *) & xevent,
 						      str, sizeof(str), &keysym, NULL);
 				}
 
 				ksname = get_ksname(keysym);
-				DEBUG_KBD("\nKeyPress for (keysym 0x%lx, %s)\n", keysym, ksname);
+				DEBUG_KBD(("\nKeyPress for (keysym 0x%lx, %s)\n", keysym, ksname));
 
 				if (inhibit_key(keysym))
 				{
-					DEBUG_KBD("Inhibiting key\n");
+					DEBUG_KBD(("Inhibiting key\n"));
 					break;
 				}
 
@@ -474,7 +474,8 @@ xwin_process_events()
 					      sizeof(str), &keysym, NULL);
 
 				ksname = get_ksname(keysym);
-				DEBUG_KBD("\nKeyRelease for (keysym 0x%lx, %s)\n", keysym, ksname);
+				DEBUG_KBD(("\nKeyRelease for (keysym 0x%lx, %s)\n", keysym,
+					   ksname));
 
 				if (inhibit_key(keysym))
 					break;
