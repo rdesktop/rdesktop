@@ -1,5 +1,3 @@
-#define	MAX_PRINTERS	5
-
 #include "rdesktop.h"
 
 extern RDPDR_DEVICE g_rdpdr_device[];
