@@ -1,3 +1,9 @@
+rdesktop (1.3.1)
+   * Crypto fixes for RDP5
+   * Keyboard and keymap fixes
+   * some endianess fixes for high color
+   * portability enhancements
+
 rdesktop (1.3.0)
 
    * RDP5
