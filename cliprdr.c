@@ -505,12 +505,46 @@ cliprdr_handle_first_handshake(STREAM s)
 	cliprdr_send_format_announce();
 }
 
-void cliprdr_handle_server_data(uint32 length, STREAM s) 
+void cliprdr_handle_server_data(uint32 length, uint32 flags, STREAM s) 
 {
-	uint32 remaining_length;
-	char *data;
-	in_uint32_le(s, remaining_length);
-	data = s->p;
+	static uint32 remaining_length;
+	static char *data, *datap;
+	static uint32 bytes_left_to_read;
+	DEBUG_CLIPBOARD(("In cliprdr_handle_server_data, flags is %d\n", 
+			 flags));
+	if (3 == flags)  /* One-op write, no packets follows */
+	{
+		in_uint32_le(s, remaining_length);
+		data = s->p;
+	} else if (1 == flags) /* First of several packets */
+	{	
+		in_uint32_le(s, remaining_length);
+		DEBUG_CLIPBOARD(("Remaining length is %d\n", 
+				 remaining_length));
+		data = xmalloc(remaining_length);
+		datap = data;
+		DEBUG_CLIPBOARD(("Copying first %d bytes\n", 
+				 MAX_CLIPRDR_STANDALONE_DATASIZE));
+		memcpy(datap, s->p, MAX_CLIPRDR_STANDALONE_DATASIZE);
+
+		datap+=MAX_CLIPRDR_STANDALONE_DATASIZE;
+		bytes_left_to_read = remaining_length-MAX_CLIPRDR_STANDALONE_DATASIZE;
+		return;
+	} else if (0 == flags) 
+	{
+		DEBUG_CLIPBOARD(("Copying %d middle bytes",
+				 MAX_CLIPRDR_CONTINUATION_DATASIZE));
+		memcpy(datap, s->p, MAX_CLIPRDR_CONTINUATION_DATASIZE);
+
+		datap+=MAX_CLIPRDR_CONTINUATION_DATASIZE;
+		bytes_left_to_read-=MAX_CLIPRDR_CONTINUATION_DATASIZE;
+		return;
+	} else if (2 == flags)
+	{
+		DEBUG_CLIPBOARD(("Copying last %d bytes\n", 
+				 bytes_left_to_read));
+		memcpy(datap, s->p, bytes_left_to_read);
+	}
 	XChangeProperty(display, 
 			selection_event.requestor,
 			selection_event.property,
@@ -518,14 +552,16 @@ void cliprdr_handle_server_data(uint32 length, STREAM s)
 			8,
 			PropModeAppend,
 			data,
-			remaining_length);
+			remaining_length-1);
 
 	XSendEvent(display, 
 		   selection_event.requestor, 
 		   False, 
 		   NoEventMask,
 		   (XEvent *)&selection_event);
-	
+
+	if (flags & 0x12)
+		xfree(data);
 
 }
 
@@ -579,14 +615,14 @@ void cliprdr_callback(STREAM s, uint16 channelno)
 	clipboard_channelno = channelno;
 	DEBUG_CLIPBOARD(("cliprdr_callback called with channelno %d, clipboard data:\n", channelno));
 #ifdef WITH_DEBUG_CLIPBOARD
-	hexdump(s->p, s->end - s->p);
+	//	hexdump(s->p, s->end - s->p);
 #endif
 	in_uint32_le(s, length);
 	in_uint32_le(s, flags);
 
 	DEBUG_CLIPBOARD(("length is %d, flags are %d\n", length, flags));
 
-	if (flags & 0x03 || flags & 0x01) /* Single-write op or first-packet-of-several op */
+	if (3 == flags || 1 == flags) /* Single-write op or first-packet-of-several op */
 	{
 		in_uint16_le(s, ptype0);
 		in_uint16_le(s, ptype1);
@@ -631,13 +667,18 @@ void cliprdr_callback(STREAM s, uint16 channelno)
 			return;
 		} else if (5 == ptype0 && 1 == ptype1) 
 		{
-			cliprdr_handle_server_data(length, s);
+			cliprdr_handle_server_data(length, flags, s);
 		} else if (4 == ptype0 && 0 == ptype1) 
 		{
 			cliprdr_handle_server_data_request(s);
 		}
 
 		
+	} 
+	else 
+	{
+		DEBUG_CLIPBOARD(("Handling middle or last packet\n"));
+		cliprdr_handle_server_data(length, flags, s);
 	}
 }
 
