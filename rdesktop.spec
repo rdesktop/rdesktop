@@ -1,6 +1,6 @@
 Summary: Remote Desktop
 Name: rdesktop
-Version: 1.3.0
+Version: 1.3.1
 Release: 1
 Copyright: GPL; see COPYING
 Group: Applications/Communications

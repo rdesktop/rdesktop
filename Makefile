@@ -1,7 +1,7 @@
 #
 # rdesktop: A Remote Desktop Protocol client
 # Makefile
-# Copyright (C) Matthew Chapman 1999-2001
+# Copyright (C) Matthew Chapman 1999-2004
 #
 
 # Configuration defaults
@@ -12,7 +12,7 @@ bindir      = $(exec_prefix)/bin
 mandir      = $(prefix)/man
 datadir     = $(prefix)/share/rdesktop
 
-VERSION     = 1.3.0
+VERSION     = 1.3.1
 KEYMAP_PATH = $(datadir)/keymaps/
 
 RDPOBJ   = tcp.o iso.o mcs.o secure.o licence.o rdp.o orders.o bitmap.o cache.o rdp5.o channels.o rdpdr.o serial.o printer.o
@@ -74,31 +74,32 @@ clean:
 
 dist:
 	mkdir -p /tmp/rdesktop-make-dist-dir
-	ln -sf `pwd` /tmp/rdesktop-make-dist-dir/rdesktop
+	ln -sf `pwd` /tmp/rdesktop-make-dist-dir/rdesktop-$(VERSION)
 	(cd /tmp/rdesktop-make-dist-dir; \
 	tar zcvf rdesktop/rdesktop-$(VERSION).tar.gz \
-	rdesktop/COPYING \
-	rdesktop/crypto/README \
-	rdesktop/crypto/*.c \
-	rdesktop/crypto/*.h \
-	rdesktop/*.c \
-	rdesktop/*.h \
-	rdesktop/keymaps/?? \
-	rdesktop/keymaps/??-?? \
-	rdesktop/keymaps/common \
-	rdesktop/keymaps/modifiers \
-	rdesktop/keymaps/convert-map \
-	rdesktop/doc/HACKING \
-	rdesktop/doc/AUTHORS \
-	rdesktop/doc/TODO \
-	rdesktop/doc/ChangeLog \
-	rdesktop/doc/keymapping.txt \
-	rdesktop/doc/keymap-names.txt \
-	rdesktop/doc/ipv6.txt \
-	rdesktop/doc/rdesktop.1 \
-	rdesktop/Makefile \
-	rdesktop/configure \
-	rdesktop/rdesktop.spec)
+	rdesktop-$(VERSION)/COPYING \
+	rdesktop-$(VERSION)/README \
+	rdesktop-$(VERSION)/configure \
+	rdesktop-$(VERSION)/Makefile \
+	rdesktop-$(VERSION)/rdesktop.spec \
+	rdesktop-$(VERSION)/*.c \
+	rdesktop-$(VERSION)/*.h \
+	rdesktop-$(VERSION)/crypto/README \
+	rdesktop-$(VERSION)/crypto/*.c \
+	rdesktop-$(VERSION)/crypto/*.h \
+	rdesktop-$(VERSION)/keymaps/?? \
+	rdesktop-$(VERSION)/keymaps/??-?? \
+	rdesktop-$(VERSION)/keymaps/common \
+	rdesktop-$(VERSION)/keymaps/modifiers \
+	rdesktop-$(VERSION)/keymaps/convert-map \
+	rdesktop-$(VERSION)/doc/HACKING \
+	rdesktop-$(VERSION)/doc/AUTHORS \
+	rdesktop-$(VERSION)/doc/TODO \
+	rdesktop-$(VERSION)/doc/ChangeLog \
+	rdesktop-$(VERSION)/doc/keymapping.txt \
+	rdesktop-$(VERSION)/doc/keymap-names.txt \
+	rdesktop-$(VERSION)/doc/ipv6.txt \
+	rdesktop-$(VERSION)/doc/rdesktop.1 )
 	rm -rf /tmp/rdesktop-make-dist-dir
 
 .SUFFIXES:
