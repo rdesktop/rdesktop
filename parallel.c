@@ -69,9 +69,11 @@ parallel_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 dispo
 {
 	int parallel_fd;
 
-	parallel_fd = open(g_rdpdr_device[device_id].local_path, O_WRONLY);
-	if (parallel_fd == -1)
+	parallel_fd = open(g_rdpdr_device[device_id].local_path, O_RDWR);
+	if (parallel_fd == -1) {
+		perror("open");
 		return STATUS_ACCESS_DENIED;
+	}
 
 	g_rdpdr_device[device_id].handle = parallel_fd;
 
@@ -84,6 +86,13 @@ parallel_close(HANDLE handle)
 {
 	g_rdpdr_device[get_device_index(handle)].handle = 0;
 	close(handle);
+	return STATUS_SUCCESS;
+}
+
+NTSTATUS
+parallel_read(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
+{
+	*result = read(handle, data, length);
 	return STATUS_SUCCESS;
 }
 
@@ -121,7 +130,7 @@ parallel_device_control(HANDLE handle, uint32 request, STREAM in, STREAM out)
 DEVICE_FNS parallel_fns = {
 	parallel_create,
 	parallel_close,
-	NULL,
+	parallel_read,
 	parallel_write,
 	parallel_device_control
 };
