@@ -42,7 +42,6 @@ void *xrealloc(void *oldmem, int size)
 	return mem;
 }
 
-#if DEBUG
 void dump_data(unsigned char *p, int len)
 {
 	unsigned char *line = p;
@@ -69,4 +68,3 @@ void dump_data(unsigned char *p, int len)
 
 	fputc('\n', stderr);
 }
-#endif

@@ -23,6 +23,10 @@
 
 typedef struct window
 {
+	struct connection *conn;
+	int width;
+	int height;
+
 	Display *display;
 	Window wnd;
 	GC gc;
@@ -30,6 +34,7 @@ typedef struct window
 
 } *HWINDOW;
 
-typedef XImage *HBITMAP;
-typedef Colormap HCOLORMAP;
+typedef void *HBITMAP;
+typedef void *HGLYPH;
+typedef void *HCOLOURMAP;
 

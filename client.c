@@ -23,6 +23,8 @@
 int main(int argc, char *argv[])
 {
 	HCONN conn;
+	int width = 640;
+	int height = 480;
 
 	fprintf(stderr, "rdesktop: A Remote Desktop Protocol client.\n");
 	fprintf(stderr, "Version 0.9.0-prealpha. Copyright (C) 1999-2000 Matt Chapman.\n\n");
@@ -33,12 +35,12 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	if ((conn = rdp_connect(argv[1])) == NULL)
+	if ((conn = rdp_connect(argv[1], width, height)) == NULL)
 		return 1;
 
 	fprintf(stderr, "Connection successful.\n");
 
-	conn->wnd = ui_create_window(640, 480);
+	conn->wnd = ui_create_window(conn, width, height);
 	rdp_main_loop(conn);
 
 	ui_destroy_window(conn->wnd);

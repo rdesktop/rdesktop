@@ -25,7 +25,7 @@ BOOL prs_io_uint8(STREAM s, uint8 *i)
 {
 	if (s->offset + 1 > s->end)
 	{
-		fprintf(stderr, "Parse past end of buffer\n");
+		ERROR("Parse past end of buffer\n");
 		return False;
 	}
 
@@ -43,7 +43,7 @@ BOOL prs_io_uint8s(STREAM s, uint8 *p, unsigned int length)
 {
 	if (s->offset + length > s->end)
 	{
-		fprintf(stderr, "Parse past end of buffer\n");
+		ERROR("Parse past end of buffer\n");
 		return False;
 	}
 
@@ -63,7 +63,7 @@ BOOL msb_io_uint16(STREAM s, uint16 *i)
 
 	if (offset + 2 > s->end)
 	{
-		fprintf(stderr, "Parse past end of buffer\n");
+		ERROR("Parse past end of buffer\n");
 		return False;
 	}
 
@@ -85,7 +85,7 @@ BOOL lsb_io_uint16(STREAM s, uint16 *i)
 
 	if (offset + 2 > s->end)
 	{
-		fprintf(stderr, "Parse past end of buffer\n");
+		ERROR("Parse past end of buffer\n");
 		return False;
 	}
 
@@ -107,7 +107,7 @@ BOOL lsb_io_uint32(STREAM s, uint32 *i)
 
 	if (offset + 4 > s->end)
 	{
-		fprintf(stderr, "Parse past end of buffer\n");
+		ERROR("Parse past end of buffer\n");
 		return False;
 	}
 

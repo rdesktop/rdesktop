@@ -24,7 +24,7 @@
 #define SVAL(p)   ((*((p++) + 1) << 8) | CVAL(p))
 
 #define REPEAT(statement) { while ((count > 0) && (x < width)) { statement; count--; x++; } }
-#define MASK_UPDATE() { maskpix <<= 1; if (maskpix == 0) { mask = CVAL(input); maskpix = 1; } }
+#define MASK_UPDATE() { mixmask <<= 1; if (mixmask == 0) { mask = CVAL(input); mixmask = 1; } }
 
 BOOL bitmap_decompress(unsigned char *output, int width, int height,
 		       unsigned char *input, int size)
@@ -32,13 +32,12 @@ BOOL bitmap_decompress(unsigned char *output, int width, int height,
 	unsigned char *end = input + size;
 	unsigned char *prevline, *line = NULL;
 	int opcode, count, offset, isfillormix, x = width;
-	uint8 code, mask, maskpix, color1, color2;
+	int lastopcode = -1, insertmix = False;
+	uint8 code, colour1, colour2, mask, mixmask;
 	uint8 mix = 0xff;
 
-	dump_data(input, end-input);
 	while (input < end)
 	{
-		fprintf(stderr, "Offset %d from end\n", end-input);
 		code = CVAL(input);
 		opcode = code >> 4;
 
@@ -85,13 +84,17 @@ BOOL bitmap_decompress(unsigned char *output, int width, int height,
 		}
 
 		/* Read preliminary data */
-		maskpix = 0;
+		mixmask = 0;
 		switch (opcode)
 		{
-			case 3: /* Color */
-				color1 = CVAL(input);
-			case 8: /* Bicolor */
-				color2 = CVAL(input);
+			case 0: /* Fill */
+				if ((lastopcode == opcode) && (x != width))
+					insertmix = True;
+				break;
+			case 8: /* Bicolour */
+				colour1 = CVAL(input);
+			case 3: /* Colour */
+				colour2 = CVAL(input);
 				break;
 			case 6: /* SetMix/Mix */
 			case 7: /* SetMix/FillOrMix */
@@ -99,6 +102,7 @@ BOOL bitmap_decompress(unsigned char *output, int width, int height,
 				opcode -= 5;
 				break;
 		}
+		lastopcode = opcode;
 
 		/* Output body */
 		while (count > 0)
@@ -106,7 +110,7 @@ BOOL bitmap_decompress(unsigned char *output, int width, int height,
 			if (x >= width)
 			{
 				if (height <= 0)
-					return True;
+					return False;
 
 				x = 0;
 				height--;
@@ -118,7 +122,18 @@ BOOL bitmap_decompress(unsigned char *output, int width, int height,
 			switch (opcode)
 			{
 				case 0: /* Fill */
-					fprintf(stderr, "Fill %d\n", count);
+					if (insertmix)
+					{
+						if (prevline == NULL)
+							line[x] = mix;
+						else
+							line[x] = prevline[x] ^ mix;
+
+						insertmix = False;
+						count--;
+						x++;
+					}
+
 					if (prevline == NULL)
 						REPEAT(line[x] = 0)
 					else
@@ -126,22 +141,18 @@ BOOL bitmap_decompress(unsigned char *output, int width, int height,
 					break;
 
 				case 1: /* Mix */
-					fprintf(stderr, "Mix %d\n", count);
 					if (prevline == NULL)
 						REPEAT(line[x] = mix)
 					else
 						REPEAT(line[x] = prevline[x] ^ mix)
 					break;
 
-#if 0
 				case 2: /* Fill or Mix */
-					REPEAT(line[x] = 0);
-					break;
 					if (prevline == NULL)
 					    REPEAT( 
 						   MASK_UPDATE();
 
-						   if (mask & maskpix)
+						   if (mask & mixmask)
 							line[x] = mix;
 						   else
 							line[x] = 0;
@@ -150,27 +161,23 @@ BOOL bitmap_decompress(unsigned char *output, int width, int height,
 					    REPEAT(
 						   MASK_UPDATE();
 
-						   if (mask & maskpix)
+						   if (mask & mixmask)
 							line[x] = prevline[x] ^ mix;
 						   else
 							line[x] = prevline[x];
 					    )
 					break;
-#endif
 
 				case 3: /* Colour */
-					fprintf(stderr, "Colour %d\n", count);
-					REPEAT(line[x] = color2)
+					REPEAT(line[x] = colour2)
 					break;
 
 				case 4: /* Copy */
-					fprintf(stderr, "Copy %d\n", count);
 					REPEAT(line[x] = CVAL(input))
 					break;
 
-#if 0
-				case 8: /* Bicolor */
-					REPEAT(line[x] = color1; line[++x] = color2)
+				case 8: /* Bicolour */
+					REPEAT(line[x] = colour1; line[++x] = colour2)
 					break;
 
 				case 13: /* White */
@@ -180,10 +187,9 @@ BOOL bitmap_decompress(unsigned char *output, int width, int height,
 				case 14: /* Black */
 					REPEAT(line[x] = 0x00)
 					break;
-#endif
 
 				default:
-					fprintf(stderr, "Unknown bitmap opcode 0x%x\n", opcode);
+					NOTIMP("bitmap opcode 0x%x\n", opcode);
 					return False;
 			}
 		}

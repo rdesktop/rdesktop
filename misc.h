@@ -19,20 +19,74 @@
 */
 
 #define NUM_ELEMENTS(array) (sizeof(array) / sizeof(array[0]))
+#define DEBUG(args...)  fprintf(stderr, args);
+#define ERROR(args...)  fprintf(stderr, "ERROR: "args);
+#define WARN(args...)   fprintf(stderr, "WARNING: "args);
+#define NOTIMP(args...) fprintf(stderr, "NOT IMPLEMENTED: "args);
 
-#define MAX_COLORS 256
+#define ROP2_S(rop3) (rop3 & 0xf)
+#define ROP2_P(rop3) ((rop3 & 0x3) | ((rop3 & 0x30) >> 2))
 
-typedef struct _colorentry
+#define ROP2_COPY    0xc
+#define ROP2_XOR     0x6
+#define ROP2_AND     0x8
+#define ROP2_OR      0xe
+
+#define MAX_COLOURS 256
+
+typedef struct _colourentry
 {
-	uint8 red;
-	uint8 green;
 	uint8 blue;
+	uint8 green;
+	uint8 red;
 
-} COLORENTRY;
+} COLOURENTRY;
 
-typedef struct _colormap
+typedef struct _colourmap
 {
-	uint16 ncolors;
-	COLORENTRY colors[MAX_COLORS];
+	uint16 ncolours;
+	COLOURENTRY colours[MAX_COLOURS];
 
-} COLORMAP;
+} COLOURMAP;
+
+typedef struct _bounds
+{
+	uint16 left;
+	uint16 top;
+	uint16 right;
+	uint16 bottom;
+
+} BOUNDS;
+
+typedef struct _pen
+{
+	uint8 style;
+	uint8 width;
+	uint8 colour;
+
+} PEN;
+
+typedef struct _brush
+{
+	uint8 xorigin;
+	uint8 yorigin;
+	uint8 style;
+	uint8 pattern[8];
+
+} BRUSH;
+
+typedef struct _font_glyph
+{
+	uint16 baseline;
+	uint16 width;
+	uint16 height;
+	HBITMAP pixmap;
+
+} FONT_GLYPH;
+
+typedef struct _blob
+{
+	void *data;
+	int size;
+
+} BLOB;

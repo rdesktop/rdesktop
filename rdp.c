@@ -21,11 +21,9 @@
 #include "includes.h"
 
 /* Establish a connection up to the RDP layer */
-HCONN rdp_connect(char *server)
+HCONN rdp_connect(char *server, int width, int height)
 {
 	HCONN conn;
-	RDP_ACTIVE_PDU active;
-	uint8 type;
 
 	if ((conn = mcs_connect(server)) == NULL)
 		return NULL;
@@ -34,294 +32,10 @@ HCONN rdp_connect(char *server)
 	mcs_recv(conn, False); /* Server's licensing certificate */
 	rdp_send_cert(conn);
 	mcs_recv(conn, False);
-	mcs_recv(conn, False); /* Demand active */
-
-	if (!rdp_recv_pdu(conn, &type) || (type != RDP_PDU_DEMAND_ACTIVE))
-	{
-		fprintf(stderr, "RDP error, expected Demand Active\n");
-		mcs_disconnect(conn);
-		return NULL;
-	}
-
-	rdp_io_active_pdu(&conn->in, &active, RDP_PDU_DEMAND_ACTIVE);
-	rdp_send_confirm_active(conn);
-	rdp_send_synchronize(conn);
-	rdp_send_control(conn, RDP_CTL_COOPERATE);
-	rdp_send_control(conn, RDP_CTL_REQUEST_CONTROL);
-	rdp_recv_pdu(conn, &type); // RDP_PDU_SYNCHRONIZE
-	rdp_recv_pdu(conn, &type); // RDP_CTL_COOPERATE
-	rdp_recv_pdu(conn, &type); // RDP_CTL_GRANT_CONTROL
-	rdp_send_input(conn);
-	rdp_send_fonts(conn, 1);
-	rdp_send_fonts(conn, 2);
-	rdp_recv_pdu(conn, &type); // RDP_PDU_UNKNOWN 0x28
+	mcs_recv(conn, False);
 
 	return conn;
-}
 
-void rdp_main_loop(HCONN conn)
-{
-	RDP_DATA_HEADER hdr;
-	RDP_ORDER_STATE os;
-	uint8 type;
-
-	memset(&os, 0, sizeof(os));
-
-	while (rdp_recv_pdu(conn, &type))
-	{
-		if (type != RDP_PDU_DATA)
-		{
-			fprintf(stderr, "Unknown PDU 0x%x\n", type);
-			continue;
-		}
-
-		rdp_io_data_header(&conn->in, &hdr);
-
-		switch (hdr.data_pdu_type)
-		{
-			case RDP_DATA_PDU_UPDATE:
-				process_update(conn, &os);
-				break;
-
-			case RDP_DATA_PDU_POINTER:
-				process_pointer(conn);
-				break;
-
-			default:
-				fprintf(stderr, "Unknown data PDU 0x%x\n",
-						hdr.data_pdu_type);
-		}
-	}
-}
-
-void process_memblt(HCONN conn, RDP_ORDER_STATE *os, BOOL delta)
-{
-	HBITMAP hbitmap;
-	uint16 present;
-	lsb_io_uint16(&conn->in, &present);
-
-	if (present & 1)
-		prs_io_uint8(&conn->in, &os->memblt.cache_id);
-
-	if (present & 2)
-		rdp_io_coord(&conn->in, &os->memblt.x, delta);
-
-	if (present & 4)
-		rdp_io_coord(&conn->in, &os->memblt.y, delta);
-
-	if (present & 8)
-		rdp_io_coord(&conn->in, &os->memblt.cx, delta);
-
-	if (present & 16)
-		rdp_io_coord(&conn->in, &os->memblt.cy, delta);
-
-	if (present & 32)
-		prs_io_uint8(&conn->in, &os->memblt.opcode);
-
-	if (present & 256)
-		lsb_io_uint16(&conn->in, &os->memblt.cache_idx);
-
-	if (os->memblt.opcode != 0xcc) /* SRCCOPY */
-	{
-		fprintf(stderr, "Unsupported raster operation 0x%x\n",
-			os->memblt.opcode);
-		return;
-	}
-
-	if ((os->memblt.cache_idx > NUM_ELEMENTS(conn->bmpcache))
-	    || ((hbitmap = conn->bmpcache[os->memblt.cache_idx]) == NULL))
-	{
-		fprintf(stderr, "Bitmap %d not found\n", os->memblt.cache_idx);
-		return;
-	}
-
-	fprintf(stderr, "MEMBLT %d:%dx%d\n", os->memblt.cache_idx,
-					os->memblt.x, os->memblt.y);
-
-	ui_paint_bitmap(conn->wnd, hbitmap, os->memblt.x, os->memblt.y);
-}
-
-void process_opaque_rect(HCONN conn, RDP_ORDER_STATE *os, BOOL delta)
-{
-	uint8 present;
-	prs_io_uint8(&conn->in, &present);
-
-	if (present & 1)
-		rdp_io_coord(&conn->in, &os->opaque_rect.x, delta);
-
-	if (present & 2)
-		rdp_io_coord(&conn->in, &os->opaque_rect.y, delta);
-
-	if (present & 4)
-		rdp_io_coord(&conn->in, &os->opaque_rect.cx, delta);
-
-	if (present & 8)
-		rdp_io_coord(&conn->in, &os->opaque_rect.cy, delta);
-
-	if (present & 16)
-		prs_io_uint8(&conn->in, &os->opaque_rect.colour);
-
-	fprintf(stderr, "Opaque rectangle at %d, %d\n", os->opaque_rect.x, os->opaque_rect.y);
-	ui_draw_rectangle(conn->wnd, os->opaque_rect.x, os->opaque_rect.y,
-				os->opaque_rect.cx, os->opaque_rect.cy);
-}
-
-void process_bmpcache(HCONN conn)
-{
-	RDP_BITMAP_HEADER rbh;
-	HBITMAP *entry;
-	char *input, *bmpdata;
-
-	rdp_io_bitmap_header(&conn->in, &rbh);
-	fprintf(stderr, "BMPCACHE %d:%dx%d\n", rbh.cache_idx,
-				rbh.width, rbh.height);
-
-	input = conn->in.data + conn->in.offset;
-	conn->in.offset += rbh.size;
-//	dump_data(conn->in.data+conn->in.offset, conn->in.rdp_offset-conn->in.offset);
-
-	bmpdata = malloc(rbh.width * rbh.height);
-	if (!bitmap_decompress(bmpdata, rbh.width, rbh.height, input, rbh.size))
-	{
-		fprintf(stderr, "Decompression failed\n");
-		free(bmpdata);
-		return;
-	}
-
-	if (rbh.cache_idx > NUM_ELEMENTS(conn->bmpcache))
-	{
-		fprintf(stderr, "Attempted store past end of cache");
-		return;
-	}
-
-	entry = &conn->bmpcache[rbh.cache_idx];
-	// if (*entry != NULL)
-	//	ui_destroy_bitmap(conn->wnd, *entry);
-
-	*entry = ui_create_bitmap(conn->wnd, rbh.width, rbh.height, bmpdata);
-	//	ui_paint_bitmap(conn->wnd, bmp, x, 0);
-	//      ui_destroy_bitmap(conn->wnd, bmp);
-}
-
-void process_orders(HCONN conn, RDP_ORDER_STATE *os)
-{
-	uint16 num_orders;
-	int processed = 0;
-	BOOL res = True;
-	BOOL delta;
-	//	unsigned char *p;
-
-	lsb_io_uint16(&conn->in, &num_orders);
-
-	conn->in.offset += 2;
-	//	p = &conn->in.data[conn->in.offset];
-
-	//	fprintf(stderr, "%02X %02X %02X %02X\n", p[0], p[1], p[2], p[3]);
-
-	while ((processed < num_orders) && res)
-	{
-		uint8 order_flags;
-
-		prs_io_uint8(&conn->in, &order_flags);
-		fprintf(stderr, "Order flags: 0x%x\n", order_flags);
-
-		if (order_flags == 0x51) /* ?? */
-			return;
-
-		if (!(order_flags & RDP_ORDER_STANDARD))
-			return;
-
-		if (order_flags & RDP_ORDER_SECONDARY)
-		{
-			RDP_SECONDARY_ORDER rso;
-
-			rdp_io_secondary_order(&conn->in, &rso);
-			switch (rso.type)
-			{
-			case RDP_ORDER_BMPCACHE:
-				process_bmpcache(conn);
-				break;
-			default:
-				fprintf(stderr, "Unknown secondary order %d\n",
-					rso.type);
-				return;
-			}
-		}
-		else
-		{
-			if (order_flags & RDP_ORDER_CHANGE)
-				prs_io_uint8(&conn->in, &os->order_type);
-
-			delta = order_flags & RDP_ORDER_DELTA;
-
-			switch (os->order_type)
-			{
-			case RDP_ORDER_OPAQUE_RECT:
-				process_opaque_rect(conn, os, delta);
-				break;
-
-			case RDP_ORDER_MEMBLT:
-				process_memblt(conn, os, delta);
-				break;
-
-			default:
-				fprintf(stderr, "Unknown order %d\n", os->order_type);
-				return;
-			}
-		}
-
-		processed++;
-	}
-}
-
-void process_palette(HCONN conn)
-{
-	HCOLORMAP map;
-	COLORMAP colors;
-
-	rdp_io_colormap(&conn->in, &colors);
-	map = ui_create_colormap(conn->wnd, &colors);
-	ui_set_colormap(conn->wnd, map);
-	// ui_destroy_colormap(map);
-}
-
-void process_update(HCONN conn, RDP_ORDER_STATE *os)
-{
-	RDP_UPDATE_PDU update;
-
-	rdp_io_update_pdu(&conn->in, &update);
-	switch (update.update_type)
-	{
-		case RDP_UPDATE_ORDERS:
-			process_orders(conn, os);
-			break;
-		case RDP_UPDATE_PALETTE:
-			process_palette(conn);
-			break;
-		case RDP_UPDATE_SYNCHRONIZE:
-			break;
-		default:
-			fprintf(stderr, "Unknown update 0x%x\n",
-				update.update_type);
-	}
-
-}
-
-void process_pointer(HCONN conn)
-{
-	RDP_POINTER ptr;
-
-	rdp_io_pointer(&conn->in, &ptr);
-
-	switch (ptr.message)
-	{
-		case RDP_POINTER_MOVE:
-			ui_move_pointer(conn->wnd, ptr.x, ptr.y);
-			break;
-		default:
-			fprintf(stderr, "Unknown pointer message 0x%x\n",
-				ptr.message);
-	}
 }
 
 /* Work this out later. This is useless anyway when encryption is off. */
@@ -331,6 +45,22 @@ uint8 precanned_key_packet[] = {
    0xf7,0x99,0xef,0x60,0xc4,0x49,0x52,0xd0,0xd8,0xea,0xb5,0x4f,0x58,0x19,
    0x52,0x2a,0x93,0x83,0x57,0x4f,0x4e,0x04,0xde,0x96,0x51,0xab,0x13,0x20,
    0xd8,0xe5,0x00,0x00,0x00,0x00,0x00,0x00
+};
+
+uint8 precanned_key_packet_e1[] = {
+0x01,0x00,0x00,0x00,0x48,0x00,0x00,0x00,0x7c,0xbd,0x8b,0x8f,0x16,0x2b,0xa1,0x00,
+0xc6,0xfb,0x8a,0x39,0xf5,0x33,0xed,0x36,0x14,0x55,0x17,0x8c,0x3a,0xde,0x5e,0xdf,
+0xcb,0x41,0x4c,0xc7,0x89,0x7d,0xe3,0xe9,0x34,0x08,0xda,0xdc,0x08,0x77,0x98,0xda,
+0x65,0xae,0x27,0x74,0xf1,0x79,0xd0,0x28,0x54,0x64,0x86,0x7f,0x02,0xe0,0x71,0x51,
+0x56,0x4e,0xca,0x72,0x94,0x62,0x49,0x27,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
+};
+
+uint8 precanned_key_packet_e2[] = {
+0x48,0x00,0x00,0x00,0x8a,0xe4,0x9f,0x8a,0xd5,0x04,0x02,0xfd,0x09,0x1f,0xff,0x53,
+0xe0,0xb2,0x72,0x8b,0x19,0xba,0x22,0xe4,0x2a,0x7b,0xeb,0x79,0xa8,0x83,0x31,0x6f,
+0x5c,0xcc,0x37,0x9c,0xe8,0x73,0x64,0x64,0xd3,0xab,0xaa,0x9f,0xbe,0x49,0x27,0xfc,
+0x95,0xf3,0x6e,0xf8,0xb1,0x01,0x7c,0xba,0xa9,0xc5,0x35,0x9c,0x8f,0x74,0x3a,0x9f,
+0xd4,0x26,0x4d,0x39,0x90,0xbe,0xf4,0xfb,0x72,0x9e,0x54,0x18
 };
 
 /* Create an RC4 key and transfer it to the server */
@@ -344,8 +74,30 @@ void rdp_establish_key(HCONN conn)
 	mcs_send_data(conn, MCS_GLOBAL_CHANNEL, True);
 }
 
+/* Create an RC4 key and transfer it to the server */
+void rdp_establish_key_e1(HCONN conn)
+{
+	mcs_init_data(conn);
+	memcpy(conn->out.data + conn->out.offset, precanned_key_packet_e1,
+	       sizeof(precanned_key_packet_e1));
+	conn->out.offset += sizeof(precanned_key_packet_e1);
+	MARK_END(conn->out);
+	mcs_send_data(conn, MCS_GLOBAL_CHANNEL, True);
+}
+
+/* Create an RC4 key and transfer it to the server */
+void rdp_establish_key_e2(HCONN conn)
+{
+	mcs_init_data(conn);
+	memcpy(conn->out.data + conn->out.offset, precanned_key_packet_e2,
+	       sizeof(precanned_key_packet_e2));
+	conn->out.offset += sizeof(precanned_key_packet_e2);
+	MARK_END(conn->out);
+	mcs_send_data(conn, MCS_GLOBAL_CHANNEL, True);
+}
+
 /* Horrible horrible certificate stuff. Work out later. */
-uint8 precanned_cert_packet[] = {
+uint8 precanned_cert_packet[] = { // 4c8
 0x80,0x00,0x00,0x00,0x12,0x02,0xb4,0x04,0x01,0x00,0x00,
 0x00,0x00,0x00,0x01,0x02,0x9d,0xa3,0x7a,0x93,0x34,0x7b,0x28,0x37,0x24,0xa0,0x1f,
 0x61,0x26,0xfd,0x96,0x3a,0x92,0x83,0xf3,0xe9,0x6a,0x2e,0x81,0x7c,0x2c,0xe4,0x72,//
@@ -476,12 +228,12 @@ void rdp_send_data(HCONN conn, uint16 data_pdu_type)
 	mcs_send_data(conn, MCS_GLOBAL_CHANNEL, True);
 }
 
-void rdp_send_confirm_active(HCONN conn)
+void rdp_send_confirm_active(HCONN conn, uint32 shareid, int width, int height)
 {
 	RDP_ACTIVE_PDU active;
 
 	rdp_init(conn);
-	rdp_make_active_pdu(&active, 0x103ea, conn->mcs_userid);
+	rdp_make_active_pdu(&active, shareid, conn->mcs_userid, width, height);
 	rdp_io_active_pdu(&conn->out, &active, RDP_PDU_CONFIRM_ACTIVE);
 	MARK_END(conn->out);
 	rdp_send(conn, RDP_PDU_CONFIRM_ACTIVE);
@@ -489,11 +241,11 @@ void rdp_send_confirm_active(HCONN conn)
 
 void rdp_send_synchronize(HCONN conn)
 {
-	RDP_SYNCHRONIZE_PDU sync;
+	RDP_SYNCHRONISE_PDU sync;
 
 	rdp_init_data(conn);
-	rdp_make_synchronize_pdu(&sync, 1002);
-	rdp_io_synchronize_pdu(&conn->out, &sync);
+	rdp_make_synchronise_pdu(&sync, 1002);
+	rdp_io_synchronise_pdu(&conn->out, &sync);
 	MARK_END(conn->out);
 	rdp_send_data(conn, RDP_DATA_PDU_SYNCHRONIZE);
 }
@@ -520,12 +272,13 @@ void rdp_send_fonts(HCONN conn, uint16 seqno)
 	rdp_send_data(conn, RDP_DATA_PDU_FONT2);
 }
 
-void rdp_send_input(HCONN conn)
+void rdp_send_input(HCONN conn, uint16 message_type, uint16 device_flags,
+				uint16 param1, uint16 param2)
 {
 	RDP_INPUT_PDU input;
 
 	rdp_init_data(conn);
-	rdp_make_input_pdu(&input);
+	rdp_make_input_pdu(&input, message_type, device_flags, param1, param2);
 	rdp_io_input_pdu(&conn->out, &input);
 	MARK_END(conn->out);
 	rdp_send_data(conn, RDP_DATA_PDU_INPUT);
@@ -549,7 +302,7 @@ BOOL rdp_recv_pdu(HCONN conn, uint8 *type)
 	conn->in.rdp_offset += hdr.length;
 	*type = hdr.pdu_type & 0xf;
 
-#if DEBUG
+#if DUMP
 	fprintf(stderr, "RDP packet (type %x):\n", *type);
 	dump_data(conn->in.data+conn->in.offset, conn->in.rdp_offset-conn->in.offset);
 #endif
@@ -563,6 +316,7 @@ void rdp_disconnect(HCONN conn)
 	mcs_disconnect(conn);
 }
 
+/* Construct an RDP header */
 void rdp_make_header(RDP_HEADER *hdr, uint16 length, uint16 pdu_type,
 		     uint16 userid)
 {
@@ -571,6 +325,20 @@ void rdp_make_header(RDP_HEADER *hdr, uint16 length, uint16 pdu_type,
 	hdr->userid = userid + 1001;
 }
 
+/* Parse an RDP header */
+BOOL rdp_io_header(STREAM s, RDP_HEADER *hdr)
+{
+	BOOL res = True;
+
+	res = res ? lsb_io_uint16(s, &hdr->length  ) : False;
+	res = res ? lsb_io_uint16(s, &hdr->pdu_type) : False;
+	if ((hdr->pdu_type & 0xf) != RDP_PDU_DEACTIVATE)
+		res = res ? lsb_io_uint16(s, &hdr->userid  ) : False;
+
+	return res;
+}
+
+/* Construct a data header */
 void rdp_make_data_header(RDP_DATA_HEADER *hdr, uint32 shareid,
 			  uint16 length, uint16 data_pdu_type)
 {
@@ -583,163 +351,7 @@ void rdp_make_data_header(RDP_DATA_HEADER *hdr, uint32 shareid,
 	hdr->compress_len = 0;
 }
 
-void rdp_make_general_caps(RDP_GENERAL_CAPS *caps)
-{
-	caps->os_major_type = 1;
-	caps->os_minor_type = 3;
-	caps->ver_protocol = 0x200;
-}
-
-void rdp_make_bitmap_caps(RDP_BITMAP_CAPS *caps)
-{
-	caps->preferred_bpp = 8;
-	caps->receive1bpp = 1;
-	caps->receive4bpp = 1;
-	caps->receive8bpp = 1;
-	caps->width = 640;
-	caps->height = 480;
-	caps->compression = 1;
-	caps->unknown2 = 1;
-}
-
-void rdp_make_order_caps(RDP_ORDER_CAPS *caps)
-{
-	caps->xgranularity = 1;
-	caps->ygranularity = 20;
-	caps->max_order_level = 1;
-	caps->num_fonts = 0x147;
-	caps->cap_flags = 0x2A;
-
-//	caps->cap_flags = ORDER_CAP_NEGOTIATE | ORDER_CAP_NOSUPPORT;
-
-	caps->support[0] = caps->support[1] = caps->support[2]
-		= caps->support[3] = caps->support[4] = caps->support[5]
-		= caps->support[6] = caps->support[8] = caps->support[11]
-		= caps->support[12] = caps->support[22] = caps->support[28]
-		= caps->support[29] = caps->support[30] = 1;
-	caps->text_cap_flags = 0x6A1;
-	caps->desk_save_size = 0x38400;
-	caps->unknown2 = 0x4E4;
-}
-
-void rdp_make_bmpcache_caps(RDP_BMPCACHE_CAPS *caps)
-{
-	caps->caches[0].entries = 0x258;
-	caps->caches[0].max_cell_size = 0x100;
-	caps->caches[1].entries = 0x12c;
-	caps->caches[1].max_cell_size = 0x400;
-	caps->caches[2].entries = 0x106;
-	caps->caches[2].max_cell_size = 0x1000;
-}
-
-void rdp_make_control_caps(RDP_CONTROL_CAPS *caps)
-{
-	caps->control_interest = 2;
-	caps->detach_interest = 2;
-}
-
-void rdp_make_activate_caps(RDP_ACTIVATE_CAPS *caps)
-{
-}
-
-void rdp_make_pointer_caps(RDP_POINTER_CAPS *caps)
-{
-	caps->colour_pointer = 0;
-	caps->cache_size = 20;
-}
-
-void rdp_make_share_caps(RDP_SHARE_CAPS *caps, uint16 userid)
-{
-}
-
-void rdp_make_colcache_caps(RDP_COLCACHE_CAPS *caps)
-{
-	caps->cache_size = 6;
-}
-
-void rdp_make_active_pdu(RDP_ACTIVE_PDU *pdu, uint32 shareid, uint16 userid)
-{
-	memset(pdu, 0, sizeof(*pdu));
-	pdu->shareid = shareid;
-	pdu->userid  = 1002;
-	pdu->source_len = sizeof(RDP_SOURCE);
-	memcpy(pdu->source, RDP_SOURCE, sizeof(RDP_SOURCE));
-
-	pdu->caps_len = RDP_CAPLEN_GENERAL + RDP_CAPLEN_BITMAP + RDP_CAPLEN_ORDER
-		+ RDP_CAPLEN_BMPCACHE + RDP_CAPLEN_COLCACHE + RDP_CAPLEN_ACTIVATE
-		+ RDP_CAPLEN_CONTROL + RDP_CAPLEN_POINTER + RDP_CAPLEN_SHARE
-		+ RDP_CAPLEN_UNKNOWN;
-	pdu->num_caps = 0xD;
-
-	rdp_make_general_caps (&pdu->general_caps );
-	rdp_make_bitmap_caps  (&pdu->bitmap_caps  );
-	rdp_make_order_caps   (&pdu->order_caps   );
-	rdp_make_bmpcache_caps(&pdu->bmpcache_caps);
-	rdp_make_control_caps (&pdu->control_caps );
-	rdp_make_activate_caps(&pdu->activate_caps);
-	rdp_make_pointer_caps (&pdu->pointer_caps );
-	rdp_make_share_caps   (&pdu->share_caps, userid);
-	rdp_make_colcache_caps(&pdu->colcache_caps);
-}
-
-void rdp_make_control_pdu(RDP_CONTROL_PDU *pdu, uint16 action)
-{
-	pdu->action = action;
-	pdu->userid = 0;
-	pdu->controlid = 0;
-}
-
-void rdp_make_synchronize_pdu(RDP_SYNCHRONIZE_PDU *pdu, uint16 userid)
-{
-	pdu->type = 1;
-	pdu->userid = userid;
-}
-
-void rdp_make_font_pdu(RDP_FONT_PDU *pdu, uint16 seqno)
-{
-	pdu->num_fonts = 0;
-	pdu->unknown1 = 0x3e;
-	pdu->unknown2 = seqno;
-	pdu->entry_size = RDP_FONT_INFO_SIZE;
-}
-
-void rdp_make_input_pdu(RDP_INPUT_PDU *pdu)
-{
-	uint32 now = time(NULL);
-
-	pdu->num_events = 3;
-	pdu->pad = 0;
-
-	pdu->event[0].event_time = now;
-	pdu->event[0].message_type = RDP_INPUT_SYNCHRONIZE;
-	pdu->event[0].device_flags = 0;
-	pdu->event[0].mouse_x = 0;
-	pdu->event[0].mouse_y = 0;
-
-	pdu->event[1].event_time = now;
-	pdu->event[1].message_type = RDP_INPUT_UNKNOWN;
-	pdu->event[1].device_flags = 0x8000;
-	pdu->event[1].mouse_x = 15;
-	pdu->event[1].mouse_y = 0;
-
-	pdu->event[2].event_time = now;
-	pdu->event[2].message_type = RDP_INPUT_MOUSE;
-	pdu->event[2].device_flags = MOUSE_FLAG_MOVE;
-	pdu->event[2].mouse_x = 425;
-	pdu->event[2].mouse_y = 493;
-}
-
-BOOL rdp_io_header(STREAM s, RDP_HEADER *hdr)
-{
-	BOOL res = True;
-
-	res = res ? lsb_io_uint16(s, &hdr->length  ) : False;
-	res = res ? lsb_io_uint16(s, &hdr->pdu_type) : False;
-	res = res ? lsb_io_uint16(s, &hdr->userid  ) : False;
-
-	return res;
-}
-
+/* Parse a data header */
 BOOL rdp_io_data_header(STREAM s, RDP_DATA_HEADER *hdr)
 {
 	BOOL res = True;
@@ -755,6 +367,34 @@ BOOL rdp_io_data_header(STREAM s, RDP_DATA_HEADER *hdr)
 	return res;
 }
 
+BOOL rdp_io_present(STREAM s, uint32 *present, uint8 flags, int size)
+{
+	uint8 bits;
+	int i;
+
+	if (flags & RDP_ORDER_SMALL)
+	{
+		size--;
+	}
+
+	if (flags & RDP_ORDER_TINY)
+	{
+		if (size < 2)
+			return False;
+
+		size -= 2;
+	}
+
+	*present = 0;
+	for (i = 0; i < size; i++)
+	{
+		prs_io_uint8(s, &bits);
+		*present |= bits << (i * 8);
+	}
+
+	return True;
+}
+
 BOOL rdp_io_coord(STREAM s, uint16 *coord, BOOL delta)
 {
 	uint8 change;
@@ -763,7 +403,7 @@ BOOL rdp_io_coord(STREAM s, uint16 *coord, BOOL delta)
 	if (delta)
 	{
 		res = prs_io_uint8(s, &change);
-		*coord += change;
+		*coord += (char)change;
 	}
 	else
 	{
@@ -773,273 +413,126 @@ BOOL rdp_io_coord(STREAM s, uint16 *coord, BOOL delta)
 	return res;
 }
 
-BOOL rdp_io_colormap(STREAM s, COLORMAP *colors)
+BOOL rdp_io_colour(STREAM s, uint8 *colour)
+{
+	BOOL res;
+
+	res = prs_io_uint8(s, colour);
+	s->offset += 2;
+
+	return res;
+}
+
+BOOL rdp_io_colourmap(STREAM s, COLOURMAP *colours)
 {
 	int datasize;
 
-	lsb_io_uint16(s, &colors->ncolors);
-	datasize = colors->ncolors * 3;
+	lsb_io_uint16(s, &colours->ncolours);
+	datasize = colours->ncolours * 3;
 
-	if (datasize > sizeof(colors->colors))
+	if (datasize > sizeof(colours->colours))
 		return False;
 
-	memcpy(colors->colors, s->data + s->offset, datasize);
+	memcpy(colours->colours, s->data + s->offset, datasize);
 	s->offset += datasize;
 	return True;
 }
 
-BOOL rdp_io_general_caps(STREAM s, RDP_GENERAL_CAPS *caps)
+BOOL rdp_io_bounds(STREAM s, BOUNDS *bounds)
 {
-	uint16 length = RDP_CAPLEN_GENERAL;
-	uint16 pkt_length = length;
-	BOOL res;
+	uint8 present;
 
-	res = lsb_io_uint16(s, &pkt_length);
-	if (pkt_length != length)
-	{
-		fprintf(stderr, "Unrecognised capabilities size\n");
-		return False;
-	}
+	prs_io_uint8(s, &present);
 
-	res = res ? lsb_io_uint16(s, &caps->os_major_type ) : False;
-	res = res ? lsb_io_uint16(s, &caps->os_minor_type ) : False;
-	res = res ? lsb_io_uint16(s, &caps->ver_protocol  ) : False;
-	res = res ? lsb_io_uint16(s, &caps->pad1          ) : False;
-	res = res ? lsb_io_uint16(s, &caps->compress_types) : False;
-	res = res ? lsb_io_uint16(s, &caps->pad2          ) : False;
-	res = res ? lsb_io_uint16(s, &caps->cap_update    ) : False;
-	res = res ? lsb_io_uint16(s, &caps->remote_unshare) : False;
-	res = res ? lsb_io_uint16(s, &caps->compress_level) : False;
-	res = res ? lsb_io_uint16(s, &caps->pad3          ) : False;
+	if (present & 1)
+		rdp_io_coord(s, &bounds->left, False);
+	else if (present & 16)
+		rdp_io_coord(s, &bounds->left, True);
 
-	return res;
-}
+	if (present & 2)
+		rdp_io_coord(s, &bounds->top, False);
+	else if (present & 32)
+		rdp_io_coord(s, &bounds->top, True);
 
-BOOL rdp_io_bitmap_caps(STREAM s, RDP_BITMAP_CAPS *caps)
-{
-	uint16 length = RDP_CAPLEN_BITMAP;
-	uint16 pkt_length = length;
-	BOOL res;
+	if (present & 4)
+		rdp_io_coord(s, &bounds->right, False);
+	else if (present & 64)
+		rdp_io_coord(s, &bounds->right, True);
 
-	res = lsb_io_uint16(s, &pkt_length);
-	if (pkt_length != length)
-	{
-		fprintf(stderr, "Unrecognised capabilities size\n");
-		return False;
-	}
-
-	res = res ? lsb_io_uint16(s, &caps->preferred_bpp) : False;
-	res = res ? lsb_io_uint16(s, &caps->receive1bpp  ) : False;
-	res = res ? lsb_io_uint16(s, &caps->receive4bpp  ) : False;
-	res = res ? lsb_io_uint16(s, &caps->receive8bpp  ) : False;
-	res = res ? lsb_io_uint16(s, &caps->width        ) : False;
-	res = res ? lsb_io_uint16(s, &caps->height       ) : False;
-	res = res ? lsb_io_uint16(s, &caps->pad1         ) : False;
-	res = res ? lsb_io_uint16(s, &caps->allow_resize ) : False;
-	res = res ? lsb_io_uint16(s, &caps->compression  ) : False;
-	res = res ? lsb_io_uint16(s, &caps->unknown1     ) : False;
-	res = res ? lsb_io_uint16(s, &caps->unknown2     ) : False;
-	res = res ? lsb_io_uint16(s, &caps->pad2         ) : False;
-
-	return res;
-}
-
-BOOL rdp_io_order_caps(STREAM s, RDP_ORDER_CAPS *caps)
-{
-	uint16 length = RDP_CAPLEN_ORDER;
-	uint16 pkt_length = length;
-	BOOL res;
-
-	res = lsb_io_uint16(s, &pkt_length);
-	if (pkt_length != length)
-	{
-		fprintf(stderr, "Unrecognised capabilities size\n");
-		return False;
-	}
-
-	res = res ? prs_io_uint8s(s,  caps->terminal_desc, 16) : False;
-	res = res ? lsb_io_uint32(s, &caps->pad1             ) : False;
-	res = res ? lsb_io_uint16(s, &caps->xgranularity     ) : False;
-	res = res ? lsb_io_uint16(s, &caps->ygranularity     ) : False;
-	res = res ? lsb_io_uint16(s, &caps->pad2             ) : False;
-	res = res ? lsb_io_uint16(s, &caps->max_order_level  ) : False;
-	res = res ? lsb_io_uint16(s, &caps->num_fonts        ) : False;
-	res = res ? lsb_io_uint16(s, &caps->cap_flags        ) : False;
-	res = res ? prs_io_uint8s(s,  caps->support      , 32) : False;
-	res = res ? lsb_io_uint16(s, &caps->text_cap_flags   ) : False;
-	res = res ? lsb_io_uint16(s, &caps->pad3             ) : False;
-	res = res ? lsb_io_uint32(s, &caps->pad4             ) : False;
-	res = res ? lsb_io_uint32(s, &caps->desk_save_size   ) : False;
-	res = res ? lsb_io_uint32(s, &caps->unknown1         ) : False;
-	res = res ? lsb_io_uint32(s, &caps->unknown2         ) : False;
-
-	return res;
-}
-
-BOOL rdp_io_bmpcache_info(STREAM s, RDP_BMPCACHE_INFO *info)
-{
-	if (!lsb_io_uint16(s, &info->entries      ))
-		return False;
-
-	if (!lsb_io_uint16(s, &info->max_cell_size))
-		return False;
+	if (present & 8)
+		rdp_io_coord(s, &bounds->bottom, False);
+	else if (present & 128)
+		rdp_io_coord(s, &bounds->bottom, True);
 
 	return True;
 }
 
-BOOL rdp_io_bmpcache_caps(STREAM s, RDP_BMPCACHE_CAPS *caps)
+BOOL rdp_io_pen(STREAM s, PEN *pen, uint32 present)
 {
-	uint16 length = RDP_CAPLEN_BMPCACHE;
-	uint16 pkt_length = length;
-	BOOL res;
-	int i;
+	BOOL res = True;
 
-	res = lsb_io_uint16(s, &pkt_length);
-	if (pkt_length != length)
-	{
-		fprintf(stderr, "Unrecognised capabilities size\n");
-		return False;
-	}
+	if (present & 1)
+		res = res ? prs_io_uint8(s, &pen->style) : False;
 
-	for (i = 0; i < 6; i++)
-		res = res ? lsb_io_uint32(s, &caps->unused[i]) : False;
+	if (present & 2)
+		res = res ? prs_io_uint8(s, &pen->width) : False;
 
-	for (i = 0; i < 3; i++)
-		res = res ? rdp_io_bmpcache_info(s, &caps->caches[i]) : False;
+	if (present & 4)
+		res = res ? rdp_io_colour(s, &pen->colour) : False;
 
 	return res;
 }
 
-BOOL rdp_io_control_caps(STREAM s, RDP_CONTROL_CAPS *caps)
+BOOL rdp_io_brush(STREAM s, BRUSH *brush, uint32 present)
 {
-	uint16 length = RDP_CAPLEN_CONTROL;
-	uint16 pkt_length = length;
-	BOOL res;
+	BOOL res = True;
 
-	res = lsb_io_uint16(s, &pkt_length);
-	if (pkt_length != length)
-	{
-		fprintf(stderr, "Unrecognised capabilities size\n");
-		return False;
-	}
+	if (present & 1)
+		res = res ? prs_io_uint8(s, &brush->xorigin) : False;
 
-	res = res ? lsb_io_uint16(s, &caps->control_caps    ) : False;
-	res = res ? lsb_io_uint16(s, &caps->remote_detach   ) : False;
-	res = res ? lsb_io_uint16(s, &caps->control_interest) : False;
-	res = res ? lsb_io_uint16(s, &caps->detach_interest ) : False;
+	if (present & 2)
+		res = res ? prs_io_uint8(s, &brush->yorigin) : False;
+
+	if (present & 4)
+		res = res ? prs_io_uint8(s, &brush->style) : False;
+
+	if (present & 8)
+		res = res ? prs_io_uint8(s, &brush->pattern[0]) : False;
+
+	if (present & 16)
+		res = res ? prs_io_uint8s(s, &brush->pattern[1], 7) : False;
 
 	return res;
 }
 
-BOOL rdp_io_activate_caps(STREAM s, RDP_ACTIVATE_CAPS *caps)
+/* Construct a confirm/demand active PDU */
+void rdp_make_active_pdu(RDP_ACTIVE_PDU *pdu, uint32 shareid, uint16 userid,
+				int width, int height)
 {
-	uint16 length = RDP_CAPLEN_ACTIVATE;
-	uint16 pkt_length = length;
-	BOOL res;
+	memset(pdu, 0, sizeof(*pdu));
+	pdu->shareid = shareid;
+	pdu->userid  = 1002;
+	pdu->source_len = sizeof(RDP_SOURCE);
+	memcpy(pdu->source, RDP_SOURCE, sizeof(RDP_SOURCE));
 
-	res = lsb_io_uint16(s, &pkt_length);
-	if (pkt_length != length)
-	{
-		fprintf(stderr, "Unrecognised capabilities size\n");
-		return False;
-	}
+	pdu->caps_len = RDP_CAPLEN_GENERAL + RDP_CAPLEN_BITMAP + RDP_CAPLEN_ORDER
+		+ RDP_CAPLEN_BMPCACHE + RDP_CAPLEN_COLCACHE + RDP_CAPLEN_ACTIVATE
+		+ RDP_CAPLEN_CONTROL + RDP_CAPLEN_POINTER + RDP_CAPLEN_SHARE
+		+ RDP_CAPLEN_UNKNOWN;
+	pdu->num_caps = 0xD;
 
-	res = res ? lsb_io_uint16(s, &caps->help_key         ) : False;
-	res = res ? lsb_io_uint16(s, &caps->help_index_key   ) : False;
-	res = res ? lsb_io_uint16(s, &caps->help_extended_key) : False;
-	res = res ? lsb_io_uint16(s, &caps->window_activate  ) : False;
-
-	return res;
+	rdp_make_general_caps (&pdu->general_caps );
+	rdp_make_bitmap_caps  (&pdu->bitmap_caps, width, height);
+	rdp_make_order_caps   (&pdu->order_caps   );
+	rdp_make_bmpcache_caps(&pdu->bmpcache_caps);
+	rdp_make_control_caps (&pdu->control_caps );
+	rdp_make_activate_caps(&pdu->activate_caps);
+	rdp_make_pointer_caps (&pdu->pointer_caps );
+	rdp_make_share_caps   (&pdu->share_caps, userid);
+	rdp_make_colcache_caps(&pdu->colcache_caps);
 }
 
-BOOL rdp_io_pointer_caps(STREAM s, RDP_POINTER_CAPS *caps)
-{
-	uint16 length = RDP_CAPLEN_POINTER;
-	uint16 pkt_length = length;
-	BOOL res;
-
-	res = lsb_io_uint16(s, &pkt_length);
-	if (pkt_length != length)
-	{
-		fprintf(stderr, "Unrecognised capabilities size\n");
-		return False;
-	}
-
-	res = res ? lsb_io_uint16(s, &caps->colour_pointer) : False;
-	res = res ? lsb_io_uint16(s, &caps->cache_size    ) : False;
-
-	return res;
-}
-
-BOOL rdp_io_share_caps(STREAM s, RDP_SHARE_CAPS *caps)
-{
-	uint16 length = RDP_CAPLEN_SHARE;
-	uint16 pkt_length = length;
-	BOOL res;
-
-	res = lsb_io_uint16(s, &pkt_length);
-	if (pkt_length != length)
-	{
-		fprintf(stderr, "Unrecognised capabilities size\n");
-		return False;
-	}
-
-	res = res ? lsb_io_uint16(s, &caps->userid) : False;
-	res = res ? lsb_io_uint16(s, &caps->pad   ) : False;
-
-	return res;
-}
-
-BOOL rdp_io_colcache_caps(STREAM s, RDP_COLCACHE_CAPS *caps)
-{
-	uint16 length = RDP_CAPLEN_COLCACHE;
-	uint16 pkt_length = length;
-	BOOL res;
-
-	res = lsb_io_uint16(s, &pkt_length);
-	if (pkt_length != length)
-	{
-		fprintf(stderr, "Unrecognised capabilities size\n");
-		return False;
-	}
-
-	res = res ? lsb_io_uint16(s, &caps->cache_size) : False;
-	res = res ? lsb_io_uint16(s, &caps->pad       ) : False;
-
-	return res;
-}
-
-uint8 canned_caps[] = {
-0x01,0x00,0x00,0x00,0x09,0x04,0x00,0x00,0x04,
-0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x0C,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x0C,0x00,0x08,0x00,0x01,
-0x00,0x00,0x00,0x0E,0x00,0x08,0x00,0x01,0x00,0x00,0x00,0x10,0x00,0x34,0x00,0xFE,
-0x00,0x04,0x00,0xFE,0x00,0x04,0x00,0xFE,0x00,0x08,0x00,0xFE,0x00,0x08,0x00,0xFE,
-0x00,0x10,0x00,0xFE,0x00,0x20,0x00,0xFE,0x00,0x40,0x00,0xFE,0x00,0x80,0x00,0xFE,
-0x00,0x00,0x01,0x40,0x00,0x00,0x08,0x00,0x01,0x00,0x01,0x02,0x00,0x00,0x00
-};
-
-BOOL rdp_io_unknown_caps(STREAM s, void *caps)
-{
-	uint16 length = 0x58;
-	uint16 pkt_length = length;
-	BOOL res;
-
-	res = lsb_io_uint16(s, &pkt_length);
-	if (pkt_length != length)
-	{
-		fprintf(stderr, "Unrecognised capabilities size\n");
-		return False;
-	}
-
-	res = res ? prs_io_uint8s(s, canned_caps, RDP_CAPLEN_UNKNOWN-4) : False;
-
-	return res;
-}
-
+/* Parse a confirm/demand active PDU */
 BOOL rdp_io_active_pdu(STREAM s, RDP_ACTIVE_PDU *pdu, int pdutype)
 {
 	uint16 capset;
@@ -1057,7 +550,7 @@ BOOL rdp_io_active_pdu(STREAM s, RDP_ACTIVE_PDU *pdu, int pdutype)
 
 	if (pdu->source_len > 48)
 	{
-		fprintf(stderr, "RDP source descriptor too long\n");
+		ERROR("RDP source descriptor too long\n");
 		return False;
 	}
 
@@ -1147,8 +640,7 @@ BOOL rdp_io_active_pdu(STREAM s, RDP_ACTIVE_PDU *pdu, int pdutype)
 				res = rdp_io_colcache_caps(s, &pdu->colcache_caps);
 				break;
 			default:
-				fprintf(stderr, "Warning: Unrecognised capset %x\n",
-					capset);
+				NOTIMP("capset 0x%x\n", capset);
 
 				if (!lsb_io_uint16(s, &length))
 					return False;
@@ -1161,6 +653,15 @@ BOOL rdp_io_active_pdu(STREAM s, RDP_ACTIVE_PDU *pdu, int pdutype)
 	return res;
 }
 
+/* Construct a control PDU */
+void rdp_make_control_pdu(RDP_CONTROL_PDU *pdu, uint16 action)
+{
+	pdu->action = action;
+	pdu->userid = 0;
+	pdu->controlid = 0;
+}
+
+/* Parse a control PDU */
 BOOL rdp_io_control_pdu(STREAM s, RDP_CONTROL_PDU *pdu)
 {
 	BOOL res = True;
@@ -1172,7 +673,15 @@ BOOL rdp_io_control_pdu(STREAM s, RDP_CONTROL_PDU *pdu)
 	return res;
 }
 
-BOOL rdp_io_synchronize_pdu(STREAM s, RDP_SYNCHRONIZE_PDU *pdu)
+/* Construct a synchronisation PDU */
+void rdp_make_synchronise_pdu(RDP_SYNCHRONISE_PDU *pdu, uint16 userid)
+{
+	pdu->type = 1;
+	pdu->userid = userid;
+}
+
+/* Parse a synchronisation PDU */
+BOOL rdp_io_synchronise_pdu(STREAM s, RDP_SYNCHRONISE_PDU *pdu)
 {
 	BOOL res = True;
 
@@ -1182,12 +691,14 @@ BOOL rdp_io_synchronize_pdu(STREAM s, RDP_SYNCHRONIZE_PDU *pdu)
 	return res;
 }
 
+/* Parse a single input event */
 BOOL rdp_io_input_event(STREAM s, RDP_INPUT_EVENT *evt)
 {
 	BOOL res = True;
 
 	res = res ? lsb_io_uint32(s, &evt->event_time)   : False;
 	res = res ? lsb_io_uint16(s, &evt->message_type) : False;
+	res = res ? lsb_io_uint16(s, &evt->device_flags) : False;
 
 	if (!res)
 		return False;
@@ -1196,24 +707,39 @@ BOOL rdp_io_input_event(STREAM s, RDP_INPUT_EVENT *evt)
 	{
 	case RDP_INPUT_CODEPOINT:
 	case RDP_INPUT_VIRTKEY:
-		res = res ? lsb_io_uint16(s, &evt->device_flags) : False;
-		res = res ? lsb_io_uint16(s, &evt->kbd_keycode ) : False;
+		res = res ? lsb_io_uint16(s, &evt->param1) : False;
 		break;
 	case RDP_INPUT_SYNCHRONIZE:
-	case RDP_INPUT_UNKNOWN:
+	case RDP_INPUT_SCANCODE:
 	case RDP_INPUT_MOUSE:
-		res = res ? lsb_io_uint16(s, &evt->device_flags) : False;
-		res = res ? lsb_io_uint16(s, &evt->mouse_x     ) : False;
-		res = res ? lsb_io_uint16(s, &evt->mouse_y     ) : False;
+		res = res ? lsb_io_uint16(s, &evt->param1) : False;
+		res = res ? lsb_io_uint16(s, &evt->param2) : False;
 		break;
 	default:
-		fprintf(stderr, "Unknown input type %d\n", evt->message_type);
+		NOTIMP("input type %d\n", evt->message_type);
 		return False;
 	}
 
 	return res;
 }
 
+/* Construct an input PDU */
+void rdp_make_input_pdu(RDP_INPUT_PDU *pdu, uint16 message_type,
+			uint16 device_flags, uint16 param1, uint16 param2)
+{
+	uint32 now = time(NULL);
+
+	pdu->num_events = 1;
+	pdu->pad = 0;
+
+	pdu->event[0].event_time = now;
+	pdu->event[0].message_type = message_type;
+	pdu->event[0].device_flags = device_flags;
+	pdu->event[0].param1 = param1;
+	pdu->event[0].param2 = param2;
+}
+
+/* Parse an input PDU */
 BOOL rdp_io_input_pdu(STREAM s, RDP_INPUT_PDU *pdu)
 {
 	BOOL res = True;
@@ -1224,7 +750,7 @@ BOOL rdp_io_input_pdu(STREAM s, RDP_INPUT_PDU *pdu)
 
 	if (pdu->num_events > RDP_MAX_EVENTS)
 	{
-		fprintf(stderr, "Too many events in one PDU\n");
+		ERROR("Too many events in one PDU\n");
 		return False;
 	}
 
@@ -1236,6 +762,16 @@ BOOL rdp_io_input_pdu(STREAM s, RDP_INPUT_PDU *pdu)
 	return res;
 }
 
+/* Construct a font information PDU */
+void rdp_make_font_pdu(RDP_FONT_PDU *pdu, uint16 seqno)
+{
+	pdu->num_fonts = 0;
+	pdu->unknown1 = 0x3e;
+	pdu->unknown2 = seqno;
+	pdu->entry_size = RDP_FONT_INFO_SIZE;
+}
+
+/* Parse a font information structure */
 BOOL rdp_io_font_info(STREAM s, RDP_FONT_INFO *font)
 {
 	BOOL res = True;
@@ -1253,6 +789,7 @@ BOOL rdp_io_font_info(STREAM s, RDP_FONT_INFO *font)
 	return res;
 }
 
+/* Parse a font information PDU */
 BOOL rdp_io_font_pdu(STREAM s, RDP_FONT_PDU *pdu)
 {
 	BOOL res = True;
@@ -1265,7 +802,7 @@ BOOL rdp_io_font_pdu(STREAM s, RDP_FONT_PDU *pdu)
 
 	if (pdu->num_fonts > RDP_MAX_FONTS)
 	{
-		fprintf(stderr, "Too many fonts in one PDU\n");
+		ERROR("Too many fonts in one PDU\n");
 		return False;
 	}
 
@@ -1277,6 +814,26 @@ BOOL rdp_io_font_pdu(STREAM s, RDP_FONT_PDU *pdu)
 	return res;
 }
 
+/* Parse a pointer PDU */
+BOOL rdp_io_pointer_pdu(STREAM s, RDP_POINTER_PDU *ptr)
+{
+	BOOL res = True;
+
+	res = res ? lsb_io_uint16(s, &ptr->message) : False;
+	res = res ? lsb_io_uint16(s, &ptr->pad    ) : False;
+
+	switch (ptr->message)
+	{
+		case RDP_POINTER_MOVE:
+			res = res ? lsb_io_uint16(s, &ptr->x      ) : False;
+			res = res ? lsb_io_uint16(s, &ptr->y      ) : False;
+			break;
+	}
+
+	return res;
+}
+
+/* Parse an update PDU */
 BOOL rdp_io_update_pdu(STREAM s, RDP_UPDATE_PDU *pdu)
 {
 	BOOL res = True;
@@ -1286,6 +843,306 @@ BOOL rdp_io_update_pdu(STREAM s, RDP_UPDATE_PDU *pdu)
 
 	return res;
 }
+
+
+/* PRIMARY ORDERS */
+
+/* Parse an destination blt order */
+BOOL rdp_io_destblt_order(STREAM s, DESTBLT_ORDER *os, uint32 present, BOOL delta)
+{
+	if (present & 0x01)
+		rdp_io_coord(s, &os->x, delta);
+
+	if (present & 0x02)
+		rdp_io_coord(s, &os->y, delta);
+
+	if (present & 0x04)
+		rdp_io_coord(s, &os->cx, delta);
+
+	if (present & 0x08)
+		rdp_io_coord(s, &os->cy, delta);
+
+	if (present & 0x10)
+		prs_io_uint8(s, &os->opcode);
+
+	return PRS_ERROR(s);
+}
+
+/* Parse an pattern blt order */
+BOOL rdp_io_patblt_order(STREAM s, PATBLT_ORDER *os, uint32 present, BOOL delta)
+{
+	if (present & 0x0001)
+		rdp_io_coord(s, &os->x, delta);
+
+	if (present & 0x0002)
+		rdp_io_coord(s, &os->y, delta);
+
+	if (present & 0x0004)
+		rdp_io_coord(s, &os->cx, delta);
+
+	if (present & 0x0008)
+		rdp_io_coord(s, &os->cy, delta);
+
+	if (present & 0x0010)
+		prs_io_uint8(s, &os->opcode);
+
+	if (present & 0x0020)
+		rdp_io_colour(s, &os->bgcolour);
+
+	if (present & 0x0040)
+		rdp_io_colour(s, &os->fgcolour);
+
+	rdp_io_brush(s, &os->brush, present >> 7);
+
+	return PRS_ERROR(s);
+}
+
+/* Parse an screen blt order */
+BOOL rdp_io_screenblt_order(STREAM s, SCREENBLT_ORDER *os, uint32 present, BOOL delta)
+{
+	if (present & 0x0001)
+		rdp_io_coord(s, &os->x, delta);
+
+	if (present & 0x0002)
+		rdp_io_coord(s, &os->y, delta);
+
+	if (present & 0x0004)
+		rdp_io_coord(s, &os->cx, delta);
+
+	if (present & 0x0008)
+		rdp_io_coord(s, &os->cy, delta);
+
+	if (present & 0x0010)
+		prs_io_uint8(s, &os->opcode);
+
+	if (present & 0x0020)
+		rdp_io_coord(s, &os->srcx, delta);
+
+	if (present & 0x0040)
+		rdp_io_coord(s, &os->srcy, delta);
+
+	return PRS_ERROR(s);
+}
+
+/* Parse a line order */
+BOOL rdp_io_line_order(STREAM s, LINE_ORDER *os, uint32 present, BOOL delta)
+{
+	if (present & 0x0001)
+		lsb_io_uint16(s, &os->mixmode);
+
+	if (present & 0x0002)
+		rdp_io_coord(s, &os->startx, delta);
+
+	if (present & 0x0004)
+		rdp_io_coord(s, &os->starty, delta);
+
+	if (present & 0x0008)
+		rdp_io_coord(s, &os->endx, delta);
+
+	if (present & 0x0010)
+		rdp_io_coord(s, &os->endy, delta);
+
+	if (present & 0x0020)
+		rdp_io_colour(s, &os->bgcolour);
+
+	if (present & 0x0040)
+		prs_io_uint8(s, &os->opcode);
+
+	rdp_io_pen(s, &os->pen, present >> 7);
+
+	return PRS_ERROR(s);
+}
+
+/* Parse an opaque rectangle order */
+BOOL rdp_io_rect_order(STREAM s, RECT_ORDER *os, uint32 present, BOOL delta)
+{
+	if (present & 0x01)
+		rdp_io_coord(s, &os->x, delta);
+
+	if (present & 0x02)
+		rdp_io_coord(s, &os->y, delta);
+
+	if (present & 0x04)
+		rdp_io_coord(s, &os->cx, delta);
+
+	if (present & 0x08)
+		rdp_io_coord(s, &os->cy, delta);
+
+	if (present & 0x10)
+		prs_io_uint8(s, &os->colour);
+
+	return PRS_ERROR(s);
+}
+
+/* Parse a desktop save order */
+BOOL rdp_io_desksave_order(STREAM s, DESKSAVE_ORDER *os, uint32 present, BOOL delta)
+{
+	if (present & 0x01)
+		lsb_io_uint32(s, &os->offset);
+
+	if (present & 0x02)
+		rdp_io_coord(s, &os->left, delta);
+
+	if (present & 0x04)
+		rdp_io_coord(s, &os->top, delta);
+
+	if (present & 0x08)
+		rdp_io_coord(s, &os->right, delta);
+
+	if (present & 0x10)
+		rdp_io_coord(s, &os->bottom, delta);
+
+	if (present & 0x20)
+		prs_io_uint8(s, &os->action);
+
+	return PRS_ERROR(s);
+}
+
+/* Parse a memory blt order */
+BOOL rdp_io_memblt_order(STREAM s, MEMBLT_ORDER *os, uint32 present, BOOL delta)
+{
+	if (present & 0x0001)
+	{
+		prs_io_uint8(s, &os->cache_id);
+		prs_io_uint8(s, &os->colour_table);
+	}
+
+	if (present & 0x0002)
+		rdp_io_coord(s, &os->x, delta);
+
+	if (present & 0x0004)
+		rdp_io_coord(s, &os->y, delta);
+
+	if (present & 0x0008)
+		rdp_io_coord(s, &os->cx, delta);
+
+	if (present & 0x0010)
+		rdp_io_coord(s, &os->cy, delta);
+
+	if (present & 0x0020)
+		prs_io_uint8(s, &os->opcode);
+
+	if (present & 0x0040)
+		rdp_io_coord(s, &os->srcx, delta);
+
+	if (present & 0x0080)
+		rdp_io_coord(s, &os->srcy, delta);
+
+	if (present & 0x0100)
+		lsb_io_uint16(s, &os->cache_idx);
+
+	return PRS_ERROR(s);
+}
+
+/* Parse a 3-way blt order */
+BOOL rdp_io_triblt_order(STREAM s, TRIBLT_ORDER *os, uint32 present, BOOL delta)
+{
+	if (present & 0x000001)
+	{
+		prs_io_uint8(s, &os->cache_id);
+		prs_io_uint8(s, &os->colour_table);
+	}
+
+	if (present & 0x000002)
+		rdp_io_coord(s, &os->x, delta);
+
+	if (present & 0x000004)
+		rdp_io_coord(s, &os->y, delta);
+
+	if (present & 0x000008)
+		rdp_io_coord(s, &os->cx, delta);
+
+	if (present & 0x000010)
+		rdp_io_coord(s, &os->cy, delta);
+
+	if (present & 0x000020)
+		prs_io_uint8(s, &os->opcode);
+
+	if (present & 0x000040)
+		rdp_io_coord(s, &os->srcx, delta);
+
+	if (present & 0x000080)
+		rdp_io_coord(s, &os->srcy, delta);
+
+	if (present & 0x000100)
+		rdp_io_colour(s, &os->bgcolour);
+
+	if (present & 0x000200)
+		rdp_io_colour(s, &os->fgcolour);
+
+	rdp_io_brush(s, &os->brush, present >> 10);
+
+	if (present & 0x008000)
+		lsb_io_uint16(s, &os->cache_idx);
+
+	if (present & 0x010000)
+		lsb_io_uint16(s, &os->unknown);
+
+	return PRS_ERROR(s);
+}
+
+/* Parse a text order */
+BOOL rdp_io_text2_order(STREAM s, TEXT2_ORDER *os, uint32 present, BOOL delta)
+{
+	if (present & 0x000001)
+		prs_io_uint8(s, &os->font);
+
+	if (present & 0x000002)
+		prs_io_uint8(s, &os->flags);
+
+	if (present & 0x000004)
+		prs_io_uint8(s, &os->unknown);
+
+	if (present & 0x000008)
+		prs_io_uint8(s, &os->mixmode);
+
+	if (present & 0x000010)
+		rdp_io_colour(s, &os->fgcolour);
+
+	if (present & 0x000020)
+		rdp_io_colour(s, &os->bgcolour);
+
+	if (present & 0x000040)
+		lsb_io_uint16(s, &os->clipleft);
+
+	if (present & 0x000080)
+		lsb_io_uint16(s, &os->cliptop);
+
+	if (present & 0x000100)
+		lsb_io_uint16(s, &os->clipright);
+
+	if (present & 0x000200)
+		lsb_io_uint16(s, &os->clipbottom);
+
+	if (present & 0x000400)
+		lsb_io_uint16(s, &os->boxleft);
+
+	if (present & 0x000800)
+		lsb_io_uint16(s, &os->boxtop);
+
+	if (present & 0x001000)
+		lsb_io_uint16(s, &os->boxright);
+
+	if (present & 0x002000)
+		lsb_io_uint16(s, &os->boxbottom);
+
+	if (present & 0x080000)
+		lsb_io_uint16(s, &os->x);
+
+	if (present & 0x100000)
+		lsb_io_uint16(s, &os->y);
+
+	if (present & 0x200000)
+	{
+		prs_io_uint8(s, &os->length);
+		prs_io_uint8s(s, os->text, os->length);
+	}
+
+	return PRS_ERROR(s);
+}
+
+
+/* SECONDARY ORDERS */
 
 BOOL rdp_io_secondary_order(STREAM s, RDP_SECONDARY_ORDER *rso)
 {
@@ -1298,33 +1155,451 @@ BOOL rdp_io_secondary_order(STREAM s, RDP_SECONDARY_ORDER *rso)
 	return res;
 }
 
-BOOL rdp_io_bitmap_header(STREAM s, RDP_BITMAP_HEADER *rdh)
+BOOL rdp_io_raw_bmpcache_order(STREAM s, RDP_RAW_BMPCACHE_ORDER *rbo)
 {
 	BOOL res = True;
 
-	res = res ? prs_io_uint8 (s, &rdh->cache_id  ) : False;
-	res = res ? prs_io_uint8 (s, &rdh->pad1      ) : False;
-	res = res ? prs_io_uint8 (s, &rdh->width     ) : False;
-	res = res ? prs_io_uint8 (s, &rdh->height    ) : False;
-	res = res ? prs_io_uint8 (s, &rdh->bpp       ) : False;
-	res = res ? lsb_io_uint16(s, &rdh->bufsize   ) : False;
-	res = res ? lsb_io_uint16(s, &rdh->cache_idx ) : False;
-	res = res ? lsb_io_uint16(s, &rdh->pad2      ) : False;
-	res = res ? lsb_io_uint16(s, &rdh->size      ) : False;
-	res = res ? lsb_io_uint16(s, &rdh->row_size  ) : False;
-	res = res ? lsb_io_uint16(s, &rdh->final_size) : False;
+	res = res ? prs_io_uint8 (s, &rbo->cache_id  ) : False;
+	res = res ? prs_io_uint8 (s, &rbo->pad1      ) : False;
+	res = res ? prs_io_uint8 (s, &rbo->width     ) : False;
+	res = res ? prs_io_uint8 (s, &rbo->height    ) : False;
+	res = res ? prs_io_uint8 (s, &rbo->bpp       ) : False;
+	res = res ? lsb_io_uint16(s, &rbo->bufsize   ) : False;
+	res = res ? lsb_io_uint16(s, &rbo->cache_idx ) : False;
+
+	rbo->data = s->data + s->offset;
+	s->offset += rbo->bufsize;
 
 	return res;
 }
 
-BOOL rdp_io_pointer(STREAM s, RDP_POINTER *ptr)
+BOOL rdp_io_bmpcache_order(STREAM s, RDP_BMPCACHE_ORDER *rbo)
 {
 	BOOL res = True;
 
-	res = res ? lsb_io_uint16(s, &ptr->message) : False;
-	res = res ? lsb_io_uint16(s, &ptr->pad    ) : False;
-	res = res ? lsb_io_uint16(s, &ptr->x      ) : False;
-	res = res ? lsb_io_uint16(s, &ptr->y      ) : False;
+	res = res ? prs_io_uint8 (s, &rbo->cache_id  ) : False;
+	res = res ? prs_io_uint8 (s, &rbo->pad1      ) : False;
+	res = res ? prs_io_uint8 (s, &rbo->width     ) : False;
+	res = res ? prs_io_uint8 (s, &rbo->height    ) : False;
+	res = res ? prs_io_uint8 (s, &rbo->bpp       ) : False;
+	res = res ? lsb_io_uint16(s, &rbo->bufsize   ) : False;
+	res = res ? lsb_io_uint16(s, &rbo->cache_idx ) : False;
+	res = res ? lsb_io_uint16(s, &rbo->pad2      ) : False;
+	res = res ? lsb_io_uint16(s, &rbo->size      ) : False;
+	res = res ? lsb_io_uint16(s, &rbo->row_size  ) : False;
+	res = res ? lsb_io_uint16(s, &rbo->final_size) : False;
+
+	rbo->data = s->data + s->offset;
+	s->offset += rbo->size;
+
+	return res;
+}
+
+BOOL rdp_io_colcache_order(STREAM s, RDP_COLCACHE_ORDER *colours)
+{
+	COLOURENTRY *entry;
+	int i;
+
+	prs_io_uint8(s, &colours->cache_id);
+	lsb_io_uint16(s, &colours->map.ncolours);
+
+	for (i = 0; i < colours->map.ncolours; i++)
+	{
+		entry = &colours->map.colours[i];
+		prs_io_uint8(s, &entry->blue);
+		prs_io_uint8(s, &entry->green);
+		prs_io_uint8(s, &entry->red);
+		s->offset++;
+	}
+
+	return True;
+}
+
+BOOL rdp_io_fontcache_order(STREAM s, RDP_FONTCACHE_ORDER *font)
+{
+	RDP_FONT_GLYPH *glyph;
+	BOOL res = True;
+	int i, j, datasize;
+	uint8 in, out;
+
+	res = res ? prs_io_uint8(s, &font->font   ) : False;
+	res = res ? prs_io_uint8(s, &font->nglyphs) : False;
+
+	for (i = 0; i < font->nglyphs; i++)
+	{
+		glyph = &font->glyphs[i];
+		res = res ? lsb_io_uint16(s, &glyph->character) : False;
+		res = res ? lsb_io_uint16(s, &glyph->unknown  ) : False;
+		res = res ? lsb_io_uint16(s, &glyph->baseline ) : False;
+		res = res ? lsb_io_uint16(s, &glyph->width    ) : False;
+		res = res ? lsb_io_uint16(s, &glyph->height   ) : False;
+
+		datasize = (glyph->height * ((glyph->width + 7) / 8) + 3) & ~3;
+		res = res ? prs_io_uint8s(s, glyph->data, datasize) : False;
+		for (j = 0; j < datasize; j++)
+		{
+			in = glyph->data[j];
+			out = 0;
+			if (in & 1) out |= 128;
+			if (in & 2) out |= 64;
+			if (in & 4) out |= 32;
+			if (in & 8) out |= 16;
+			if (in & 16) out |= 8;
+			if (in & 32) out |= 4;
+			if (in & 64) out |= 2;
+			if (in & 128) out |= 1;
+			glyph->data[j] = out;
+		}
+	} 
+
+	return res;
+}
+
+
+/* CAPABILITIES */
+
+/* Construct a general capability set */
+void rdp_make_general_caps(RDP_GENERAL_CAPS *caps)
+{
+	caps->os_major_type = 1;
+	caps->os_minor_type = 3;
+	caps->ver_protocol = 0x200;
+}
+
+/* Parse general capability set */
+BOOL rdp_io_general_caps(STREAM s, RDP_GENERAL_CAPS *caps)
+{
+	uint16 length = RDP_CAPLEN_GENERAL;
+	uint16 pkt_length = length;
+	BOOL res;
+
+	res = lsb_io_uint16(s, &pkt_length);
+	if (pkt_length != length)
+	{
+		ERROR("Unrecognised capabilities size\n");
+		return False;
+	}
+
+	res = res ? lsb_io_uint16(s, &caps->os_major_type ) : False;
+	res = res ? lsb_io_uint16(s, &caps->os_minor_type ) : False;
+	res = res ? lsb_io_uint16(s, &caps->ver_protocol  ) : False;
+	res = res ? lsb_io_uint16(s, &caps->pad1          ) : False;
+	res = res ? lsb_io_uint16(s, &caps->compress_types) : False;
+	res = res ? lsb_io_uint16(s, &caps->pad2          ) : False;
+	res = res ? lsb_io_uint16(s, &caps->cap_update    ) : False;
+	res = res ? lsb_io_uint16(s, &caps->remote_unshare) : False;
+	res = res ? lsb_io_uint16(s, &caps->compress_level) : False;
+	res = res ? lsb_io_uint16(s, &caps->pad3          ) : False;
+
+	return res;
+}
+
+/* Construct a bitmap capability set */
+void rdp_make_bitmap_caps(RDP_BITMAP_CAPS *caps, int width, int height)
+{
+	caps->preferred_bpp = 8;
+	caps->receive1bpp = 1;
+	caps->receive4bpp = 1;
+	caps->receive8bpp = 1;
+	caps->width = width;
+	caps->height = height;
+	caps->compression = 1;
+	caps->unknown2 = 1;
+}
+
+/* Parse bitmap capability set */
+BOOL rdp_io_bitmap_caps(STREAM s, RDP_BITMAP_CAPS *caps)
+{
+	uint16 length = RDP_CAPLEN_BITMAP;
+	uint16 pkt_length = length;
+	BOOL res;
+
+	res = lsb_io_uint16(s, &pkt_length);
+	if (pkt_length != length)
+	{
+		ERROR("Unrecognised capabilities size\n");
+		return False;
+	}
+
+	res = res ? lsb_io_uint16(s, &caps->preferred_bpp) : False;
+	res = res ? lsb_io_uint16(s, &caps->receive1bpp  ) : False;
+	res = res ? lsb_io_uint16(s, &caps->receive4bpp  ) : False;
+	res = res ? lsb_io_uint16(s, &caps->receive8bpp  ) : False;
+	res = res ? lsb_io_uint16(s, &caps->width        ) : False;
+	res = res ? lsb_io_uint16(s, &caps->height       ) : False;
+	res = res ? lsb_io_uint16(s, &caps->pad1         ) : False;
+	res = res ? lsb_io_uint16(s, &caps->allow_resize ) : False;
+	res = res ? lsb_io_uint16(s, &caps->compression  ) : False;
+	res = res ? lsb_io_uint16(s, &caps->unknown1     ) : False;
+	res = res ? lsb_io_uint16(s, &caps->unknown2     ) : False;
+	res = res ? lsb_io_uint16(s, &caps->pad2         ) : False;
+
+	return res;
+}
+
+/* Construct an order capability set */
+void rdp_make_order_caps(RDP_ORDER_CAPS *caps)
+{
+	caps->xgranularity = 1;
+	caps->ygranularity = 20;
+	caps->max_order_level = 1;
+	caps->num_fonts = 0x147;
+	caps->cap_flags = 0x2A;
+
+//	caps->cap_flags = ORDER_CAP_NEGOTIATE | ORDER_CAP_NOSUPPORT;
+
+	caps->support[0] = caps->support[1] = caps->support[2]
+		= caps->support[3] = caps->support[4] = caps->support[5]
+		= caps->support[6] = caps->support[8] = caps->support[11]
+		= caps->support[12] = caps->support[22] = caps->support[28]
+		= caps->support[29] = caps->support[30] = 1;
+	caps->text_cap_flags = 0x6A1;
+	caps->desk_save_size = 0x38400;
+	caps->unknown2 = 0x4E4;
+}
+
+/* Parse order capability set */
+BOOL rdp_io_order_caps(STREAM s, RDP_ORDER_CAPS *caps)
+{
+	uint16 length = RDP_CAPLEN_ORDER;
+	uint16 pkt_length = length;
+	BOOL res;
+
+	res = lsb_io_uint16(s, &pkt_length);
+	if (pkt_length != length)
+	{
+		ERROR("Unrecognised capabilities size\n");
+		return False;
+	}
+
+	res = res ? prs_io_uint8s(s,  caps->terminal_desc, 16) : False;
+	res = res ? lsb_io_uint32(s, &caps->pad1             ) : False;
+	res = res ? lsb_io_uint16(s, &caps->xgranularity     ) : False;
+	res = res ? lsb_io_uint16(s, &caps->ygranularity     ) : False;
+	res = res ? lsb_io_uint16(s, &caps->pad2             ) : False;
+	res = res ? lsb_io_uint16(s, &caps->max_order_level  ) : False;
+	res = res ? lsb_io_uint16(s, &caps->num_fonts        ) : False;
+	res = res ? lsb_io_uint16(s, &caps->cap_flags        ) : False;
+	res = res ? prs_io_uint8s(s,  caps->support      , 32) : False;
+	res = res ? lsb_io_uint16(s, &caps->text_cap_flags   ) : False;
+	res = res ? lsb_io_uint16(s, &caps->pad3             ) : False;
+	res = res ? lsb_io_uint32(s, &caps->pad4             ) : False;
+	res = res ? lsb_io_uint32(s, &caps->desk_save_size   ) : False;
+	res = res ? lsb_io_uint32(s, &caps->unknown1         ) : False;
+	res = res ? lsb_io_uint32(s, &caps->unknown2         ) : False;
+
+	return res;
+}
+
+/* Construct a bitmap cache capability set */
+void rdp_make_bmpcache_caps(RDP_BMPCACHE_CAPS *caps)
+{
+	caps->caches[0].entries = 0x258;
+	caps->caches[0].max_cell_size = 0x100;
+	caps->caches[1].entries = 0x12c;
+	caps->caches[1].max_cell_size = 0x400;
+	caps->caches[2].entries = 0x106;
+	caps->caches[2].max_cell_size = 0x1000;
+}
+
+/* Parse single bitmap cache information structure */
+BOOL rdp_io_bmpcache_info(STREAM s, RDP_BMPCACHE_INFO *info)
+{
+	if (!lsb_io_uint16(s, &info->entries      ))
+		return False;
+
+	if (!lsb_io_uint16(s, &info->max_cell_size))
+		return False;
+
+	return True;
+}
+
+/* Parse bitmap cache capability set */
+BOOL rdp_io_bmpcache_caps(STREAM s, RDP_BMPCACHE_CAPS *caps)
+{
+	uint16 length = RDP_CAPLEN_BMPCACHE;
+	uint16 pkt_length = length;
+	BOOL res;
+	int i;
+
+	res = lsb_io_uint16(s, &pkt_length);
+	if (pkt_length != length)
+	{
+		ERROR("Unrecognised capabilities size\n");
+		return False;
+	}
+
+	for (i = 0; i < 6; i++)
+		res = res ? lsb_io_uint32(s, &caps->unused[i]) : False;
+
+	for (i = 0; i < 3; i++)
+		res = res ? rdp_io_bmpcache_info(s, &caps->caches[i]) : False;
+
+	return res;
+}
+
+/* Construct a control capability set */
+void rdp_make_control_caps(RDP_CONTROL_CAPS *caps)
+{
+	caps->control_interest = 2;
+	caps->detach_interest = 2;
+}
+
+/* Parse control capability set */
+BOOL rdp_io_control_caps(STREAM s, RDP_CONTROL_CAPS *caps)
+{
+	uint16 length = RDP_CAPLEN_CONTROL;
+	uint16 pkt_length = length;
+	BOOL res;
+
+	res = lsb_io_uint16(s, &pkt_length);
+	if (pkt_length != length)
+	{
+		ERROR("Unrecognised capabilities size\n");
+		return False;
+	}
+
+	res = res ? lsb_io_uint16(s, &caps->control_caps    ) : False;
+	res = res ? lsb_io_uint16(s, &caps->remote_detach   ) : False;
+	res = res ? lsb_io_uint16(s, &caps->control_interest) : False;
+	res = res ? lsb_io_uint16(s, &caps->detach_interest ) : False;
+
+	return res;
+}
+
+/* Construct an activation capability set */
+void rdp_make_activate_caps(RDP_ACTIVATE_CAPS *caps)
+{
+}
+
+/* Parse activation capability set */
+BOOL rdp_io_activate_caps(STREAM s, RDP_ACTIVATE_CAPS *caps)
+{
+	uint16 length = RDP_CAPLEN_ACTIVATE;
+	uint16 pkt_length = length;
+	BOOL res;
+
+	res = lsb_io_uint16(s, &pkt_length);
+	if (pkt_length != length)
+	{
+		ERROR("Unrecognised capabilities size\n");
+		return False;
+	}
+
+	res = res ? lsb_io_uint16(s, &caps->help_key         ) : False;
+	res = res ? lsb_io_uint16(s, &caps->help_index_key   ) : False;
+	res = res ? lsb_io_uint16(s, &caps->help_extended_key) : False;
+	res = res ? lsb_io_uint16(s, &caps->window_activate  ) : False;
+
+	return res;
+}
+
+/* Construct a pointer capability set */
+void rdp_make_pointer_caps(RDP_POINTER_CAPS *caps)
+{
+	caps->colour_pointer = 0;
+	caps->cache_size = 20;
+}
+
+/* Parse pointer capability set */
+BOOL rdp_io_pointer_caps(STREAM s, RDP_POINTER_CAPS *caps)
+{
+	uint16 length = RDP_CAPLEN_POINTER;
+	uint16 pkt_length = length;
+	BOOL res;
+
+	res = lsb_io_uint16(s, &pkt_length);
+	if (pkt_length != length)
+	{
+		ERROR("Unrecognised capabilities size\n");
+		return False;
+	}
+
+	res = res ? lsb_io_uint16(s, &caps->colour_pointer) : False;
+	res = res ? lsb_io_uint16(s, &caps->cache_size    ) : False;
+
+	return res;
+}
+
+/* Construct a share capability set */
+void rdp_make_share_caps(RDP_SHARE_CAPS *caps, uint16 userid)
+{
+}
+
+/* Parse share capability set */
+BOOL rdp_io_share_caps(STREAM s, RDP_SHARE_CAPS *caps)
+{
+	uint16 length = RDP_CAPLEN_SHARE;
+	uint16 pkt_length = length;
+	BOOL res;
+
+	res = lsb_io_uint16(s, &pkt_length);
+	if (pkt_length != length)
+	{
+		ERROR("Unrecognised capabilities size\n");
+		return False;
+	}
+
+	res = res ? lsb_io_uint16(s, &caps->userid) : False;
+	res = res ? lsb_io_uint16(s, &caps->pad   ) : False;
+
+	return res;
+}
+
+/* Construct a colour cache capability set */
+void rdp_make_colcache_caps(RDP_COLCACHE_CAPS *caps)
+{
+	caps->cache_size = 6;
+}
+
+/* Parse colour cache capability set */
+BOOL rdp_io_colcache_caps(STREAM s, RDP_COLCACHE_CAPS *caps)
+{
+	uint16 length = RDP_CAPLEN_COLCACHE;
+	uint16 pkt_length = length;
+	BOOL res;
+
+	res = lsb_io_uint16(s, &pkt_length);
+	if (pkt_length != length)
+	{
+		ERROR("Unrecognised capabilities size\n");
+		return False;
+	}
+
+	res = res ? lsb_io_uint16(s, &caps->cache_size) : False;
+	res = res ? lsb_io_uint16(s, &caps->pad       ) : False;
+
+	return res;
+}
+
+uint8 canned_caps[] = {
+0x01,0x00,0x00,0x00,0x09,0x04,0x00,0x00,0x04,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x0C,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x0C,0x00,0x08,0x00,0x01,
+0x00,0x00,0x00,0x0E,0x00,0x08,0x00,0x01,0x00,0x00,0x00,0x10,0x00,0x34,0x00,0xFE,
+0x00,0x04,0x00,0xFE,0x00,0x04,0x00,0xFE,0x00,0x08,0x00,0xFE,0x00,0x08,0x00,0xFE,
+0x00,0x10,0x00,0xFE,0x00,0x20,0x00,0xFE,0x00,0x40,0x00,0xFE,0x00,0x80,0x00,0xFE,
+0x00,0x00,0x01,0x40,0x00,0x00,0x08,0x00,0x01,0x00,0x01,0x02,0x00,0x00,0x00
+};
+
+/* Insert canned capabilities */
+BOOL rdp_io_unknown_caps(STREAM s, void *caps)
+{
+	uint16 length = 0x58;
+	uint16 pkt_length = length;
+	BOOL res;
+
+	res = lsb_io_uint16(s, &pkt_length);
+	if (pkt_length != length)
+	{
+		ERROR("Unrecognised capabilities size\n");
+		return False;
+	}
+
+	res = res ? prs_io_uint8s(s, canned_caps, RDP_CAPLEN_UNKNOWN-4) : False;
 
 	return res;
 }

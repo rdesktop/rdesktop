@@ -33,15 +33,14 @@ HCONN mcs_connect(char *server)
 	mcs_send_connect_initial(conn);
 	if (!iso_recv(conn) || !mcs_io_connect_response(&conn->in, &mcr))
 	{
-		fprintf(stderr, "MCS error, expected Connect-Response\n");
+		ERROR("MCS error, expected Connect-Response\n");
 		iso_disconnect(conn);
 		return NULL;
 	}
 
 	if (mcr.result != 0)
 	{
-		fprintf(stderr, "MCS-Connect-Initial failed, result %d\n",
-			mcr.result);
+		ERROR("MCS-Connect-Initial failed, result %d\n", mcr.result);
 		iso_disconnect(conn);
 		return NULL;
 	}
@@ -51,14 +50,14 @@ HCONN mcs_connect(char *server)
 	mcs_send_aurq(conn);
 	if (!iso_recv(conn) || !mcs_io_aucf(&conn->in, &aucf))
 	{
-		fprintf(stderr, "MCS error, expected AUcf\n");
+		ERROR("MCS error, expected AUcf\n");
 		mcs_disconnect(conn);
 		return NULL;
 	}
 
 	if (aucf.result != 0)
 	{
-		fprintf(stderr, "AUrq failed, result %d\n", mcr.result);
+		ERROR("AUrq failed, result %d\n", mcr.result);
 		mcs_disconnect(conn);
 		return NULL;
 	}
@@ -82,13 +81,13 @@ BOOL mcs_join_channel(HCONN conn, uint16 chanid)
 	mcs_send_cjrq(conn, chanid);
 	if (!iso_recv(conn) || !mcs_io_cjcf(&conn->in, &cjcf))
 	{
-		fprintf(stderr, "MCS error, expected CJcf\n");
+		ERROR("MCS error, expected CJcf\n");
 		return False;
 	}
 
 	if (cjcf.result != 0)
 	{
-		fprintf(stderr, "CJrq failed, result %d\n", cjcf.result);
+		ERROR("CJrq failed, result %d\n", cjcf.result);
 		return False;
 	}
 
@@ -179,11 +178,6 @@ BOOL mcs_recv(HCONN conn, BOOL request)
 	if (!iso_recv(conn) || !mcs_io_data(&conn->in, &data, request))
 		return False;
 
-#ifdef MCS_DEBUG
-	fprintf(stderr, "MCS packet\n");
-	dump_data(conn->in.data+conn->in.offset, conn->in.end-conn->in.offset);
-#endif
-
 	conn->in.rdp_offset = conn->in.offset;
 	return True;
 }
@@ -216,16 +210,34 @@ char precanned_connect_userdata[] = {
    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-   0x00,0x01,0xca,0x00,0x00,0x02,0xc0,0x08,0x00,0x00,0x00,0x00,0x00 };
+   0x00,0x01,0xca,0x00,0x00,0x02,0xc0,0x08,0x00,
+   /* encryption disabled */ 0x00,0x00,0x00,0x00 };
+
+char precanned_connect_userdata_e[] = {
+0x00,
+0x05,0x00,0x14,0x7c,0x00,0x01,0x80,0x9e,0x00,0x08,0x00,0x10,0x00,0x01,0xc0,0x00,
+0x44,0x75,0x63,0x61,0x80,0x90,0x01,0xc0,0x88,0x00,0x01,0x00,0x08,0x00,0x80,0x02,
+0xe0,0x01,0x01,0xca,0x03,0xaa,0x09,0x04,0x00,0x00,0xa3,0x01,0x00,0x00,0x57,0x00,
+0x49,0x00,0x4e,0x00,0x39,0x00,0x35,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x04,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x0c,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0xca,0x00,0x00,0x02,0xc0,
+0x08,0x00,0x01,0x00,0x00,0x00
+};
+
+char domain_data[] = {0x01};
 
 /* Initialise a MCS_CONNECT_INITIAL structure */
 void mcs_make_connect_initial(MCS_CONNECT_INITIAL *mci)
 {
-	mci->calling_domain.length = 0;
-	mci->calling_domain.data = NULL;
+	mci->calling_domain.length = 1;
+	mci->calling_domain.data = domain_data;
 
-	mci->called_domain.length = 0;
-	mci->called_domain.data = NULL;
+	mci->called_domain.length = 1;
+	mci->called_domain.data = domain_data;
 
 	mci->upward_flag = 0xff;
 
@@ -267,7 +279,7 @@ BOOL ber_io_header(STREAM s, BOOL islong, int tagval, int *length)
 
 	if (!res || (tag != tagval))
 	{
-		fprintf(stderr, "Invalid ASN.1 tag\n");
+		ERROR("Invalid ASN.1 tag\n");
 		return False;
 	}
 
@@ -374,7 +386,7 @@ BOOL ber_io_uint8(STREAM s, uint8 *i, int tagval)
 
 	if (length != 1)
 	{
-		fprintf(stderr, "Wrong length for simple type\n");
+		ERROR("Wrong length for simple type\n");
 		return False;
 	}
 
@@ -441,7 +453,7 @@ BOOL mcs_io_edrq(STREAM s, MCS_EDRQ *edrq)
 	res = prs_io_uint8(s, &pkt_opcode);
 	if (pkt_opcode != opcode)
 	{
-		fprintf(stderr, "Expected EDrq, received %x\n", pkt_opcode);
+		ERROR("Expected EDrq, received %x\n", pkt_opcode);
 		return False;
 	}
 
@@ -461,7 +473,7 @@ BOOL mcs_io_aurq(STREAM s, MCS_AURQ *aurq)
 	res = prs_io_uint8(s, &pkt_opcode);
 	if (pkt_opcode != opcode)
 	{
-		fprintf(stderr, "Expected AUrq, received %x\n", pkt_opcode);
+		ERROR("Expected AUrq, received %x\n", pkt_opcode);
 		return False;
 	}
 
@@ -478,7 +490,7 @@ BOOL mcs_io_aucf(STREAM s, MCS_AUCF *aucf)
 	res = prs_io_uint8(s, &pkt_opcode);
 	if ((pkt_opcode & 0xfc) != opcode)
 	{
-		fprintf(stderr, "Expected AUcf, received %x\n", pkt_opcode);
+		ERROR("Expected AUcf, received %x\n", pkt_opcode);
 		return False;
 	}
 
@@ -499,7 +511,7 @@ BOOL mcs_io_cjrq(STREAM s, MCS_CJRQ *cjrq)
 	res = prs_io_uint8(s, &pkt_opcode);
 	if (pkt_opcode != opcode)
 	{
-		fprintf(stderr, "Expected CJrq, received %x\n", pkt_opcode);
+		ERROR("Expected CJrq, received %x\n", pkt_opcode);
 		return False;
 	}
 
@@ -519,7 +531,7 @@ BOOL mcs_io_cjcf(STREAM s, MCS_CJCF *cjcf)
 	res = prs_io_uint8(s, &pkt_opcode);
 	if ((pkt_opcode & 0xfc) != opcode)
 	{
-		fprintf(stderr, "Expected CJcf, received %x\n", pkt_opcode);
+		ERROR("Expected CJcf, received %x\n", pkt_opcode);
 		return False;
 	}
 
@@ -543,11 +555,9 @@ BOOL mcs_io_data(STREAM s, MCS_DATA *dt, BOOL request)
 	res = prs_io_uint8(s, &pkt_opcode);
 	if (pkt_opcode != opcode)
 	{
-		fprintf(stderr, "Expected MCS data, received %x\n", pkt_opcode);
+		ERROR("Expected MCS data, received %x\n", pkt_opcode);
 		return False;
 	}
-
-	dt->length |= 0x8000;
 
 	res = res ? msb_io_uint16(s, &dt->userid) : False;
 	res = res ? msb_io_uint16(s, &dt->chanid) : False;
@@ -555,6 +565,7 @@ BOOL mcs_io_data(STREAM s, MCS_DATA *dt, BOOL request)
 
 	if (s->marshall)
 	{
+		dt->length |= 0x8000;
 		res = res ? msb_io_uint16(s, &dt->length) : False;
 	}
 	else

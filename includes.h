@@ -30,6 +30,7 @@
 #include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <sys/time.h>
 
 #if 0
 #define False (0)
@@ -49,4 +50,6 @@ typedef unsigned int   uint32;
 #include "mcs.h"
 #include "rdp.h"
 
+#ifndef MAKE_PROTO
 #include "proto.h"
+#endif

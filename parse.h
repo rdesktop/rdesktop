@@ -41,7 +41,10 @@ typedef struct connection
 {
 	/* User interface */
 	HWINDOW wnd;
-	HBITMAP bmpcache[8];
+	HBITMAP bmpcache[3][600];
+	FONT_GLYPH fontcache[12][256];
+	BLOB textcache[256];
+	uint8 deskcache[0x38400];
 
 	/* Parsing layer */
 	struct stream in;
@@ -61,3 +64,4 @@ typedef struct connection
 #define PUSH_LAYER(s,v,l)  { s.v = s.offset; s.offset += l; }
 #define POP_LAYER(s,v)     { s.offset = s.v; }
 #define MARK_END(s)        { s.end = s.offset; }
+#define PRS_ERROR(s)       (!(s)->error)

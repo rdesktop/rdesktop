@@ -100,24 +100,39 @@ BOOL tcp_send(HCONN conn)
 /* Receive a message on the TCP layer */
 BOOL tcp_recv(HCONN conn, int length)
 {
-	int rcvd;
+	int ret, rcvd = 0;
+	struct timeval tv;
+	fd_set rfds;
 
 	STREAM_SIZE(conn->in, length);
 	conn->in.end = conn->in.offset = 0;
 
 	while (length > 0)
 	{
-		rcvd = read(conn->tcp_socket, conn->in.data + conn->in.end,
-			    length);
+		ui_process_events(conn->wnd, conn);
 
-		if (rcvd <= 0)
+		FD_ZERO(&rfds);
+		FD_SET(conn->tcp_socket, &rfds);
+		tv.tv_sec = 0;
+		tv.tv_usec = 100;
+
+		ret = select(conn->tcp_socket+1, &rfds, NULL, NULL, &tv);
+
+		if (ret)
 		{
-			fprintf(stderr, "read: %s\n", strerror(errno));
-			return False;
-		}
+			rcvd = read(conn->tcp_socket, conn->in.data
+					+ conn->in.end, length);
 
-		conn->in.end += rcvd;
-		length -= rcvd;
+			if (rcvd <= 0)
+			{
+				fprintf(stderr, "read: %s\n",
+						strerror(errno));
+				return False;
+			}
+
+			conn->in.end += rcvd;
+			length -= rcvd;
+		}
 	}
 
 	return True;

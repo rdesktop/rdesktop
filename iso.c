@@ -33,7 +33,7 @@ HCONN iso_connect(char *server)
 
 	if (!iso_recv_msg(conn, &code) || (code != ISO_PDU_CC))
 	{
-		fprintf(stderr, "ISO error, expected CC\n");
+		ERROR("ISO error, expected CC\n");
 		tcp_disconnect(conn);
 		return NULL;
 	}
@@ -91,7 +91,7 @@ BOOL iso_recv(HCONN conn)
 
 	if (!iso_recv_msg(conn, &code) || (code != ISO_PDU_DT))
 	{
-		fprintf(stderr, "ISO error, expected DT\n");
+		ERROR("ISO error, expected DT\n");
 		return False;
 	}
 
@@ -128,7 +128,7 @@ BOOL iso_io_tpkt(STREAM s, TPKT *tpkt)
 
 	if (tpkt->version != 3)
 	{
-		fprintf(stderr, "Wrong TPKT version %d\n", tpkt->version);
+		ERROR("Wrong TPKT version %d\n", tpkt->version);
 		return False;
 	}
 
