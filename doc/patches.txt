@@ -20,9 +20,13 @@ Applied (revision 1.11 of secure.c)
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/backingstore+privatecolormap-for-19-3-9.patch
 Description:
-TDB
+This adds support for 1) Private color maps (useful for 8 bpp mode)
+and 2) backingstore selection. 
 Status:
-Not yet examined. 
+1) is not needed anymore; rdesktop automatically uses Private color
+map in 8 bpp mode. 2) is, as far as I understand, also not
+need. rdesktop automatically uses a software backing store if the
+Xserver does not provide one. 
 
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/ben_xwin.c.diff
