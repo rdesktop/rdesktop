@@ -700,7 +700,7 @@ sec_process_crypt_info(STREAM s)
 
 	DEBUG(("Generating client random\n"));
 	/* Generate a client random, and hence determine encryption keys */
-	// This is what the MS client do:
+	/* This is what the MS client do: */
 	memset(inr, 0, SEC_RANDOM_SIZE);
 	/*  *ARIGL!* Plaintext attack, anyone?
 	   I tried doing:
@@ -844,7 +844,7 @@ sec_connect(char *server, char *username)
 	if (!mcs_connect(server, &mcs_data, username))
 		return False;
 
-	//      sec_process_mcs_data(&mcs_data);
+	/*      sec_process_mcs_data(&mcs_data); */
 	if (g_encryption)
 		sec_establish_key();
 	xfree(mcs_data.data);
