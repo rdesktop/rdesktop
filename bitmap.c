@@ -23,8 +23,25 @@
 #define CVAL(p)   (*(p++))
 #define SVAL(p)   ((*((p++) + 1) << 8) | CVAL(p))
 
-#define REPEAT(statement) { while ((count > 0) && (x < width)) { statement; count--; x++; } }
-#define MASK_UPDATE() { mixmask <<= 1; if (mixmask == 0) { mask = CVAL(input); mixmask = 1; } }
+#define UNROLL8(exp) { exp exp exp exp exp exp exp exp }
+
+#define REPEAT(statement) \
+{ \
+	while((count & ~0x7) && ((x+8) < width)) \
+		UNROLL8( statement; count--; x++; ); \
+	\
+	while((count > 0) && (x < width)) { statement; count--; x++; } \
+}
+
+#define MASK_UPDATE() \
+{ \
+	mixmask <<= 1; \
+	if (mixmask == 0) \
+	{ \
+		mask = fom_mask ? fom_mask : CVAL(input); \
+		mixmask = 1; \
+	} \
+}
 
 BOOL
 bitmap_decompress(unsigned char *output, int width, int height,
@@ -36,9 +53,11 @@ bitmap_decompress(unsigned char *output, int width, int height,
 	int lastopcode = -1, insertmix = False, bicolour = False;
 	uint8 code, colour1 = 0, colour2 = 0;
 	uint8 mixmask, mask = 0, mix = 0xff;
+	int fom_mask = 0;
 
 	while (input < end)
 	{
+		fom_mask = 0;
 		code = CVAL(input);
 		opcode = code >> 4;
 
@@ -55,7 +74,10 @@ bitmap_decompress(unsigned char *output, int width, int height,
 
 			case 0xf:
 				opcode = code & 0xf;
-				count = (opcode < 13) ? SVAL(input) : 1;
+				if (opcode < 9)
+					count = SVAL(input);
+				else
+					count = (opcode < 0xb) ? 8 : 1;
 				offset = 0;
 				break;
 
@@ -85,7 +107,6 @@ bitmap_decompress(unsigned char *output, int width, int height,
 		}
 
 		/* Read preliminary data */
-		mixmask = 0;
 		switch (opcode)
 		{
 			case 0:	/* Fill */
@@ -103,8 +124,21 @@ bitmap_decompress(unsigned char *output, int width, int height,
 				mix = CVAL(input);
 				opcode -= 5;
 				break;
+			case 9:	/* FillOrMix_1 */
+				mask = 0x03;
+				opcode = 0x02;
+				fom_mask = 3;
+				break;
+			case 0x0a:	/* FillOrMix_2 */
+				mask = 0x05;
+				opcode = 0x02;
+				fom_mask = 5;
+				break;
+
 		}
+
 		lastopcode = opcode;
+		mixmask = 0;
 
 		/* Output body */
 		while (count > 0)
@@ -201,11 +235,11 @@ bitmap_decompress(unsigned char *output, int width, int height,
 					);
 					break;
 
-				case 13:	/* White */
+				case 0xd:	/* White */
 					REPEAT(line[x] = 0xff);
 					break;
 
-				case 14:	/* Black */
+				case 0xe:	/* Black */
 					REPEAT(line[x] = 0x00);
 					break;
 

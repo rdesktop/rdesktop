@@ -28,6 +28,8 @@ extern char hostname[16];
 extern int width;
 extern int height;
 extern int keylayout;
+extern BOOL use_encryption;
+extern BOOL licence_issued;
 
 static int rc4_key_len;
 static RC4_KEY rc4_decrypt_key;
@@ -312,7 +314,10 @@ sec_init(uint32 flags, int maxlen)
 	int hdrlen;
 	STREAM s;
 
-	hdrlen = (flags & SEC_ENCRYPT) ? 12 : 4;
+	if (!licence_issued)
+		hdrlen = (flags & SEC_ENCRYPT) ? 12 : 4;
+	else
+		hdrlen = (flags & SEC_ENCRYPT) ? 12 : 0;
 	s = mcs_init(maxlen + hdrlen);
 	s_push_layer(s, sec_hdr, hdrlen);
 
@@ -326,7 +331,8 @@ sec_send(STREAM s, uint32 flags)
 	int datalen;
 
 	s_pop_layer(s, sec_hdr);
-	out_uint32_le(s, flags);
+	if (!licence_issued || (flags & SEC_ENCRYPT))
+		out_uint32_le(s, flags);
 
 	if (flags & SEC_ENCRYPT)
 	{
@@ -412,7 +418,7 @@ sec_out_mcs_data(STREAM s)
 	/* Client encryption settings */
 	out_uint16_le(s, SEC_TAG_CLI_CRYPT);
 	out_uint16(s, 8);	/* length */
-	out_uint32_le(s, 1);	/* encryption enabled */
+	out_uint32_le(s, use_encryption ? 1 : 0);	/* encryption enabled */
 	s_mark_end(s);
 }
 
@@ -569,18 +575,21 @@ sec_recv()
 
 	while ((s = mcs_recv()) != NULL)
 	{
-		in_uint32_le(s, sec_flags);
-
-		if (sec_flags & SEC_LICENCE_NEG)
+		if (use_encryption || !licence_issued)
 		{
-			licence_process(s);
-			continue;
-		}
+			in_uint32_le(s, sec_flags);
 
-		if (sec_flags & SEC_ENCRYPT)
-		{
-			in_uint8s(s, 8);	/* signature */
-			sec_decrypt(s->p, s->end - s->p);
+			if (sec_flags & SEC_LICENCE_NEG)
+			{
+				licence_process(s);
+				continue;
+			}
+
+			if (sec_flags & SEC_ENCRYPT)
+			{
+				in_uint8s(s, 8);	/* signature */
+				sec_decrypt(s->p, s->end - s->p);
+			}
 		}
 
 		return s;
@@ -604,7 +613,8 @@ sec_connect(char *server)
 		return False;
 
 	sec_process_mcs_data(&mcs_data);
-	sec_establish_key();
+	if (use_encryption)
+		sec_establish_key();
 	return True;
 }
 

@@ -32,6 +32,7 @@ typedef unsigned int uint32;
 typedef void *HBITMAP;
 typedef void *HGLYPH;
 typedef void *HCOLOURMAP;
+typedef void *HCURSOR;
 
 typedef struct _COLOURENTRY
 {

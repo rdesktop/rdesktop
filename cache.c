@@ -158,13 +158,13 @@ cache_put_text(uint8 cache_id, void *data, int length)
 
 
 /* DESKTOP CACHE */
-static uint8 deskcache[0x38400];
+static uint8 deskcache[0x38400 * 4];
 
 /* Retrieve desktop data from the cache */
 uint8 *
-cache_get_desktop(uint32 offset, int cx, int cy)
+cache_get_desktop(uint32 offset, int cx, int cy, int bytes_per_pixel)
 {
-	int length = cx * cy;
+	int length = cx * cy * bytes_per_pixel;
 
 	if ((offset + length) <= sizeof(deskcache))
 	{
@@ -177,12 +177,14 @@ cache_get_desktop(uint32 offset, int cx, int cy)
 
 /* Store desktop data in the cache */
 void
-cache_put_desktop(uint32 offset, int cx, int cy, int scanline, uint8 *data)
+cache_put_desktop(uint32 offset, int cx, int cy, int scanline,
+		  int bytes_per_pixel, uint8 *data)
 {
-	int length = cx * cy;
+	int length = cx * cy * bytes_per_pixel;
 
 	if ((offset + length) <= sizeof(deskcache))
 	{
+		cx *= bytes_per_pixel;
 		while (cy--)
 		{
 			memcpy(&deskcache[offset], data, cx);
@@ -193,5 +195,45 @@ cache_put_desktop(uint32 offset, int cx, int cy, int scanline, uint8 *data)
 	else
 	{
 		ERROR("put desktop %d:%d\n", offset, length);
+	}
+}
+
+
+/* CURSOR CACHE */
+static HCURSOR cursorcache[0x20];
+
+/* Retrieve cursor from cache */
+HCURSOR cache_get_cursor(uint16 cache_idx)
+{
+	HCURSOR cursor;
+
+	if (cache_idx < NUM_ELEMENTS(cursorcache))
+	{
+		cursor = cursorcache[cache_idx];
+		if (cursor != NULL)
+			return cursor;
+	}
+
+	ERROR("get cursor %d\n", cache_idx);
+	return NULL;
+}
+
+/* Store cursor in cache */
+void
+cache_put_cursor(uint16 cache_idx, HCURSOR cursor)
+{
+	HCURSOR old;
+
+	if (cache_idx < NUM_ELEMENTS(cursorcache))
+	{
+		old = cursorcache[cache_idx];
+		if (old != NULL)
+			ui_destroy_cursor(old);
+
+		cursorcache[cache_idx] = cursor;
+	}
+	else
+	{
+		ERROR("put cursor %d\n", cache_idx);
 	}
 }

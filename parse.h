@@ -23,7 +23,7 @@ typedef struct stream
 {
 	unsigned char *p;
 	unsigned char *end;
-        unsigned char *data;
+	unsigned char *data;
 	unsigned int size;
 
 	/* Offsets of various headers */
@@ -65,7 +65,7 @@ typedef struct stream
 #define in_uint16(s,v)		in_uint16_be(s,v)
 #define in_uint32(s,v)		in_uint32_be(s,v)
 #define out_uint16(s,v)		out_uint16_be(s,v)
-#define out_uint32(s,v)		out_uint32_be(s,b)
+#define out_uint32(s,v)		out_uint32_be(s,v)
 
 #else
 #define next_be(s,v)		v = ((v) << 8) + *((s)->p++);

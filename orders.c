@@ -21,7 +21,7 @@
 #include "rdesktop.h"
 #include "orders.h"
 
-extern unsigned char *next_packet;
+extern uint8 *next_packet;
 static RDP_ORDER_STATE order_state;
 
 /* Read field indicating which parameters are present */
@@ -533,7 +533,7 @@ process_polyline(STREAM s, POLYLINE_ORDER *os, uint32 present, BOOL delta)
 		if (flags & 0x80)
 			y += parse_delta(os->data, &data);
 
-		ui_line(ROP2_COPY, xfrom, yfrom, x, y, &pen);
+		ui_line(ROP2_NXOR, xfrom, yfrom, x, y, &pen);
 
 		flags <<= 2;
 	}
@@ -649,7 +649,8 @@ process_raw_bmpcache(STREAM s)
 	HBITMAP bitmap;
 	uint16 cache_idx, bufsize;
 	uint8 cache_id, width, height, bpp;
-	uint8 *data;
+	uint8 *data, *inverted;
+	int y;
 
 	in_uint8(s, cache_id);
 	in_uint8s(s, 1);	/* pad */
@@ -662,8 +663,15 @@ process_raw_bmpcache(STREAM s)
 
 	DEBUG("RAW_BMPCACHE(cx=%d,cy=%d,id=%d,idx=%d)\n",
 	      width, height, cache_id, cache_idx);
+	inverted = xmalloc(width * height);
+	for (y = 0; y < height; y++)
+	{
+		memcpy(&inverted[(height - y - 1) * width], &data[y * width],
+		       width);
+	}
 
-	bitmap = ui_create_bitmap(width, height, data);
+	bitmap = ui_create_bitmap(width, height, inverted);
+	xfree(inverted);
 	cache_put_bitmap(cache_id, cache_idx, bitmap);
 }
 
@@ -948,4 +956,5 @@ void
 reset_order_state()
 {
 	memset(&order_state, 0, sizeof(order_state));
+	order_state.order_type = RDP_ORDER_PATBLT;
 }

@@ -22,9 +22,12 @@
 
 extern uint16 mcs_userid;
 extern char username[16];
+extern BOOL bitmap_compression;
 extern BOOL orders;
+extern BOOL use_encryption;
+extern BOOL desktop_save;
 
-unsigned char *next_packet;
+uint8 *next_packet;
 uint32 rdp_shareid;
 
 /* Initialise an RDP packet */
@@ -33,7 +36,7 @@ rdp_init(int maxlen)
 {
 	STREAM s;
 
-	s = sec_init(SEC_ENCRYPT, maxlen + 6);
+	s = sec_init(use_encryption ? SEC_ENCRYPT : 0, maxlen + 6);
 	s_push_layer(s, rdp_hdr, 6);
 
 	return s;
@@ -52,7 +55,7 @@ rdp_send(STREAM s, uint8 pdu_type)
 	out_uint16_le(s, (pdu_type | 0x10));	/* Version 1 */
 	out_uint16_le(s, (mcs_userid + 1001));
 
-	sec_send(s, SEC_ENCRYPT);
+	sec_send(s, use_encryption ? SEC_ENCRYPT : 0);
 }
 
 /* Receive an RDP packet */
@@ -78,15 +81,14 @@ rdp_recv(uint8 *type)
 	in_uint16_le(rdp_s, length);
 	in_uint16_le(rdp_s, pdu_type);
 	in_uint8s(rdp_s, 2);	/* userid */
-
-	next_packet += length;
 	*type = pdu_type & 0xf;
 
 #if RDP_DEBUG
 	DEBUG("RDP packet (type %x):\n", *type);
-	hexdump(rdp_s->p, length);
-#endif
+	hexdump(next_packet, length);
+#endif /*  */
 
+	next_packet += length;
 	return rdp_s;
 }
 
@@ -96,7 +98,7 @@ rdp_init_data(int maxlen)
 {
 	STREAM s;
 
-	s = sec_init(SEC_ENCRYPT, maxlen + 18);
+	s = sec_init(use_encryption ? SEC_ENCRYPT : 0, maxlen + 18);
 	s_push_layer(s, rdp_hdr, 18);
 
 	return s;
@@ -123,7 +125,7 @@ rdp_send_data(STREAM s, uint8 data_pdu_type)
 	out_uint8(s, 0);	/* compress_type */
 	out_uint16(s, 0);	/* compress_len */
 
-	sec_send(s, SEC_ENCRYPT);
+	sec_send(s, use_encryption ? SEC_ENCRYPT : 0);
 }
 
 /* Output a string in Unicode */
@@ -153,7 +155,8 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 	int len_password = 2 * strlen(password);
 	int len_program = 2 * strlen(program);
 	int len_directory = 2 * strlen(directory);
-	uint32 sec_flags = SEC_LOGON_INFO | SEC_ENCRYPT;
+	uint32 sec_flags = use_encryption ? (SEC_LOGON_INFO | SEC_ENCRYPT)
+				: SEC_LOGON_INFO;
 	STREAM s;
 
 	s = sec_init(sec_flags, 18 + len_domain + len_user + len_password
@@ -280,7 +283,7 @@ rdp_out_bitmap_caps(STREAM s)
 	out_uint16_le(s, 600);	/* Desktop height */
 	out_uint16(s, 0);	/* Pad */
 	out_uint16(s, 0);	/* Allow resize */
-	out_uint16_le(s, 1);	/* Support compression */
+	out_uint16_le(s, bitmap_compression ? 1 : 0);	/* Support compression */
 	out_uint16(s, 0);	/* Unknown */
 	out_uint16_le(s, 1);	/* Unknown */
 	out_uint16(s, 0);	/* Pad */
@@ -292,8 +295,19 @@ rdp_out_order_caps(STREAM s)
 {
 	uint8 order_caps[32];
 
-	memset(order_caps, orders, 32);
 
+	memset(order_caps, 0, 32);
+	order_caps[0] = 1;	/* dest blt */
+	order_caps[1] = 1;	/* pat blt */
+	order_caps[2] = 1;	/* screen blt */
+	order_caps[8] = 1;	/* line */
+	order_caps[9] = 1;	/* line */
+	order_caps[10] = 1;	/* rect */
+	order_caps[11] = (desktop_save == False ? 0 : 1);	/* desksave */
+	order_caps[13] = 1;	/* memblt */
+	order_caps[14] = 1;	/* triblt */
+	order_caps[22] = 1;	/* polyline */
+	order_caps[27] = 1;	/* text2 */
 	out_uint16_le(s, RDP_CAPSET_ORDER);
 	out_uint16_le(s, RDP_CAPLEN_ORDER);
 
@@ -307,7 +321,7 @@ rdp_out_order_caps(STREAM s)
 	out_uint8p(s, order_caps, 32);	/* Orders supported */
 	out_uint16_le(s, 0x6a1);	/* Text capability flags */
 	out_uint8s(s, 6);	/* Pad */
-	out_uint32(s, 0x38400);	/* Desktop cache size */
+	out_uint32(s, desktop_save == False ? 0 : 0x38400);	/* Desktop cache size */
 	out_uint32(s, 0);	/* Unknown */
 	out_uint32(s, 0x4e4);	/* Unknown */
 }
@@ -428,7 +442,8 @@ rdp_send_confirm_active()
 		RDP_CAPLEN_GENERAL + RDP_CAPLEN_BITMAP + RDP_CAPLEN_ORDER +
 		RDP_CAPLEN_BMPCACHE + RDP_CAPLEN_COLCACHE +
 		RDP_CAPLEN_ACTIVATE + RDP_CAPLEN_CONTROL +
-		RDP_CAPLEN_POINTER + RDP_CAPLEN_SHARE + RDP_CAPLEN_UNKNOWN;
+		RDP_CAPLEN_POINTER + RDP_CAPLEN_SHARE + RDP_CAPLEN_UNKNOWN
+			+ 4 /* w2k fix, why? */;
 
 	s = rdp_init(14 + caplen + sizeof(RDP_SOURCE));
 
@@ -470,13 +485,13 @@ process_demand_active(STREAM s)
 	rdp_send_synchronise();
 	rdp_send_control(RDP_CTL_COOPERATE);
 	rdp_send_control(RDP_CTL_REQUEST_CONTROL);
-	rdp_recv(&type);	// RDP_PDU_SYNCHRONIZE
-	rdp_recv(&type);	// RDP_CTL_COOPERATE
-	rdp_recv(&type);	// RDP_CTL_GRANT_CONTROL
+	rdp_recv(&type);	/* RDP_PDU_SYNCHRONIZE */
+	rdp_recv(&type);	/* RDP_CTL_COOPERATE */
+	rdp_recv(&type);	/* RDP_CTL_GRANT_CONTROL */
 	rdp_send_input(0, RDP_INPUT_SYNCHRONIZE, 0, 0, 0);
 	rdp_send_fonts(1);
 	rdp_send_fonts(2);
-	rdp_recv(&type);	// RDP_PDU_UNKNOWN 0x28
+	rdp_recv(&type);	/* RDP_PDU_UNKNOWN 0x28 */
 	reset_order_state();
 }
 
@@ -485,7 +500,9 @@ static void
 process_pointer_pdu(STREAM s)
 {
 	uint16 message_type;
-	uint16 x, y;
+	uint16 x, y, width, height, cache_idx, masklen, datalen;
+	uint8 *mask, *data;
+	HCURSOR cursor;
 
 	in_uint16_le(s, message_type);
 	in_uint8s(s, 2);	/* pad */
@@ -497,6 +514,27 @@ process_pointer_pdu(STREAM s)
 			in_uint16_le(s, y);
 			if (s_check(s))
 				ui_move_pointer(x, y);
+			break;
+
+		case RDP_POINTER_COLOR:
+			in_uint16_le(s, cache_idx);
+			in_uint16_le(s, x);
+			in_uint16_le(s, y);
+			in_uint16_le(s, width);
+			in_uint16_le(s, height);
+			in_uint16_le(s, masklen);
+			in_uint16_le(s, datalen);
+			in_uint8p(s, data, datalen);
+			in_uint8p(s, mask, masklen);
+			cursor = ui_create_cursor(x, y, width, height, mask,
+						  data);
+			ui_set_cursor(cursor);
+			cache_put_cursor(cache_idx, cursor);
+			break;
+
+		case RDP_POINTER_CACHED:
+			in_uint16_le(s, cache_idx);
+			ui_set_cursor(cache_get_cursor(cache_idx));
 			break;
 
 		default:
@@ -511,7 +549,7 @@ process_bitmap_updates(STREAM s)
 	uint16 num_updates;
 	uint16 left, top, right, bottom, width, height;
 	uint16 cx, cy, bpp, compress, bufsize, size;
-	uint8 *data, *rawdata;
+	uint8 *data, *bmpdata;
 	int i;
 
 	in_uint16_le(s, num_updates);
@@ -536,10 +574,18 @@ process_bitmap_updates(STREAM s)
 
 		if (!compress)
 		{
-			in_uint8p(s, data, bufsize);
+			int y;
+			bmpdata = xmalloc(width * height);
+			for (y = 0; y < height; y++)
+			{
+				in_uint8a(s,
+					  &bmpdata[(height - y - 1) * width],
+					  width);
+			}
 			ui_paint_bitmap(left, top, cx, cy, width, height,
-					data);
-			return;
+					bmpdata);
+			xfree(bmpdata);
+			continue;
 		}
 
 		in_uint8s(s, 2);	/* pad */
@@ -547,14 +593,14 @@ process_bitmap_updates(STREAM s)
 		in_uint8s(s, 4);	/* line_size, final_size */
 		in_uint8p(s, data, size);
 
-		rawdata = xmalloc(width * height);
-		if (bitmap_decompress(rawdata, width, height, data, size))
+		bmpdata = xmalloc(width * height);
+		if (bitmap_decompress(bmpdata, width, height, data, size))
 		{
 			ui_paint_bitmap(left, top, cx, cy, width, height,
-					rawdata);
+					bmpdata);
 		}
 
-		xfree(rawdata);
+		xfree(bmpdata);
 	}
 }
 

@@ -28,6 +28,8 @@ extern BOOL licence;
 static uint8 licence_key[16];
 static uint8 licence_sign_key[16];
 
+BOOL licence_issued = False;
+
 /* Generate a session key and RC4 keys, given client and server randoms */
 void
 licence_generate_keys(uint8 *client_key, uint8 *server_key, uint8 *client_rsa)
@@ -210,6 +212,8 @@ licence_process_issue(STREAM s)
 	in_uint16(s, check);
 	if (check != 0)
 		return;
+
+	licence_issued = True;
 
 	/* We should save the licence here */
 	STATUS("Server issued licence.\n");

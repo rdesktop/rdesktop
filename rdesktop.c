@@ -32,9 +32,15 @@ char hostname[16];
 int width = 800;
 int height = 600;
 int keylayout = 0x409;
+BOOL bitmap_compression = True;
 BOOL motion = True;
 BOOL orders = True;
 BOOL licence = True;
+BOOL use_encryption = True;
+BOOL desktop_save = True;
+BOOL grab_keyboard = True;
+BOOL fullscreen = False;
+int private_colormap = False;
 
 /* Display usage information */
 static void
@@ -105,17 +111,26 @@ main(int argc, char *argv[])
 			case 'n':
 				strncpy(hostname, optarg, sizeof(hostname));
 				break;
-
-			case 'w':
-				width = strtol(optarg, NULL, 10);
-				break;
-
-			case 'h':
-				height = strtol(optarg, NULL, 10);
+			case 'g':
+				{
+					char *tgem = 0;
+					width = strtol(optarg, NULL, 10);
+					tgem = strchr(optarg, 'x');
+					if ((tgem == 0) || (strlen(tgem) < 2))
+					{
+						ERROR
+							("-g: invalid parameter. Syntax example: -g 1024x768\n");
+						exit(1);
+					}
+					height = strtol(tgem + 1, NULL, 10);
+				}
 				break;
 
 			case 'k':
 				keylayout = strtol(optarg, NULL, 16);
+				/* keylayout = find_keyb_code(optarg); */
+				if (keylayout == 0)
+					return 0;
 				break;
 
 			case 'm':
@@ -130,6 +145,19 @@ main(int argc, char *argv[])
 				licence = False;
 				break;
 
+			case 'e':
+				use_encryption = False;
+				break;
+			case 'K':
+				grab_keyboard = False;
+				break;
+			case 'F':
+				fullscreen = True;
+				break;
+			case 'v':
+				private_colormap = True;
+				break;
+			case 'h':
 			case '?':
 			default:
 				usage(argv[0]);
@@ -166,16 +194,16 @@ main(int argc, char *argv[])
 		}
 	}
 
-	if (!rdp_connect(server, flags, domain, password, shell, directory))
-		return 1;
-
-	STATUS("Connection successful.\n");
-
 	strcpy(title, "rdesktop - ");
 	strncat(title, server, sizeof(title));
 
 	if (ui_create_window(title))
 	{
+		if (!rdp_connect(server, flags, domain, password, shell,
+				 directory))
+			return 1;
+
+		STATUS("Connection successful.\n");
 		rdp_main_loop();
 		ui_destroy_window();
 	}

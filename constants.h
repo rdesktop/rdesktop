@@ -34,14 +34,14 @@ enum ISO_PDU_CODE
 /* MCS PDU codes */
 enum MCS_PDU_TYPE
 {
-	MCS_EDRQ = 1,	/* Erect Domain Request */
-	MCS_DPUM = 8,	/* Disconnect Provider Ultimatum */
-	MCS_AURQ = 10,	/* Attach User Request */
-	MCS_AUCF = 11,	/* Attach User Confirm */
-	MCS_CJRQ = 14,	/* Channel Join Request */
-	MCS_CJCF = 15,	/* Channel Join Confirm */
-	MCS_SDRQ = 25,	/* Send Data Request */
-	MCS_SDIN = 26	/* Send Data Indication */
+	MCS_EDRQ = 1,		/* Erect Domain Request */
+	MCS_DPUM = 8,		/* Disconnect Provider Ultimatum */
+	MCS_AURQ = 10,		/* Attach User Request */
+	MCS_AUCF = 11,		/* Attach User Confirm */
+	MCS_CJRQ = 14,		/* Channel Join Request */
+	MCS_CJCF = 15,		/* Channel Join Confirm */
+	MCS_SDRQ = 25,		/* Send Data Request */
+	MCS_SDIN = 26		/* Send Data Indication */
 };
 
 #define MCS_CONNECT_INITIAL	0x7f65
@@ -132,7 +132,9 @@ enum RDP_UPDATE_PDU_TYPE
 
 enum RDP_POINTER_PDU_TYPE
 {
-	RDP_POINTER_MOVE = 3
+	RDP_POINTER_MOVE = 3,
+	RDP_POINTER_COLOR = 6,
+	RDP_POINTER_CACHED = 7
 };
 
 enum RDP_INPUT_DEVICE
@@ -146,6 +148,7 @@ enum RDP_INPUT_DEVICE
 
 /* Device flags */
 #define KBD_FLAG_RIGHT          0x0001
+#define KBD_FLAG_EXT            0x0100
 #define KBD_FLAG_QUIET          0x1000
 #define KBD_FLAG_DOWN           0x4000
 #define KBD_FLAG_UP             0x8000

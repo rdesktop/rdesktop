@@ -9,7 +9,7 @@
 
 CC     = gcc
 CFLAGS = -O2 -Wall $(DEBUG) -I/usr/X11R6/include
-LIBS   = -L/usr/X11R6/lib -lX11
+LIBS   = -L/usr/X11R6/lib -lX11 -lnsl
 
 RDPOBJ = rdesktop.o tcp.o iso.o mcs.o secure.o licence.o rdp.o orders.o bitmap.o cache.o xwin.o
 CRYPTOBJ = crypto/rc4_enc.o crypto/rc4_skey.o crypto/md5_dgst.o crypto/sha1dgst.o crypto/arith.o
