@@ -1,7 +1,7 @@
 /*
    rdesktop: A Remote Desktop Protocol client.
    Entrypoint and utility functions
-   Copyright (C) Matthew Chapman 1999-2001
+   Copyright (C) Matthew Chapman 1999-2002
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -50,6 +50,10 @@ BOOL grab_keyboard = True;
 static void
 usage(char *program)
 {
+	fprintf(stderr, "rdesktop: A Remote Desktop Protocol client.\n");
+	fprintf(stderr, "Version " VERSION ". Copyright (C) 1999-2002 Matt Chapman.\n");
+	fprintf(stderr, "See http://www.rdesktop.org/ for more information.\n\n");
+
 	fprintf(stderr, "Usage: %s [options] server\n", program);
 	fprintf(stderr, "   -u: user name\n");
 	fprintf(stderr, "   -d: domain\n");
@@ -84,10 +88,6 @@ main(int argc, char *argv[])
 	char *server, *p;
 	uint32 flags;
 	int c;
-
-	fprintf(stderr, "rdesktop: A Remote Desktop Protocol client.\n");
-	fprintf(stderr, "Version " VERSION ". Copyright (C) 1999-2001 Matt Chapman.\n");
-	fprintf(stderr, "See http://www.rdesktop.org/ for more information.\n\n");
 
 	flags = RDP_LOGON_NORMAL;
 	domain[0] = password[0] = shell[0] = directory[0] = 0;
@@ -257,7 +257,7 @@ main(int argc, char *argv[])
 	if (!rdp_connect(server, flags, domain, password, shell, directory))
 		return 1;
 
-	fprintf(stderr, "Connection successful.\n");
+	DEBUG(("Connection successful.\n"));
 
 	if (ui_create_window())
 	{
@@ -265,7 +265,7 @@ main(int argc, char *argv[])
 		ui_destroy_window();
 	}
 
-	fprintf(stderr, "Disconnecting...\n");
+	DEBUG(("Disconnecting...\n"));
 	rdp_disconnect();
 	return 0;
 }
