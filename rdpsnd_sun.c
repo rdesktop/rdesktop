@@ -80,8 +80,10 @@ wave_out_close(void)
 		queue_lo = (queue_lo + 1) % MAX_QUEUE;
 	}
 
+#if defined I_FLUSH && defined FLUSHW
 	/* Flush the audiobuffer */
 	ioctl(g_dsp_fd, I_FLUSH, FLUSHW);
+#endif
 	close(g_dsp_fd);
 }
 
