@@ -538,7 +538,7 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 		     uint8 ** server_random, uint8 ** modulus, uint8 ** exponent)
 {
 	uint32 crypt_level, random_len, rsa_info_len;
-	uint32 cacert_len, cert_len;
+	uint32 cacert_len, cert_len, flags;
 	X509 *cacert, *server_cert;
 	uint16 tag, length;
 	uint8 *next_tag, *end;
@@ -563,10 +563,11 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 	if (end > s->end)
 		return False;
 
-	if (!use_rdp5 || 1 == server_rdp_version)
+	in_uint32_le(s, flags); /* 1 = RDP4-style, 0x80000002 = X.509 */
+	if (flags & 1)
 	{
 		DEBUG_RDP5(("We're going for the RDP4-style encryption\n"));
-		in_uint8s(s, 12);	/* unknown */
+		in_uint8s(s, 8);	/* unknown */
 
 		while (s->p < end)
 		{
@@ -598,10 +599,10 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 			s->p = next_tag;
 		}
 	}
-	else if (4 == server_rdp_version)
+	else
 	{
 		DEBUG_RDP5(("We're going for the RDP5-style encryption\n"));
-		in_uint8s(s, 8);	/* Unknown */
+		in_uint8s(s, 4);	/* Number of certificates */
 
 		/* Do da funky X.509 stuffy 
 
@@ -652,11 +653,6 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 			return False;
 		}
 		return True;	/* There's some garbage here we don't care about */
-	}
-	else
-	{
-		error("Unknown Server RDP version %d", server_rdp_version);
-		return False;
 	}
 	return s_check_end(s);
 }
