@@ -269,7 +269,7 @@ process_line(STREAM s, LINE_ORDER * os, uint32 present, BOOL delta)
 
 	rdp_parse_pen(s, &os->pen, present >> 7);
 
-	DEBUG(("LINE(op=0x%x,sx=%d,sy=%d,dx=%d,dx=%d,fg=0x%x)\n",
+	DEBUG(("LINE(op=0x%x,sx=%d,sy=%d,dx=%d,dy=%d,fg=0x%x)\n",
 	       os->opcode, os->startx, os->starty, os->endx, os->endy, os->pen.colour));
 
 	if (os->opcode < 0x01 || os->opcode > 0x10)
