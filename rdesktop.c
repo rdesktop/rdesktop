@@ -79,6 +79,7 @@ BOOL g_rdpsnd = False;
 
 extern RDPDR_DEVICE g_rdpdr_device[];
 extern uint32 g_num_devices;
+extern char * g_rdpdr_clientname;
 
 #ifdef RDP2VNC
 extern int rfb_port;
@@ -130,6 +131,8 @@ usage(char *program)
 	fprintf(stderr,
 		"         '-r disk:A=/mnt/floppy': enable redirection of /mnt/floppy to A:\n");
 	fprintf(stderr, "             or   A=/mnt/floppy,D=/mnt/cdrom'\n");
+	fprintf(stderr, "         '-r clientname=<client name>': Set the client name displayed\n");
+	fprintf(stderr, "             for redirected disks\n");
 	fprintf(stderr,
 		"         '-r lptport:LPT1=/dev/lp0': enable parallel redirection of /dev/lp0 to LPT1\n");
 	fprintf(stderr, "             or      LPT1=/dev/lp0,LPT2=/dev/lp1\n");
@@ -492,6 +495,11 @@ main(int argc, char *argv[])
 				else if (strncmp("printer", optarg, 7) == 0)
 				{
 					printer_enum_devices(&g_num_devices, optarg + 7);
+				}
+				else if (strncmp("clientname", optarg, 7) == 0)
+				{
+					g_rdpdr_clientname = xmalloc(strlen(optarg+11)+1);
+					strcpy(g_rdpdr_clientname, optarg + 11);
 				}
 				else
 				{
