@@ -780,8 +780,7 @@ ui_init(void)
 
 	xclip_init();
 
-	/* todo take this out when high colour is done */
-	printf("server bpp %d client bpp %d depth %d\n", g_server_bpp, g_bpp, g_depth);
+	DEBUG_RDP5(("server bpp %d client bpp %d depth %d\n", g_server_bpp, g_bpp, g_depth));
 
 	return True;
 }
