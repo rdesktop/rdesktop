@@ -34,8 +34,8 @@
 #endif
 
 extern char hostname[16];
-extern int width;
-extern int height;
+extern int g_width;
+extern int g_height;
 extern int keylayout;
 extern BOOL g_encryption;
 extern BOOL g_licence_issued;
@@ -432,8 +432,8 @@ sec_out_mcs_data(STREAM s)
 	out_uint16_le(s, 212);	/* length */
 	out_uint16_le(s, g_use_rdp5 ? 4 : 1);	/* RDP version. 1 == RDP4, 4 == RDP5. */
 	out_uint16_le(s, 8);
-	out_uint16_le(s, width);
-	out_uint16_le(s, height);
+	out_uint16_le(s, g_width);
+	out_uint16_le(s, g_height);
 	out_uint16_le(s, 0xca01);
 	out_uint16_le(s, 0xaa03);
 	out_uint32_le(s, keylayout);

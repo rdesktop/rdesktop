@@ -39,7 +39,7 @@ extern Display *display;
 extern char keymapname[16];
 extern int keylayout;
 extern int win_button_size;
-extern BOOL enable_compose;
+extern BOOL g_enable_compose;
 
 static BOOL keymap_loaded;
 static key_translation keymap[KEYMAP_SIZE];
@@ -140,7 +140,7 @@ xkeymap_read(char *mapname)
 		if (strncmp(line, "enable_compose", 15) == 0)
 		{
 			DEBUG_KBD(("Enabling compose handling\n"));
-			enable_compose = True;
+			g_enable_compose = True;
 			continue;
 		}
 

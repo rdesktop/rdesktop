@@ -45,19 +45,19 @@ char g_username[16];
 char hostname[16];
 char keymapname[16];
 int keylayout = 0x409;		/* Defaults to US keyboard layout */
-int width = 800;		/* If width or height are reset to zero, the geometry will
+int g_width = 800;		/* If width or height are reset to zero, the geometry will
 				   be fetched from _NET_WORKAREA */
-int height = 600;
+int g_height = 600;
 int tcp_port_rdp = TCP_PORT_RDP;
 int g_server_bpp = 8;
 int win_button_size = 0;	/* If zero, disable single app mode */
 BOOL g_bitmap_compression = True;
-BOOL sendmotion = True;
+BOOL g_sendmotion = True;
 BOOL g_orders = True;
 BOOL g_encryption = True;
 BOOL packet_encryption = True;
 BOOL g_desktop_save = True;
-BOOL fullscreen = False;
+BOOL g_fullscreen = False;
 BOOL grab_keyboard = True;
 BOOL hide_decorations = False;
 BOOL g_use_rdp5 = False;
@@ -296,15 +296,15 @@ main(int argc, char *argv[])
 			case 'g':
 				if (!strcmp(optarg, "workarea"))
 				{
-					width = height = 0;
+					g_width = g_height = 0;
 					break;
 				}
 
-				width = strtol(optarg, &p, 10);
+				g_width = strtol(optarg, &p, 10);
 				if (*p == 'x')
-					height = strtol(p + 1, NULL, 10);
+					g_height = strtol(p + 1, NULL, 10);
 
-				if ((width == 0) || (height == 0))
+				if ((g_width == 0) || (g_height == 0))
 				{
 					error("invalid geometry\n");
 					return 1;
@@ -312,7 +312,7 @@ main(int argc, char *argv[])
 				break;
 
 			case 'f':
-				fullscreen = True;
+				g_fullscreen = True;
 				break;
 
 			case 'b':
@@ -326,7 +326,7 @@ main(int argc, char *argv[])
 				packet_encryption = False;
 				break;
 			case 'm':
-				sendmotion = False;
+				g_sendmotion = False;
 				break;
 
 			case 'C':

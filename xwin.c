@@ -25,18 +25,18 @@
 #include "rdesktop.h"
 #include "xproto.h"
 
-extern int width;
-extern int height;
-extern BOOL sendmotion;
-extern BOOL fullscreen;
+extern int g_width;
+extern int g_height;
+extern BOOL g_sendmotion;
+extern BOOL g_fullscreen;
 extern BOOL grab_keyboard;
 extern BOOL hide_decorations;
 extern char title[];
 extern int g_server_bpp;
 extern int win_button_size;
-BOOL enable_compose = False;
-BOOL focused;
-BOOL mouse_in_wnd;
+BOOL g_enable_compose = False;
+BOOL g_focused;
+BOOL g_mouse_in_wnd;
 
 Display *display;
 Time last_gesturetime;
@@ -570,46 +570,46 @@ ui_init(void)
 	host_be = !(BOOL) (*(uint8 *) (&test));
 	xserver_be = (ImageByteOrder(display) == MSBFirst);
 
-	if ((width == 0) || (height == 0))
+	if ((g_width == 0) || (g_height == 0))
 	{
 		/* Fetch geometry from _NET_WORKAREA */
 		uint32 x, y, cx, cy;
 
 		if (get_current_workarea(&x, &y, &cx, &cy) == 0)
 		{
-			width = cx;
-			height = cy;
+			g_width = cx;
+			g_height = cy;
 		}
 		else
 		{
 			warning("Failed to get workarea: probably your window manager does not support extended hints\n");
-			width = 800;
-			height = 600;
+			g_width = 800;
+			g_height = 600;
 		}
 	}
 
-	if (fullscreen)
+	if (g_fullscreen)
 	{
-		width = WidthOfScreen(screen);
-		height = HeightOfScreen(screen);
+		g_width = WidthOfScreen(screen);
+		g_height = HeightOfScreen(screen);
 	}
 
 	/* make sure width is a multiple of 4 */
-	width = (width + 3) & ~3;
+	g_width = (g_width + 3) & ~3;
 
 	if (ownbackstore)
 	{
 		backstore =
-			XCreatePixmap(display, RootWindowOfScreen(screen), width, height, depth);
+			XCreatePixmap(display, RootWindowOfScreen(screen), g_width, g_height, depth);
 
 		/* clear to prevent rubbish being exposed at startup */
 		XSetForeground(display, gc, BlackPixelOfScreen(screen));
-		XFillRectangle(display, backstore, gc, 0, 0, width, height);
+		XFillRectangle(display, backstore, gc, 0, 0, g_width, g_height);
 	}
 
 	mod_map = XGetModifierMapping(display);
 
-	if (enable_compose)
+	if (g_enable_compose)
 		IM = XOpenIM(display, NULL, NULL, NULL);
 
 	xkeymap_init();
@@ -647,12 +647,12 @@ ui_create_window(void)
 	long input_mask, ic_input_mask;
 	XEvent xevent;
 
-	wndwidth = fullscreen ? WidthOfScreen(screen) : width;
-	wndheight = fullscreen ? HeightOfScreen(screen) : height;
+	wndwidth = g_fullscreen ? WidthOfScreen(screen) : g_width;
+	wndheight = g_fullscreen ? HeightOfScreen(screen) : g_height;
 
 	attribs.background_pixel = BlackPixelOfScreen(screen);
 	attribs.backing_store = ownbackstore ? NotUseful : Always;
-	attribs.override_redirect = fullscreen;
+	attribs.override_redirect = g_fullscreen;
 
 	wnd = XCreateWindow(display, RootWindowOfScreen(screen), 0, 0, wndwidth, wndheight,
 			    0, CopyFromParent, InputOutput, CopyFromParent,
@@ -675,8 +675,8 @@ ui_create_window(void)
 	if (sizehints)
 	{
 		sizehints->flags = PMinSize | PMaxSize;
-		sizehints->min_width = sizehints->max_width = width;
-		sizehints->min_height = sizehints->max_height = height;
+		sizehints->min_width = sizehints->max_width = g_width;
+		sizehints->min_height = sizehints->max_height = g_height;
 		XSetWMNormalHints(display, wnd, sizehints);
 		XFree(sizehints);
 	}
@@ -684,11 +684,11 @@ ui_create_window(void)
 	input_mask = KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask |
 		VisibilityChangeMask | FocusChangeMask;
 
-	if (sendmotion)
+	if (g_sendmotion)
 		input_mask |= PointerMotionMask;
 	if (ownbackstore)
 		input_mask |= ExposureMask;
-	if (fullscreen || grab_keyboard)
+	if (g_fullscreen || grab_keyboard)
 		input_mask |= EnterWindowMask;
 	if (grab_keyboard)
 		input_mask |= LeaveWindowMask;
@@ -713,8 +713,8 @@ ui_create_window(void)
 	}
 	while (xevent.type != VisibilityNotify);
 
-	focused = False;
-	mouse_in_wnd = False;
+	g_focused = False;
+	g_mouse_in_wnd = False;
 
 	/* handle the WM_DELETE_WINDOW protocol */
 	protocol_atom = XInternAtom(display, "WM_PROTOCOLS", True);
@@ -741,24 +741,24 @@ xwin_toggle_fullscreen(void)
 	if (!ownbackstore)
 	{
 		/* need to save contents of window */
-		contents = XCreatePixmap(display, wnd, width, height, depth);
-		XCopyArea(display, wnd, contents, gc, 0, 0, width, height, 0, 0);
+		contents = XCreatePixmap(display, wnd, g_width, g_height, depth);
+		XCopyArea(display, wnd, contents, gc, 0, 0, g_width, g_height, 0, 0);
 	}
 
 	ui_destroy_window();
-	fullscreen = !fullscreen;
+	g_fullscreen = !g_fullscreen;
 	ui_create_window();
 
 	XDefineCursor(display, wnd, current_cursor);
 
 	if (!ownbackstore)
 	{
-		XCopyArea(display, contents, wnd, gc, 0, 0, width, height, 0, 0);
+		XCopyArea(display, contents, wnd, gc, 0, 0, g_width, g_height, 0, 0);
 		XFreePixmap(display, contents);
 	}
 }
 
-/* Process all events in Xlib queue 
+/* Process all events in Xlib queue
    Returns 0 after user quit, 1 otherwise */
 static int
 xwin_process_events(void)
@@ -877,20 +877,20 @@ xwin_process_events(void)
 
 					/*  Check from right to left: */
 
-					if (xevent.xbutton.x >= width - win_button_size)
+					if (xevent.xbutton.x >= g_width - win_button_size)
 					{
 						/* The close button, continue */
 						;
 					}
-					else if (xevent.xbutton.x >= width - win_button_size * 2)
+					else if (xevent.xbutton.x >= g_width - win_button_size * 2)
 					{
 						/* The maximize/restore button. Do not send to
 						   server.  It might be a good idea to change the
-						   cursor or give some other visible indication 
+						   cursor or give some other visible indication
 						   that rdesktop inhibited this click */
 						break;
 					}
-					else if (xevent.xbutton.x >= width - win_button_size * 3)
+					else if (xevent.xbutton.x >= g_width - win_button_size * 3)
 					{
 						/* The minimize button. Iconify window. */
 						XIconifyWindow(display, wnd,
@@ -905,7 +905,7 @@ xwin_process_events(void)
 					else
 					{
 						/* The title bar. */
-						if ((xevent.type == ButtonPress) && !fullscreen
+						if ((xevent.type == ButtonPress) && !g_fullscreen
 						    && hide_decorations)
 						{
 							moving_wnd = True;
@@ -930,7 +930,7 @@ xwin_process_events(void)
 					break;
 				}
 
-				if (fullscreen && !focused)
+				if (g_fullscreen && !g_focused)
 					XSetInputFocus(display, wnd, RevertToPointerRoot,
 						       CurrentTime);
 				rdp_send_input(time(NULL), RDP_INPUT_MOUSE,
@@ -940,11 +940,11 @@ xwin_process_events(void)
 			case FocusIn:
 				if (xevent.xfocus.mode == NotifyGrab)
 					break;
-				focused = True;
+				g_focused = True;
 				XQueryPointer(display, wnd, &wdummy, &wdummy, &dummy, &dummy,
 					      &dummy, &dummy, &state);
 				reset_modifier_keys(state);
-				if (grab_keyboard && mouse_in_wnd)
+				if (grab_keyboard && g_mouse_in_wnd)
 					XGrabKeyboard(display, wnd, True,
 						      GrabModeAsync, GrabModeAsync, CurrentTime);
 				break;
@@ -952,7 +952,7 @@ xwin_process_events(void)
 			case FocusOut:
 				if (xevent.xfocus.mode == NotifyUngrab)
 					break;
-				focused = False;
+				g_focused = False;
 				if (xevent.xfocus.mode == NotifyWhileGrabbed)
 					XUngrabKeyboard(display, CurrentTime);
 				break;
@@ -960,21 +960,21 @@ xwin_process_events(void)
 			case EnterNotify:
 				/* we only register for this event when in fullscreen mode */
 				/* or grab_keyboard */
-				mouse_in_wnd = True;
-				if (fullscreen)
+				g_mouse_in_wnd = True;
+				if (g_fullscreen)
 				{
 					XSetInputFocus(display, wnd, RevertToPointerRoot,
 						       CurrentTime);
 					break;
 				}
-				if (focused)
+				if (g_focused)
 					XGrabKeyboard(display, wnd, True,
 						      GrabModeAsync, GrabModeAsync, CurrentTime);
 				break;
 
 			case LeaveNotify:
 				/* we only register for this event when grab_keyboard */
-				mouse_in_wnd = False;
+				g_mouse_in_wnd = False;
 				XUngrabKeyboard(display, CurrentTime);
 				break;
 
@@ -1371,8 +1371,8 @@ ui_reset_clip(void)
 
 	rect.x = 0;
 	rect.y = 0;
-	rect.width = width;
-	rect.height = height;
+	rect.width = g_width;
+	rect.height = g_height;
 	XSetClipRectangles(display, gc, 0, 0, &rect, 1, YXBanded);
 }
 
