@@ -49,7 +49,7 @@ void rdp_disconnect(void);
 void sec_hash_48(uint8 *out, uint8 *in, uint8 *salt1, uint8 *salt2, uint8 salt);
 void sec_hash_16(uint8 *out, uint8 *in, uint8 *salt1, uint8 *salt2);
 void buf_out_uint32(uint8 *buffer, uint32 value);
-void sec_sign(uint8 *signature, uint8 *session_key, int length, uint8 *data, int datalen);
+void sec_sign(uint8 *signature, int siglen, uint8 *session_key, int keylen, uint8 *data, int datalen);
 STREAM sec_init(uint32 flags, int maxlen);
 void sec_send(STREAM s, uint32 flags);
 STREAM sec_recv(void);

@@ -162,7 +162,7 @@ licence_process_demand(STREAM s)
 
 	/* Generate a signature for the HWID buffer */
 	licence_generate_hwid(hwid);
-	sec_sign(signature, licence_sign_key, 16, hwid, sizeof(hwid));
+	sec_sign(signature, 16, licence_sign_key, 16, hwid, sizeof(hwid));
 
 	/* Now encrypt the HWID */
 	RC4_set_key(&crypt_key, 16, licence_key);
@@ -245,7 +245,7 @@ licence_process_authreq(STREAM s)
 	licence_generate_hwid(hwid);
 	memcpy(sealed_buffer, decrypt_token, LICENCE_TOKEN_SIZE);
 	memcpy(sealed_buffer + LICENCE_TOKEN_SIZE, hwid, LICENCE_HWID_SIZE);
-	sec_sign(out_sig, licence_sign_key, 16,
+	sec_sign(out_sig, 16, licence_sign_key, 16,
 		 sealed_buffer, sizeof(sealed_buffer));
 
 	/* Deliberately break signature if licencing disabled */

@@ -181,7 +181,7 @@ buf_out_uint32(uint8 *buffer, uint32 value)
 
 /* Generate a signature hash, using a combination of SHA1 and MD5 */
 void
-sec_sign(uint8 *signature, uint8 *session_key, int length,
+sec_sign(uint8 *signature, int siglen, uint8 *session_key, int keylen,
 	 uint8 *data, int datalen)
 {
 	uint8 shasig[20];
@@ -193,19 +193,19 @@ sec_sign(uint8 *signature, uint8 *session_key, int length,
 	buf_out_uint32(lenhdr, datalen);
 
 	SHA1_Init(&sha);
-	SHA1_Update(&sha, session_key, rc4_key_len);
+	SHA1_Update(&sha, session_key, keylen);
 	SHA1_Update(&sha, pad_54, 40);
 	SHA1_Update(&sha, lenhdr, 4);
 	SHA1_Update(&sha, data, datalen);
 	SHA1_Final(shasig, &sha);
 
 	MD5_Init(&md5);
-	MD5_Update(&md5, session_key, rc4_key_len);
+	MD5_Update(&md5, session_key, keylen);
 	MD5_Update(&md5, pad_92, 48);
 	MD5_Update(&md5, shasig, 20);
 	MD5_Final(md5sig, &md5);
 
-	memcpy(signature, md5sig, length);
+	memcpy(signature, md5sig, siglen);
 }
 
 /* Update an encryption key - similar to the signing process */
@@ -358,7 +358,7 @@ sec_send(STREAM s, uint32 flags)
 		hexdump(s->p + 8, datalen);
 #endif
 
-		sec_sign(s->p, sec_sign_key, 8, s->p + 8, datalen);
+		sec_sign(s->p, 8, sec_sign_key, rc4_key_len, s->p + 8, datalen);
 		sec_encrypt(s->p + 8, datalen);
 	}
 
