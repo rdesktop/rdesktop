@@ -229,6 +229,15 @@ translate_colour(uint32 colour)
 	return make_colour(pc);
 }
 
+#define UNROLL8(stm) { stm stm stm stm stm stm stm stm }
+#define REPEAT(stm) \
+{ \
+	while (out <= end - 8 * 4) \
+		UNROLL8(stm) \
+	while (out < end) \
+		{ stm } \
+}
+
 static void
 translate8to8(uint8 * data, uint8 * out, uint8 * end)
 {
@@ -241,7 +250,9 @@ translate8to16(uint8 * data, uint8 * out, uint8 * end)
 {
 	uint16 value;
 
-	if (g_xserver_be)
+	if (g_arch_match)
+		REPEAT(*(((uint16*)out)++) = g_colmap[*(data++)];)
+	else if (g_xserver_be)
 	{
 		while (out < end)
 		{
@@ -294,7 +305,9 @@ translate8to32(uint8 * data, uint8 * out, uint8 * end)
 {
 	uint32 value;
 
-	if (g_xserver_be)
+	if (g_arch_match)
+		REPEAT(*(((uint32*)out)++) = g_colmap[*(data++)];)
+	else if (g_xserver_be)
 	{
 		while (out < end)
 		{
