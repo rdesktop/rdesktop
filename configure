@@ -2,7 +2,7 @@
 #
 # rdesktop: A Remote Desktop Protocol client
 # configure script
-# Copyright (C) Matthew Chapman 1999-2001
+# Copyright (C) Matthew Chapman 1999-2002
 #
 
 echo "rdesktop build configuration script"

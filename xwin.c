@@ -1,7 +1,7 @@
 /*
    rdesktop: A Remote Desktop Protocol client.
    User interface services - X Window System
-   Copyright (C) Matthew Chapman 1999-2001
+   Copyright (C) Matthew Chapman 1999-2002
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
