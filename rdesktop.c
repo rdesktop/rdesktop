@@ -388,6 +388,7 @@ hexdump(unsigned char *p, unsigned int len)
 	}
 }
 
+#ifdef SAVE_LICENCE
 int
 load_licence(unsigned char **data)
 {
@@ -441,3 +442,4 @@ save_licence(unsigned char *data, int length)
 	write(fd, data, length);
 	close(fd);
 }
+#endif

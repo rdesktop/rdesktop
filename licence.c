@@ -55,6 +55,7 @@ licence_generate_hwid(uint8 * hwid)
 	strncpy((char *) (hwid + 4), hostname, LICENCE_HWID_SIZE - 4);
 }
 
+#ifdef SAVE_LICENCE
 /* Present an existing licence to the server */
 static void
 licence_present(uint8 * client_random, uint8 * rsa_data,
@@ -94,6 +95,7 @@ licence_present(uint8 * client_random, uint8 * rsa_data,
 	s_mark_end(s);
 	sec_send(s, sec_flags);
 }
+#endif
 
 /* Send a licence request packet */
 static void
@@ -152,23 +154,25 @@ licence_process_demand(STREAM s)
 	memset(null_data, 0, sizeof(null_data));
 	licence_generate_keys(null_data, server_random, null_data);
 
+#ifdef SAVE_LICENCE
 	licence_size = load_licence(&licence_data);
-	if (licence_size == -1)
+	if (licence_size != -1)
 	{
-		licence_send_request(null_data, null_data, username, hostname);
+		/* Generate a signature for the HWID buffer */
+		licence_generate_hwid(hwid);
+		sec_sign(signature, 16, licence_sign_key, 16, hwid, sizeof(hwid));
+
+		/* Now encrypt the HWID */
+		RC4_set_key(&crypt_key, 16, licence_key);
+		RC4(&crypt_key, sizeof(hwid), hwid, hwid);
+
+		licence_present(null_data, null_data, licence_data, licence_size, hwid, signature);
+		xfree(licence_data);
 		return;
 	}
+#endif
 
-	/* Generate a signature for the HWID buffer */
-	licence_generate_hwid(hwid);
-	sec_sign(signature, 16, licence_sign_key, 16, hwid, sizeof(hwid));
-
-	/* Now encrypt the HWID */
-	RC4_set_key(&crypt_key, 16, licence_key);
-	RC4(&crypt_key, sizeof(hwid), hwid, hwid);
-
-	licence_present(null_data, null_data, licence_data, licence_size, hwid, signature);
-	xfree(licence_data);
+	licence_send_request(null_data, null_data, username, hostname);
 }
 
 /* Send an authentication response packet */
@@ -276,7 +280,10 @@ licence_process_issue(STREAM s)
 		return;
 
 	licence_issued = True;
+
+#ifdef SAVE_LICENCE
 	save_licence(s->p, length - 2);
+#endif
 }
 
 /* Process a licence packet */
