@@ -278,7 +278,8 @@ ui_init(void)
 
 	if (ownbackstore)
 	{
-		backstore = XCreatePixmap(display, RootWindowOfScreen(screen), width, height, depth);
+		backstore =
+			XCreatePixmap(display, RootWindowOfScreen(screen), width, height, depth);
 
 		/* clear to prevent rubbish being exposed at startup */
 		XSetForeground(display, gc, BlackPixelOfScreen(screen));
@@ -316,7 +317,7 @@ ui_create_window(void)
 	long input_mask, ic_input_mask;
 	XEvent xevent;
 
-	wndwidth  = fullscreen ? WidthOfScreen(screen)  : width;
+	wndwidth = fullscreen ? WidthOfScreen(screen) : width;
 	wndheight = fullscreen ? HeightOfScreen(screen) : height;
 
 	attribs.background_pixel = BlackPixelOfScreen(screen);
@@ -360,7 +361,8 @@ ui_create_window(void)
 		IC = XCreateIC(IM, XNInputStyle, (XIMPreeditNothing | XIMStatusNothing),
 			       XNClientWindow, wnd, XNFocusWindow, wnd, NULL);
 
-		if ((IC != NULL) && (XGetICValues(IC, XNFilterEvents, &ic_input_mask, NULL) == NULL))
+		if ((IC != NULL)
+		    && (XGetICValues(IC, XNFilterEvents, &ic_input_mask, NULL) == NULL))
 			input_mask |= ic_input_mask;
 	}
 
@@ -368,9 +370,11 @@ ui_create_window(void)
 	XMapWindow(display, wnd);
 
 	/* wait for MapNotify */
-	do {
+	do
+	{
 		XMaskEvent(display, StructureNotifyMask, &xevent);
-	} while (xevent.type != MapNotify);
+	}
+	while (xevent.type != MapNotify);
 
 	if (fullscreen)
 		XSetInputFocus(display, wnd, RevertToPointerRoot, CurrentTime);
@@ -779,26 +783,38 @@ ui_create_colourmap(COLOURMAP * colours)
 			long nDist = nMinDist;
 
 			/* only get the colors once */
-			while( colLookup-- ){
+			while (colLookup--)
+			{
 				xc_cache[colLookup].pixel = colLookup;
-				xc_cache[colLookup].red = xc_cache[colLookup].green = xc_cache[colLookup].blue = 0;
+				xc_cache[colLookup].red = xc_cache[colLookup].green =
+					xc_cache[colLookup].blue = 0;
 				xc_cache[colLookup].flags = 0;
-				XQueryColor(display, DefaultColormap(display, DefaultScreen(display)), &xc_cache[colLookup]);
+				XQueryColor(display,
+					    DefaultColormap(display, DefaultScreen(display)),
+					    &xc_cache[colLookup]);
 			}
 			colLookup = 0;
 
 			/* approximate the pixel */
-			while( j-- ){
-				if( xc_cache[j].flags ){
-					nDist = 
-					((long) (xc_cache[j].red >> 8) - (long) (xentry.red >> 8)) *
-					((long) (xc_cache[j].red >> 8) - (long) (xentry.red >> 8)) +
-					((long) (xc_cache[j].green >> 8) - (long) (xentry.green >> 8)) *
-					((long) (xc_cache[j].green >> 8) - (long) (xentry.green >> 8)) +
-					((long) (xc_cache[j].blue >> 8) - (long) (xentry.blue >> 8)) *
-					((long) (xc_cache[j].blue >> 8) - (long) (xentry.blue >> 8));
+			while (j--)
+			{
+				if (xc_cache[j].flags)
+				{
+					nDist = ((long) (xc_cache[j].red >> 8) -
+						 (long) (xentry.red >> 8)) *
+						((long) (xc_cache[j].red >> 8) -
+						 (long) (xentry.red >> 8)) +
+						((long) (xc_cache[j].green >> 8) -
+						 (long) (xentry.green >> 8)) *
+						((long) (xc_cache[j].green >> 8) -
+						 (long) (xentry.green >> 8)) +
+						((long) (xc_cache[j].blue >> 8) -
+						 (long) (xentry.blue >> 8)) *
+						((long) (xc_cache[j].blue >> 8) -
+						 (long) (xentry.blue >> 8));
 				}
-				if( nDist < nMinDist ){
+				if (nDist < nMinDist)
+				{
 					nMinDist = nDist;
 					xentry.pixel = j;
 				}
@@ -807,7 +823,8 @@ ui_create_colourmap(COLOURMAP * colours)
 		colour = xentry.pixel;
 
 		/* update our cache */
-		if( xentry.pixel < 256 ){
+		if (xentry.pixel < 256)
+		{
 			xc_cache[xentry.pixel].red = xentry.red;
 			xc_cache[xentry.pixel].green = xentry.green;
 			xc_cache[xentry.pixel].blue = xentry.blue;
