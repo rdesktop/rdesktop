@@ -1,4 +1,4 @@
-/*
+/* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    Protocol services - Multipoint Communications Service
    Copyright (C) Matthew Chapman 1999-2002
@@ -21,6 +21,7 @@
 #include "rdesktop.h"
 
 uint16 mcs_userid;
+extern BOOL use_rdp5;
 
 /* Parse an ASN.1 BER header */
 static BOOL
@@ -119,19 +120,21 @@ static void
 mcs_send_connect_initial(STREAM mcs_data)
 {
 	int datalen = mcs_data->end - mcs_data->data;
-	int length = 7 + 3 * 34 + 4 + datalen;
+	int length = 9 + 3 * 34 + 4 + datalen;
 	STREAM s;
 
 	s = iso_init(length + 5);
 
 	ber_out_header(s, MCS_CONNECT_INITIAL, length);
-	ber_out_header(s, BER_TAG_OCTET_STRING, 0);	/* calling domain */
-	ber_out_header(s, BER_TAG_OCTET_STRING, 0);	/* called domain */
+	ber_out_header(s, BER_TAG_OCTET_STRING, 1);	/* calling domain */
+	out_uint8(s, 1);
+	ber_out_header(s, BER_TAG_OCTET_STRING, 1);	/* called domain */
+	out_uint8(s, 1);
 
 	ber_out_header(s, BER_TAG_BOOLEAN, 1);
 	out_uint8(s, 0xff);	/* upward flag */
 
-	mcs_out_domain_params(s, 2, 2, 0, 0xffff);	/* target params */
+	mcs_out_domain_params(s, 34, 2, 0, 0xffff);	/* target params */
 	mcs_out_domain_params(s, 1, 1, 1, 0x420);	/* min params */
 	mcs_out_domain_params(s, 0xffff, 0xfc17, 0xffff, 0xffff);	/* max params */
 
@@ -169,16 +172,20 @@ mcs_recv_connect_response(STREAM mcs_data)
 	mcs_parse_domain_params(s);
 
 	ber_parse_header(s, BER_TAG_OCTET_STRING, &length);
-	if (length > mcs_data->size)
-	{
-		error("MCS data length %d\n", length);
-		length = mcs_data->size;
-	}
 
-	in_uint8a(s, mcs_data->data, length);
-	mcs_data->p = mcs_data->data;
-	mcs_data->end = mcs_data->data + length;
+	sec_process_mcs_data(s);
+	/*
+	   if (length > mcs_data->size)
+	   {
+	   error("MCS data length %d, expected %d\n", length, 
+	   mcs_data->size);
+	   length = mcs_data->size;
+	   }
 
+	   in_uint8a(s, mcs_data->data, length);
+	   mcs_data->p = mcs_data->data;
+	   mcs_data->end = mcs_data->data + length;
+	 */
 	return s_check_end(s);
 }
 
@@ -324,7 +331,7 @@ mcs_send(STREAM s)
 
 /* Receive an MCS transport data packet */
 STREAM
-mcs_recv(void)
+mcs_recv(uint16 * channel)
 {
 	uint8 opcode, appid, length;
 	STREAM s;
@@ -344,7 +351,9 @@ mcs_recv(void)
 		return NULL;
 	}
 
-	in_uint8s(s, 5);	/* userid, chanid, flags */
+	in_uint8s(s, 2);	/* userid */
+	in_uint16_be(s, *channel);
+	in_uint8s(s, 1);	/* flags */
 	in_uint8(s, length);
 	if (length & 0x80)
 		in_uint8s(s, 1);	/* second byte of length */
@@ -354,9 +363,9 @@ mcs_recv(void)
 
 /* Establish a connection up to the MCS layer */
 BOOL
-mcs_connect(char *server, STREAM mcs_data)
+mcs_connect(char *server, STREAM mcs_data, char *username)
 {
-	if (!iso_connect(server))
+	if (!iso_connect(server, username))
 		return False;
 
 	mcs_send_connect_initial(mcs_data);
@@ -376,6 +385,15 @@ mcs_connect(char *server, STREAM mcs_data)
 	mcs_send_cjrq(MCS_GLOBAL_CHANNEL);
 	if (!mcs_recv_cjcf())
 		goto error;
+
+	if (use_rdp5)
+	{
+		/* Note: If we send this cjrq after telling the server we support RDP4 only, 
+		   the server won't respond with a cjcf and we will hang. */
+		mcs_send_cjrq(MCS_GLOBAL_CHANNEL + 1);	/* hack - clipboard */
+		if (!mcs_recv_cjcf())
+			goto error;
+	}
 
 	return True;
 
