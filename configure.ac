@@ -154,6 +154,10 @@ else
 fi
 AC_SUBST(SOUNDOBJ)
 
+#
+# dirfd
+#
+UTILS_FUNC_DIRFD
 
 #
 # debugging

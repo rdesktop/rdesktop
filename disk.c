@@ -20,16 +20,6 @@
 
 #include "disk.h"
 
-#if (defined(sun) && (defined(__svr4__) || defined(__SVR4)))
-#define SOLARIS
-#endif
-
-#if (defined(SOLARIS) || defined(__hpux))
-#define DIRFD(a) ((a)->dd_fd)
-#else
-#define DIRFD(a) (dirfd(a))
-#endif
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -41,6 +31,16 @@
 #include <utime.h>
 #include <time.h>		/* ctime */
 
+#if defined(HAVE_DIRFD)
+#define DIRFD(a) (dirfd(a))
+#else
+#define DIRFD(a) ((a)->DIR_FD_MEMBER_NAME)
+#endif
+
+/* TODO: let autoconf figure out everything below... */
+#if (defined(sun) && (defined(__svr4__) || defined(__SVR4)))
+#define SOLARIS
+#endif
 
 #if (defined(SOLARIS) || defined (__hpux) || defined(__BEOS__))
 #include <sys/statvfs.h>	/* solaris statvfs */
