@@ -21,7 +21,8 @@
 #include "rdesktop.h"
 
 /* Send a self-contained ISO PDU */
-static void iso_send_msg(uint8 code)
+static void
+iso_send_msg(uint8 code)
 {
 	STREAM s;
 
@@ -42,7 +43,8 @@ static void iso_send_msg(uint8 code)
 }
 
 /* Receive a message on the ISO layer, return code */
-static STREAM iso_recv_msg(uint8 *code)
+static STREAM
+iso_recv_msg(uint8 *code)
 {
 	STREAM s;
 	uint16 length;
@@ -80,7 +82,8 @@ static STREAM iso_recv_msg(uint8 *code)
 }
 
 /* Initialise ISO transport data packet */
-STREAM iso_init(int length)
+STREAM
+iso_init(int length)
 {
 	STREAM s;
 
@@ -91,7 +94,8 @@ STREAM iso_init(int length)
 }
 
 /* Send an ISO data PDU */
-void iso_send(STREAM s)
+void
+iso_send(STREAM s)
 {
 	uint16 length;
 
@@ -110,7 +114,8 @@ void iso_send(STREAM s)
 }
 
 /* Receive ISO transport data packet */
-STREAM iso_recv()
+STREAM
+iso_recv()
 {
 	STREAM s;
 	uint8 code;
@@ -126,7 +131,8 @@ STREAM iso_recv()
 }
 
 /* Establish a connection up to the ISO layer */
-BOOL iso_connect(char *server)
+BOOL
+iso_connect(char *server)
 {
 	uint8 code;
 
@@ -146,7 +152,8 @@ BOOL iso_connect(char *server)
 }
 
 /* Disconnect from the ISO layer */
-void iso_disconnect()
+void
+iso_disconnect()
 {
 	iso_send_msg(ISO_PDU_DR);
 	tcp_disconnect();

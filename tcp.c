@@ -33,7 +33,8 @@ static struct stream in;
 static struct stream out;
 
 /* Initialise TCP transport data packet */
-STREAM tcp_init(int maxlen)
+STREAM
+tcp_init(int maxlen)
 {
 	if (maxlen > out.size)
 	{
@@ -47,7 +48,8 @@ STREAM tcp_init(int maxlen)
 }
 
 /* Send TCP transport data packet */
-void tcp_send(STREAM s)
+void
+tcp_send(STREAM s)
 {
 	int length = s->end - s->data;
 	int sent, total = 0;
@@ -67,7 +69,8 @@ void tcp_send(STREAM s)
 }
 
 /* Receive a message on the TCP layer */
-STREAM tcp_recv(int length)
+STREAM
+tcp_recv(int length)
 {
 	int ret, rcvd = 0;
 	struct timeval tv;
@@ -111,7 +114,8 @@ STREAM tcp_recv(int length)
 }
 
 /* Establish a connection on the TCP layer */
-BOOL tcp_connect(char *server)
+BOOL
+tcp_connect(char *server)
 {
 	struct hostent *nslookup;
 	struct sockaddr_in servaddr;
@@ -159,7 +163,8 @@ BOOL tcp_connect(char *server)
 }
 
 /* Disconnect on the TCP layer */
-void tcp_disconnect()
+void
+tcp_disconnect()
 {
 	close(sock);
 }

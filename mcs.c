@@ -23,7 +23,8 @@
 uint16 mcs_userid;
 
 /* Parse an ASN.1 BER header */
-static BOOL ber_parse_header(STREAM s, int tagval, int *length)
+static BOOL
+ber_parse_header(STREAM s, int tagval, int *length)
 {
 	int tag, len;
 
@@ -57,7 +58,8 @@ static BOOL ber_parse_header(STREAM s, int tagval, int *length)
 }
 
 /* Output an ASN.1 BER header */
-static void ber_out_header(STREAM s, int tagval, int length)
+static void
+ber_out_header(STREAM s, int tagval, int length)
 {
 	if (tagval > 0xff)
 	{
@@ -78,15 +80,17 @@ static void ber_out_header(STREAM s, int tagval, int length)
 }
 
 /* Output an ASN.1 BER integer */
-static void ber_out_integer(STREAM s, int value)
+static void
+ber_out_integer(STREAM s, int value)
 {
 	ber_out_header(s, BER_TAG_INTEGER, 2);
 	out_uint16_be(s, value);
 }
 
 /* Output a DOMAIN_PARAMS structure (ASN.1 BER) */
-static void mcs_out_domain_params(STREAM s, int max_channels, int max_users,
-				  int max_tokens, int max_pdusize)
+static void
+mcs_out_domain_params(STREAM s, int max_channels, int max_users,
+		      int max_tokens, int max_pdusize)
 {
 	ber_out_header(s, MCS_TAG_DOMAIN_PARAMS, 32);
 	ber_out_integer(s, max_channels);
@@ -100,7 +104,8 @@ static void mcs_out_domain_params(STREAM s, int max_channels, int max_users,
 }
 
 /* Parse a DOMAIN_PARAMS structure (ASN.1 BER) */
-static BOOL mcs_parse_domain_params(STREAM s)
+static BOOL
+mcs_parse_domain_params(STREAM s)
 {
 	int length;
 
@@ -111,7 +116,8 @@ static BOOL mcs_parse_domain_params(STREAM s)
 }
 
 /* Send an MCS_CONNECT_INITIAL message (ASN.1 BER) */
-static void mcs_send_connect_initial(STREAM mcs_data)
+static void
+mcs_send_connect_initial(STREAM mcs_data)
 {
 	int datalen = mcs_data->end - mcs_data->data;
 	int length = 7 + 3 * 34 + 4 + datalen;
@@ -138,7 +144,8 @@ static void mcs_send_connect_initial(STREAM mcs_data)
 }
 
 /* Expect a MCS_CONNECT_RESPONSE message (ASN.1 BER) */
-static BOOL mcs_recv_connect_response(STREAM mcs_data)
+static BOOL
+mcs_recv_connect_response(STREAM mcs_data)
 {
 	uint8 result;
 	int length;
@@ -177,7 +184,8 @@ static BOOL mcs_recv_connect_response(STREAM mcs_data)
 }
 
 /* Send an EDrq message (ASN.1 PER) */
-static void mcs_send_edrq()
+static void
+mcs_send_edrq()
 {
 	STREAM s;
 
@@ -192,7 +200,8 @@ static void mcs_send_edrq()
 }
 
 /* Send an AUrq message (ASN.1 PER) */
-static void mcs_send_aurq()
+static void
+mcs_send_aurq()
 {
 	STREAM s;
 
@@ -205,7 +214,8 @@ static void mcs_send_aurq()
 }
 
 /* Expect a AUcf message (ASN.1 PER) */
-static BOOL mcs_recv_aucf(uint16 *mcs_userid)
+static BOOL
+mcs_recv_aucf(uint16 *mcs_userid)
 {
 	uint8 opcode, result;
 	STREAM s;
@@ -235,7 +245,8 @@ static BOOL mcs_recv_aucf(uint16 *mcs_userid)
 }
 
 /* Send a CJrq message (ASN.1 PER) */
-static void mcs_send_cjrq(uint16 chanid)
+static void
+mcs_send_cjrq(uint16 chanid)
 {
 	STREAM s;
 
@@ -250,7 +261,8 @@ static void mcs_send_cjrq(uint16 chanid)
 }
 
 /* Expect a CJcf message (ASN.1 PER) */
-static BOOL mcs_recv_cjcf()
+static BOOL
+mcs_recv_cjcf()
 {
 	uint8 opcode, result;
 	STREAM s;
@@ -281,7 +293,8 @@ static BOOL mcs_recv_cjcf()
 }
 
 /* Initialise an MCS transport data packet */
-STREAM mcs_init(int length)
+STREAM
+mcs_init(int length)
 {
 	STREAM s;
 
@@ -292,7 +305,8 @@ STREAM mcs_init(int length)
 }
 
 /* Send an MCS transport data packet */
-void mcs_send(STREAM s)
+void
+mcs_send(STREAM s)
 {
 	uint16 length;
 
@@ -310,7 +324,8 @@ void mcs_send(STREAM s)
 }
 
 /* Receive an MCS transport data packet */
-STREAM mcs_recv()
+STREAM
+mcs_recv()
 {
 	uint8 opcode, appid, length;
 	STREAM s;
@@ -339,7 +354,8 @@ STREAM mcs_recv()
 }
 
 /* Establish a connection up to the MCS layer */
-BOOL mcs_connect(char *server, STREAM mcs_data)
+BOOL
+mcs_connect(char *server, STREAM mcs_data)
 {
 	if (!iso_connect(server))
 		return False;
@@ -370,7 +386,8 @@ BOOL mcs_connect(char *server, STREAM mcs_data)
 }
 
 /* Disconnect from the MCS layer */
-void mcs_disconnect()
+void
+mcs_disconnect()
 {
 	iso_disconnect();
 }

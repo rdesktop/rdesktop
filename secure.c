@@ -45,8 +45,8 @@ static uint8 sec_crypted_random[64];
  * a client and server salt) and a global salt value used for padding.
  * Both SHA1 and MD5 algorithms are used.
  */
-void sec_hash_48(uint8 *out, uint8 *in, uint8 *salt1, uint8 *salt2,
-		 uint8 salt)
+void
+sec_hash_48(uint8 *out, uint8 *in, uint8 *salt1, uint8 *salt2, uint8 salt)
 {
 	uint8 shasig[20];
 	uint8 pad[4];
@@ -76,7 +76,8 @@ void sec_hash_48(uint8 *out, uint8 *in, uint8 *salt1, uint8 *salt2,
  * Weaker 16-byte transformation, also using two 32-byte salts, but
  * only using a single round of MD5.
  */
-void sec_hash_16(uint8 *out, uint8 *in, uint8 *salt1, uint8 *salt2)
+void
+sec_hash_16(uint8 *out, uint8 *in, uint8 *salt1, uint8 *salt2)
 {
 	MD5_CTX md5;
 
@@ -88,7 +89,8 @@ void sec_hash_16(uint8 *out, uint8 *in, uint8 *salt1, uint8 *salt2)
 }
 
 /* Reduce key entropy from 64 to 40 bits */
-static void sec_make_40bit(uint8 *key)
+static void
+sec_make_40bit(uint8 *key)
 {
 	key[0] = 0xd1;
 	key[1] = 0x26;
@@ -96,8 +98,8 @@ static void sec_make_40bit(uint8 *key)
 }
 
 /* Generate a session key and RC4 keys, given client and server randoms */
-static void sec_generate_keys(uint8 *client_key, uint8 *server_key,
-			      int rc4_key_size)
+static void
+sec_generate_keys(uint8 *client_key, uint8 *server_key, int rc4_key_size)
 {
 	uint8 session_key[48];
 	uint8 temp_hash[48];
@@ -145,20 +147,21 @@ static void sec_generate_keys(uint8 *client_key, uint8 *server_key,
 
 static uint8 pad_54[40] = {
 	54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54,
-		54, 54, 54,
+	54, 54, 54,
 	54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54, 54,
-		54, 54, 54
+	54, 54, 54
 };
 
 static uint8 pad_92[48] = {
 	92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92,
-		92, 92, 92, 92, 92, 92, 92,
+	92, 92, 92, 92, 92, 92, 92,
 	92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92, 92,
-		92, 92, 92, 92, 92, 92, 92
+	92, 92, 92, 92, 92, 92, 92
 };
 
 /* Output a uint32 into a buffer (little-endian) */
-void buf_out_uint32(uint8 *buffer, uint32 value)
+void
+buf_out_uint32(uint8 *buffer, uint32 value)
 {
 	buffer[0] = (value) & 0xff;
 	buffer[1] = (value >> 8) & 0xff;
@@ -167,8 +170,9 @@ void buf_out_uint32(uint8 *buffer, uint32 value)
 }
 
 /* Generate a signature hash, using a combination of SHA1 and MD5 */
-void sec_sign(uint8 *signature, uint8 *session_key, int length,
-	      uint8 *data, int datalen)
+void
+sec_sign(uint8 *signature, uint8 *session_key, int length,
+	 uint8 *data, int datalen)
 {
 	uint8 shasig[20];
 	uint8 md5sig[16];
@@ -195,7 +199,8 @@ void sec_sign(uint8 *signature, uint8 *session_key, int length,
 }
 
 /* Update an encryption key - similar to the signing process */
-static void sec_update(uint8 *key, uint8 *update_key)
+static void
+sec_update(uint8 *key, uint8 *update_key)
 {
 	uint8 shasig[20];
 	SHA_CTX sha;
@@ -222,7 +227,8 @@ static void sec_update(uint8 *key, uint8 *update_key)
 }
 
 /* Encrypt data using RC4 */
-static void sec_encrypt(uint8 *data, int length)
+static void
+sec_encrypt(uint8 *data, int length)
 {
 	static int use_count;
 
@@ -238,7 +244,8 @@ static void sec_encrypt(uint8 *data, int length)
 }
 
 /* Decrypt data using RC4 */
-static void sec_decrypt(uint8 *data, int length)
+static void
+sec_decrypt(uint8 *data, int length)
 {
 	static int use_count;
 
@@ -254,7 +261,8 @@ static void sec_decrypt(uint8 *data, int length)
 }
 
 /* Read in a NUMBER from a buffer */
-static void sec_read_number(NUMBER * num, uint8 *buffer, int len)
+static void
+sec_read_number(NUMBER * num, uint8 *buffer, int len)
 {
 	INT *data = num->n_part;
 	int i, j;
@@ -266,7 +274,8 @@ static void sec_read_number(NUMBER * num, uint8 *buffer, int len)
 }
 
 /* Write a NUMBER to a buffer */
-static void sec_write_number(NUMBER * num, uint8 *buffer, int len)
+static void
+sec_write_number(NUMBER * num, uint8 *buffer, int len)
 {
 	INT *data = num->n_part;
 	int i, j;
@@ -279,8 +288,9 @@ static void sec_write_number(NUMBER * num, uint8 *buffer, int len)
 }
 
 /* Perform an RSA public key encryption operation */
-static void sec_rsa_encrypt(uint8 *out, uint8 *in, int len,
-			    uint8 *modulus, uint8 *exponent)
+static void
+sec_rsa_encrypt(uint8 *out, uint8 *in, int len,
+		uint8 *modulus, uint8 *exponent)
 {
 	NUMBER data, key;
 
@@ -296,7 +306,8 @@ static void sec_rsa_encrypt(uint8 *out, uint8 *in, int len,
 }
 
 /* Initialise secure transport packet */
-STREAM sec_init(uint32 flags, int maxlen)
+STREAM
+sec_init(uint32 flags, int maxlen)
 {
 	int hdrlen;
 	STREAM s;
@@ -309,7 +320,8 @@ STREAM sec_init(uint32 flags, int maxlen)
 }
 
 /* Transmit secure transport packet */
-void sec_send(STREAM s, uint32 flags)
+void
+sec_send(STREAM s, uint32 flags)
 {
 	int datalen;
 
@@ -334,7 +346,8 @@ void sec_send(STREAM s, uint32 flags)
 }
 
 /* Transfer the client random to the server */
-static void sec_establish_key()
+static void
+sec_establish_key()
 {
 	uint32 length = SEC_MODULUS_SIZE + SEC_PADDING_SIZE;
 	uint32 flags = SEC_CLIENT_RANDOM;
@@ -351,7 +364,8 @@ static void sec_establish_key()
 }
 
 /* Output connect initial data blob */
-static void sec_out_mcs_data(STREAM s)
+static void
+sec_out_mcs_data(STREAM s)
 {
 	int hostlen = 2 * strlen(hostname);
 
@@ -403,7 +417,8 @@ static void sec_out_mcs_data(STREAM s)
 }
 
 /* Parse a public key structure */
-static BOOL sec_parse_public_key(STREAM s, uint8 **modulus, uint8 **exponent)
+static BOOL
+sec_parse_public_key(STREAM s, uint8 **modulus, uint8 **exponent)
 {
 	uint32 magic, modulus_len;
 
@@ -430,9 +445,9 @@ static BOOL sec_parse_public_key(STREAM s, uint8 **modulus, uint8 **exponent)
 }
 
 /* Parse a crypto information structure */
-static BOOL sec_parse_crypt_info(STREAM s, uint32 *rc4_key_size,
-				 uint8 **server_random, uint8 **modulus,
-				 uint8 **exponent)
+static BOOL
+sec_parse_crypt_info(STREAM s, uint32 *rc4_key_size,
+		     uint8 **server_random, uint8 **modulus, uint8 **exponent)
 {
 	uint32 crypt_level, random_len, rsa_info_len;
 	uint16 tag, length;
@@ -490,7 +505,8 @@ static BOOL sec_parse_crypt_info(STREAM s, uint32 *rc4_key_size,
 }
 
 /* Process crypto information blob */
-static void sec_process_crypt_info(STREAM s)
+static void
+sec_process_crypt_info(STREAM s)
 {
 	uint8 *server_random, *modulus, *exponent;
 	uint8 client_random[SEC_RANDOM_SIZE];
@@ -508,7 +524,8 @@ static void sec_process_crypt_info(STREAM s)
 }
 
 /* Process connect response data blob */
-static void sec_process_mcs_data(STREAM s)
+static void
+sec_process_mcs_data(STREAM s)
 {
 	uint16 tag, length;
 	uint8 *next_tag;
@@ -544,7 +561,8 @@ static void sec_process_mcs_data(STREAM s)
 }
 
 /* Receive secure transport packet */
-STREAM sec_recv()
+STREAM
+sec_recv()
 {
 	uint32 sec_flags;
 	STREAM s;
@@ -572,7 +590,8 @@ STREAM sec_recv()
 }
 
 /* Establish a secure connection */
-BOOL sec_connect(char *server)
+BOOL
+sec_connect(char *server)
 {
 	struct stream mcs_data;
 
@@ -590,7 +609,8 @@ BOOL sec_connect(char *server)
 }
 
 /* Disconnect a connection */
-void sec_disconnect()
+void
+sec_disconnect()
 {
 	mcs_disconnect();
 }

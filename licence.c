@@ -29,8 +29,8 @@ static uint8 licence_key[16];
 static uint8 licence_sign_key[16];
 
 /* Generate a session key and RC4 keys, given client and server randoms */
-void licence_generate_keys(uint8 *client_key, uint8 *server_key,
-			   uint8 *client_rsa)
+void
+licence_generate_keys(uint8 *client_key, uint8 *server_key, uint8 *client_rsa)
 {
 	uint8 session_key[48];
 	uint8 temp_hash[48];
@@ -47,8 +47,9 @@ void licence_generate_keys(uint8 *client_key, uint8 *server_key,
 }
 
 /* Send a licence request packet */
-static void licence_send_request(uint8 *client_random, uint8 *rsa_data,
-				 char *user, char *host)
+static void
+licence_send_request(uint8 *client_random, uint8 *rsa_data,
+		     char *user, char *host)
 {
 	uint32 sec_flags = SEC_LICENCE_NEG;
 	uint16 userlen = strlen(user) + 1;
@@ -83,7 +84,8 @@ static void licence_send_request(uint8 *client_random, uint8 *rsa_data,
 }
 
 /* Process a licence demand packet */
-static void licence_process_demand(STREAM s)
+static void
+licence_process_demand(STREAM s)
 {
 	uint8 null_data[SEC_MODULUS_SIZE];
 	uint8 *server_random;
@@ -101,8 +103,8 @@ static void licence_process_demand(STREAM s)
 }
 
 /* Send an authentication response packet */
-static void licence_send_authresp(uint8 *token, uint8 *crypt_hwid,
-				  uint8 *signature)
+static void
+licence_send_authresp(uint8 *token, uint8 *crypt_hwid, uint8 *signature)
 {
 	uint32 sec_flags = SEC_LICENCE_NEG;
 	uint16 length = 58;
@@ -128,7 +130,8 @@ static void licence_send_authresp(uint8 *token, uint8 *crypt_hwid,
 }
 
 /* Parse an authentication request packet */
-static BOOL licence_parse_authreq(STREAM s, uint8 **token, uint8 **signature)
+static BOOL
+licence_parse_authreq(STREAM s, uint8 **token, uint8 **signature)
 {
 	uint16 tokenlen;
 
@@ -148,7 +151,8 @@ static BOOL licence_parse_authreq(STREAM s, uint8 **token, uint8 **signature)
 }
 
 /* Process an authentication request packet */
-static void licence_process_authreq(STREAM s)
+static void
+licence_process_authreq(STREAM s)
 {
 	uint8 *in_token, *in_sig;
 	uint8 out_token[LICENCE_TOKEN_SIZE],
@@ -188,7 +192,8 @@ static void licence_process_authreq(STREAM s)
 }
 
 /* Process an licence issue packet */
-static void licence_process_issue(STREAM s)
+static void
+licence_process_issue(STREAM s)
 {
 	RC4_KEY crypt_key;
 	uint32 length;
@@ -211,7 +216,8 @@ static void licence_process_issue(STREAM s)
 }
 
 /* Process a licence packet */
-void licence_process(STREAM s)
+void
+licence_process(STREAM s)
 {
 	uint16 tag;
 

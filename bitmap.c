@@ -26,8 +26,9 @@
 #define REPEAT(statement) { while ((count > 0) && (x < width)) { statement; count--; x++; } }
 #define MASK_UPDATE() { mixmask <<= 1; if (mixmask == 0) { mask = CVAL(input); mixmask = 1; } }
 
-BOOL bitmap_decompress(unsigned char *output, int width, int height,
-		       unsigned char *input, int size)
+BOOL
+bitmap_decompress(unsigned char *output, int width, int height,
+		  unsigned char *input, int size)
 {
 	unsigned char *end = input + size;
 	unsigned char *prevline = NULL, *line = NULL;

@@ -37,7 +37,8 @@ BOOL orders = True;
 BOOL licence = True;
 
 /* Display usage information */
-static void usage(char *program)
+static void
+usage(char *program)
 {
 	STATUS("Usage: %s [options] server\n", program);
 	STATUS("   -u: user name\n");
@@ -55,7 +56,8 @@ static void usage(char *program)
 }
 
 /* Client program */
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
 	struct passwd *pw;
 	char *server;
@@ -183,7 +185,8 @@ int main(int argc, char *argv[])
 }
 
 /* Generate a 32-byte random for the secure transport code. */
-void generate_random(uint8 *random)
+void
+generate_random(uint8 *random)
 {
 	struct stat st;
 	struct tms tmsbuf;
@@ -210,7 +213,8 @@ void generate_random(uint8 *random)
 }
 
 /* malloc; exit if out of memory */
-void *xmalloc(int size)
+void *
+xmalloc(int size)
 {
 	void *mem = malloc(size);
 	if (mem == NULL)
@@ -222,7 +226,8 @@ void *xmalloc(int size)
 }
 
 /* realloc; exit if out of memory */
-void *xrealloc(void *oldmem, int size)
+void *
+xrealloc(void *oldmem, int size)
 {
 	void *mem = realloc(oldmem, size);
 	if (mem == NULL)
@@ -234,13 +239,15 @@ void *xrealloc(void *oldmem, int size)
 }
 
 /* free */
-void xfree(void *mem)
+void
+xfree(void *mem)
 {
 	free(mem);
 }
 
 /* Produce a hex dump */
-void hexdump(unsigned char *p, unsigned int len)
+void
+hexdump(unsigned char *p, unsigned int len)
 {
 	unsigned char *line = p;
 	unsigned int thisline, offset = 0;

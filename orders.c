@@ -25,7 +25,8 @@ extern unsigned char *next_packet;
 static RDP_ORDER_STATE order_state;
 
 /* Read field indicating which parameters are present */
-static void rdp_in_present(STREAM s, uint32 *present, uint8 flags, int size)
+static void
+rdp_in_present(STREAM s, uint32 *present, uint8 flags, int size)
 {
 	uint8 bits;
 	int i;
@@ -52,7 +53,8 @@ static void rdp_in_present(STREAM s, uint32 *present, uint8 flags, int size)
 }
 
 /* Read a co-ordinate (16-bit, or 8-bit delta) */
-static void rdp_in_coord(STREAM s, uint16 *coord, BOOL delta)
+static void
+rdp_in_coord(STREAM s, uint16 *coord, BOOL delta)
 {
 	uint8 change;
 
@@ -68,14 +70,16 @@ static void rdp_in_coord(STREAM s, uint16 *coord, BOOL delta)
 }
 
 /* Read a colour entry */
-static void rdp_in_colour(STREAM s, uint8 *colour)
+static void
+rdp_in_colour(STREAM s, uint8 *colour)
 {
 	in_uint8(s, *colour);
 	s->p += 2;
 }
 
 /* Parse bounds information */
-static BOOL rdp_parse_bounds(STREAM s, BOUNDS *bounds)
+static BOOL
+rdp_parse_bounds(STREAM s, BOUNDS *bounds)
 {
 	uint8 present;
 
@@ -105,7 +109,8 @@ static BOOL rdp_parse_bounds(STREAM s, BOUNDS *bounds)
 }
 
 /* Parse a pen */
-static BOOL rdp_parse_pen(STREAM s, PEN *pen, uint32 present)
+static BOOL
+rdp_parse_pen(STREAM s, PEN *pen, uint32 present)
 {
 	if (present & 1)
 		in_uint8(s, pen->style);
@@ -120,7 +125,8 @@ static BOOL rdp_parse_pen(STREAM s, PEN *pen, uint32 present)
 }
 
 /* Parse a brush */
-static BOOL rdp_parse_brush(STREAM s, BRUSH *brush, uint32 present)
+static BOOL
+rdp_parse_brush(STREAM s, BRUSH *brush, uint32 present)
 {
 	if (present & 1)
 		in_uint8(s, brush->xorigin);
@@ -141,8 +147,8 @@ static BOOL rdp_parse_brush(STREAM s, BRUSH *brush, uint32 present)
 }
 
 /* Process a destination blt order */
-static void process_destblt(STREAM s, DESTBLT_ORDER *os,
-			    uint32 present, BOOL delta)
+static void
+process_destblt(STREAM s, DESTBLT_ORDER *os, uint32 present, BOOL delta)
 {
 	if (present & 0x01)
 		rdp_in_coord(s, &os->x, delta);
@@ -166,8 +172,8 @@ static void process_destblt(STREAM s, DESTBLT_ORDER *os,
 }
 
 /* Process a pattern blt order */
-static void process_patblt(STREAM s, PATBLT_ORDER *os,
-			   uint32 present, BOOL delta)
+static void
+process_patblt(STREAM s, PATBLT_ORDER *os, uint32 present, BOOL delta)
 {
 	if (present & 0x0001)
 		rdp_in_coord(s, &os->x, delta);
@@ -201,8 +207,8 @@ static void process_patblt(STREAM s, PATBLT_ORDER *os,
 }
 
 /* Process a screen blt order */
-static void process_screenblt(STREAM s, SCREENBLT_ORDER *os,
-			      uint32 present, BOOL delta)
+static void
+process_screenblt(STREAM s, SCREENBLT_ORDER *os, uint32 present, BOOL delta)
 {
 	if (present & 0x0001)
 		rdp_in_coord(s, &os->x, delta);
@@ -233,7 +239,8 @@ static void process_screenblt(STREAM s, SCREENBLT_ORDER *os,
 }
 
 /* Process a line order */
-static void process_line(STREAM s, LINE_ORDER *os, uint32 present, BOOL delta)
+static void
+process_line(STREAM s, LINE_ORDER *os, uint32 present, BOOL delta)
 {
 	if (present & 0x0001)
 		in_uint16_le(s, os->mixmode);
@@ -273,7 +280,8 @@ static void process_line(STREAM s, LINE_ORDER *os, uint32 present, BOOL delta)
 }
 
 /* Process an opaque rectangle order */
-static void process_rect(STREAM s, RECT_ORDER *os, uint32 present, BOOL delta)
+static void
+process_rect(STREAM s, RECT_ORDER *os, uint32 present, BOOL delta)
 {
 	if (present & 0x01)
 		rdp_in_coord(s, &os->x, delta);
@@ -297,8 +305,8 @@ static void process_rect(STREAM s, RECT_ORDER *os, uint32 present, BOOL delta)
 }
 
 /* Process a desktop save order */
-static void process_desksave(STREAM s, DESKSAVE_ORDER *os,
-			     uint32 present, BOOL delta)
+static void
+process_desksave(STREAM s, DESKSAVE_ORDER *os, uint32 present, BOOL delta)
 {
 	int width, height;
 
@@ -335,8 +343,8 @@ static void process_desksave(STREAM s, DESKSAVE_ORDER *os,
 }
 
 /* Process a memory blt order */
-static void process_memblt(STREAM s, MEMBLT_ORDER *os,
-			   uint32 present, BOOL delta)
+static void
+process_memblt(STREAM s, MEMBLT_ORDER *os, uint32 present, BOOL delta)
 {
 	HBITMAP bitmap;
 
@@ -383,8 +391,8 @@ static void process_memblt(STREAM s, MEMBLT_ORDER *os,
 }
 
 /* Process a 3-way blt order */
-static void process_triblt(STREAM s, TRIBLT_ORDER *os,
-			   uint32 present, BOOL delta)
+static void
+process_triblt(STREAM s, TRIBLT_ORDER *os, uint32 present, BOOL delta)
 {
 	HBITMAP bitmap;
 
@@ -444,7 +452,8 @@ static void process_triblt(STREAM s, TRIBLT_ORDER *os,
 }
 
 /* Parse a delta co-ordinate in polyline order form */
-static int parse_delta(uint8 *buffer, int *offset)
+static int
+parse_delta(uint8 *buffer, int *offset)
 {
 	int value = buffer[(*offset)++];
 	int two_byte = value & 0x80;
@@ -461,8 +470,8 @@ static int parse_delta(uint8 *buffer, int *offset)
 }
 
 /* Process a polyline order */
-static void process_polyline(STREAM s, POLYLINE_ORDER *os,
-			     uint32 present, BOOL delta)
+static void
+process_polyline(STREAM s, POLYLINE_ORDER *os, uint32 present, BOOL delta)
 {
 	int index, line, data;
 	int x, y, xfrom, yfrom;
@@ -531,8 +540,8 @@ static void process_polyline(STREAM s, POLYLINE_ORDER *os,
 }
 
 /* Process a text order */
-static void process_text2(STREAM s, TEXT2_ORDER *os, uint32 present,
-			  BOOL delta)
+static void
+process_text2(STREAM s, TEXT2_ORDER *os, uint32 present, BOOL delta)
 {
 	DATABLOB *entry;
 	int i;
@@ -634,7 +643,8 @@ static void process_text2(STREAM s, TEXT2_ORDER *os, uint32 present,
 }
 
 /* Process a raw bitmap cache order */
-static void process_raw_bmpcache(STREAM s)
+static void
+process_raw_bmpcache(STREAM s)
 {
 	HBITMAP bitmap;
 	uint16 cache_idx, bufsize;
@@ -658,7 +668,8 @@ static void process_raw_bmpcache(STREAM s)
 }
 
 /* Process a bitmap cache order */
-static void process_bmpcache(STREAM s)
+static void
+process_bmpcache(STREAM s)
 {
 	HBITMAP bitmap;
 	uint16 cache_idx, size;
@@ -692,7 +703,8 @@ static void process_bmpcache(STREAM s)
 }
 
 /* Process a colourmap cache order */
-static void process_colcache(STREAM s)
+static void
+process_colcache(STREAM s)
 {
 	COLOURENTRY *entry;
 	COLOURMAP map;
@@ -723,7 +735,8 @@ static void process_colcache(STREAM s)
 }
 
 /* Process a font cache order */
-static void process_fontcache(STREAM s)
+static void
+process_fontcache(STREAM s)
 {
 	HGLYPH bitmap;
 	uint8 font, nglyphs;
@@ -754,7 +767,8 @@ static void process_fontcache(STREAM s)
 }
 
 /* Process a secondary order */
-static void process_secondary_order(STREAM s)
+static void
+process_secondary_order(STREAM s)
 {
 	uint16 length;
 	uint8 type;
@@ -792,7 +806,8 @@ static void process_secondary_order(STREAM s)
 }
 
 /* Process an order PDU */
-void process_orders(STREAM s)
+void
+process_orders(STREAM s)
 {
 	RDP_ORDER_STATE *os = &order_state;
 	uint32 present;
@@ -929,7 +944,8 @@ void process_orders(STREAM s)
 }
 
 /* Reset order state */
-void reset_order_state()
+void
+reset_order_state()
 {
 	memset(&order_state, 0, sizeof(order_state));
 }

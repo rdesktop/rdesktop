@@ -28,7 +28,8 @@ unsigned char *next_packet;
 uint32 rdp_shareid;
 
 /* Initialise an RDP packet */
-static STREAM rdp_init(int maxlen)
+static STREAM
+rdp_init(int maxlen)
 {
 	STREAM s;
 
@@ -39,7 +40,8 @@ static STREAM rdp_init(int maxlen)
 }
 
 /* Send an RDP packet */
-static void rdp_send(STREAM s, uint8 pdu_type)
+static void
+rdp_send(STREAM s, uint8 pdu_type)
 {
 	uint16 length;
 
@@ -54,7 +56,8 @@ static void rdp_send(STREAM s, uint8 pdu_type)
 }
 
 /* Receive an RDP packet */
-static STREAM rdp_recv(uint8 *type)
+static STREAM
+rdp_recv(uint8 *type)
 {
 	static STREAM rdp_s;
 	uint16 length, pdu_type;
@@ -88,7 +91,8 @@ static STREAM rdp_recv(uint8 *type)
 }
 
 /* Initialise an RDP data packet */
-static STREAM rdp_init_data(int maxlen)
+static STREAM
+rdp_init_data(int maxlen)
 {
 	STREAM s;
 
@@ -99,7 +103,8 @@ static STREAM rdp_init_data(int maxlen)
 }
 
 /* Send an RDP data packet */
-static void rdp_send_data(STREAM s, uint8 data_pdu_type)
+static void
+rdp_send_data(STREAM s, uint8 data_pdu_type)
 {
 	uint16 length;
 
@@ -122,7 +127,8 @@ static void rdp_send_data(STREAM s, uint8 data_pdu_type)
 }
 
 /* Output a string in Unicode */
-void rdp_out_unistr(STREAM s, char *string, int len)
+void
+rdp_out_unistr(STREAM s, char *string, int len)
 {
 	int i = 0, j = 0;
 
@@ -138,9 +144,9 @@ void rdp_out_unistr(STREAM s, char *string, int len)
 }
 
 /* Parse a logon info packet */
-static void rdp_send_logon_info(uint32 flags, char *domain, char *user,
-				char *password, char *program,
-				char *directory)
+static void
+rdp_send_logon_info(uint32 flags, char *domain, char *user,
+		    char *password, char *program, char *directory)
 {
 	int len_domain = 2 * strlen(domain);
 	int len_user = 2 * strlen(user);
@@ -171,7 +177,8 @@ static void rdp_send_logon_info(uint32 flags, char *domain, char *user,
 }
 
 /* Send a control PDU */
-static void rdp_send_control(uint16 action)
+static void
+rdp_send_control(uint16 action)
 {
 	STREAM s;
 
@@ -186,7 +193,8 @@ static void rdp_send_control(uint16 action)
 }
 
 /* Send a synchronisation PDU */
-static void rdp_send_synchronise()
+static void
+rdp_send_synchronise()
 {
 	STREAM s;
 
@@ -200,8 +208,9 @@ static void rdp_send_synchronise()
 }
 
 /* Send a single input event */
-void rdp_send_input(uint32 time, uint16 message_type, uint16 device_flags,
-		    uint16 param1, uint16 param2)
+void
+rdp_send_input(uint32 time, uint16 message_type, uint16 device_flags,
+	       uint16 param1, uint16 param2)
 {
 	STREAM s;
 
@@ -221,7 +230,8 @@ void rdp_send_input(uint32 time, uint16 message_type, uint16 device_flags,
 }
 
 /* Send an (empty) font information PDU */
-static void rdp_send_fonts(uint16 seq)
+static void
+rdp_send_fonts(uint16 seq)
 {
 	STREAM s;
 
@@ -237,7 +247,8 @@ static void rdp_send_fonts(uint16 seq)
 }
 
 /* Output general capability set */
-static void rdp_out_general_caps(STREAM s)
+static void
+rdp_out_general_caps(STREAM s)
 {
 	out_uint16_le(s, RDP_CAPSET_GENERAL);
 	out_uint16_le(s, RDP_CAPLEN_GENERAL);
@@ -255,7 +266,8 @@ static void rdp_out_general_caps(STREAM s)
 }
 
 /* Output bitmap capability set */
-static void rdp_out_bitmap_caps(STREAM s)
+static void
+rdp_out_bitmap_caps(STREAM s)
 {
 	out_uint16_le(s, RDP_CAPSET_BITMAP);
 	out_uint16_le(s, RDP_CAPLEN_BITMAP);
@@ -275,7 +287,8 @@ static void rdp_out_bitmap_caps(STREAM s)
 }
 
 /* Output order capability set */
-static void rdp_out_order_caps(STREAM s)
+static void
+rdp_out_order_caps(STREAM s)
 {
 	uint8 order_caps[32];
 
@@ -300,7 +313,8 @@ static void rdp_out_order_caps(STREAM s)
 }
 
 /* Output bitmap cache capability set */
-static void rdp_out_bmpcache_caps(STREAM s)
+static void
+rdp_out_bmpcache_caps(STREAM s)
 {
 	out_uint16_le(s, RDP_CAPSET_BMPCACHE);
 	out_uint16_le(s, RDP_CAPLEN_BMPCACHE);
@@ -315,7 +329,8 @@ static void rdp_out_bmpcache_caps(STREAM s)
 }
 
 /* Output control capability set */
-static void rdp_out_control_caps(STREAM s)
+static void
+rdp_out_control_caps(STREAM s)
 {
 	out_uint16_le(s, RDP_CAPSET_CONTROL);
 	out_uint16_le(s, RDP_CAPLEN_CONTROL);
@@ -327,7 +342,8 @@ static void rdp_out_control_caps(STREAM s)
 }
 
 /* Output activation capability set */
-static void rdp_out_activate_caps(STREAM s)
+static void
+rdp_out_activate_caps(STREAM s)
 {
 	out_uint16_le(s, RDP_CAPSET_ACTIVATE);
 	out_uint16_le(s, RDP_CAPLEN_ACTIVATE);
@@ -339,7 +355,8 @@ static void rdp_out_activate_caps(STREAM s)
 }
 
 /* Output pointer capability set */
-static void rdp_out_pointer_caps(STREAM s)
+static void
+rdp_out_pointer_caps(STREAM s)
 {
 	out_uint16_le(s, RDP_CAPSET_POINTER);
 	out_uint16_le(s, RDP_CAPLEN_POINTER);
@@ -349,7 +366,8 @@ static void rdp_out_pointer_caps(STREAM s)
 }
 
 /* Output share capability set */
-static void rdp_out_share_caps(STREAM s)
+static void
+rdp_out_share_caps(STREAM s)
 {
 	out_uint16_le(s, RDP_CAPSET_SHARE);
 	out_uint16_le(s, RDP_CAPLEN_SHARE);
@@ -359,7 +377,8 @@ static void rdp_out_share_caps(STREAM s)
 }
 
 /* Output colour cache capability set */
-static void rdp_out_colcache_caps(STREAM s)
+static void
+rdp_out_colcache_caps(STREAM s)
 {
 	out_uint16_le(s, RDP_CAPSET_COLCACHE);
 	out_uint16_le(s, RDP_CAPLEN_COLCACHE);
@@ -371,27 +390,28 @@ static void rdp_out_colcache_caps(STREAM s)
 static uint8 canned_caps[] = {
 	0x01, 0x00, 0x00, 0x00, 0x09, 0x04, 0x00, 0x00, 0x04,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0C, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x0C, 0x00, 0x08, 0x00, 0x01,
+	0x0C, 0x00, 0x08, 0x00, 0x01,
 	0x00, 0x00, 0x00, 0x0E, 0x00, 0x08, 0x00, 0x01, 0x00, 0x00, 0x00,
-		0x10, 0x00, 0x34, 0x00, 0xFE,
+	0x10, 0x00, 0x34, 0x00, 0xFE,
 	0x00, 0x04, 0x00, 0xFE, 0x00, 0x04, 0x00, 0xFE, 0x00, 0x08, 0x00,
-		0xFE, 0x00, 0x08, 0x00, 0xFE,
+	0xFE, 0x00, 0x08, 0x00, 0xFE,
 	0x00, 0x10, 0x00, 0xFE, 0x00, 0x20, 0x00, 0xFE, 0x00, 0x40, 0x00,
-		0xFE, 0x00, 0x80, 0x00, 0xFE,
+	0xFE, 0x00, 0x80, 0x00, 0xFE,
 	0x00, 0x00, 0x01, 0x40, 0x00, 0x00, 0x08, 0x00, 0x01, 0x00, 0x01,
-		0x02, 0x00, 0x00, 0x00
+	0x02, 0x00, 0x00, 0x00
 };
 
 /* Output unknown capability set */
-static void rdp_out_unknown_caps(STREAM s)
+static void
+rdp_out_unknown_caps(STREAM s)
 {
 	out_uint16_le(s, RDP_CAPSET_UNKNOWN);
 	out_uint16_le(s, 0x58);
@@ -400,7 +420,8 @@ static void rdp_out_unknown_caps(STREAM s)
 }
 
 /* Send a confirm active PDU */
-static void rdp_send_confirm_active()
+static void
+rdp_send_confirm_active()
 {
 	STREAM s;
 	uint16 caplen =
@@ -436,7 +457,8 @@ static void rdp_send_confirm_active()
 }
 
 /* Respond to a demand active PDU */
-static void process_demand_active(STREAM s)
+static void
+process_demand_active(STREAM s)
 {
 	uint8 type;
 
@@ -459,7 +481,8 @@ static void process_demand_active(STREAM s)
 }
 
 /* Process a pointer PDU */
-static void process_pointer_pdu(STREAM s)
+static void
+process_pointer_pdu(STREAM s)
 {
 	uint16 message_type;
 	uint16 x, y;
@@ -482,7 +505,8 @@ static void process_pointer_pdu(STREAM s)
 }
 
 /* Process bitmap updates */
-static void process_bitmap_updates(STREAM s)
+static void
+process_bitmap_updates(STREAM s)
 {
 	uint16 num_updates;
 	uint16 left, top, right, bottom, width, height;
@@ -535,7 +559,8 @@ static void process_bitmap_updates(STREAM s)
 }
 
 /* Process a palette update */
-static void process_palette(STREAM s)
+static void
+process_palette(STREAM s)
 {
 	HCOLOURMAP hmap;
 	COLOURMAP map;
@@ -550,7 +575,8 @@ static void process_palette(STREAM s)
 }
 
 /* Process an update PDU */
-static void process_update_pdu(STREAM s)
+static void
+process_update_pdu(STREAM s)
 {
 	uint16 update_type;
 
@@ -580,7 +606,8 @@ static void process_update_pdu(STREAM s)
 }
 
 /* Process data PDU */
-static void process_data_pdu(STREAM s)
+static void
+process_data_pdu(STREAM s)
 {
 	uint8 data_pdu_type;
 
@@ -612,7 +639,8 @@ static void process_data_pdu(STREAM s)
 }
 
 /* Process incoming packets */
-void rdp_main_loop()
+void
+rdp_main_loop()
 {
 	uint8 type;
 	STREAM s;
@@ -639,8 +667,9 @@ void rdp_main_loop()
 }
 
 /* Establish a connection up to the RDP layer */
-BOOL rdp_connect(char *server, uint32 flags, char *domain, char *password,
-		 char *command, char *directory)
+BOOL
+rdp_connect(char *server, uint32 flags, char *domain, char *password,
+	    char *command, char *directory)
 {
 	if (!sec_connect(server))
 		return False;
@@ -651,7 +680,8 @@ BOOL rdp_connect(char *server, uint32 flags, char *domain, char *password,
 }
 
 /* Disconnect from the RDP layer */
-void rdp_disconnect()
+void
+rdp_disconnect()
 {
 	sec_disconnect();
 }

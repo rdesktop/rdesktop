@@ -27,7 +27,8 @@
 static HBITMAP bmpcache[3][600];
 
 /* Retrieve a bitmap from the cache */
-HBITMAP cache_get_bitmap(uint8 cache_id, uint16 cache_idx)
+HBITMAP
+cache_get_bitmap(uint8 cache_id, uint16 cache_idx)
 {
 	HBITMAP bitmap;
 
@@ -44,7 +45,8 @@ HBITMAP cache_get_bitmap(uint8 cache_id, uint16 cache_idx)
 }
 
 /* Store a bitmap in the cache */
-void cache_put_bitmap(uint8 cache_id, uint16 cache_idx, HBITMAP bitmap)
+void
+cache_put_bitmap(uint8 cache_id, uint16 cache_idx, HBITMAP bitmap)
 {
 	HBITMAP old;
 
@@ -68,7 +70,8 @@ void cache_put_bitmap(uint8 cache_id, uint16 cache_idx, HBITMAP bitmap)
 static FONTGLYPH fontcache[12][256];
 
 /* Retrieve a glyph from the font cache */
-FONTGLYPH *cache_get_font(uint8 font, uint16 character)
+FONTGLYPH *
+cache_get_font(uint8 font, uint16 character)
 {
 	FONTGLYPH *glyph;
 
@@ -85,9 +88,9 @@ FONTGLYPH *cache_get_font(uint8 font, uint16 character)
 }
 
 /* Store a glyph in the font cache */
-void cache_put_font(uint8 font, uint16 character, uint16 offset,
-		    uint16 baseline, uint16 width, uint16 height,
-		    HGLYPH pixmap)
+void
+cache_put_font(uint8 font, uint16 character, uint16 offset,
+	       uint16 baseline, uint16 width, uint16 height, HGLYPH pixmap)
 {
 	FONTGLYPH *glyph;
 
@@ -115,7 +118,8 @@ void cache_put_font(uint8 font, uint16 character, uint16 offset,
 static DATABLOB textcache[256];
 
 /* Retrieve a text item from the cache */
-DATABLOB *cache_get_text(uint8 cache_id)
+DATABLOB *
+cache_get_text(uint8 cache_id)
 {
 	DATABLOB *text;
 
@@ -131,7 +135,8 @@ DATABLOB *cache_get_text(uint8 cache_id)
 }
 
 /* Store a text item in the cache */
-void cache_put_text(uint8 cache_id, void *data, int length)
+void
+cache_put_text(uint8 cache_id, void *data, int length)
 {
 	DATABLOB *text;
 
@@ -156,7 +161,8 @@ void cache_put_text(uint8 cache_id, void *data, int length)
 static uint8 deskcache[0x38400];
 
 /* Retrieve desktop data from the cache */
-uint8 *cache_get_desktop(uint32 offset, int cx, int cy)
+uint8 *
+cache_get_desktop(uint32 offset, int cx, int cy)
 {
 	int length = cx * cy;
 
@@ -170,8 +176,8 @@ uint8 *cache_get_desktop(uint32 offset, int cx, int cy)
 }
 
 /* Store desktop data in the cache */
-void cache_put_desktop(uint32 offset, int cx, int cy, int scanline,
-		       uint8 *data)
+void
+cache_put_desktop(uint32 offset, int cx, int cy, int scanline, uint8 *data)
 {
 	int length = cx * cy;
 
