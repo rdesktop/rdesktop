@@ -207,7 +207,7 @@ make_colour(PixelColour pc)
 }
 
 #define BSWAP16(x) { x = (((x & 0xff) << 8) | (x >> 8)); }
-#define BSWAP24(x) { x = (((x & 0xff) << 16) | (x >> 16) | ((x >> 8) & 0xff00)); }
+#define BSWAP24(x) { x = (((x & 0xff) << 16) | (x >> 16) | (x & 0xff00)); }
 #define BSWAP32(x) { x = (((x & 0xff00ff) << 8) | ((x >> 8) & 0xff00ff)); \
 			x = (x << 16) | (x >> 16); }
 
@@ -481,7 +481,8 @@ translate16to32(uint16 * data, uint8 * out, uint8 * end)
 
 		if (g_host_be)
 		{
-		BSWAP16(pixel)}
+			BSWAP16(pixel);
+		}
 
 		value = make_colour(split_colour16(pixel));
 
@@ -531,30 +532,59 @@ translate24to16(uint8 * data, uint8 * out, uint8 * end)
 static void
 translate24to24(uint8 * data, uint8 * out, uint8 * end)
 {
+	uint32 pixel;
+	uint32 value;
+
 	while (out < end)
 	{
-		*(out++) = (*(data++));
+		pixel = *(data++) << 16;
+		pixel |= *(data++) << 8;
+		pixel |= *(data++);
+
+		value = make_colour(split_colour24(pixel));
+		
+		if (g_xserver_be)
+		{
+			*(out++) = value >> 16;
+			*(out++) = value >> 8;
+			*(out++) = value;
+		}
+		else
+		{
+			*(out++) = value;
+			*(out++) = value >> 8;
+			*(out++) = value >> 16;
+		}
 	}
 }
 
 static void
 translate24to32(uint8 * data, uint8 * out, uint8 * end)
 {
+	uint32 pixel;
+	uint32 value;
+
 	while (out < end)
 	{
+		pixel = *(data++) << 16;
+		pixel |= *(data++) << 8;
+		pixel |= *(data++);
+
+		value = make_colour(split_colour24(pixel));
+
 		if (g_xserver_be)
 		{
-			*(out++) = 0x00;
-			*(out++) = *(data++);
-			*(out++) = *(data++);
-			*(out++) = *(data++);
+			*(out++) = value >> 24;
+			*(out++) = value >> 16;
+			*(out++) = value >> 8;
+			*(out++) = value;
 		}
 		else
 		{
-			*(out++) = *(data++);
-			*(out++) = *(data++);
-			*(out++) = *(data++);
-			*(out++) = 0x00;
+			*(out++) = value;
+			*(out++) = value >> 8;
+			*(out++) = value >> 16;
+			*(out++) = value >> 24;
 		}
 	}
 }
