@@ -653,6 +653,8 @@ disk_set_information(HANDLE handle, uint32 info_class, STREAM in, STREAM out)
 				if (stat_fs.f_bsize * stat_fs.f_bfree < length)
 					return STATUS_DISK_FULL;
 
+			/* FIXME: Growing file with ftruncate doesn't
+			   work with Linux FAT fs */
 			if (ftruncate(handle, length) != 0)
 			{
 				perror("ftruncate");
