@@ -73,6 +73,7 @@ usage(char *program)
 	fprintf(stderr, "   -u: user name\n");
 	fprintf(stderr, "   -d: domain\n");
 	fprintf(stderr, "   -s: shell\n");
+	fprintf(stderr, "   -S: caption button size (single application mode)\n");
 	fprintf(stderr, "   -c: working directory\n");
 	fprintf(stderr, "   -p: password (- to prompt)\n");
 	fprintf(stderr, "   -n: client hostname\n");
