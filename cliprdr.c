@@ -29,11 +29,12 @@ extern Time last_gesturetime;
 
 // static Time selection_timestamp;
 static Atom clipboard_atom, primary_atom, targets_atom, timestamp_atom;
-static Atom rdesktop_clipboard_target_atom;
+static Atom rdesktop_clipboard_target_atom, incr_atom;
 static cliprdr_dataformat *server_formats = NULL;
 static uint16 num_server_formats = 0;
 static XSelectionEvent selection_event;
 static uint16 clipboard_channelno;
+static Atom targets[NUM_TARGETS];
 
 static void
 cliprdr_print_server_formats(void) 
@@ -125,13 +126,16 @@ void
 cliprdr_handle_SelectionNotify(XSelectionEvent *event)
 {
 
-	unsigned char	*data;
+	unsigned char	*data, *datap;
 	unsigned long	nitems, bytes_left;
-	int res;
+	
+	unsigned long bytes_left_to_transfer;
+	int res, i;
 
 	int format;
 	Atom type_return;
 	Atom best_target;
+	Atom *supported_targets;
 
 	STREAM out;
 	
@@ -171,6 +175,13 @@ cliprdr_handle_SelectionNotify(XSelectionEvent *event)
 		{
 			/* FIXME: We should choose format here based
 			   on what the server wanted */
+			supported_targets = (Atom *)data;
+			for (i=0;i<nitems;i++) 
+			{
+				DEBUG_CLIPBOARD(("Target %d: %s\n", 
+						 i, XGetAtomName(display,
+								 supported_targets[i])));
+			}
 			best_target = XInternAtom(display, "TEXT", False);
 			
 			
@@ -187,9 +198,21 @@ cliprdr_handle_SelectionNotify(XSelectionEvent *event)
 		
 		res = XGetWindowProperty(display, wnd, 
 					 rdesktop_clipboard_target_atom,
-					 0L, 4096L, False, AnyPropertyType, 
+					 0L, 0x1FFFFFF, 
+					 True, AnyPropertyType, 
 					 &type_return,
 					 &format, &nitems, &bytes_left, &data);
+
+
+		/* FIXME: We need to handle INCR as well, 
+		 this is a temporary solution. */
+
+		if (incr_atom == type_return) 
+		{
+			warning("We don't support INCR transfers at this time. Try cutting less data\n");
+			cliprdr_send_empty_datapacket();
+		}
+
 
 		if (Success != res) 
 		{
@@ -198,23 +221,88 @@ cliprdr_handle_SelectionNotify(XSelectionEvent *event)
 			return;
 		}
 
-		/* We need to handle INCR as well */
+		DEBUG_CLIPBOARD(("Received %d bytes of clipboard data from X, there is %d remaining\n",
+				 nitems, bytes_left));
+		DEBUG_CLIPBOARD(("type_return is %s\n", 
+				 XGetAtomName(display, type_return)));
 
-		out =  sec_init(encryption ? SEC_ENCRYPT : 0, 
-				20+nitems+1);
-		out_uint32_le(out, 12+nitems+1);
-		out_uint32_le(out, 0x13);
-		out_uint16_le(out, 5);
-		out_uint16_le(out, 1);
-		out_uint32_le(out, nitems+1);
-		out_uint8p(out, data, nitems+1);
-		/* Insert null string here? */
-		out_uint32_le(out, 0);
-		s_mark_end(out);
+		datap = data;
+
+		if (nitems+1 <= MAX_CLIPRDR_STANDALONE_DATASIZE) 
+		{
+			out =  sec_init(encryption ? SEC_ENCRYPT : 0, 
+					20+nitems+1);
+			out_uint32_le(out, 12+nitems+1);
+			out_uint32_le(out, 0x13);
+			out_uint16_le(out, 5);
+			out_uint16_le(out, 1);
+			out_uint32_le(out, nitems+1);
+			out_uint8p(out, datap, nitems+1);
+			out_uint32_le(out, 0);
+			s_mark_end(out);
 	
-		sec_send_to_channel(out, encryption ? SEC_ENCRYPT : 0, 
-				    clipboard_channelno); 
+			sec_send_to_channel(out, encryption ? SEC_ENCRYPT : 0, 
+					    clipboard_channelno); 
 
+		} 
+		else
+		{
+			DEBUG_CLIPBOARD(("Sending %d bytes of data\n",
+					 16+MAX_CLIPRDR_STANDALONE_DATASIZE));
+			out =  sec_init(encryption ? SEC_ENCRYPT : 0, 
+					16+MAX_CLIPRDR_STANDALONE_DATASIZE);
+			out_uint32_le(out, nitems+12);
+			out_uint32_le(out, 0x11);
+			out_uint16_le(out, 5);
+			out_uint16_le(out, 1);
+			out_uint32_le(out, nitems);
+			out_uint8p(out, datap, 
+				   MAX_CLIPRDR_STANDALONE_DATASIZE);
+			s_mark_end(out);
+	
+			sec_send_to_channel(out, encryption ? SEC_ENCRYPT : 0, 
+					    clipboard_channelno); 
+
+			bytes_left_to_transfer = nitems - MAX_CLIPRDR_STANDALONE_DATASIZE;
+			datap+=MAX_CLIPRDR_STANDALONE_DATASIZE;
+
+			while (bytes_left_to_transfer > MAX_CLIPRDR_STANDALONE_DATASIZE) 
+			{
+				DEBUG_CLIPBOARD(("Sending %d bytes of data\n",
+					 16+MAX_CLIPRDR_CONTINUATION_DATASIZE));
+				out =  sec_init(encryption ? SEC_ENCRYPT : 0, 
+						8+MAX_CLIPRDR_CONTINUATION_DATASIZE);
+				out_uint32_le(out, nitems);
+				out_uint32_le(out, 0x10);
+				out_uint8p(out, datap, 
+					   MAX_CLIPRDR_CONTINUATION_DATASIZE);
+				s_mark_end(out);
+
+				sec_send_to_channel(out, 
+						    encryption ? SEC_ENCRYPT : 0, 
+						    clipboard_channelno);
+				bytes_left_to_transfer-= MAX_CLIPRDR_CONTINUATION_DATASIZE;
+				datap+=MAX_CLIPRDR_CONTINUATION_DATASIZE;
+				
+			}
+			DEBUG_CLIPBOARD(("Sending %d bytes of data\n", 
+					 12+bytes_left_to_transfer));
+			out =  sec_init(encryption ? SEC_ENCRYPT : 0, 
+					12+bytes_left_to_transfer);
+			out_uint32_le(out, nitems);
+			out_uint32_le(out, 0x12);
+			out_uint8p(out, datap, 
+				   bytes_left_to_transfer);
+			out_uint32_le(out, 0x0);
+			s_mark_end(out);
+	
+			sec_send_to_channel(out, encryption ? SEC_ENCRYPT : 0, 
+					    clipboard_channelno); 
+
+		}
+
+
+		XFree(data);
 		cliprdr_send_format_announce();
 		
 	}
@@ -254,9 +342,6 @@ void
 cliprdr_handle_SelectionRequest(XSelectionRequestEvent *xevent) 
 {
 
-	Atom *targets;
-	int res;
-
 	XSelectionEvent xev;
 	DEBUG_CLIPBOARD(("cliprdr_handle_SelectionRequest\n"));
 	DEBUG_CLIPBOARD(("Requestor window id 0x%x ", 
@@ -285,43 +370,36 @@ cliprdr_handle_SelectionRequest(XSelectionRequestEvent *xevent)
 	if (targets_atom == xevent->target) 
 	{
 		DEBUG_CLIPBOARD(("TARGETS requested, sending list..\n"));
-		targets = xmalloc(4*sizeof(Atom));
-		targets[0] = xevent->target;
-		targets[1] = XInternAtom(display, "TEXT", True);
-		targets[2] = XInternAtom(display, "UTF8_STRING", True);
-		targets[3] = XInternAtom(display, "TIMESTAMP", True);
-		res = XChangeProperty(display, 
-				      xevent->requestor,
-				      xevent->property,
-				      XA_ATOM,
-				      32,
-				      PropModeAppend,
-				      (unsigned char *)targets,
-				      3);
+		XChangeProperty(display, 
+				xevent->requestor,
+				xevent->property,
+				XA_ATOM,
+				32,
+				PropModeAppend,
+				(unsigned char *)&targets,
+				NUM_TARGETS);
 
-		res = XSendEvent(display, 
-				 xevent->requestor, 
-				 False, 
-				 NoEventMask,
-				 (XEvent *)&xev);
+		XSendEvent(display, 
+			   xevent->requestor, 
+			   False, 
+			   NoEventMask,
+			   (XEvent *)&xev);
 		return;
 	} else if (timestamp_atom == xevent->target) 
 	{
-		DEBUG_CLIPBOARD(("TIMESTAMP requested... sending 0x%x\n",
-				 (unsigned)last_gesturetime));
-		res = XChangeProperty(display, 
-				      xevent->requestor,
-				      xevent->property,
-				      XA_INTEGER,
-				      32,
-				      PropModeAppend,
-				      (unsigned char *)&last_gesturetime,
-				      1);
-		res = XSendEvent(display, 
-				 xevent->requestor, 
-				 False, 
-				 NoEventMask,
-				 (XEvent *)&xev);
+		XChangeProperty(display, 
+				xevent->requestor,
+				xevent->property,
+				XA_INTEGER,
+				32,
+				PropModeAppend,
+				(unsigned char *)&last_gesturetime,
+				1);
+		XSendEvent(display, 
+			   xevent->requestor, 
+			   False, 
+			   NoEventMask,
+			   (XEvent *)&xev);
 	} else /* Some other target */
 	{
 		cliprdr_request_clipboard_data(CF_TEXT);
@@ -571,4 +649,12 @@ void cliprdr_init(void)
 	targets_atom = XInternAtom(display, "TARGETS", False);
 	timestamp_atom = XInternAtom(display, "TIMESTAMP", False);
 	rdesktop_clipboard_target_atom = XInternAtom(display, "_RDESKTOP_CLIPBOARD_TARGET", False);
+	incr_atom = XInternAtom(display, "INCR", False);
+	targets[0] = targets_atom;
+	targets[1] = XInternAtom(display, "TEXT", False);
+	targets[2] = XInternAtom(display, "UTF8_STRING", False);
+	targets[3] = XInternAtom(display, "text/unicode", False);
+	targets[4] = XInternAtom(display, "TIMESTAMP", False);
+	targets[5] = XInternAtom(display, "STRING", False);
+
 }
