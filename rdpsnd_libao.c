@@ -27,12 +27,13 @@
 #include <ao/ao.h>
 
 #define MAX_QUEUE	10
-#define WAVEOUTBUF	32
+#define WAVEOUTBUF	64
 
 int g_dsp_fd;
 ao_device *o_device = NULL;
 int default_driver;
 int g_samplerate;
+int g_channels;
 BOOL g_dsp_busy = False;
 static short g_samplewidth;
 
@@ -54,6 +55,7 @@ wave_out_open(void)
 
 	format.bits = 16;
 	format.channels = 2;
+	g_channels = 2;
 	format.rate = 44100;
 	g_samplerate = 44100;
 	format.byte_format = AO_FMT_LITTLE;
@@ -111,6 +113,7 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 
 	format.bits = pwfx->wBitsPerSample;
 	format.channels = pwfx->nChannels;
+	g_channels = pwfx->nChannels;
 	format.rate = 44100;
 	g_samplerate = pwfx->nSamplesPerSec;
 	format.byte_format = AO_FMT_LITTLE;
@@ -184,18 +187,19 @@ wave_out_play(void)
 	if (g_samplerate == 22050)
 	{
 		/* Resample to 44100 */
-		for (i = 0; (i < ((WAVEOUTBUF / 8) * (3 - g_samplewidth))) && (out->p < out->end);
+		for (i = 0; (i < ((WAVEOUTBUF / 4) * (3 - g_samplewidth))) && (out->p < out->end);
 		     i++)
 		{
-			offset = i * 4 * g_samplewidth;
-			memcpy(&outbuf[0 * g_samplewidth + offset], out->p, g_samplewidth);
-			memcpy(&outbuf[2 * g_samplewidth + offset], out->p, g_samplewidth);
+			if (g_channels == 2)
+				offset = ((i * 2) - (i & 1)) * g_samplewidth;
+			else
+				offset = (i * 2) * g_samplewidth;
+
+			memcpy(&outbuf[offset], out->p, g_samplewidth);
+			memcpy(&outbuf[g_channels * g_samplewidth + offset], out->p, g_samplewidth);
 			out->p += 2;
 
-			memcpy(&outbuf[1 * g_samplewidth + offset], out->p, g_samplewidth);
-			memcpy(&outbuf[3 * g_samplewidth + offset], out->p, g_samplewidth);
-			out->p += 2;
-			len += 4 * g_samplewidth;
+			len += 2 * g_samplewidth;
 		}
 	}
 	else
