@@ -70,8 +70,7 @@ STREAM tcp_recv(int length);
 BOOL tcp_connect(char *server);
 void tcp_disconnect(void);
 /* xkeymap.c */
-void xkeymap_init1(void);
-void xkeymap_init2(void);
+void xkeymap_init(void);
 BOOL handle_special_keys(KeySym keysym, uint32 ev_time, BOOL pressed);
 key_translation xkeymap_translate_key(KeySym keysym, unsigned int keycode, unsigned int state);
 uint16 xkeymap_translate_button(unsigned int button);

@@ -251,7 +251,6 @@ main(int argc, char *argv[])
 		strncat(title, server, sizeof(title) - sizeof("rdesktop - "));
 	}
 
-	xkeymap_init1();
 	if (!ui_init())
 		return 1;
 

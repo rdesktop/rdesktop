@@ -202,29 +202,14 @@ xkeymap_read(char *mapname)
 
 /* Before connecting and creating UI */
 void
-xkeymap_init1(void)
-{
-	int i;
-
-	/* Zeroing keymap */
-	for (i = 0; i < KEYMAP_SIZE; i++)
-	{
-		keymap[i].scancode = 0;
-		keymap[i].modifiers = 0;
-	}
-
-	if (strcmp(keymapname, "none"))
-	{
-		xkeymap_read(keymapname);
-	}
-
-}
-
-/* After connecting and creating UI */
-void
-xkeymap_init2(void)
+xkeymap_init(void)
 {
 	unsigned int max_keycode;
+	int i;
+
+	if (strcmp(keymapname, "none"))
+		xkeymap_read(keymapname);
+
 	XDisplayKeycodes(display, &min_keycode, (int *) &max_keycode);
 }
 
