@@ -220,7 +220,7 @@ void
 xkeymap_init2(void)
 {
 	unsigned int max_keycode;
-	XDisplayKeycodes(display, &min_keycode, (int *)&max_keycode);
+	XDisplayKeycodes(display, &min_keycode, (int *) &max_keycode);
 }
 
 

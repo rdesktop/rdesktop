@@ -53,7 +53,7 @@ static void
 licence_generate_hwid(uint8 * hwid)
 {
 	buf_out_uint32(hwid, 2);
-	strncpy((char *)(hwid + 4), hostname, LICENCE_HWID_SIZE - 4);
+	strncpy((char *) (hwid + 4), hostname, LICENCE_HWID_SIZE - 4);
 }
 
 /* Present an existing licence to the server */
