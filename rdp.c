@@ -38,7 +38,7 @@ extern BOOL g_bitmap_cache;
 uint8 *g_next_packet;
 uint32 g_rdp_shareid;
 
-extern RDPCOMP mppc_dict;
+extern RDPCOMP g_mppc_dict;
 
 #if WITH_DEBUG
 static uint32 g_packetno;
@@ -176,16 +176,16 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 	time_t t = time(NULL);
 	time_t tzone;
 
+#if 0
+	/* enable rdp compression */
+	/* some problems still exist with rdp5 */
+	flags |= RDP_COMPRESSION;
+#endif
+
 	if (!g_use_rdp5 || 1 == g_server_rdp_version)
 	{
 		DEBUG_RDP5(("Sending RDP4-style Logon packet\n"));
 
-#if 0
-		/* enable rdp compression */
-		/* decompression also works with rdp5 */
-		/* but there are some unknown opcodes */
-		flags |= RDP_COMPRESSION;
-#endif
 		s = sec_init(sec_flags, 18 + len_domain + len_user + len_password
 			     + len_program + len_directory + 10);
 
@@ -962,8 +962,7 @@ process_data_pdu(STREAM s, uint32 * ext_disc_reason)
 
 	uint32 roff, rlen;
 
-	struct stream *ns = &(mppc_dict.ns);
-	uint8 *dict = (mppc_dict.hist);
+	struct stream *ns = &(g_mppc_dict.ns);
 
 	in_uint8s(s, 6);	/* shareid, pad, streamid */
 	in_uint16(s, len);
@@ -978,18 +977,14 @@ process_data_pdu(STREAM s, uint32 * ext_disc_reason)
 		if (mppc_expand(s->p, clen, ctype, &roff, &rlen) == -1)
 			error("error while decompressing packet\n");
 
-		len -= 18;
-
-		/* this should never happen */
-		if (len != rlen)
-			error("decompression error len != rlen\n");
+		//len -= 18;
 
 		/* allocate memory and copy the uncompressed data into the temporary stream */
-		ns->data = xrealloc(ns->data, len);
+		ns->data = xrealloc(ns->data, rlen);
 
-		memcpy((ns->data), (unsigned char *) (mppc_dict.hist + roff), len);
+		memcpy((ns->data), (unsigned char *) (g_mppc_dict.hist + roff), rlen);
 
-		ns->size = len;
+		ns->size = rlen;
 		ns->end = (ns->data + ns->size);
 		ns->p = ns->data;
 		ns->rdp_hdr = ns->p;

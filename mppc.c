@@ -3,7 +3,7 @@
 
 #include "rdesktop.h"
 
-/* mppc-like??? decompression               */
+/* mppc decompression                       */
 /* http://www.faqs.org/rfcs/rfc2118.html    */
 
 /* TODO: research the below statements      */
@@ -18,11 +18,15 @@
 /* already paying royalties                 */
 /* through the CAL licenses?                */
 
-/* the dictionary is empty when init. like  */
-/* LZ78,  which is not patented             */
+/* as the rfc states the algorithm seems to */
+/* be LZ77 with a sliding buffer            */
+/* that is empty at init.                   */
+
+/* as of my limited knowledge these patents */
+/* has expired.                             */
 
 
-RDPCOMP mppc_dict;
+RDPCOMP g_mppc_dict;
 
 int
 mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen)
@@ -33,7 +37,7 @@ mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen
 	int match_len;
 	int old_offset, match_bits;
 
-	signed char *dict = &(mppc_dict.hist);
+	signed char *dict = &(g_mppc_dict.hist);
 
 	if ((ctype & RDP_MPPC_COMPRESSED) == 0)
 	{
@@ -44,19 +48,19 @@ mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen
 
 	if ((ctype & RDP_MPPC_RESET) != 0)
 	{
-		mppc_dict.roff = 0;
+		g_mppc_dict.roff = 0;
 	}
 
 	if ((ctype & RDP_MPPC_FLUSH) != 0)
 	{
 		memset(dict, 0, RDP_MPPC_DICT_SIZE);
-		mppc_dict.roff = 0;
+		g_mppc_dict.roff = 0;
 	}
 
 	*roff = 0;
 	*rlen = 0;
 
-	walker = mppc_dict.roff;
+	walker = g_mppc_dict.roff;
 
 	next_offset = walker;
 	old_offset = next_offset;
@@ -267,7 +271,7 @@ mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen
 	while (1);
 
 	/* store history offset */
-	mppc_dict.roff = next_offset;
+	g_mppc_dict.roff = next_offset;
 
 	*roff = old_offset;
 	*rlen = next_offset - old_offset;

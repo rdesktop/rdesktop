@@ -23,12 +23,18 @@
 
 extern uint8 *g_next_packet;
 
+extern RDPCOMP g_mppc_dict;
+
 void
 rdp5_process(STREAM s, BOOL encryption)
 {
 	uint16 length, count, x, y;
-	uint8 type;
+	uint8 type, ctype;
 	uint8 *next;
+
+	uint32 roff, rlen;
+	struct stream *ns = &(g_mppc_dict.ns);
+	struct stream *ts;
 
 	if (encryption)
 	{
@@ -44,8 +50,39 @@ rdp5_process(STREAM s, BOOL encryption)
 	while (s->p < s->end)
 	{
 		in_uint8(s, type);
-		in_uint16_le(s, length);
+		if (type & RDP_COMPRESSION)
+		{
+			in_uint8(s, ctype);
+			in_uint16_le(s, length);
+			type ^= RDP_COMPRESSION;
+		}
+		else
+		{
+			ctype = 0;
+			in_uint16_le(s, length);
+		}
 		g_next_packet = next = s->p + length;
+
+		if (ctype & RDP_MPPC_COMPRESSED)
+		{
+
+			if (mppc_expand(s->p, length, ctype, &roff, &rlen) == -1)
+				error("error while decompressing packet\n");
+
+			/* allocate memory and copy the uncompressed data into the temporary stream */
+			ns->data = xrealloc(ns->data, rlen);
+
+			memcpy((ns->data), (unsigned char *) (g_mppc_dict.hist + roff), rlen);
+
+			ns->size = rlen;
+			ns->end = (ns->data + ns->size);
+			ns->p = ns->data;
+			ns->rdp_hdr = ns->p;
+
+			ts = ns;
+		}
+		else
+			ts = s;
 
 		switch (type)
 		{
@@ -54,16 +91,16 @@ rdp5_process(STREAM s, BOOL encryption)
 				   most of the opcodes here. Especially opcode
 				   8! :) */
 			case 0:	/* orders */
-				in_uint16_le(s, count);
-				process_orders(s, count);
+				in_uint16_le(ts, count);
+				process_orders(ts, count);
 				break;
 			case 1:	/* bitmap update (???) */
-				in_uint8s(s, 2);	/* part length */
-				process_bitmap_updates(s);
+				in_uint8s(ts, 2);	/* part length */
+				process_bitmap_updates(ts);
 				break;
 			case 2:	/* palette */
-				in_uint8s(s, 2);	/* uint16 = 2 */
-				process_palette(s);
+				in_uint8s(ts, 2);	/* uint16 = 2 */
+				process_palette(ts);
 				break;
 			case 3:	/* probably an palette with offset 3. Weird */
 				break;
@@ -71,16 +108,16 @@ rdp5_process(STREAM s, BOOL encryption)
 				ui_set_null_cursor();
 				break;
 			case 8:
-				in_uint16_le(s, x);
-				in_uint16_le(s, y);
-				if (s_check(s))
+				in_uint16_le(ts, x);
+				in_uint16_le(ts, y);
+				if (s_check(ts))
 					ui_move_pointer(x, y);
 				break;
 			case 9:
-				process_colour_pointer_pdu(s);
+				process_colour_pointer_pdu(ts);
 				break;
 			case 10:
-				process_cached_pointer_pdu(s);
+				process_cached_pointer_pdu(ts);
 				break;
 			default:
 				unimpl("RDP5 opcode %d\n", type);
