@@ -116,6 +116,9 @@ main(int argc, char *argv[])
 			case 'p':
 				STRNCPY(password, optarg, sizeof(password));
 				flags |= RDP_LOGON_AUTO;
+				p = optarg;
+				while (*p)
+					*(p++) = 'X';
 				break;
 
 			case 'P':
