@@ -75,7 +75,10 @@ proto:
 clean:
 	rm -f *.o *~ vnc/*.o vnc/*~ rdesktop rdp2vnc
 
-dist: Makefile configure
+
+dist: rdesktop-$(VERSION).tar.gz
+
+rdesktop-$(VERSION).tar.gz: Makefile configure
 	mkdir -p /tmp/rdesktop-make-dist-dir
 	ln -sf `pwd` /tmp/rdesktop-make-dist-dir/rdesktop-$(VERSION)
 	(cd /tmp/rdesktop-make-dist-dir; \
@@ -109,6 +112,11 @@ dist: Makefile configure
 	rdesktop-$(VERSION)/doc/redirection.txt \
 	rdesktop-$(VERSION)/doc/rdesktop.1 )
 	rm -rf /tmp/rdesktop-make-dist-dir
+
+dist-noversion: rdesktop.tar.gz
+
+rdesktop.tar.gz: rdesktop-$(VERSION).tar.gz
+	cp $< $@
 
 Makefile: Makefile.in configure
 	./config.status
