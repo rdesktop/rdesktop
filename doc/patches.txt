@@ -102,9 +102,9 @@ Applied (in revision 1.29, 2002/07/14).
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/frank_fasttext.patch.txt
 Description:
-TDB
+Some kind of performence improvements. 
 Status:
-Not yet examined. 
+From what I can tell, this patch is no longer necessary. 
 
 
 URL:
