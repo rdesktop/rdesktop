@@ -125,9 +125,10 @@ Applied in version 1.10 of rdesktop.c.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/hove-19-7-2endian.diff
 Description:
-TDB
+Includes a program for testing endianness. 
 Status:
-Not yet examined. 
+rdesktop determines endianness at runtime. This patch is not needed
+anymore. 
 
 
 URL:
