@@ -294,9 +294,9 @@ Applied.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/svenni_disable_bs_in_x-tiny-patch
 Description:
-TDB
+Disables backing store for TinyX. 
 Status:
-Not yet examined. 
+As far as I understand, this patch is not need any longer. 
 
 
 URL:
