@@ -40,7 +40,7 @@ static key_translation keymap[KEYMAP_SIZE];
 static int min_keycode;
 static uint16 remote_modifier_state = 0;
 
-static void update_modifier_state(uint16 modifiers, BOOL pressed);
+static void update_modifier_state(uint8 scancode, BOOL pressed);
 
 static void
 add_to_keymap(char *keyname, uint8 scancode, uint16 modifiers, char *mapname)
@@ -214,12 +214,12 @@ xkeymap_init(void)
 /* Handles, for example, multi-scancode keypresses (which is not
    possible via keymap-files) */
 BOOL
-handle_special_keys(uint32 keysym, uint32 ev_time, BOOL pressed)
+handle_special_keys(uint32 keysym, unsigned int state, uint32 ev_time, BOOL pressed)
 {
 	switch (keysym)
 	{
 		case XK_Break:
-			if (get_key_state(XK_Alt_L) || get_key_state(XK_Alt_R))
+			if (get_key_state(state, XK_Alt_L) || get_key_state(state, XK_Alt_R))
 			{
 				/* toggle full screen */
 				if (pressed)
@@ -471,35 +471,35 @@ ensure_remote_modifiers(uint32 ev_time, key_translation tr)
 
 
 void
-reset_modifier_keys(void)
+reset_modifier_keys(unsigned int state)
 {
 	/* reset keys */
 	uint32 ev_time;
 	ev_time = time(NULL);
 
-	if (MASK_HAS_BITS(remote_modifier_state, MapLeftShiftMask) && !get_key_state(XK_Shift_L))
+	if (MASK_HAS_BITS(remote_modifier_state, MapLeftShiftMask) && !get_key_state(state, XK_Shift_L))
 		rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_LSHIFT);
 
-	if (MASK_HAS_BITS(remote_modifier_state, MapRightShiftMask) && !get_key_state(XK_Shift_R))
+	if (MASK_HAS_BITS(remote_modifier_state, MapRightShiftMask) && !get_key_state(state, XK_Shift_R))
 		rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_RSHIFT);
 
-	if (MASK_HAS_BITS(remote_modifier_state, MapLeftCtrlMask) && !get_key_state(XK_Control_L))
+	if (MASK_HAS_BITS(remote_modifier_state, MapLeftCtrlMask) && !get_key_state(state, XK_Control_L))
 		rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_LCTRL);
 
-	if (MASK_HAS_BITS(remote_modifier_state, MapRightCtrlMask) && !get_key_state(XK_Control_R))
+	if (MASK_HAS_BITS(remote_modifier_state, MapRightCtrlMask) && !get_key_state(state, XK_Control_R))
 		rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_RCTRL);
 
-	if (MASK_HAS_BITS(remote_modifier_state, MapLeftAltMask) && !get_key_state(XK_Alt_L))
+	if (MASK_HAS_BITS(remote_modifier_state, MapLeftAltMask) && !get_key_state(state, XK_Alt_L))
 		rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_LALT);
 
 	if (MASK_HAS_BITS(remote_modifier_state, MapRightAltMask) &&
-	    !get_key_state(XK_Alt_R) && !get_key_state(XK_Mode_switch))
+	    !get_key_state(state, XK_Alt_R) && !get_key_state(state, XK_Mode_switch))
 		rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_RALT);
 }
 
 
 static void
-update_modifier_state(uint16 modifiers, BOOL pressed)
+update_modifier_state(uint8 scancode, BOOL pressed)
 {
 #ifdef WITH_DEBUG_KBD
 	uint16 old_modifier_state;
@@ -507,7 +507,7 @@ update_modifier_state(uint16 modifiers, BOOL pressed)
 	old_modifier_state = remote_modifier_state;
 #endif
 
-	switch (modifiers)
+	switch (scancode)
 	{
 		case SCANCODE_CHAR_LSHIFT:
 			MASK_CHANGE_BIT(remote_modifier_state, MapLeftShiftMask, pressed);
@@ -561,7 +561,7 @@ update_modifier_state(uint16 modifiers, BOOL pressed)
 
 /* Send keyboard input */
 void
-rdp_send_scancode(uint32 time, uint16 flags, uint16 scancode)
+rdp_send_scancode(uint32 time, uint16 flags, uint8 scancode)
 {
 	update_modifier_state(scancode, !(flags & RDP_KEYRELEASE));
 

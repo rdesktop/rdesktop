@@ -42,6 +42,7 @@ static int depth;
 static int bpp;
 static XIM IM;
 static XIC IC;
+static XModifierKeymap *mod_map;
 static Cursor current_cursor;
 
 /* endianness */
@@ -183,15 +184,11 @@ translate_colour(uint32 colour)
 }
 
 BOOL
-get_key_state(int keysym)
+get_key_state(uint32 keysym, unsigned int state)
 {
-	int keysymMask = 0, modifierpos, key;
-	Window wDummy1, wDummy2;
-	int iDummy3, iDummy4, iDummy5, iDummy6;
-	unsigned int current_state;
+	int modifierpos, key, keysymMask = 0;
 	int offset;
 
-	XModifierKeymap *map = XGetModifierMapping(display);
 	KeyCode keycode = XKeysymToKeycode(display, keysym);
 
 	if (keycode == NoSymbol)
@@ -199,21 +196,16 @@ get_key_state(int keysym)
 
 	for (modifierpos = 0; modifierpos < 8; modifierpos++)
 	{
-		offset = map->max_keypermod * modifierpos;
+		offset = mod_map->max_keypermod * modifierpos;
 
-		for (key = 0; key < map->max_keypermod; key++)
+		for (key = 0; key < mod_map->max_keypermod; key++)
 		{
-			if (map->modifiermap[offset + key] == keycode)
-				keysymMask = 1 << modifierpos;
+			if (mod_map->modifiermap[offset + key] == keycode)
+				keysymMask |= 1 << modifierpos;
 		}
 	}
 
-	XQueryPointer(display, DefaultRootWindow(display), &wDummy1,
-		      &wDummy2, &iDummy3, &iDummy4, &iDummy5, &iDummy6, &current_state);
-
-	XFreeModifiermap(map);
-
-	return (current_state & keysymMask) ? True : False;
+	return (state & keysymMask) ? True : False;
 }
 
 BOOL
@@ -286,6 +278,8 @@ ui_init(void)
 		XFillRectangle(display, backstore, gc, 0, 0, width, height);
 	}
 
+	mod_map = XGetModifierMapping(display);
+
 	if (enable_compose)
 		IM = XOpenIM(display, NULL, NULL, NULL);
 
@@ -298,6 +292,8 @@ ui_deinit(void)
 {
 	if (IM != NULL)
 		XCloseIM(IM);
+
+	XFreeModifierMap(mod_map);
 
 	if (ownbackstore)
 		XFreePixmap(display, backstore);
@@ -425,9 +421,11 @@ xwin_process_events(void)
 	uint16 button, flags;
 	uint32 ev_time;
 	key_translation tr;
-	char *ksname = NULL;
 	char str[256];
 	Status status;
+	unsigned int state;
+	Window wdummy;
+	int dummy;
 
 	while (XPending(display) > 0)
 	{
@@ -439,7 +437,6 @@ xwin_process_events(void)
 			continue;
 		}
 
-		ev_time = time(NULL);
 		flags = 0;
 
 		switch (xevent.type)
@@ -466,10 +463,10 @@ xwin_process_events(void)
 						      str, sizeof(str), &keysym, NULL);
 				}
 
-				ksname = get_ksname(keysym);
-				DEBUG_KBD(("KeyPress for (keysym 0x%lx, %s)\n", keysym, ksname));
+				DEBUG_KBD(("KeyPress for (keysym 0x%lx, %s)\n", keysym, get_ksname(keysym)));
 
-				if (handle_special_keys(keysym, ev_time, True))
+				ev_time = time(NULL);
+				if (handle_special_keys(keysym, xevent.xkey.state, ev_time, True))
 					break;
 
 				tr = xkeymap_translate_key(keysym,
@@ -482,15 +479,16 @@ xwin_process_events(void)
 
 				rdp_send_scancode(ev_time, RDP_KEYPRESS, tr.scancode);
 				break;
+
 			case KeyRelease:
 				XLookupString((XKeyEvent *) & xevent, str,
 					      sizeof(str), &keysym, NULL);
 
-				ksname = get_ksname(keysym);
 				DEBUG_KBD(("\nKeyRelease for (keysym 0x%lx, %s)\n", keysym,
-					   ksname));
+					   get_ksname(keysym)));
 
-				if (handle_special_keys(keysym, ev_time, False))
+				ev_time = time(NULL);
+				if (handle_special_keys(keysym, xevent.xkey.state, ev_time, False))
 					break;
 
 				tr = xkeymap_translate_key(keysym,
@@ -511,17 +509,18 @@ xwin_process_events(void)
 				if (button == 0)
 					break;
 
-				rdp_send_input(ev_time, RDP_INPUT_MOUSE,
+				rdp_send_input(time(NULL), RDP_INPUT_MOUSE,
 					       flags | button, xevent.xbutton.x, xevent.xbutton.y);
 				break;
 
 			case MotionNotify:
-				rdp_send_input(ev_time, RDP_INPUT_MOUSE,
+				rdp_send_input(time(NULL), RDP_INPUT_MOUSE,
 					       MOUSE_FLAG_MOVE, xevent.xmotion.x, xevent.xmotion.y);
 				break;
 
 			case FocusIn:
-				reset_modifier_keys();
+				XQueryPointer(display, wnd, &wdummy, &wdummy, &dummy, &dummy, &dummy, &dummy, &state);
+				reset_modifier_keys(state);
 				if (grab_keyboard)
 					XGrabKeyboard(display, wnd, True,
 						      GrabModeAsync, GrabModeAsync, CurrentTime);
@@ -546,6 +545,12 @@ xwin_process_events(void)
 				if (xevent.xmapping.request == MappingKeyboard
 				    || xevent.xmapping.request == MappingModifier)
 					XRefreshKeyboardMapping(&xevent.xmapping);
+
+				if (xevent.xmapping.request == MappingModifier)
+				{
+					XFreeModifierMap(mod_map);
+					mod_map = XGetModifierMapping(display);
+				}
 				break;
 
 		}
