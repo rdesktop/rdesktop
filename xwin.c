@@ -656,8 +656,8 @@ ui_create_window(void)
 	attribs.override_redirect = g_fullscreen;
 
 	g_wnd = XCreateWindow(g_display, RootWindowOfScreen(g_screen), 0, 0, wndwidth, wndheight,
-			    0, CopyFromParent, InputOutput, CopyFromParent,
-			    CWBackPixel | CWBackingStore | CWOverrideRedirect, &attribs);
+			      0, CopyFromParent, InputOutput, CopyFromParent,
+			      CWBackPixel | CWBackingStore | CWOverrideRedirect, &attribs);
 
 	XStoreName(g_display, g_wnd, g_title);
 
@@ -697,7 +697,7 @@ ui_create_window(void)
 	if (g_IM != NULL)
 	{
 		g_IC = XCreateIC(g_IM, XNInputStyle, (XIMPreeditNothing | XIMStatusNothing),
-			       XNClientWindow, g_wnd, XNFocusWindow, g_wnd, NULL);
+				 XNClientWindow, g_wnd, XNFocusWindow, g_wnd, NULL);
 
 		if ((g_IC != NULL)
 		    && (XGetICValues(g_IC, XNFilterEvents, &ic_input_mask, NULL) == NULL))
@@ -885,7 +885,8 @@ xwin_process_events(void)
 						/* The close button, continue */
 						;
 					}
-					else if (xevent.xbutton.x >= g_width - g_win_button_size * 2)
+					else if (xevent.xbutton.x >=
+						 g_width - g_win_button_size * 2)
 					{
 						/* The maximize/restore button. Do not send to
 						   server.  It might be a good idea to change the
@@ -893,7 +894,8 @@ xwin_process_events(void)
 						   that rdesktop inhibited this click */
 						break;
 					}
-					else if (xevent.xbutton.x >= g_width - g_win_button_size * 3)
+					else if (xevent.xbutton.x >=
+						 g_width - g_win_button_size * 3)
 					{
 						/* The minimize button. Iconify window. */
 						XIconifyWindow(g_display, g_wnd,

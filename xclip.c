@@ -197,8 +197,8 @@ xclip_handle_PropertyNotify(XPropertyEvent * event)
 	{
 		res = XGetWindowProperty(g_display, DefaultRootWindow(g_display),
 					 rdesktop_clipboard_formats_atom, 0,
-					 XMaxRequestSize(g_display), False, XA_STRING, &type, &format,
-					 &nitems, &bytes_left, &data);
+					 XMaxRequestSize(g_display), False, XA_STRING, &type,
+					 &format, &nitems, &bytes_left, &data);
 
 		if ((res == Success) && (nitems > 0))
 		{
@@ -296,7 +296,8 @@ xclip_init(void)
 	clipboard_atom = XInternAtom(g_display, "CLIPBOARD", False);
 	targets_atom = XInternAtom(g_display, "TARGETS", False);
 	timestamp_atom = XInternAtom(g_display, "TIMESTAMP", False);
-	rdesktop_clipboard_target_atom = XInternAtom(g_display, "_RDESKTOP_CLIPBOARD_TARGET", False);
+	rdesktop_clipboard_target_atom =
+		XInternAtom(g_display, "_RDESKTOP_CLIPBOARD_TARGET", False);
 	incr_atom = XInternAtom(g_display, "INCR", False);
 	targets[0] = targets_atom;
 	targets[1] = XInternAtom(g_display, "TEXT", False);
