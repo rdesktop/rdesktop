@@ -132,7 +132,7 @@ channel_process(STREAM s, uint16 mcs_channel)
 {
 	uint32 length, flags;
 	uint32 thislength;
-	VCHANNEL *channel;
+	VCHANNEL *channel = NULL;
 	unsigned int i;
 	STREAM in;
 
