@@ -647,11 +647,6 @@ disk_set_information(HANDLE handle, uint32 info_class, STREAM in, STREAM out)
 			if (fchmod(handle, mode))
 				return STATUS_ACCESS_DENIED;
 
-			/* prevents start of writing if not enough space left on device */
-			if (STATFS_FN(g_rdpdr_device[pfinfo->device_id].local_path, &stat_fs) == 0)
-				if (stat_fs.f_bsize * stat_fs.f_bfree < length)
-					return STATUS_DISK_FULL;
-
 			break;
 
 		case 10:	/* FileRenameInformation */
@@ -705,10 +700,14 @@ disk_set_information(HANDLE handle, uint32 info_class, STREAM in, STREAM out)
 			in_uint8s(in, 28);	/* unknown */
 			in_uint32_le(in, length);	/* file size */
 
-			printf("FileEndOfFileInformation length = %d\n", length);
-			// ????????????
+			/* prevents start of writing if not enough space left on device */
+			if (STATFS_FN(g_rdpdr_device[pfinfo->device_id].local_path, &stat_fs) == 0)
+				if (stat_fs.f_bsize * stat_fs.f_bfree < length)
+					return STATUS_DISK_FULL;
 
-			unimpl("IRP Set File Information class: FileEndOfFileInformation\n");
+			//printf("FileEndOfFileInformation length = %d\n", length);
+			// ????????????
+			//unimpl("IRP Set File Information class: FileEndOfFileInformation\n");
 			break;
 		default:
 
