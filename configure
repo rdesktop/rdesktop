@@ -78,7 +78,7 @@ case $arg in
     echo "Build configuration:"
     echo " --with-x=DIR            look for X Window System at DIR/include, DIR/lib"
     echo " --with-openssl=DIR      look for OpenSSL at DIR/include, DIR/lib"
-    echo " --without-openssl       use in-tree crypto, even if OpenSSL is available"
+    #echo " --without-openssl       use in-tree crypto, even if OpenSSL is available"
     echo " --with-egd-socket=PATH  look for Entropy Gathering Daemon socket at PATH"
     echo " --with-libvncserver     make rdp2vnc"
     echo " --with-libvncserver-config=CMD"
@@ -175,7 +175,8 @@ fi
 ldflags="$ldflags"
 targets="$targets rdesktop"
 
-if [ -z "$withoutopenssl" ]; then
+#withoutopenssl not currently supported
+#if [ -z "$withoutopenssl" ]; then
     # Find OpenSSL installation if available
     ssldirs="$extrassldir /usr/openssl /usr/ssl /usr /usr/local/openssl /usr/local/ssl /usr/local"
     
@@ -187,10 +188,15 @@ if [ -z "$withoutopenssl" ]; then
     done
     
     if [ -z "$ssldir" ]; then
-    	echo "WARNING: could not find OpenSSL headers"
-    	echo "(searched for include/openssl/rc4.h in: $ssldirs)"
-    	echo "Using in-tree crypto; installing OpenSSL is recommended."
-    	echo
+	echo "ERROR: could not find OpenSSL headers"
+	echo "(searched for include/openssl/rc4.h in: $ssldirs)"
+	# additional helpful information for Linux users
+	if [ -f /etc/redhat-release ]; then
+	    echo You probably need to install the openssl-devel package
+	elif [ -f /etc/debian_version ]; then
+	    echo You probably need to install the libssl-dev package
+	fi
+	exit 1
     else
     	echo "OpenSSL:"
     	echo "  includes  $ssldir/include"
@@ -208,7 +214,7 @@ if [ -z "$withoutopenssl" ]; then
     	cflags="$cflags -DWITH_OPENSSL"
     	ldflags="$ldflags -lcrypto"
     fi
-fi
+#fi
     
 if [ ! -z "$withvncserver" ]; then
     if [ -z "$vncserverconfig" ]; then
