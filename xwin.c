@@ -350,8 +350,6 @@ ui_create_window(void)
 	input_mask = KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask |
 		StructureNotifyMask | FocusChangeMask;
 
-	if (grab_keyboard)
-		input_mask |= EnterWindowMask | LeaveWindowMask;
 	if (sendmotion)
 		input_mask |= PointerMotionMask;
 	if (ownbackstore)
@@ -518,19 +516,16 @@ xwin_process_events(void)
 					       MOUSE_FLAG_MOVE, xevent.xmotion.x, xevent.xmotion.y);
 				break;
 
-			case EnterNotify:
+			case FocusIn:
+				reset_modifier_keys();
 				if (grab_keyboard)
 					XGrabKeyboard(display, wnd, True,
 						      GrabModeAsync, GrabModeAsync, CurrentTime);
 				break;
 
-			case LeaveNotify:
+			case FocusOut:
 				if (grab_keyboard)
 					XUngrabKeyboard(display, CurrentTime);
-				break;
-
-			case FocusIn:
-				reset_modifier_keys();
 				break;
 
 			case Expose:
