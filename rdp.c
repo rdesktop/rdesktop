@@ -1,4 +1,4 @@
-/*
+/* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    Protocol services - RDP layer
    Copyright (C) Matthew Chapman 1999-2002
@@ -26,41 +26,15 @@ extern BOOL bitmap_compression;
 extern BOOL orders;
 extern BOOL encryption;
 extern BOOL desktop_save;
+extern BOOL use_rdp5;
+extern uint16 server_rdp_version;
 
 uint8 *next_packet;
 uint32 rdp_shareid;
 
 #if WITH_DEBUG
 static uint32 packetno;
-#endif 
-
-/* Initialise an RDP packet */
-static STREAM
-rdp_init(int maxlen)
-{
-	STREAM s;
-
-	s = sec_init(encryption ? SEC_ENCRYPT : 0, maxlen + 6);
-	s_push_layer(s, rdp_hdr, 6);
-
-	return s;
-}
-
-/* Send an RDP packet */
-static void
-rdp_send(STREAM s, uint8 pdu_type)
-{
-	uint16 length;
-
-	s_pop_layer(s, rdp_hdr);
-	length = s->end - s->p;
-
-	out_uint16_le(s, length);
-	out_uint16_le(s, (pdu_type | 0x10));	/* Version 1 */
-	out_uint16_le(s, (mcs_userid + 1001));
-
-	sec_send(s, encryption ? SEC_ENCRYPT : 0);
-}
+#endif
 
 /* Receive an RDP packet */
 static STREAM
@@ -95,8 +69,8 @@ rdp_recv(uint8 * type)
 	*type = pdu_type & 0xf;
 
 #if WITH_DEBUG
-	DEBUG(("RDP packet #%d, (type %x):\n", ++packetno, *type));
-	hexdump(next_packet, length);
+	DEBUG(("RDP packet #%d, (type %x)\n", ++packetno, *type));
+	//      hexdump(next_packet, length);
 #endif /*  */
 
 	next_packet += length;
@@ -169,22 +143,86 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 	uint32 sec_flags = encryption ? (SEC_LOGON_INFO | SEC_ENCRYPT) : SEC_LOGON_INFO;
 	STREAM s;
 
-	s = sec_init(sec_flags, 18 + len_domain + len_user + len_password
-		     + len_program + len_directory + 10);
+	if (1 == server_rdp_version)
+	{
+		DEBUG_RDP5(("Sending RDP4-style Logon packet\n"));
 
-	out_uint32(s, 0);
-	out_uint32_le(s, flags);
-	out_uint16_le(s, len_domain);
-	out_uint16_le(s, len_user);
-	out_uint16_le(s, len_password);
-	out_uint16_le(s, len_program);
-	out_uint16_le(s, len_directory);
-	rdp_out_unistr(s, domain, len_domain);
-	rdp_out_unistr(s, user, len_user);
-	rdp_out_unistr(s, password, len_password);
-	rdp_out_unistr(s, program, len_program);
-	rdp_out_unistr(s, directory, len_directory);
+		s = sec_init(sec_flags, 18 + len_domain + len_user + len_password
+			     + len_program + len_directory + 10);
 
+		out_uint32(s, 0);
+		out_uint32_le(s, flags);
+		out_uint16_le(s, len_domain);
+		out_uint16_le(s, len_user);
+		out_uint16_le(s, len_password);
+		out_uint16_le(s, len_program);
+		out_uint16_le(s, len_directory);
+		rdp_out_unistr(s, domain, len_domain);
+		rdp_out_unistr(s, user, len_user);
+		rdp_out_unistr(s, password, len_password);
+		rdp_out_unistr(s, program, len_program);
+		rdp_out_unistr(s, directory, len_directory);
+	}
+	else
+	{
+		DEBUG_RDP5(("Sending RDP5-style Logon packet\n"));
+		s = sec_init(sec_flags, 12 + (flags & RDP_LOGON_AUTO ? 2 : 0) + 6 + (flags & RDP_LOGON_AUTO ? len_password : 0) + len_domain + len_user + 4 + len_program + len_directory + 30 + 2 + 60 + 32 + 20 + 32 + 20);	/* Phew! */
+
+		out_uint32(s, 0);
+		out_uint32_le(s, flags);
+		out_uint16_le(s, len_domain);
+		out_uint16_le(s, len_user);
+		if (flags & RDP_LOGON_AUTO)
+		{
+			out_uint16_le(s, len_password);
+		}
+		out_uint16_le(s, 0);	/* Seems to be length of a 512 byte blob with
+					   completely unknown data, but hopefully we'll do
+					   with a 0 length block as well */
+		out_uint16_le(s, len_program);
+		out_uint16_le(s, len_directory);
+		if (flags & RDP_LOGON_AUTO)
+		{
+			rdp_out_unistr(s, password, len_password);
+		}
+		rdp_out_unistr(s, domain, len_domain);
+		rdp_out_unistr(s, user, len_user);
+		out_uint16_le(s, 0);
+		out_uint16_le(s, 0);
+		if (0 < len_program)
+			rdp_out_unistr(s, program, len_program);
+		if (0 < len_directory)
+			rdp_out_unistr(s, directory, len_directory);
+		out_uint8s(s, 30);	/* Some kind of client data - let's see if the server
+					   handles zeros well.. */
+		out_uint16_le(s, 60);
+		rdp_out_unistr(s, "C:\\WINNT\\System32\\mstscax.dll", 58);
+		out_uint32_be(s, 0x88ffffff);
+		rdp_out_unistr(s, "GTB, normaltid", 2 * strlen("GTB, normaltid") - 2);
+		out_uint8s(s, 30 - 2 * strlen("GTP, normaltid"));
+
+		out_uint32_le(s, 0x0a0000);
+		out_uint32_le(s, 0x050000);
+		out_uint32_le(s, 2);
+		out_uint32_le(s, 0);
+		out_uint32_le(s, 0xffffffc4);
+		out_uint32_le(s, 0xfffffffe);
+		out_uint32_le(s, 0x0f);
+		out_uint32_le(s, 0);
+
+		rdp_out_unistr(s, "GTB, sommartid", 2 * strlen("GTB, sommartid") - 1);
+		out_uint8s(s, 30 - 2 * strlen("GTP, sommartid"));
+
+		out_uint32_le(s, 0x030000);
+		out_uint32_le(s, 0x050000);
+		out_uint32_le(s, 2);
+		out_uint32_le(s, 0);
+		out_uint32_le(s, 0xffffffc4);
+		out_uint32_le(s, 0xfffffffe);
+		out_uint32_le(s, 0x0f);
+		out_uint32_le(s, 0);
+
+	}
 	s_mark_end(s);
 	sec_send(s, sec_flags);
 }
@@ -270,7 +308,14 @@ rdp_out_general_caps(STREAM s)
 	out_uint16_le(s, 0x200);	/* Protocol version */
 	out_uint16(s, 0);	/* Pad */
 	out_uint16(s, 0);	/* Compression types */
-	out_uint16(s, 0);	/* Pad */
+	out_uint16(s, use_rdp5 ? 0x40d : 0);
+	/* Pad, according to T.128. 0x40d seems to 
+	   trigger
+	   the server to start sending RDP5 packets. 
+	   However, the value is 0x1d04 with W2KTSK and
+	   NT4MS. Hmm.. Anyway, thankyou, Microsoft,
+	   for sending such information in a padding 
+	   field.. */
 	out_uint16(s, 0);	/* Update capability */
 	out_uint16(s, 0);	/* Remote unshare capability */
 	out_uint16(s, 0);	/* Compression level */
@@ -433,7 +478,7 @@ static uint8 canned_caps[] = {
 	0x02, 0x00, 0x00, 0x00
 };
 
-/* Output unknown capability set */
+/* Output unknown capability sets (number 13, 12, 14 and 16) */
 static void
 rdp_out_unknown_caps(STREAM s)
 {
@@ -443,18 +488,24 @@ rdp_out_unknown_caps(STREAM s)
 	out_uint8p(s, canned_caps, RDP_CAPLEN_UNKNOWN - 4);
 }
 
+#define RDP5_FLAG 0x0030
 /* Send a confirm active PDU */
 static void
 rdp_send_confirm_active(void)
 {
 	STREAM s;
+	uint32 sec_flags = encryption ? (RDP5_FLAG | SEC_ENCRYPT) : RDP5_FLAG;
 	uint16 caplen =
 		RDP_CAPLEN_GENERAL + RDP_CAPLEN_BITMAP + RDP_CAPLEN_ORDER +
 		RDP_CAPLEN_BMPCACHE + RDP_CAPLEN_COLCACHE +
 		RDP_CAPLEN_ACTIVATE + RDP_CAPLEN_CONTROL +
 		RDP_CAPLEN_POINTER + RDP_CAPLEN_SHARE + RDP_CAPLEN_UNKNOWN + 4 /* w2k fix, why? */ ;
 
-	s = rdp_init(14 + caplen + sizeof(RDP_SOURCE));
+	s = sec_init(sec_flags, 6 + 14 + caplen + sizeof(RDP_SOURCE));
+
+	out_uint16_le(s, 2 + 14 + caplen + sizeof(RDP_SOURCE));
+	out_uint16_le(s, (RDP_PDU_CONFIRM_ACTIVE | 0x10));	/* Version 1 */
+	out_uint16_le(s, (mcs_userid + 1001));
 
 	out_uint32_le(s, rdp_shareid);
 	out_uint16_le(s, 0x3ea);	/* userid */
@@ -477,7 +528,7 @@ rdp_send_confirm_active(void)
 	rdp_out_unknown_caps(s);
 
 	s_mark_end(s);
-	rdp_send(s, RDP_PDU_CONFIRM_ACTIVE);
+	sec_send(s, sec_flags);
 }
 
 /* Respond to a demand active PDU */
@@ -504,14 +555,54 @@ process_demand_active(STREAM s)
 	reset_order_state();
 }
 
+/* Process a null system pointer PDU */
+void
+process_null_system_pointer_pdu(STREAM s)
+{
+	// FIXME: We should probably set another cursor here, 
+	// like the X window system base cursor or something.
+	ui_set_cursor(cache_get_cursor(0));
+}
+
+/* Process a colour pointer PDU */
+void
+process_colour_pointer_pdu(STREAM s)
+{
+	uint16 x, y, width, height, cache_idx, masklen, datalen;
+	uint8 *mask, *data;
+	HCURSOR cursor;
+
+	in_uint16_le(s, cache_idx);
+	in_uint16_le(s, x);
+	in_uint16_le(s, y);
+	in_uint16_le(s, width);
+	in_uint16_le(s, height);
+	in_uint16_le(s, masklen);
+	in_uint16_le(s, datalen);
+	in_uint8p(s, data, datalen);
+	in_uint8p(s, mask, masklen);
+	cursor = ui_create_cursor(x, y, width, height, mask, data);
+	ui_set_cursor(cursor);
+	cache_put_cursor(cache_idx, cursor);
+}
+
+/* Process a cached pointer PDU */
+void
+process_cached_pointer_pdu(STREAM s)
+{
+	uint16 cache_idx;
+
+	in_uint16_le(s, cache_idx);
+	ui_set_cursor(cache_get_cursor(cache_idx));
+}
+
+
 /* Process a pointer PDU */
 static void
 process_pointer_pdu(STREAM s)
 {
 	uint16 message_type;
-	uint16 x, y, width, height, cache_idx, masklen, datalen;
-	uint8 *mask, *data;
-	HCURSOR cursor;
+	uint16 x, y;
 
 	in_uint16_le(s, message_type);
 	in_uint8s(s, 2);	/* pad */
@@ -526,23 +617,11 @@ process_pointer_pdu(STREAM s)
 			break;
 
 		case RDP_POINTER_COLOR:
-			in_uint16_le(s, cache_idx);
-			in_uint16_le(s, x);
-			in_uint16_le(s, y);
-			in_uint16_le(s, width);
-			in_uint16_le(s, height);
-			in_uint16_le(s, masklen);
-			in_uint16_le(s, datalen);
-			in_uint8p(s, data, datalen);
-			in_uint8p(s, mask, masklen);
-			cursor = ui_create_cursor(x, y, width, height, mask, data);
-			ui_set_cursor(cursor);
-			cache_put_cursor(cache_idx, cursor);
+			process_colour_pointer_pdu(s);
 			break;
 
 		case RDP_POINTER_CACHED:
-			in_uint16_le(s, cache_idx);
-			ui_set_cursor(cache_get_cursor(cache_idx));
+			process_cached_pointer_pdu(s);
 			break;
 
 		default:
@@ -551,7 +630,7 @@ process_pointer_pdu(STREAM s)
 }
 
 /* Process bitmap updates */
-static void
+void
 process_bitmap_updates(STREAM s)
 {
 	uint16 num_updates;
@@ -578,8 +657,8 @@ process_bitmap_updates(STREAM s)
 		cx = right - left + 1;
 		cy = bottom - top + 1;
 
-		DEBUG(("UPDATE(l=%d,t=%d,r=%d,b=%d,w=%d,h=%d,cmp=%d)\n",
-		       left, top, right, bottom, width, height, compress));
+		DEBUG(("BITMAP_UPDATE(l=%d,t=%d,r=%d,b=%d,w=%d,h=%d,Bpp=%d,cmp=%d)\n",
+		       left, top, right, bottom, width, height, Bpp, compress));
 
 		if (!compress)
 		{
@@ -595,21 +674,34 @@ process_bitmap_updates(STREAM s)
 			continue;
 		}
 
-		in_uint8s(s, 2);	/* pad */
-		in_uint16_le(s, size);
-		in_uint8s(s, 4);	/* line_size, final_size */
+
+		if (compress & 0x400)
+		{
+			size = bufsize;
+		}
+		else
+		{
+			in_uint8s(s, 2);	/* pad */
+			in_uint16_le(s, size);
+			in_uint8s(s, 4);	/* line_size, final_size */
+		}
 		in_uint8p(s, data, size);
 		bmpdata = xmalloc(width * height * Bpp);
 		if (bitmap_decompress(bmpdata, width, height, data, size, Bpp))
 		{
 			ui_paint_bitmap(left, top, cx, cy, width, height, bmpdata);
 		}
+		else
+		{
+			DEBUG_RDP5(("Failed to decompress data\n"));
+		}
+
 		xfree(bmpdata);
 	}
 }
 
 /* Process a palette update */
-static void
+void
 process_palette(STREAM s)
 {
 	COLOURENTRY *entry;
@@ -622,6 +714,8 @@ process_palette(STREAM s)
 	in_uint8s(s, 2);	/* pad */
 
 	map.colours = xmalloc(3 * map.ncolours);
+
+	DEBUG(("PALETTE(c=%d)\n", map.ncolours));
 
 	for (i = 0; i < map.ncolours; i++)
 	{
@@ -641,14 +735,17 @@ process_palette(STREAM s)
 static void
 process_update_pdu(STREAM s)
 {
-	uint16 update_type;
+	uint16 update_type, count;
 
 	in_uint16_le(s, update_type);
 
 	switch (update_type)
 	{
 		case RDP_UPDATE_ORDERS:
-			process_orders(s);
+			in_uint8s(s, 2);	/* pad */
+			in_uint16_le(s, count);
+			in_uint8s(s, 2);	/* pad */
+			process_orders(s, count);
 			break;
 
 		case RDP_UPDATE_BITMAP:
@@ -693,6 +790,7 @@ process_data_pdu(STREAM s)
 			break;
 
 		case RDP_DATA_PDU_LOGON:
+			DEBUG(("Received Logon PDU\n"));
 			/* User logged on */
 			break;
 
@@ -737,7 +835,7 @@ BOOL
 rdp_connect(char *server, uint32 flags, char *domain, char *password,
 	    char *command, char *directory)
 {
-	if (!sec_connect(server))
+	if (!sec_connect(server, username))
 		return False;
 
 	rdp_send_logon_info(flags, domain, username, password, command, directory);
