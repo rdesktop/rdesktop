@@ -259,6 +259,7 @@ main(int argc, char *argv[])
 
 	DEBUG(("Disconnecting...\n"));
 	rdp_disconnect();
+	ui_deinit();
 	return 0;
 }
 

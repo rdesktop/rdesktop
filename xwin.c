@@ -33,6 +33,7 @@ extern BOOL sendmotion;
 extern BOOL fullscreen;
 extern BOOL grab_keyboard;
 extern char title[];
+BOOL enable_compose = False;
 
 Display *display;
 static int x_socket;
@@ -42,6 +43,9 @@ static GC gc;
 static Visual *visual;
 static int depth;
 static int bpp;
+static XIM IM;
+static XIC IC;
+static Cursor current_cursor;
 
 /* endianness */
 static BOOL host_be;
@@ -61,14 +65,6 @@ static Pixmap backstore;
 /* colour maps */
 static Colormap xcolmap;
 static uint32 *colmap;
-
-/* Compose support */
-BOOL enable_compose = False;
-static XIM IM = NULL;
-static XIC IC = NULL;
-
-/* toggle fullscreen globals */
-static unsigned long input_mask;
 
 #define SET_FOREGROUND(col)	XSetForeground(display, gc, translate_colour(colmap[col]));
 #define SET_BACKGROUND(col)	XSetBackground(display, gc, translate_colour(colmap[col]));
@@ -189,59 +185,6 @@ translate_colour(uint32 colour)
 	return colour;
 }
 
-static unsigned long
-init_inputmethod(void)
-{
-	unsigned long filtered_events = 0;
-
-	IM = XOpenIM(display, NULL, NULL, NULL);
-	if (IM == NULL)
-	{
-		error("Failed to open input method\n");
-	}
-
-	if (IM != NULL)
-	{
-		/* Must be done after XCreateWindow */
-		IC = XCreateIC(IM, XNInputStyle,
-			       (XIMPreeditNothing | XIMStatusNothing),
-			       XNClientWindow, wnd, XNFocusWindow, wnd, NULL);
-
-		if (IC == NULL)
-		{
-			error("Failed to create input context\n");
-			XCloseIM(IM);
-			IM = NULL;
-		}
-	}
-
-	/* For correct Multi_key/Compose processing, I guess.
-	   It seems to work alright anyway, though. */
-	if (IC != NULL)
-	{
-		if (XGetICValues(IC, XNFilterEvents, &filtered_events, NULL) != NULL)
-		{
-			error("Failed to obtain XNFilterEvents value from IC\n");
-			filtered_events = 0;
-		}
-	}
-	return filtered_events;
-}
-
-static void
-close_inputmethod(void)
-{
-	if (IC != NULL)
-	{
-		XDestroyIC(IC);
-		if (IM != NULL)
-		{
-			XCloseIM(IM);
-			IM = NULL;
-		}
-	}
-}
-
 BOOL
 get_key_state(int keysym)
 {
@@ -274,20 +217,6 @@ get_key_state(int keysym)
 	XFreeModifiermap(map);
 
 	return (current_state & keysymMask) ? True : False;
-}
-
-static void
-xwin_map_window()
-{
-	XEvent xevent;
-
-	XMapWindow(display, wnd);
-
-	/* wait for VisibilityChange */
-	XMaskEvent(display, VisibilityChangeMask, &xevent);
-
-	if (fullscreen)
-		XSetInputFocus(display, wnd, RevertToPointerRoot, CurrentTime);
 }
 
 BOOL
@@ -332,8 +261,9 @@ ui_init()
 	}
 
 	xcolmap = DefaultColormapOfScreen(screen);
+	gc = XCreateGC(display, RootWindowOfScreen(screen), 0, NULL);
 
-	if (DoesBackingStore(screen) == NotUseful)
+	if (DoesBackingStore(screen) != Always)
 		ownbackstore = True;
 
 	test = 1;
@@ -349,8 +279,34 @@ ui_init()
 	/* make sure width is a multiple of 4 */
 	width = (width + 3) & ~3;
 
+	if (ownbackstore)
+	{
+		backstore = XCreatePixmap(display, RootWindowOfScreen(screen), width, height, depth);
+
+		/* clear to prevent rubbish being exposed at startup */
+		XSetForeground(display, gc, BlackPixelOfScreen(screen));
+		XFillRectangle(display, backstore, gc, 0, 0, width, height);
+	}
+
+	if (enable_compose)
+		IM = XOpenIM(display, NULL, NULL, NULL);
+
 	xkeymap_init();
 	return True;
+}
+
+void
+ui_deinit()
+{
+	if (IM != NULL)
+		XCloseIM(IM);
+
+	if (ownbackstore)
+		XFreePixmap(display, backstore);
+
+	XFreeGC(display, gc);
+	XCloseDisplay(display);
+	display = NULL;
 }
 
 BOOL
@@ -359,17 +315,20 @@ ui_create_window()
 	XSetWindowAttributes attribs;
 	XClassHint *classhints;
 	XSizeHints *sizehints;
+	int wndwidth, wndheight;
+	long input_mask, ic_input_mask;
 	XEvent xevent;
+
+	wndwidth  = fullscreen ? WidthOfScreen(screen)  : width;
+	wndheight = fullscreen ? HeightOfScreen(screen) : height;
 
 	attribs.background_pixel = BlackPixelOfScreen(screen);
 	attribs.backing_store = ownbackstore ? NotUseful : Always;
 	attribs.override_redirect = fullscreen;
-	wnd = XCreateWindow(display, RootWindowOfScreen(screen), 0, 0, width, height,
+
+	wnd = XCreateWindow(display, RootWindowOfScreen(screen), 0, 0, wndwidth, wndheight,
 			    0, CopyFromParent, InputOutput, CopyFromParent,
 			    CWBackPixel | CWBackingStore | CWOverrideRedirect, &attribs);
-
-	if (ownbackstore)
-		backstore = XCreatePixmap(display, wnd, width, height, depth);
 
 	XStoreName(display, wnd, title);
 
@@ -392,7 +351,7 @@ ui_create_window()
 	}
 
 	input_mask = KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask |
-		VisibilityChangeMask | FocusChangeMask;
+		StructureNotifyMask | FocusChangeMask;
 
 	if (grab_keyboard)
 		input_mask |= EnterWindowMask | LeaveWindowMask;
@@ -400,17 +359,26 @@ ui_create_window()
 		input_mask |= PointerMotionMask;
 	if (ownbackstore)
 		input_mask |= ExposureMask;
-	if (enable_compose)
-		input_mask |= init_inputmethod();
+
+	if (IM != NULL)
+	{
+		IC = XCreateIC(IM, XNInputStyle, (XIMPreeditNothing | XIMStatusNothing),
+			       XNClientWindow, wnd, XNFocusWindow, wnd, NULL);
+
+		if ((IC != NULL) && (XGetICValues(IC, XNFilterEvents, &ic_input_mask, NULL) == NULL))
+			input_mask |= ic_input_mask;
+	}
 
 	XSelectInput(display, wnd, input_mask);
+	XMapWindow(display, wnd);
 
-	xwin_map_window();
+	/* wait for MapNotify */
+	do {
+		XMaskEvent(display, StructureNotifyMask, &xevent);
+	} while (xevent.type != MapNotify);
 
-	/* clear the window so that cached data is not seen */
-	gc = XCreateGC(display, wnd, 0, NULL);
-	XSetForeground(display, gc, 0);
-	FILL_RECTANGLE(0, 0, width, height);
+	if (fullscreen)
+		XSetInputFocus(display, wnd, RevertToPointerRoot, CurrentTime);
 
 	return True;
 }
@@ -418,35 +386,35 @@ ui_create_window()
 void
 ui_destroy_window()
 {
-	if (ownbackstore)
-		XFreePixmap(display, backstore);
-
-	XFreeGC(display, gc);
-
-	close_inputmethod();
+	if (IC != NULL)
+		XDestroyIC(IC);
 
 	XDestroyWindow(display, wnd);
-	XCloseDisplay(display);
-	display = NULL;
 }
-
 
 void
 xwin_toggle_fullscreen()
 {
-	XEvent xevent;
-	XSetWindowAttributes attribs;
-	int newwidth, newheight;
+	Pixmap contents = 0;
 
+	if (!ownbackstore)
+	{
+		/* need to save contents of window */
+		contents = XCreatePixmap(display, wnd, width, height, depth);
+		XCopyArea(display, wnd, contents, gc, 0, 0, width, height, 0, 0);
+	}
+
+	ui_destroy_window();
 	fullscreen = !fullscreen;
-	newwidth = fullscreen ? WidthOfScreen(screen) : width;
-	newheight = fullscreen ? HeightOfScreen(screen) : height;
+	ui_create_window();
 
-	XUnmapWindow(display, wnd);
-	attribs.override_redirect = fullscreen;
-	XMoveResizeWindow(display, wnd, 0, 0, newwidth, newheight);
-	XChangeWindowAttributes(display, wnd, CWOverrideRedirect, &attribs);
-	xwin_map_window();
+	XDefineCursor(display, wnd, current_cursor);
+
+	if (!ownbackstore)
+	{
+		XCopyArea(display, contents, wnd, gc, 0, 0, width, height, 0, 0);
+		XFreePixmap(display, contents);
+	}
 }
 
 /* Process all events in Xlib queue */
@@ -466,7 +434,7 @@ xwin_process_events()
 	{
 		XNextEvent(display, &xevent);
 
-		if (enable_compose && (XFilterEvent(&xevent, None) == True))
+		if ((IC != NULL) && (XFilterEvent(&xevent, None) == True))
 		{
 			DEBUG_KBD(("Filtering event\n"));
 			continue;
@@ -780,7 +748,8 @@ ui_create_cursor(unsigned int x, unsigned int y, int width, int height,
 void
 ui_set_cursor(HCURSOR cursor)
 {
-	XDefineCursor(display, wnd, (Cursor) cursor);
+	current_cursor = (Cursor) cursor;
+	XDefineCursor(display, wnd, current_cursor);
 }
 
 void
