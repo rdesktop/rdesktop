@@ -605,10 +605,13 @@ translate_image(int width, int height, uint8 * data)
 	/* if server and xserver bpp match, */
 	/* and arch(endian) matches, no need to translate */
 	/* just return data */
-	if (g_depth > 8)
-		if (g_arch_match)
-			if (g_depth == g_server_bpp)
-				return data;
+	if (g_arch_match)
+	{
+		if (g_depth == 15 && g_server_bpp == 15)
+			return data;
+		if (g_depth == 16 && g_server_bpp == 16)
+			return data;
+	}
 
 	size = width * height * (g_bpp / 8);
 	out = (uint8 *) xmalloc(size);
