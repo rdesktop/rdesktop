@@ -8,17 +8,8 @@ Alt_L 0x38
 Control_R 0x9d
 Control_L 0x1d
 
-# Translate Meta, Super and Hyper to Windows key. It seems the RDP
-# protocol does not support these keys directly. Therefore, rdesktop
-# currently translates the keysyms listed below into Ctrl-Esc. This is
-# hard-coded, since multiple scancodes cannot be specified in keymap
-# files. 
-#Meta_L 0xdb
-#Super_L 0xdb
-#Hyper_L 0xdb
-#Meta_R 0xdc	
-#Super_R 0xdc
-#Hyper_R 0xdc
+# Translate Meta, Super and Hyper to Windows keys. 
+# This is hardcoded. See documentation for details. 
 
 # Translate Menu to the Windows Application key. 
 # This one does not work either. 
