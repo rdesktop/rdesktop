@@ -230,8 +230,25 @@ translate_colour(uint32 colour)
 	return make_colour(pc);
 }
 
+/* indent is confused by UNROLL8 */
+/* *INDENT-OFF* */
+
+/* repeat and unroll, similar to bitmap.c */
+/* potentialy any of the following translate */
+/* functions can use repeat but just doing */
+/* the most common ones */
+
 #define UNROLL8(stm) { stm stm stm stm stm stm stm stm }
-#define REPEAT(stm) \
+/* 2 byte output repeat */
+#define REPEAT2(stm) \
+{ \
+	while (out <= end - 8 * 2) \
+		UNROLL8(stm) \
+	while (out < end) \
+		{ stm } \
+}
+/* 4 byte output repeat */
+#define REPEAT4(stm) \
 { \
 	while (out <= end - 8 * 4) \
 		UNROLL8(stm) \
@@ -252,27 +269,31 @@ translate8to16(uint8 * data, uint8 * out, uint8 * end)
 	uint16 value;
 
 	if (g_arch_match)
-		REPEAT(*((uint16 *) out) = g_colmap[*(data++)];
-		       out += 2;)
+	{
+		REPEAT2
+		(
+			*((uint16 *) out) = g_colmap[*(data++)];
+			out += 2;
+		)
+	}
+	else if (g_xserver_be)
+	{
+		while (out < end)
+		{
+			value = (uint16) g_colmap[*(data++)];
+			*(out++) = value >> 8;
+			*(out++) = value;
+		}
+	}
 	else
-if (g_xserver_be)
-{
-	while (out < end)
 	{
-		value = (uint16) g_colmap[*(data++)];
-		*(out++) = value >> 8;
-		*(out++) = value;
+		while (out < end)
+		{
+			value = (uint16) g_colmap[*(data++)];
+			*(out++) = value;
+			*(out++) = value >> 8;
+		}
 	}
-}
-else
-{
-	while (out < end)
-	{
-		value = (uint16) g_colmap[*(data++)];
-		*(out++) = value;
-		*(out++) = value >> 8;
-	}
-}
 }
 
 /* little endian - conversion happens when colourmap is built */
@@ -309,32 +330,38 @@ translate8to32(uint8 * data, uint8 * out, uint8 * end)
 	uint32 value;
 
 	if (g_arch_match)
-		REPEAT(*((uint32 *) out) = g_colmap[*(data++)];
-		       out += 4;)
+	{
+		REPEAT4
+		(
+			*((uint32 *) out) = g_colmap[*(data++)];
+			out += 4;
+		)
+	}
+	else if (g_xserver_be)
+	{
+		while (out < end)
+		{
+			value = g_colmap[*(data++)];
+			*(out++) = value >> 24;
+			*(out++) = value >> 16;
+			*(out++) = value >> 8;
+			*(out++) = value;
+		}
+	}
 	else
-if (g_xserver_be)
-{
-	while (out < end)
 	{
-		value = g_colmap[*(data++)];
-		*(out++) = value >> 24;
-		*(out++) = value >> 16;
-		*(out++) = value >> 8;
-		*(out++) = value;
+		while (out < end)
+		{
+			value = g_colmap[*(data++)];
+			*(out++) = value;
+			*(out++) = value >> 8;
+			*(out++) = value >> 16;
+			*(out++) = value >> 24;
+		}
 	}
 }
-else
-{
-	while (out < end)
-	{
-		value = g_colmap[*(data++)];
-		*(out++) = value;
-		*(out++) = value >> 8;
-		*(out++) = value >> 16;
-		*(out++) = value >> 24;
-	}
-}
-}
+
+/* *INDENT-ON* */
 
 static void
 translate15to16(uint16 * data, uint8 * out, uint8 * end)
