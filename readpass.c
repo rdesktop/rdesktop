@@ -26,6 +26,8 @@
 #include <assert.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 /* Execute specified askpass program and fetch password from standard
    output. Return NULL on failure, otherwise a pointer to the data
@@ -39,6 +41,7 @@ askpass(char *askpass, const char *msg)
 	char *pass;
 	int p[2], status, ret;
 	char buf[1024];
+	int devnull;
 
 	if (fflush(stdout) != 0)
 		error("askpass: fflush: %s", strerror(errno));
@@ -62,11 +65,28 @@ askpass(char *askpass, const char *msg)
 			setuid(getuid());
 			/* Close read end */
 			close(p[0]);
+
+			/* Setup stdin */
+			devnull = open("/dev/null", 0, O_RDONLY);
+			if (dup2(devnull, STDIN_FILENO) < 0)
+			{
+				error("askpass: dup2: %s", strerror(errno));
+				exit(1);
+			}
+			close(devnull);
+
+			/* Setup stdout */
 			if (dup2(p[1], STDOUT_FILENO) < 0)
 			{
 				error("askpass: dup2: %s", strerror(errno));
 				exit(1);
 			}
+			close(p[1]);
+
+			/* By now, the following fds are open: 
+			   0 -> /dev/null 
+			   1 -> pipe write end
+			   2 -> users terminal */
 			execlp(askpass, askpass, msg, (char *) 0);
 			error("askpass: exec(%s): %s", askpass, strerror(errno));
 			exit(1);
