@@ -270,6 +270,7 @@ ui_create_window(char *title)
 	Screen *screen;
 	uint16 test;
 	int i;
+	XEvent xevent;
 
 	x_socket = ConnectionNumber(display);
 	screen = DefaultScreenOfDisplay(display);
@@ -354,7 +355,8 @@ ui_create_window(char *title)
 
 	xkeymap_init2();
 
-	input_mask = KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask;
+	input_mask = KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask |
+			VisibilityChangeMask;
 	if (grab_keyboard)
 		input_mask |= EnterWindowMask | LeaveWindowMask;
 	if (sendmotion)
@@ -374,6 +376,18 @@ ui_create_window(char *title)
 		backstore = XCreatePixmap(display, wnd, width, height, depth);
 
 	XMapWindow(display, wnd);
+
+	/* Wait for VisibilityNotify Event */
+	for (;;) {
+		XNextEvent(display, &xevent);
+		if (xevent.type == VisibilityNotify)
+			break;
+	}
+
+	/* clear the window so that cached data is not viewed upon start... */
+	XSetBackground(display, gc, 0);
+	XSetForeground(display, gc, 0);
+	FILL_RECTANGLE(0, 0, width, height);
 
 	return True;
 }
