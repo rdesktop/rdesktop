@@ -238,7 +238,7 @@ wave_out_play(void)
 			duration = (out->size * (1000000 / (g_samplewidth * g_snd_rate)));
 			elapsed = (tv.tv_sec - startedat_s) * 1000000 + (tv.tv_usec - startedat_us);
 
-			if (elapsed >= (duration * 7) / 10)
+			if (elapsed >= (duration * 85) / 100)
 			{
 				rdpsnd_send_completion(packet->tick, packet->index);
 				free(out->data);
