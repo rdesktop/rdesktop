@@ -266,6 +266,8 @@ rdpdr_send_available(void)
 	{
 		out_uint32_le(s, g_rdpdr_device[i].device_type);
 		out_uint32_le(s, i);	/* RDP Device ID */
+		/* Is it possible to use share names longer than 8 chars?
+		   /astrand */
 		out_uint8p(s, g_rdpdr_device[i].name, 8);
 
 		switch (g_rdpdr_device[i].device_type)

@@ -149,16 +149,14 @@ disk_enum_devices(uint32 * id, char *optarg)
 	while ((pos = next_arg(optarg, ',')) && *id < RDPDR_MAX_DEVICES)
 	{
 		pos2 = next_arg(optarg, '=');
-		strcpy(g_rdpdr_device[*id].name, optarg);
 
-		toupper_str(g_rdpdr_device[*id].name);
-
-		/* add trailing colon to name. */
-		strcat(g_rdpdr_device[*id].name, ":");
+		strncpy(g_rdpdr_device[*id].name, optarg, sizeof(g_rdpdr_device[*id].name));
+		if (strlen(optarg) > 8)
+			fprintf(stderr, "share name %s truncated to %s\n", optarg,
+				g_rdpdr_device[*id].name);
 
 		g_rdpdr_device[*id].local_path = xmalloc(strlen(pos2) + 1);
 		strcpy(g_rdpdr_device[*id].local_path, pos2);
-		printf("DISK %s to %s\n", g_rdpdr_device[*id].name, g_rdpdr_device[*id].local_path);
 		g_rdpdr_device[*id].device_type = DEVICE_TYPE_DISK;
 		count++;
 		(*id)++;

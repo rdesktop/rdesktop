@@ -22,8 +22,8 @@ disk mapping
 -------------
 Multiple mappings possible: yes
 Default: no disk redirected
-Syntax: -r disk:<driveletter>=<path>
-Example: -r disk:H=/home/johndoe
+Syntax: -r disk:<sharename>=<path>
+Example: -r disk:home=/home/johndoe
 
 
 printer mapping

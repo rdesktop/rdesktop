@@ -138,9 +138,10 @@ OSes you would use stty. Bidirectional/Read support requires Windows XP or newer
 In Windows 2000 it will create a port, but it's not seamless, most
 shell programs will not work with it.
 .TP
-.BR "-r disk:<driveletter>=<path>,..."
-Redirects a path to the drive letter of your choice on the server.
-(requires Windows XP or newer).
+.BR "-r disk:<sharename>=<path>,..."
+Redirects a path to the share \\\\tsclient\\<sharename> on the server
+(requires Windows XP or newer). The share name is limited to 8
+characters. 
 .TP
 .BR "-r lptport:<lptport>=<device>,..."
 Redirects parallel devices on your client to the server.

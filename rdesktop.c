@@ -129,8 +129,8 @@ usage(char *program)
 		"         '-r comport:COM1=/dev/ttyS0': enable serial redirection of /dev/ttyS0 to COM1\n");
 	fprintf(stderr, "             or      COM1=/dev/ttyS0,COM2=/dev/ttyS1\n");
 	fprintf(stderr,
-		"         '-r disk:A=/mnt/floppy': enable redirection of /mnt/floppy to A:\n");
-	fprintf(stderr, "             or   A=/mnt/floppy,D=/mnt/cdrom'\n");
+		"         '-r disk:floppy=/mnt/floppy': enable redirection of /mnt/floppy to 'floppy' share\n");
+	fprintf(stderr, "             or   'floppy=/mnt/floppy,cdrom=/mnt/cdrom'\n");
 	fprintf(stderr, "         '-r clientname=<client name>': Set the client name displayed\n");
 	fprintf(stderr, "             for redirected disks\n");
 	fprintf(stderr,
