@@ -23,7 +23,6 @@ AC_CHECK_HEADER(sys/strtio.h, AC_DEFINE(HAVE_SYS_STRTIO_H))
 AC_CHECK_HEADER(locale.h, AC_DEFINE(HAVE_LOCALE_H))
 AC_CHECK_HEADER(langinfo.h, AC_DEFINE(HAVE_LANGINFO_H))
 AC_CHECK_HEADER(iconv.h, AC_DEFINE(HAVE_ICONV_H))
-AC_CHECK_HEADER(unistd.h, AC_DEFINE(HAVE_UNISTD_H))
 
 rpath=""
 
@@ -397,7 +396,15 @@ AC_CHECK_HEADERS(sys/vfs.h)
 AC_CHECK_HEADERS(sys/statvfs.h)
 AC_CHECK_HEADERS(sys/statfs.h)
 AC_CHECK_HEADERS(sys/param.h)
-AC_CHECK_HEADERS(sys/mount.h)
+
+mount_includes="\
+  $ac_includes_default
+  #if HAVE_SYS_PARAM_H
+  # include <sys/param.h>
+  #endif
+  "
+
+AC_CHECK_HEADERS(sys/mount.h,,,[$mount_includes])
 
 #################################################
 # these tests are taken from the GNU fileutils package
