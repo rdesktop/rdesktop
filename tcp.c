@@ -232,7 +232,7 @@ tcp_get_address()
 {
 	static char ipaddr[32];
 	struct sockaddr_in sockaddr;
-	socklen_t len = sizeof(sockaddr);
+	int len = sizeof(sockaddr);
 	if (getsockname(sock, (struct sockaddr *) &sockaddr, &len) == 0)
 	{
 		unsigned char *ip = (unsigned char *) &sockaddr.sin_addr;
