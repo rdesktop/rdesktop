@@ -45,6 +45,7 @@ static Screen *g_screen;
 Window g_wnd;
 extern uint32 g_embed_wnd;
 BOOL g_enable_compose = False;
+BOOL g_Unobscured; /* used for screenblt */
 static GC g_gc = NULL;
 static Visual *g_visual;
 static int g_depth;
@@ -1005,6 +1006,7 @@ ui_create_window(void)
 		XMaskEvent(g_display, VisibilityChangeMask, &xevent);
 	}
 	while (xevent.type != VisibilityNotify);
+	g_Unobscured = xevent.xvisibility.state == VisibilityUnobscured;
 
 	g_focused = False;
 	g_mouse_in_wnd = False;
@@ -1103,6 +1105,9 @@ xwin_process_events(void)
 
 		switch (xevent.type)
 		{
+			case VisibilityNotify:
+				g_Unobscured = xevent.xvisibility.state == VisibilityUnobscured;
+				break;
 			case ClientMessage:
 				/* the window manager told us to quit */
 				if ((xevent.xclient.message_type == g_protocol_atom)
@@ -1849,8 +1854,16 @@ ui_screenblt(uint8 opcode,
 	SET_FUNCTION(opcode);
 	if (g_ownbackstore)
 	{
-		XCopyArea(g_display, g_backstore, g_wnd, g_gc, srcx, srcy, cx, cy, x, y);
-		XCopyArea(g_display, g_backstore, g_backstore, g_gc, srcx, srcy, cx, cy, x, y);
+		if (g_Unobscured)
+		{
+			XCopyArea(g_display, g_wnd, g_wnd, g_gc, srcx, srcy, cx, cy, x, y);
+			XCopyArea(g_display, g_backstore, g_backstore, g_gc, srcx, srcy, cx, cy, x, y);
+		}
+		else
+		{
+			XCopyArea(g_display, g_backstore, g_wnd, g_gc, srcx, srcy, cx, cy, x, y);
+			XCopyArea(g_display, g_backstore, g_backstore, g_gc, srcx, srcy, cx, cy, x, y);
+		}
 	}
 	else
 	{
