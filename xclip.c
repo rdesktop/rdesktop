@@ -133,6 +133,7 @@ void
 xclip_handle_SelectionRequest(XSelectionRequestEvent * event)
 {
 	unsigned long nitems, bytes_left;
+	unsigned char *prop_return;
 	uint32 *wanted_format;
 	int format, res;
 	Atom type;
@@ -157,8 +158,10 @@ xclip_handle_SelectionRequest(XSelectionRequestEvent * event)
 		res = XGetWindowProperty(g_display, event->requestor,
 					 rdesktop_clipboard_target_atom, 0, 1, True, XA_INTEGER,
 					 &type, &format, &nitems, &bytes_left,
-					 (unsigned char **) &wanted_format);
+					 &prop_return);
+		wanted_format = (uint32 *) prop_return;
 		format = (res == Success) ? *wanted_format : CF_TEXT;
+		/* FIXME: Need to free returned data? */
 	}
 	else
 	{
