@@ -1,14 +1,47 @@
-* Implement support for more RDP 5.X features:
 
-  * Serial port redirection
+* Clipboard:
 
-  * Drive redirection
-
-
-* Keymapping: Support non-dead versions of some dead keys, like
- "acute". It seems like RDP4 only supports the dead versions, but the
-  non-dead ones can be simulated by sending a space after the dead
-  key. 
+  * Support other data types than plain text. 
+ 
+  * Conversion between different character sets. 
 
 
-* Keymapping: Autodetect which keymap to use. 
+* Drive Redirection:
+
+  * Real support for file locking
+
+  * Handle reconnections correctly. 
+
+  * Various deficiencies; see FIXMEs in source code. 
+
+
+* Serial Port Redirection:
+
+  * More testing needed. 
+
+
+* Printer Redirection:
+
+  * More testing needed. 
+
+
+* Keymapping: 
+
+  * Support non-dead versions of some dead keys, like
+    "acute". It seems like RDP4 only supports the dead versions, but
+    the non-dead ones can be simulated by sending a space after the
+    dead key.
+
+  * Autodetect which keymap to use.
+
+
+* Miscellaneous
+
+  * Clean up header files. The current "proto.h" and "xproto.h" is far
+    from optimal.
+
+  * Go through the many trackers (bugs/patches/RFEs) at SourceForge. 
+
+  * More fancy homepage. 
+
+  * Enhance documentation. Write a FAQ. 
