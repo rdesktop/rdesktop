@@ -18,6 +18,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+#include <time.h>
 #include "rdesktop.h"
 
 extern uint16 g_mcs_userid;
@@ -146,6 +147,8 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 	int packetlen = 0;
 	uint32 sec_flags = g_encryption ? (SEC_LOGON_INFO | SEC_ENCRYPT) : SEC_LOGON_INFO;
 	STREAM s;
+	time_t t = time(NULL);
+	time_t tzone;
 
 	if (!g_use_rdp5 || 1 == g_server_rdp_version)
 	{
@@ -247,12 +250,10 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 		rdp_out_unistr(s, "127.0.0.1", len_ip);
 		out_uint16_le(s, len_dll + 2);
 		rdp_out_unistr(s, "C:\\WINNT\\System32\\mstscax.dll", len_dll);
-		/*
-		out_uint16_le(s, tz_offset/60);
+
+		tzone = (mktime(localtime(&t)) - mktime(gmtime(&t))) / 60;
+		out_uint16_le(s, tzone);
 		out_uint16_le(s, 0x0000);
-		*/
-		out_uint16_le(s, 0xffc4);
-		out_uint16_le(s, 0xffff);
 
 		rdp_out_unistr(s, "GTB, normaltid", 2 * strlen("GTB, normaltid"));
 		out_uint8s(s, 62 - 2 * strlen("GTB, normaltid"));
