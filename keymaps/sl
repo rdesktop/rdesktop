@@ -27,7 +27,6 @@ dead_abovedot 0x09 altgr
 abovedot 0x09 shift altgr
 parenright 0x0a shift
 dead_acute 0x0a altgr
-apostrophe 0x0a shift altgr
 equal 0x0b shift
 dead_doubleacute 0x0b altgr
 doubleacute 0x0b shift altgr
@@ -62,7 +61,6 @@ THORN 0x19 shift altgr
 scaron 0x1a
 Scaron 0x1a shift
 division 0x1a altgr
-dead_abovering 0x1a shift altgr
 dstroke 0x1b
 Dstroke 0x1b shift
 multiply 0x1b altgr
@@ -80,46 +78,33 @@ ENG 0x22 shift altgr
 hstroke 0x23 altgr
 Hstroke 0x23 shift altgr
 lstroke 0x25 altgr
-ampersand 0x25 shift altgr
 Lstroke 0x26 altgr
 ccaron 0x27
 Ccaron 0x27 shift
-dead_acute 0x27 altgr
-dead_doubleacute 0x27 shift altgr
 cacute 0x28
 Cacute 0x28 shift
 ssharp 0x28 altgr
-dead_caron 0x28 shift altgr
 dead_cedilla 0x29
-dead_diaeresis 0x29 shift
 notsign 0x29 altgr
 zcaron 0x2b
 Zcaron 0x2b shift
 currency 0x2b altgr
-dead_breve 0x2b shift altgr
 y 0x2c addupper
 guillemotleft 0x2c altgr
-less 0x2c shift altgr
 guillemotright 0x2d altgr
-greater 0x2d shift altgr
 cent 0x2e altgr
 copyright 0x2e shift altgr
 at 0x2f altgr
-grave 0x2f shift altgr
 braceleft 0x30 altgr
-apostrophe 0x30 shift altgr
 braceright 0x31 altgr
 section 0x32 altgr
 masculine 0x32 shift altgr
 comma 0x33
 semicolon 0x33 shift
 horizconnector 0x33 altgr
-multiply 0x33 shift altgr
 period 0x34
 colon 0x34 shift
 periodcentered 0x34 altgr
-division 0x34 shift altgr
 minus 0x35
 underscore 0x35 shift
 dead_belowdot 0x35 altgr
-dead_abovedot 0x35 shift altgr
