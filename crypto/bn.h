@@ -72,12 +72,9 @@ extern "C" {
 #define OPENSSL_free(ptr)    xfree(ptr);
 
 /* Only one for the following should be defined */
-/* The prime number generation stuff may not work when
- * EIGHT_BIT but I don't care since I've only used this mode
- * for debuging the bignum libraries */
-#if defined(__alpha__) || defined(__ia64__)
+#if defined(__alpha) || defined(__ia64)
 #define SIXTY_FOUR_BIT_LONG
-#elseif defined(__mips__)
+#elif defined(__mips)
 #define SIXTY_FOUR_BIT
 #else
 #define THIRTY_TWO_BIT

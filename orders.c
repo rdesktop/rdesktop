@@ -61,7 +61,7 @@ rdp_in_coord(STREAM s, uint16 *coord, BOOL delta)
 	if (delta)
 	{
 		in_uint8(s, change);
-		*coord += (char) change;
+		*coord += (signed char) change;
 	}
 	else
 	{
