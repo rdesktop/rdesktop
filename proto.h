@@ -31,6 +31,8 @@ NTSTATUS disk_query_information(HANDLE handle, uint32 info_class, STREAM out);
 NTSTATUS disk_set_information(HANDLE handle, uint32 info_class, STREAM in, STREAM out);
 NTSTATUS disk_query_volume_information(HANDLE handle, uint32 info_class, STREAM out);
 NTSTATUS disk_query_directory(HANDLE handle, uint32 info_class, char *pattern, STREAM out);
+/* mppc.c */
+int mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen);
 /* ewmhints.c */
 int get_current_workarea(uint32 * x, uint32 * y, uint32 * width, uint32 * height);
 /* iso.c */

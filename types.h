@@ -134,6 +134,14 @@ typedef struct
 	uint8 cb[MAX_CBSIZE];
 } WAVEFORMATEX;
 
+typedef struct _RDPCOMP
+{
+	uint32 roff;
+	uint8 hist[RDP_MPPC_DICT_SIZE];
+	struct stream ns;
+}
+RDPCOMP;
+
 /* RDPDR */
 typedef uint32 NTSTATUS;
 typedef uint32 HANDLE;

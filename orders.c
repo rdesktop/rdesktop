@@ -948,9 +948,12 @@ process_orders(STREAM s, uint16 num_orders)
 
 		processed++;
 	}
-
+#if 0
+	/* not true when RDP_COMPRESSION is set */
 	if (s->p != g_next_packet)
 		error("%d bytes remaining\n", (int) (g_next_packet - s->p));
+#endif
+
 }
 
 /* Reset order state */

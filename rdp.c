@@ -38,6 +38,8 @@ extern BOOL g_bitmap_cache;
 uint8 *g_next_packet;
 uint32 g_rdp_shareid;
 
+extern RDPCOMP mppc_dict;
+
 #if WITH_DEBUG
 static uint32 g_packetno;
 #endif
@@ -174,15 +176,16 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 	time_t t = time(NULL);
 	time_t tzone;
 
-#if 0
-	// enable rdp compression
-	flags |= RDP_COMPRESSION;
-#endif
-
 	if (!g_use_rdp5 || 1 == g_server_rdp_version)
 	{
 		DEBUG_RDP5(("Sending RDP4-style Logon packet\n"));
 
+#if 0
+		/* enable rdp compression */
+		/* decompression also works with rdp5 */
+		/* but there are some unknown opcodes */
+		flags |= RDP_COMPRESSION;
+#endif
 		s = sec_init(sec_flags, 18 + len_domain + len_user + len_password
 			     + len_program + len_directory + 10);
 
@@ -201,6 +204,7 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 	}
 	else
 	{
+
 		flags |= RDP_LOGON_BLOB;
 		DEBUG_RDP5(("Sending RDP5-style Logon packet\n"));
 		packetlen = 4 +	/* Unknown uint32 */
@@ -437,7 +441,7 @@ rdp_out_order_caps(STREAM s)
 	order_caps[0] = 1;	/* dest blt */
 	order_caps[1] = 1;	/* pat blt */
 	order_caps[2] = 1;	/* screen blt */
-	order_caps[3] = (g_bitmap_cache ? 1 : 0); /* memblt */
+	order_caps[3] = (g_bitmap_cache ? 1 : 0);	/* memblt */
 	order_caps[8] = 1;	/* line */
 	order_caps[9] = 1;	/* line */
 	order_caps[10] = 1;	/* rect */
@@ -954,12 +958,12 @@ process_data_pdu(STREAM s, uint32 * ext_disc_reason)
 	uint8 data_pdu_type;
 	uint8 ctype;
 	uint16 clen;
-	int len;
-#if 0
-	int roff, rlen, ret;
-	static struct stream ns;
-	static signed char *dict = 0;
-#endif
+	uint32 len;
+
+	uint32 roff, rlen;
+
+	struct stream *ns = &(mppc_dict.ns);
+	uint8 *dict = (mppc_dict.hist);
 
 	in_uint8s(s, 6);	/* shareid, pad, streamid */
 	in_uint16(s, len);
@@ -968,31 +972,30 @@ process_data_pdu(STREAM s, uint32 * ext_disc_reason)
 	in_uint16(s, clen);
 	clen -= 18;
 
-#if 0
-	if (ctype & 0x20)
+	if (ctype & RDP_MPPC_COMPRESSED)
 	{
-		if (!dict)
-		{
-			dict = (signed char *) malloc(8200 * sizeof(signed char));
-			dict = (signed char *) memset(dict, 0, 8200 * sizeof(signed char));
-		}
 
-		ret = decompress(s->p, clen, ctype, (signed char *) dict, &roff, &rlen);
+		if (mppc_expand(s->p, clen, ctype, &roff, &rlen) == -1)
+			error("error while decompressing packet\n");
 
 		len -= 18;
 
-		ns.data = xrealloc(ns.data, len);
+		/* this should never happen */
+		if (len != rlen)
+			error("decompression error len != rlen\n");
 
-		ns.data = (unsigned char *) memcpy(ns.data, (unsigned char *) (dict + roff), len);
+		/* allocate memory and copy the uncompressed data into the temporary stream */
+		ns->data = xrealloc(ns->data, len);
 
-		ns.size = len;
-		ns.end = ns.data + ns.size;
-		ns.p = ns.data;
-		ns.rdp_hdr = ns.p;
+		memcpy((ns->data), (unsigned char *) (mppc_dict.hist + roff), len);
 
-		s = &ns;
+		ns->size = len;
+		ns->end = (ns->data + ns->size);
+		ns->p = ns->data;
+		ns->rdp_hdr = ns->p;
+
+		s = ns;
 	}
-#endif
 
 	switch (data_pdu_type)
 	{

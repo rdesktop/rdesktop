@@ -251,6 +251,12 @@ enum RDP_INPUT_DEVICE
 #define RDP5_NO_CURSOR_SHADOW	0x20
 #define RDP5_NO_CURSORSETTINGS	0x40	/* disables cursor blinking */
 
+/* compression types */
+#define RDP_MPPC_COMPRESSED	0x20
+#define RDP_MPPC_RESET		0x40
+#define RDP_MPPC_FLUSH		0x80
+#define RDP_MPPC_DICT_SIZE      8192
+
 /* Keymap flags */
 #define MapRightShiftMask   (1<<0)
 #define MapLeftShiftMask    (1<<1)
