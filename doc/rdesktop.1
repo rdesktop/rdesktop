@@ -135,8 +135,9 @@ simple PS-driver unless you specify one. Keep in mind that you need a
 100% match in the server environment, or the driver will fail. The first
 printer on the command line will be set as your default printer.
 .TP
-.BR "-r sound:[on|off|remote]"
-Redirects sound generated on the server to the client ( Requires
+.BR "-r sound:[local|off|remote]"
+Redirects sound generated on the server to the client. "remote" only has
+any effect when you connect to the console with the -0 option. (Requires
 Windows XP or newer).
 .TP
 .BR "-0"
