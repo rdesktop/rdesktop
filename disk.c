@@ -24,6 +24,7 @@
 #define FILE_ATTRIBUTE_DIRECTORY		0x00000010
 #define FILE_ATTRIBUTE_ARCHIVE			0x00000020
 #define FILE_ATTRIBUTE_DEVICE			0x00000040
+#define FILE_ATTRIBUTE_UNKNOWNXXX0		0x00000060	/* ??? ACTION i.e. 0x860 == compress this file ? */
 #define FILE_ATTRIBUTE_NORMAL			0x00000080
 #define FILE_ATTRIBUTE_TEMPORARY		0x00000100
 #define FILE_ATTRIBUTE_SPARSE_FILE		0x00000200
@@ -32,6 +33,21 @@
 #define FILE_ATTRIBUTE_OFFLINE			0x00001000
 #define FILE_ATTRIBUTE_NOT_CONTENT_INDEXED	0x00002000
 #define FILE_ATTRIBUTE_ENCRYPTED		0x00004000
+
+#define FILE_FLAG_OPEN_NO_RECALL		0x00100000
+#define FILE_FLAG_OPEN_REPARSE_POINT		0x00200000
+#define FILE_FLAG_POSIX_SEMANTICS		0x01000000
+#define FILE_FLAG_BACKUP_SEMANTICS		0x02000000	/* sometimes used to create a directory */
+#define FILE_FLAG_DELETE_ON_CLOSE		0x04000000
+#define FILE_FLAG_SEQUENTIAL_SCAN		0x08000000
+#define FILE_FLAG_RANDOM_ACCESS			0x10000000
+#define FILE_FLAG_NO_BUFFERING			0x20000000
+#define FILE_FLAG_OVERLAPPED			0x40000000
+#define FILE_FLAG_WRITE_THROUGH			0x80000000
+
+#define FILE_SHARE_READ				0x01
+#define FILE_SHARE_WRITE			0x02
+#define FILE_SHARE_DELETE			0x04
 
 #define FILE_BASIC_INFORMATION			0x04
 #define FILE_STANDARD_INFORMATION		0x05
@@ -215,65 +231,15 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 			break;
 	}
 
-	/* the sad part is that we can't trust this flag   */
-	/* directories aren't always marked                */
-	if (flags_and_attributes ^ FILE_DIRECTORY_FILE)
-	{
-		if (accessmask & GENERIC_ALL
-		    || (accessmask & GENERIC_READ && accessmask & GENERIC_WRITE))
-		{
-			flags |= O_RDWR;
-		}
-		else if ((accessmask & GENERIC_WRITE) && !(accessmask & GENERIC_READ))
-		{
-			flags |= O_WRONLY;
-		}
-		else
-		{
-			flags |= O_RDONLY;
-		}
-
-		handle = open(path, flags, mode);
-		if (handle == -1)
-		{
-			switch (errno)
-			{
-				case EACCES:
-
-					return STATUS_ACCESS_DENIED;
-
-				case ENOENT:
-
-					return STATUS_NO_SUCH_FILE;
-
-				default:
-
-					perror("open");
-					return STATUS_NO_SUCH_FILE;
-			}
-		}
-
-		/* all read and writes of files should be non blocking */
-		if (fcntl(handle, F_SETFL, O_NONBLOCK) == -1)
-			perror("fcntl");
-	}
+	//printf("Open: \"%s\"  flags: %u, accessmask: %u sharemode: %u create disp: %u\n", path, flags_and_attributes, accessmask, sharemode, create_disposition);
 
 	/* since we can't trust the FILE_DIRECTORY_FILE flag */
 	/* we need to double check that the file isn't a dir */
-	if (handle != 0)
-	{
-		/* Must check if this file isn't actually a directory */
-		struct stat filestat;
+	struct stat filestat;
 
-		// Get information about file and set that flag ourselfs
-		if ((fstat(handle, &filestat) == 0) && (S_ISDIR(filestat.st_mode)))
-		{
-			flags_and_attributes |= FILE_DIRECTORY_FILE;
-			close(handle);
-			handle = 0;
-		}
-	}
-
+	// Get information about file and set that flag ourselfs
+	if ((stat(path, &filestat) == 0) && (S_ISDIR(filestat.st_mode)))
+		flags_and_attributes |= FILE_DIRECTORY_FILE;
 
 	if (flags_and_attributes & FILE_DIRECTORY_FILE)
 	{
@@ -303,6 +269,46 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 		}
 		handle = DIRFD(dirp);
 	}
+	else
+	{
+
+		if (accessmask & GENERIC_ALL
+		    || (accessmask & GENERIC_READ && accessmask & GENERIC_WRITE))
+		{
+			flags |= O_RDWR;
+		}
+		else if ((accessmask & GENERIC_WRITE) && !(accessmask & GENERIC_READ))
+		{
+			flags |= O_WRONLY;
+		}
+		else
+		{
+			flags |= O_RDONLY;
+		}
+
+		handle = open(path, flags, mode);
+		if (handle == -1)
+		{
+			switch (errno)
+			{
+				case EACCES:
+
+					return STATUS_ACCESS_DENIED;
+
+				case ENOENT:
+
+					return STATUS_NO_SUCH_FILE;
+				default:
+
+					perror("open");
+					return STATUS_NO_SUCH_FILE;
+			}
+		}
+
+		/* all read and writes of files should be non blocking */
+		if (fcntl(handle, F_SETFL, O_NONBLOCK) == -1)
+			perror("fcntl");
+	}
 
 	if (handle >= MAX_OPEN_FILES)
 	{
@@ -315,7 +321,6 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 		g_fileinfo[handle].pdir = dirp;
 	g_fileinfo[handle].device_id = device_id;
 	g_fileinfo[handle].flags_and_attributes = flags_and_attributes;
-//      printf("create: attrib: %u handle %u\n", g_fileinfo[handle].flags_and_attributes, handle );
 	strncpy(g_fileinfo[handle].path, path, 255);
 
 	*phandle = handle;
