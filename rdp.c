@@ -583,7 +583,8 @@ process_bitmap_updates(STREAM s)
 			bmpdata = xmalloc(width * height * Bpp);
 			for (y = 0; y < height; y++)
 			{
-				in_uint8a(s, &bmpdata[(height - y - 1) * (width * Bpp)], width * Bpp);
+				in_uint8a(s, &bmpdata[(height - y - 1) * (width * Bpp)],
+					  width * Bpp);
 			}
 			ui_paint_bitmap(left, top, cx, cy, width, height, bmpdata);
 			xfree(bmpdata);

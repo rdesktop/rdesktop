@@ -97,9 +97,8 @@ save_licence(unsigned char *data, int length)
 		if ((s_ptr->p) + 4 > data + length)
 		{
 			printf("Error in parsing licence key.\n");
-			printf("Strings %d end value %x > supplied length (%x)\n", i, 
-			       (unsigned int)s_ptr->p, 
-			       (unsigned int)data + length);
+			printf("Strings %d end value %x > supplied length (%x)\n", i,
+			       (unsigned int) s_ptr->p, (unsigned int) data + length);
 			return;
 		}
 	}
@@ -107,9 +106,8 @@ save_licence(unsigned char *data, int length)
 	if (s_ptr->p + len > data + length)
 	{
 		printf("Error in parsing licence key.\n");
-		printf("End of licence %x > supplied length (%x)\n", 
-		       (unsigned int)s_ptr->p + len, 
-		       (unsigned int)data + length);
+		printf("End of licence %x > supplied length (%x)\n",
+		       (unsigned int) s_ptr->p + len, (unsigned int) data + length);
 		return;
 	}
 
@@ -145,7 +143,7 @@ save_licence(unsigned char *data, int length)
 	fnamewrk = xmalloc(strlen(fname) + 12);
 	for (y = 0;; y++)
 	{
-		sprintf(fnamewrk, "%s.%lu", fname, (long unsigned int)y); 
+		sprintf(fnamewrk, "%s.%lu", fname, (long unsigned int) y);
 		fnwrkfd = open(fnamewrk, O_WRONLY | O_CREAT | O_EXCL, 0600);
 		if (fnwrkfd == -1)
 		{
@@ -477,4 +475,3 @@ licence_process(STREAM s)
 			unimpl("licence tag 0x%x\n", tag);
 	}
 }
-

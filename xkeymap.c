@@ -198,7 +198,7 @@ xkeymap_read(char *mapname)
 			/* Automatically add uppercase key, with same modifiers 
 			   plus shift */
 			for (p = keyname; *p; p++)
-				*p = toupper((int)*p);
+				*p = toupper((int) *p);
 			MASK_ADD_BITS(modifiers, MapLeftShiftMask);
 			add_to_keymap(keyname, scancode, modifiers, mapname);
 		}
@@ -220,7 +220,7 @@ xkeymap_init(void)
 	mapname_ptr = keymapname;
 	while (*mapname_ptr)
 	{
-		*mapname_ptr = tolower((int)*mapname_ptr);
+		*mapname_ptr = tolower((int) *mapname_ptr);
 		mapname_ptr++;
 	}
 

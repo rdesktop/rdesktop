@@ -659,7 +659,8 @@ process_raw_bmpcache(STREAM s)
 	inverted = xmalloc(width * height * Bpp);
 	for (y = 0; y < height; y++)
 	{
-		memcpy(&inverted[(height - y - 1) * (width * Bpp)], &data[y * (width * Bpp)], width * Bpp);
+		memcpy(&inverted[(height - y - 1) * (width * Bpp)], &data[y * (width * Bpp)],
+		       width * Bpp);
 	}
 
 	bitmap = ui_create_bitmap(width, height, inverted);

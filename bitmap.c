@@ -22,7 +22,8 @@
 
 #define CVAL(p)   (*(p++))
 
-uint32 cvalx(unsigned char **input, int Bpp)
+uint32
+cvalx(unsigned char **input, int Bpp)
 {
 	uint32 rv = 0;
 	memcpy(&rv, *input, Bpp);
@@ -30,13 +31,15 @@ uint32 cvalx(unsigned char **input, int Bpp)
 	return rv;
 }
 
-void setli(unsigned char * input, int offset, uint32 value, int Bpp)
+void
+setli(unsigned char *input, int offset, uint32 value, int Bpp)
 {
 	input += offset * Bpp;
 	memcpy(input, &value, Bpp);
 }
 
-uint32 getli(unsigned char * input, int offset, int Bpp)
+uint32
+getli(unsigned char *input, int offset, int Bpp)
 {
 	uint32 rv = 0;
 	input += offset * Bpp;
@@ -65,7 +68,8 @@ uint32 getli(unsigned char * input, int offset, int Bpp)
 }
 
 BOOL
-bitmap_decompress(unsigned char *output, int width, int height, unsigned char *input, int size, int Bpp)
+bitmap_decompress(unsigned char *output, int width, int height, unsigned char *input, int size,
+		  int Bpp)
 {
 	unsigned char *end = input + size;
 	unsigned char *prevline = NULL, *line = NULL;
@@ -189,7 +193,8 @@ bitmap_decompress(unsigned char *output, int width, int height, unsigned char *i
 						if (prevline == NULL)
 							setli(line, x, mix, Bpp);
 						else
-							setli(line, x, getli(prevline, x, Bpp) ^ mix, Bpp);
+							setli(line, x,
+							      getli(prevline, x, Bpp) ^ mix, Bpp);
 
 						insertmix = False;
 						count--;
@@ -198,11 +203,11 @@ bitmap_decompress(unsigned char *output, int width, int height, unsigned char *i
 
 					if (prevline == NULL)
 					{
-						REPEAT(setli(line, x, 0, Bpp))
-					}
+					REPEAT(setli(line, x, 0, Bpp))}
 					else
 					{
-						REPEAT(setli(line, x, getli(prevline, x, Bpp), Bpp));
+						REPEAT(setli
+						       (line, x, getli(prevline, x, Bpp), Bpp));
 					}
 					break;
 
@@ -213,7 +218,9 @@ bitmap_decompress(unsigned char *output, int width, int height, unsigned char *i
 					}
 					else
 					{
-						REPEAT(setli(line, x, getli(prevline, x, Bpp) ^ mix, Bpp));
+						REPEAT(setli
+						       (line, x, getli(prevline, x, Bpp) ^ mix,
+							Bpp));
 					}
 					break;
 
@@ -229,9 +236,11 @@ bitmap_decompress(unsigned char *output, int width, int height, unsigned char *i
 					{
 						REPEAT(MASK_UPDATE();
 						       if (mask & mixmask)
-						       setli(line, x, getli(prevline, x, Bpp) ^ mix, Bpp);
+						       setli(line, x, getli(prevline, x, Bpp) ^ mix,
+							     Bpp);
 						       else
-						       setli(line, x, getli(prevline, x, Bpp), Bpp););
+						       setli(line, x, getli(prevline, x, Bpp),
+							     Bpp););
 					}
 					break;
 
@@ -249,7 +258,8 @@ bitmap_decompress(unsigned char *output, int width, int height, unsigned char *i
 					       setli(line, x, colour2, Bpp); bicolour = False;}
 					       else
 					       {
-					       setli(line, x, colour1, Bpp); bicolour = True; count++;}
+					       setli(line, x, colour1, Bpp); bicolour = True;
+					       count++;}
 					);
 					break;
 
@@ -270,4 +280,3 @@ bitmap_decompress(unsigned char *output, int width, int height, unsigned char *i
 
 	return True;
 }
-

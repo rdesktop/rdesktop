@@ -180,7 +180,8 @@ split_colour24(uint32 colour)
 	return rv;
 }
 
-uint32 make_colour16(PixelColour pc)
+uint32
+make_colour16(PixelColour pc)
 {
 	pc.red = (pc.red * 0x1f) / 0xff;
 	pc.green = (pc.green * 0x3f) / 0xff;
@@ -188,12 +189,14 @@ uint32 make_colour16(PixelColour pc)
 	return (pc.red << 11) | (pc.green << 5) | pc.blue;
 }
 
-uint32 make_colour24(PixelColour pc)
+uint32
+make_colour24(PixelColour pc)
 {
 	return (pc.red << 16) | (pc.green << 8) | pc.blue;
 }
 
-uint32 make_colour32(PixelColour pc)
+uint32
+make_colour32(PixelColour pc)
 {
 	return (pc.red << 16) | (pc.green << 8) | pc.blue;
 }
@@ -426,13 +429,15 @@ translate_image(int width, int height, uint8 * data)
 			switch (bpp)
 			{
 				case 32:
-					translate16to32((uint16 *) data, (uint32 *) out, (uint32 *) end);
+					translate16to32((uint16 *) data, (uint32 *) out,
+							(uint32 *) end);
 					break;
 				case 24:
 					translate16to24((uint16 *) data, out, end);
 					break;
 				case 16:
-					translate16to16((uint16 *) data, (uint16 *) out, (uint16 *) end);
+					translate16to16((uint16 *) data, (uint16 *) out,
+							(uint16 *) end);
 					break;
 			}
 			break;
@@ -440,13 +445,15 @@ translate_image(int width, int height, uint8 * data)
 			switch (bpp)
 			{
 				case 32:
-					translate15to32((uint16 *) data, (uint32 *) out, (uint32 *) end);
+					translate15to32((uint16 *) data, (uint32 *) out,
+							(uint32 *) end);
 					break;
 				case 24:
 					translate15to24((uint16 *) data, out, end);
 					break;
 				case 16:
-					translate15to16((uint16 *) data, (uint16 *) out, (uint16 *) end);
+					translate15to16((uint16 *) data, (uint16 *) out,
+							(uint16 *) end);
 					break;
 			}
 			break;
