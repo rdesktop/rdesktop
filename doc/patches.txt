@@ -142,9 +142,9 @@ Not needed anymore, with the new keyboard mapping implementation.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/norbert_fullscreen.patch
 Description:
-TDB
+Fullscreen mode. 
 Status:
-Not yet examined. 
+Applied. 
 
 
 URL:
