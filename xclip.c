@@ -380,7 +380,7 @@ xclip_init(void)
 	incr_atom = XInternAtom(g_display, "INCR", False);
 	targets[0] = targets_atom;
 	targets[1] = XInternAtom(g_display, "TEXT", False);
-	targets[2] = XInternAtom(g_display, "UTF8_STRING", False);
+	targets[2] = XInternAtom(g_display, "STRING", False);
 	targets[3] = XInternAtom(g_display, "text/unicode", False);
 	targets[4] = XInternAtom(g_display, "TIMESTAMP", False);
 	targets[5] = XA_STRING;
