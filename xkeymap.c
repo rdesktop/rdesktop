@@ -420,6 +420,34 @@ ensure_remote_modifiers(uint32 ev_time, key_translation tr)
 }
 
 
+void
+reset_modifier_keys()
+{
+	/* reset keys */
+	uint32 ev_time;
+	ev_time = time(NULL);
+
+	if (MASK_HAS_BITS(remote_modifier_state, MapLeftShiftMask) && !get_key_state(XK_Shift_L))
+		rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_LSHIFT);
+
+	if (MASK_HAS_BITS(remote_modifier_state, MapRightShiftMask) && !get_key_state(XK_Shift_R))
+		rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_RSHIFT);
+
+	if (MASK_HAS_BITS(remote_modifier_state, MapLeftCtrlMask) && !get_key_state(XK_Control_L))
+		rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_LCTRL);
+
+	if (MASK_HAS_BITS(remote_modifier_state, MapRightCtrlMask) && !get_key_state(XK_Control_R))
+		rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_RCTRL);
+
+	if (MASK_HAS_BITS(remote_modifier_state, MapLeftAltMask) && !get_key_state(XK_Alt_L))
+		rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_LALT);
+
+	if (MASK_HAS_BITS(remote_modifier_state, MapRightAltMask) &&
+	    !get_key_state(XK_Alt_R) && !get_key_state(XK_Mode_switch))
+		rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_RALT);
+}
+
+
 static void
 update_modifier_state(uint16 modifiers, BOOL pressed)
 {

@@ -435,19 +435,6 @@ ui_destroy_window()
 	display = NULL;
 }
 
-static void
-xwin_reset_keys()
-{
-	/* reset keys */
-	uint32 ev_time;
-	ev_time = time(NULL);
-	rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_LCTRL);
-	rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_LALT);
-	rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_LSHIFT);
-	rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_RCTRL);
-	rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_RALT);
-	rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_RSHIFT);
-}
 
 void
 xwin_toggle_fullscreen()
@@ -582,8 +569,8 @@ xwin_process_events()
 					XUngrabKeyboard(display, CurrentTime);
 				break;
 
-			case FocusOut:
-				xwin_reset_keys();
+			case FocusIn:
+				reset_modifier_keys();
 				break;
 
 			case Expose:
