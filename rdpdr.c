@@ -317,7 +317,7 @@ rdpdr_process_irp(STREAM s)
 		case DEVICE_TYPE_DISK:
 
 			fns = &disk_fns;
-			/*rw_blocking = False; */
+			rw_blocking = False;
 			break;
 
 		case DEVICE_TYPE_SCARD:
@@ -736,6 +736,7 @@ rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
 	DEVICE_FNS *fns;
 	struct async_iorequest *iorq;
 	struct async_iorequest *prev;
+	uint32 req_size = 0;
 
 	if (timed_out)
 	{
@@ -747,7 +748,6 @@ rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
 	prev = NULL;
 	while (iorq != NULL)
 	{
-
 		if (iorq->fd != 0)
 		{
 			switch (iorq->major)
@@ -758,29 +758,34 @@ rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
 						/* Read the data */
 						fns = iorq->fns;
 
+						req_size =
+							(iorq->length - iorq->partial_len) >
+							8192 ? 8192 : (iorq->length -
+								       iorq->partial_len);
 						/* never read larger chunks than 8k - chances are that it will block */
 						status = fns->read(iorq->fd,
 								   iorq->buffer + iorq->partial_len,
-								   (iorq->length -
-								    iorq->partial_len) >
-								   8192 ? 8192 : (iorq->length -
-										  iorq->
-										  partial_len), 0,
-								   &result);
+								   req_size, 0, &result);
 						iorq->partial_len += result;
+
 #if WITH_DEBUG_RDP5
 						DEBUG(("RDPDR: %d bytes of data read\n", result));
 #endif
 						/* only delete link if all data has been transfered */
-						if (iorq->partial_len == iorq->length)
+						/* or if result was 0 and status success - EOF      */
+						if ((iorq->partial_len == iorq->length) ||
+						    (result == 0))
 						{
+#if WITH_DEBUG_RDP5
+							DEBUG(("RDPDR: AIO total %u bytes read of %u\n", iorq->partial_len, iorq->length));
+#endif
 							/* send the data */
 							status = STATUS_SUCCESS;
 							rdpdr_send_completion(iorq->device,
 									      iorq->id, status,
-									      iorq->length,
-									      iorq->buffer, result);
-
+									      iorq->partial_len,
+									      iorq->buffer,
+									      iorq->partial_len);
 							xfree(iorq->buffer);
 							iorq->fd = 0;
 							if (prev != NULL)
@@ -803,15 +808,15 @@ rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
 						/* Write data. */
 						fns = iorq->fns;
 
+						req_size =
+							(iorq->length - iorq->partial_len) >
+							8192 ? 8192 : (iorq->length -
+								       iorq->partial_len);
+
 						/* never write larger chunks than 8k - chances are that it will block */
 						status = fns->write(iorq->fd,
 								    iorq->buffer +
-								    iorq->partial_len,
-								    (iorq->length -
-								     iorq->partial_len) >
-								    8192 ? 8192 : (iorq->length -
-										   iorq->
-										   partial_len), 0,
+								    iorq->partial_len, req_size, 0,
 								    &result);
 						iorq->partial_len += result;
 #if WITH_DEBUG_RDP5
@@ -819,13 +824,19 @@ rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
 						       result));
 #endif
 						/* only delete link if all data has been transfered */
-						if (iorq->partial_len == iorq->length)
+						/* or we couldn't write */
+						if ((iorq->partial_len == iorq->length)
+						    || (result == 0))
 						{
+#if WITH_DEBUG_RDP5
+							DEBUG(("RDPDR: AIO total %u bytes written of %u\n", iorq->partial_len, iorq->length));
+#endif
 							/* send a status success */
 							status = STATUS_SUCCESS;
 							rdpdr_send_completion(iorq->device,
 									      iorq->id, status,
-									      iorq->length, "", 1);
+									      iorq->partial_len, "",
+									      1);
 
 							xfree(iorq->buffer);
 							iorq->fd = 0;
