@@ -43,7 +43,7 @@ wave_out_open(void)
 {
 	char *dsp_dev = "/dev/dsp";
 
-	if ((g_dsp_fd = open(dsp_dev, O_WRONLY)) == -1)
+	if ((g_dsp_fd = open(dsp_dev, O_WRONLY|O_NONBLOCK)) == -1)
 	{
 		perror(dsp_dev);
 		return False;
@@ -113,6 +113,20 @@ wave_out_set_format(WAVEFORMATEX *pwfx)
 }
 
 void
+wave_out_volume(uint16 left, uint16 right)
+{
+	uint32 volume;
+
+	volume = left/(65536/100);
+	volume |= right/(65536/100) << 8;
+	if (ioctl(g_dsp_fd, MIXER_WRITE(SOUND_MIXER_PCM), &volume) == -1)
+	{
+		perror("MIXER_WRITE(SOUND_MIXER_PCM)");
+		return;
+	}
+}
+
+void
 wave_out_write(STREAM s, uint16 tick, uint8 index)
 {
 	struct audio_packet *packet = &packet_queue[queue_hi];
@@ -129,6 +143,7 @@ wave_out_write(STREAM s, uint16 tick, uint8 index)
 	packet->s = *s;
 	packet->tick = tick;
 	packet->index = index;
+	packet->s.p += 4;
 
 	/* we steal the data buffer from s, give it a new one */
 	s->data = malloc(s->size);

@@ -293,7 +293,10 @@ enum RDP_INPUT_DEVICE
 #define CF_GDIOBJLAST   1023
 
 /* Sound format constants */
-#define WAVE_FORMAT_PCM 1
+#define WAVE_FORMAT_PCM		1
+#define WAVE_FORMAT_ADPCM	2
+#define WAVE_FORMAT_ALAW	6
+#define WAVE_FORMAT_MULAW	7
 
 /* Virtual channel options */
 #define CHANNEL_OPTION_INITIALIZED	0x80000000

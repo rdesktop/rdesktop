@@ -89,6 +89,7 @@ BOOL wave_out_format_supported(WAVEFORMATEX *pwfx);
 BOOL wave_out_set_format(WAVEFORMATEX *pwfx);
 void wave_out_write(STREAM s, uint16 tick, uint8 index);
 void wave_out_play(void);
+void wave_out_volume(uint16 left, uint16 right);
 /* secure.c */
 void sec_hash_48(uint8 *out, uint8 *in, uint8 *salt1, uint8 *salt2, uint8 salt);
 void sec_hash_16(uint8 *out, uint8 *in, uint8 *salt1, uint8 *salt2);

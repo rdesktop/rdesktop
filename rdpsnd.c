@@ -78,10 +78,17 @@ rdpsnd_process_negotiate(STREAM in)
 	unsigned int in_format_count, i;
 	WAVEFORMATEX *format;
 	STREAM out;
+	BOOL device_available = False;
 
 	in_uint8s(in, 14);	/* flags, volume, pitch, UDP port */
 	in_uint16_le(in, in_format_count);
 	in_uint8s(in, 4);	/* pad, status, pad */
+
+	if (wave_out_open())
+	{
+		wave_out_close();
+		device_available = True;
+	}
 
 	format_count = 0;
 	if (s_check_rem(in, 18*in_format_count))
@@ -97,7 +104,7 @@ rdpsnd_process_negotiate(STREAM in)
 			in_uint16_le(in, format->wBitsPerSample);
 			in_uint16_le(in, format->cbSize);
 
-			if (wave_out_format_supported(format))
+			if (device_available && wave_out_format_supported(format))
 			{
 				format_count++;
 				if (format_count == MAX_FORMATS)
@@ -155,6 +162,7 @@ rdpsnd_process(STREAM s)
 {
 	uint8 type;
 	uint16 datalen;
+	uint32 volume;
 	static uint16 tick, format;
 	static uint8 packet_index;
 	static BOOL awaiting_data_packet;
@@ -218,7 +226,11 @@ rdpsnd_process(STREAM s)
 		rdpsnd_process_unknown6(s);
 		break;
 	case RDPSND_SET_VOLUME:
-		/* uint32 volume */
+		in_uint32(s, volume);
+		if ( device_open )
+		{
+			wave_out_volume((volume & 0xffff), (volume & 0xffff0000) >> 16);
+		}
 		break;
 	default:
 		unimpl("RDPSND packet type %d\n", type);

@@ -111,15 +111,15 @@ wave_out_set_format(WAVEFORMATEX *pwfx)
 	if (pwfx->wBitsPerSample == 8)
 	{
 		info.play.encoding = AUDIO_ENCODING_LINEAR8;
-		samplewidth = 1;
 	}
 	else if (pwfx->wBitsPerSample == 16)
 	{
 		info.play.encoding = AUDIO_ENCODING_LINEAR;
-		samplewidth = 2;
 		/* Do we need to swap the 16bit values? (Are we BigEndian) */
 		swapaudio = !(*(uint8 *) (&test));
 	}
+
+	samplewidth = pwfx->wBitsPerSample/8;
 
 	if (pwfx->nChannels == 1 )
 	{	
@@ -136,6 +136,7 @@ wave_out_set_format(WAVEFORMATEX *pwfx)
 	info.play.samples = 0;
 	info.play.eof = 0;
 	info.play.error = 0;
+	reopened = True;
 
 	if (ioctl(g_dsp_fd, AUDIO_SETINFO, &info) == -1)
 	{
@@ -145,6 +146,40 @@ wave_out_set_format(WAVEFORMATEX *pwfx)
 	}
 
 	return True;
+}
+
+void
+wave_out_volume(uint16 left, uint16 right)
+{
+	audio_info_t info;
+	uint balance;
+	uint volume;
+
+	if (ioctl(g_dsp_fd, AUDIO_GETINFO, &info) == -1)
+	{
+		perror("AUDIO_GETINFO");
+		return;
+	}
+
+	volume = (left > right) ? left : right;
+
+	if ( volume/AUDIO_MID_BALANCE != 0 )
+	{
+		balance = AUDIO_MID_BALANCE - (left/(volume/AUDIO_MID_BALANCE)) + (right/(volume/AUDIO_MID_BALANCE));
+	}
+	else
+	{
+		balance = AUDIO_MID_BALANCE;
+	}
+
+	info.play.gain = volume/(65536/AUDIO_MAX_GAIN);
+	info.play.balance = balance;
+
+	if (ioctl(g_dsp_fd, AUDIO_SETINFO, &info) == -1)
+	{
+		perror("AUDIO_SETINFO");
+		return;
+	}
 }
 
 void
@@ -164,6 +199,7 @@ wave_out_write(STREAM s, uint16 tick, uint8 index)
 	packet->s = *s;
 	packet->tick = tick;
 	packet->index = index;
+	packet->s.p += 4;
 
 	/* we steal the data buffer from s, give it a new one */
 	s->data = malloc(s->size);
@@ -209,13 +245,13 @@ wave_out_play(void)
 		/* Swap the current packet, but only once */
 		if ( swapaudio && ! swapped )
 		{
-			for ( i = 0; i < out->end - out->p; i+=2 )
+			for ( i = 0; i < out->end - out->p; i += 2 )
 			{
 				swap = *(out->p + i);
-				*(out->p + i ) = *(out->p + i + 1);
+				*(out->p + i) = *(out->p + i + 1);
 				*(out->p + i + 1) = swap;
-				swapped = True;
 			}
+			swapped = True;
 		}
 
 		if ( sentcompletion )
