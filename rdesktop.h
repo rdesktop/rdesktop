@@ -49,7 +49,12 @@
 #endif
 
 #define STRNCPY(dst,src,n)	{ strncpy(dst,src,n-1); dst[n-1] = 0; }
+#ifndef MIN
 #define MIN(x,y)		(((x) < (y)) ? (x) : (y))
+#endif
+#ifndef MAX
+#define MAX(x,y)		(((x) > (y)) ? (x) : (y))
+#endif
 
 #include "parse.h"
 #include "constants.h"

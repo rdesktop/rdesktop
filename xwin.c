@@ -849,12 +849,11 @@ ui_deinit(void)
 	g_display = NULL;
 }
 
-#define NULL_POINTER_MASK	"\x80"
-#define NULL_POINTER_DATA	"\x0\x0\x0"
-
 BOOL
 ui_create_window(void)
 {
+	uint8 null_pointer_mask[1] = { 0x80 };
+	uint8 null_pointer_data[4] = { 0x00, 0x00, 0x00, 0x00 };
 	XSetWindowAttributes attribs;
 	XClassHint *classhints;
 	XSizeHints *sizehints;
@@ -937,7 +936,7 @@ ui_create_window(void)
 	XSetWMProtocols(g_display, g_wnd, &g_kill_atom, 1);
 
 	/* create invisible 1x1 cursor to be used as null cursor */
-	g_null_cursor = ui_create_cursor(0, 0, 1, 1, NULL_POINTER_MASK, NULL_POINTER_DATA);
+	g_null_cursor = ui_create_cursor(0, 0, 1, 1, null_pointer_mask, null_pointer_data);
 
 	return True;
 }

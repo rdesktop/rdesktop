@@ -96,7 +96,7 @@ cliprdr_process(STREAM s)
 {
 	uint16 type, status;
 	uint32 length, format;
-	char *data;
+	uint8 *data;
 
 	in_uint16_le(s, type);
 	in_uint16_le(s, status);

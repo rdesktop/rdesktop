@@ -81,7 +81,7 @@ channel_send(STREAM s, VCHANNEL * channel)
 {
 	uint32 length, flags;
 	uint32 thislength, remaining;
-	char *data;
+	uint8 *data;
 
 	/* first fragment sent in-place */
 	s_pop_layer(s, channel_hdr);

@@ -288,6 +288,9 @@ case `uname -s` in
   OSF1)
     ldflags="$ldflags -Wl,-rpath,$rpath"
     ;;
+  HP-UX)
+    cflags="$cflags -D_XOPEN_SOURCE_EXTENDED"
+    ;;
 esac
 
 

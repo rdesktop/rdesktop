@@ -209,7 +209,7 @@ static void
 rdpdr_process(STREAM s)
 {
 	uint32 handle;
-	char *magic;
+	uint8 *magic;
 
 	printf("rdpdr_process\n");
 	hexdump(s->p, s->end - s->p);

@@ -118,8 +118,8 @@ STREAM tcp_recv(STREAM s, uint32 length);
 BOOL tcp_connect(char *server);
 void tcp_disconnect(void);
 /* xclip.c */
-void ui_clip_format_announce(char *data, uint32 length);
-void ui_clip_handle_data(char *data, uint32 length);
+void ui_clip_format_announce(uint8 *data, uint32 length);
+void ui_clip_handle_data(uint8 *data, uint32 length);
 void ui_clip_request_data(uint32 format);
 void ui_clip_sync(void);
 void xclip_init(void);
