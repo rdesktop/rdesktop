@@ -359,7 +359,7 @@ xkeymap_translate_key(uint32 keysym, unsigned int keycode, unsigned int state)
 		warning("No translation for (keysym 0x%lx, %s)\n", keysym, get_ksname(keysym));
 
 	/* not in keymap, try to interpret the raw scancode */
-	if (((int)keycode >= min_keycode) && (keycode <= 0x60))
+	if (((int) keycode >= min_keycode) && (keycode <= 0x60))
 	{
 		tr.scancode = keycode - min_keycode;
 
