@@ -74,17 +74,36 @@ tcp_send(STREAM s)
 
 /* Receive a message on the TCP layer */
 STREAM
-tcp_recv(uint32 length)
+tcp_recv(STREAM s, uint32 length)
 {
+	unsigned int new_length, end_offset, p_offset;
 	int rcvd = 0;
 
-	if (length > in.size)
+	if (s == NULL)
 	{
-		in.data = (uint8 *) xrealloc(in.data, length);
-		in.size = length;
+		/* read into "new" stream */
+		if (length > in.size)
+		{
+			in.data = (uint8 *) xrealloc(in.data, length);
+			in.size = length;
+		}
+		in.end = in.p = in.data;
+		s = &in;
 	}
-
-	in.end = in.p = in.data;
+	else
+	{
+		/* append to existing stream */
+		new_length = (s->end - s->data) + length;
+		if (new_length > s->size)
+		{
+			p_offset = s->p - s->data;
+			end_offset = s->end - s->data;
+			s->data = (uint8 *) xrealloc(s->data, new_length);
+			s->size = new_length;
+			s->p = s->data + p_offset;
+			s->end = s->data + end_offset;
+		}
+	}
 
 	while (length > 0)
 	{
@@ -92,18 +111,18 @@ tcp_recv(uint32 length)
 			/* User quit */
 			return NULL;
 
-		rcvd = recv(sock, in.end, length, 0);
-		if (rcvd == -1)
+		rcvd = recv(sock, s->end, length, 0);
+		if (rcvd <= 0)
 		{
 			error("recv: %s\n", strerror(errno));
 			return NULL;
 		}
 
-		in.end += rcvd;
+		s->end += rcvd;
 		length -= rcvd;
 	}
 
-	return &in;
+	return s;
 }
 
 /* Establish a connection on the TCP layer */

@@ -77,10 +77,9 @@ iso_recv_msg(uint8 * code)
 	STREAM s;
 	uint16 length;
 	uint8 version;
-	BOOL shortform = False;	// Shut the compiler up.
 
       next_packet:
-	s = tcp_recv(4);
+	s = tcp_recv(NULL, 4);
 	if (s == NULL)
 		return NULL;
 
@@ -93,11 +92,6 @@ iso_recv_msg(uint8 * code)
 			{
 				length &= ~0x80;
 				next_be(s, length);
-				shortform = False;
-			}
-			else
-			{
-				shortform = True;
 			}
 			break;
 
@@ -111,13 +105,13 @@ iso_recv_msg(uint8 * code)
 			return NULL;
 	}
 
-	s = tcp_recv(length - 4);
+	s = tcp_recv(s, length - 4);
 	if (s == NULL)
 		return NULL;
 
 	if ((version & 3) == 0)
 	{
-		rdp5_process(s, version & 0x80, shortform);
+		rdp5_process(s, version & 0x80);
 		goto next_packet;
 	}
 

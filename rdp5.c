@@ -24,7 +24,7 @@
 extern uint8 *next_packet;
 
 void
-rdp5_process(STREAM s, BOOL encryption, BOOL shortform)
+rdp5_process(STREAM s, BOOL encryption)
 {
 	uint16 length, count;
 	uint8 type;
@@ -32,7 +32,7 @@ rdp5_process(STREAM s, BOOL encryption, BOOL shortform)
 
 	if (encryption)
 	{
-		in_uint8s(s, shortform ? 6 : 7 /* XXX HACK */ );	/* signature */
+		in_uint8s(s, 8);	/* signature */
 		sec_decrypt(s->p, s->end - s->p);
 	}
 

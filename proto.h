@@ -80,7 +80,7 @@ BOOL rdp_connect(char *server, uint32 flags, char *domain, char *password, char 
 		 char *directory);
 void rdp_disconnect(void);
 /* rdp5.c */
-void rdp5_process(STREAM s, BOOL encryption, BOOL shortform);
+void rdp5_process(STREAM s, BOOL encryption);
 void rdp5_process_channel(STREAM s, uint16 channelno);
 /* secure.c */
 void sec_hash_48(uint8 * out, uint8 * in, uint8 * salt1, uint8 * salt2, uint8 salt);
@@ -99,7 +99,7 @@ void sec_disconnect(void);
 /* tcp.c */
 STREAM tcp_init(uint32 maxlen);
 void tcp_send(STREAM s);
-STREAM tcp_recv(uint32 length);
+STREAM tcp_recv(STREAM s, uint32 length);
 BOOL tcp_connect(char *server);
 void tcp_disconnect(void);
 /* xkeymap.c */
