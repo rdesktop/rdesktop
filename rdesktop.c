@@ -122,6 +122,7 @@ usage(char *program)
 	fprintf(stderr, "   -N: enable numlock syncronization\n");
 	fprintf(stderr, "   -X: embed into another window with a given id.\n");
 	fprintf(stderr, "   -a: connection colour depth\n");
+	fprintf(stderr, "   -z: enable rdp compression\n");
 	fprintf(stderr, "   -x: RDP5 experience (m[odem 28.8], b[roadband], l[an] or hex nr.)\n");
 	fprintf(stderr, "   -P: use persistent bitmap caching\n");
 	fprintf(stderr, "   -r: enable specified device redirection (this flag can be repeated)\n");
@@ -363,7 +364,7 @@ main(int argc, char *argv[])
 #endif
 
 	while ((c = getopt(argc, argv,
-			   VNCOPT "u:d:s:c:p:n:k:g:fbBeEmCDKS:T:NX:a:x:Pr:045h?")) != -1)
+			   VNCOPT "u:d:s:c:p:n:k:g:fbBeEmzCDKS:T:NX:a:x:Pr:045h?")) != -1)
 	{
 		switch (c)
 		{
@@ -524,8 +525,12 @@ main(int argc, char *argv[])
 				}
 				break;
 
-			case 'x':
+			case 'z':
+				DEBUG(("rdp compression enabled\n"));
+				flags |= RDP_COMPRESSION;
+				break;
 
+			case 'x':
 				if (strncmp("modem", optarg, 1) == 0)
 				{
 					g_rdp5_performanceflags =
@@ -847,7 +852,11 @@ xmalloc(int size)
 void *
 xrealloc(void *oldmem, int size)
 {
-	void *mem = realloc(oldmem, size);
+	void * mem;
+
+	if (size < 1)
+		size = 1;
+	mem = realloc(oldmem, size);
 	if (mem == NULL)
 	{
 		error("xrealloc %d\n", size);
