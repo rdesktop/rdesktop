@@ -25,6 +25,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <limits.h>
+#include <assert.h>
 #include "rdesktop.h"
 #include "scancodes.h"
 
@@ -362,21 +363,34 @@ ensure_remote_modifiers(uint32 ev_time, key_translation tr)
 			break;
 	}
 
-	/* Shift */
+	/* Shift. Left shift and right shift are treated as equal; either is fine. */
 	if (MASK_HAS_BITS(tr.modifiers, MapShiftMask)
 	    != MASK_HAS_BITS(remote_modifier_state, MapShiftMask))
 	{
 		/* The remote modifier state is not correct */
-		if (MASK_HAS_BITS(tr.modifiers, MapShiftMask))
+		if (MASK_HAS_BITS(tr.modifiers, MapLeftShiftMask))
 		{
-			/* Needs this modifier. Send down. */
+			/* Needs left shift. Send down. */
 			rdp_send_scancode(ev_time, RDP_KEYPRESS, SCANCODE_CHAR_LSHIFT);
+		}
+		else if (MASK_HAS_BITS(tr.modifiers, MapRightShiftMask))
+		{
+			/* Needs right shift. Send down. */
+			rdp_send_scancode(ev_time, RDP_KEYPRESS, SCANCODE_CHAR_RSHIFT);
 		}
 		else
 		{
-			/* Should not use this modifier. Send up. */
-			rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_LSHIFT);
-			rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_RSHIFT);
+			/* Should not use this modifier. Send up for shift currently pressed. */
+			if (MASK_HAS_BITS(remote_modifier_state, MapLeftShiftMask))
+				/* Left shift is down */
+				rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_LSHIFT);
+			else
+			{
+				assert(MASK_HAS_BITS(remote_modifier_state, MapRightShiftMask));
+				/* Right shift is down */
+				rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_RSHIFT);
+			}
+
 		}
 	}
 
