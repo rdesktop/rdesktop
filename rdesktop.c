@@ -55,6 +55,7 @@ usage(char *program)
 	printf("   -s: shell\n");
 	printf("   -c: working directory\n");
 	printf("   -p: password (autologon)\n");
+	printf("   -P: askpass-program (autologon)\n");
 	printf("   -n: client hostname\n");
 	printf("   -k: keyboard layout on terminal server (us,sv,gr etc.)\n");
 	printf("   -g: desktop geometry (WxH)\n");
@@ -74,6 +75,7 @@ main(int argc, char *argv[])
 	char fullhostname[64];
 	char domain[16];
 	char password[16];
+	char *askpass_result;
 	char shell[32];
 	char directory[32];
 	char title[32];
@@ -90,7 +92,7 @@ main(int argc, char *argv[])
 	domain[0] = password[0] = shell[0] = directory[0] = 0;
 	strcpy(keymapname, "us");
 
-	while ((c = getopt(argc, argv, "u:d:s:c:p:n:k:g:t:fbemlKh?")) != -1)
+	while ((c = getopt(argc, argv, "u:d:s:c:p:P:n:k:g:t:fbemlKh?")) != -1)
 	{
 		switch (c)
 		{
@@ -112,6 +114,16 @@ main(int argc, char *argv[])
 
 			case 'p':
 				STRNCPY(password, optarg, sizeof(password));
+				flags |= RDP_LOGON_AUTO;
+				break;
+
+			case 'P':
+				askpass_result = askpass(optarg, "Enter password");
+				if (askpass_result == NULL)
+					exit(1);
+
+				STRNCPY(password, askpass_result, sizeof(password));
+				free(askpass_result);
 				flags |= RDP_LOGON_AUTO;
 				break;
 
