@@ -85,7 +85,7 @@ wave_out_format_supported(WAVEFORMATEX * pwfx)
 BOOL
 wave_out_set_format(WAVEFORMATEX * pwfx)
 {
-	int channels, format;
+	int stereo, format;
 
 	ioctl(g_dsp_fd, SNDCTL_DSP_RESET, NULL);
 	ioctl(g_dsp_fd, SNDCTL_DSP_SYNC, NULL);
@@ -104,17 +104,21 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 		return False;
 	}
 
-	channels = pwfx->nChannels;
-	if (ioctl(g_dsp_fd, SNDCTL_DSP_CHANNELS, &channels) == -1)
+	if (pwfx->nChannels == 2)
+	{
+		stereo = 1;
+		g_samplewidth *= 2;
+	}
+	else
+	{
+		stereo = 0;
+	}
+
+	if (ioctl(g_dsp_fd, SNDCTL_DSP_STEREO, &stereo) == -1)
 	{
 		perror("SNDCTL_DSP_CHANNELS");
 		close(g_dsp_fd);
 		return False;
-	}
-
-	if (channels == 2)
-	{
-		g_samplewidth *= 2;
 	}
 
 	g_snd_rate = pwfx->nSamplesPerSec;
