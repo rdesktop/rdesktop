@@ -402,8 +402,9 @@ translate24to32(uint8 * data, uint32 * out, uint32 * end)
 	uint32 pixel = 0;
 	while (out < end)
 	{
-		memcpy(&pixel, data, 3);
-		data += 3;
+		pixel = *(data++);
+		pixel |= *(data++) << 8;
+		pixel |= *(data++) << 16;
 		*(out++) = pixel;
 	}
 }
