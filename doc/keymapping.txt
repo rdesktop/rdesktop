@@ -146,6 +146,17 @@ When you need to add a translation to a keymap file, do:
     error message) into the keymap file. 
 
 
+Special keys
+============
+
+* The combination Ctrl-Alt-Enter toggles between fullscreen and
+  non-fullscreen mode. 
+
+* Meta, Hyper and Super will be treated as windows keys. RDP4 does not
+  support the windows keys though, so if you are running RDP4, these
+  keys will translate to Ctrl-Esc. 
+
+
 Links
 =====
 http://www.win.tue.nl/~aeb/linux/kbd/scancodes.html
