@@ -266,8 +266,8 @@ disk_enum_devices(uint32 * id, char *optarg)
 	{
 		pos2 = next_arg(optarg, '=');
 
-		strncpy(g_rdpdr_device[*id].name, optarg, sizeof(g_rdpdr_device[*id].name)-1);
-		if (strlen(optarg) > (sizeof(g_rdpdr_device[*id].name)-1))
+		strncpy(g_rdpdr_device[*id].name, optarg, sizeof(g_rdpdr_device[*id].name) - 1);
+		if (strlen(optarg) > (sizeof(g_rdpdr_device[*id].name) - 1))
 			fprintf(stderr, "share name %s truncated to %s\n", optarg,
 				g_rdpdr_device[*id].name);
 
