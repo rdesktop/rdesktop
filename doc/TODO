@@ -1,4 +1,5 @@
 
-* Add manpage. 
+* The Windows keys does not work, for unknown reason.
 
-
+* Implement support for RDP 5.X features, like cut-n-paste, sound and
+  serial port redirection.
