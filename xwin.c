@@ -32,6 +32,7 @@ extern int height;
 extern BOOL sendmotion;
 extern BOOL fullscreen;
 extern BOOL grab_keyboard;
+extern char title[];
 
 Display *display = NULL;
 static int x_socket;
@@ -40,6 +41,8 @@ static GC gc;
 static Visual *visual;
 static int depth;
 static int bpp;
+static int dpy_width;
+static int dpy_height;
 
 /* endianness */
 static BOOL host_be;
@@ -66,6 +69,10 @@ static XIC IC = NULL;
 
 /* Compose support */
 BOOL enable_compose = False;
+
+/* toggle fullscreen globals */
+static XSetWindowAttributes attribs;
+static unsigned long input_mask;
 
 #define TRANSLATE(col)		( owncolmap ? col : translate_colour(colmap[col]) )
 #define SET_FOREGROUND(col)	XSetForeground(display, gc, TRANSLATE(col));
@@ -260,17 +267,74 @@ ui_init()
 }
 
 BOOL
-ui_create_window(char *title)
+ui_create_window_obj(int xpos, int ypos, int width, int height, int valuemask)
 {
-	XSetWindowAttributes attribs;
 	XClassHint *classhints;
 	XSizeHints *sizehints;
-	unsigned long input_mask;
+	XEvent xevent;
+	Screen *screen;
+
+	screen = DefaultScreenOfDisplay(display);
+
+	wnd = XCreateWindow(display, RootWindowOfScreen(screen), xpos,
+				ypos, width, height, 0, CopyFromParent,
+				InputOutput, CopyFromParent, valuemask, &attribs);
+
+
+	XStoreName(display, wnd, title);
+
+	classhints = XAllocClassHint();
+	if (classhints != NULL)
+	{
+		classhints->res_name = classhints->res_class = "rdesktop";
+		XSetClassHint(display, wnd, classhints);
+		XFree(classhints);
+	}
+
+	sizehints = XAllocSizeHints();
+	if (sizehints)
+	{
+		sizehints->flags = PMinSize | PMaxSize;
+		sizehints->min_width = sizehints->max_width = width;
+		sizehints->min_height = sizehints->max_height = height;
+		XSetWMNormalHints(display, wnd, sizehints);
+		XFree(sizehints);
+	}
+
+	if (enable_compose)
+		input_mask |= init_inputmethod();
+
+	XSelectInput(display, wnd, input_mask);
+
+	gc = XCreateGC(display, wnd, 0, NULL);
+
+	XMapWindow(display, wnd);
+
+	/* Wait for VisibilityNotify Event */
+	for (;;) {
+		XNextEvent(display, &xevent);
+		if (xevent.type == VisibilityNotify)
+			break;
+	}
+
+	if (ownbackstore)
+		backstore = XCreatePixmap(display, wnd, width, height, depth);
+
+	/* clear the window so that cached data is not viewed upon start... */
+	XSetBackground(display, gc, 0);
+	XSetForeground(display, gc, 0);
+	FILL_RECTANGLE(0, 0, width, height);
+	/* make sure the window is focused */
+	XSetInputFocus(display, wnd, RevertToPointerRoot, CurrentTime);
+}
+
+BOOL
+ui_create_window()
+{
 	XPixmapFormatValues *pfm;
 	Screen *screen;
 	uint16 test;
 	int i;
-	XEvent xevent;
 
 	x_socket = ConnectionNumber(display);
 	screen = DefaultScreenOfDisplay(display);
@@ -315,11 +379,14 @@ ui_create_window(char *title)
 	if (attribs.backing_store == NotUseful)
 		ownbackstore = True;
 
+	dpy_width = WidthOfScreen(screen);
+	dpy_height = HeightOfScreen(screen);
+
 	if (fullscreen)
 	{
 		attribs.override_redirect = True;
-		width = WidthOfScreen(screen);
-		height = HeightOfScreen(screen);
+		width = dpy_width;
+		height = dpy_height;
 	}
 	else
 	{
@@ -328,35 +395,10 @@ ui_create_window(char *title)
 
 	width = (width + 3) & ~3;	/* make width a multiple of 32 bits */
 
-	wnd = XCreateWindow(display, RootWindowOfScreen(screen),
-			    0, 0, width, height, 0, CopyFromParent,
-			    InputOutput, CopyFromParent,
-			    CWBackingStore | CWBackPixel | CWOverrideRedirect, &attribs);
-
-	XStoreName(display, wnd, title);
-
-	classhints = XAllocClassHint();
-	if (classhints != NULL)
-	{
-		classhints->res_name = classhints->res_class = "rdesktop";
-		XSetClassHint(display, wnd, classhints);
-		XFree(classhints);
-	}
-
-	sizehints = XAllocSizeHints();
-	if (sizehints)
-	{
-		sizehints->flags = PMinSize | PMaxSize;
-		sizehints->min_width = sizehints->max_width = width;
-		sizehints->min_height = sizehints->max_height = height;
-		XSetWMNormalHints(display, wnd, sizehints);
-		XFree(sizehints);
-	}
-
-	xkeymap_init2();
 
 	input_mask = KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask |
 			VisibilityChangeMask | FocusChangeMask;
+
 	if (grab_keyboard)
 		input_mask |= EnterWindowMask | LeaveWindowMask;
 	if (sendmotion)
@@ -365,29 +407,12 @@ ui_create_window(char *title)
 	if (ownbackstore)
 		input_mask |= ExposureMask;
 
-	if (enable_compose)
-		input_mask |= init_inputmethod();
+	if (fullscreen)
+		ui_create_window_obj(0, 0, width, height, CWBackingStore | CWBackPixel | CWOverrideRedirect);
+	else
+		ui_create_window_obj(0, 0, width, height, CWBackingStore | CWBackPixel);
 
-	XSelectInput(display, wnd, input_mask);
-
-	gc = XCreateGC(display, wnd, 0, NULL);
-
-	if (ownbackstore)
-		backstore = XCreatePixmap(display, wnd, width, height, depth);
-
-	XMapWindow(display, wnd);
-
-	/* Wait for VisibilityNotify Event */
-	for (;;) {
-		XNextEvent(display, &xevent);
-		if (xevent.type == VisibilityNotify)
-			break;
-	}
-
-	/* clear the window so that cached data is not viewed upon start... */
-	XSetBackground(display, gc, 0);
-	XSetForeground(display, gc, 0);
-	FILL_RECTANGLE(0, 0, width, height);
+	xkeymap_init2();
 
 	return True;
 }
@@ -407,6 +432,56 @@ ui_destroy_window()
 	display = NULL;
 }
 
+void
+reset_keys()
+{
+	/* reset keys */
+	uint32 ev_time;
+	ev_time = time(NULL);
+	rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_LCTRL);
+	rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_LALT);
+	rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_LSHIFT);
+	rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_RCTRL);
+	rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_RALT);
+	rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_RSHIFT);
+}
+
+void
+toggle_fullscreen()
+{
+	/* save window contents */
+	Pixmap pixmap;
+	pixmap = XCreatePixmap(display, wnd, width, height, depth);
+	if (ownbackstore)
+		XCopyArea(display, backstore, pixmap, gc, 0, 0, width, height, 0, 0);
+	else
+		XCopyArea(display, wnd, pixmap, gc, 0, 0, width, height, 0, 0);
+	fullscreen = fullscreen ? False : True;
+	close_inputmethod();
+	if (ownbackstore)
+		XFreePixmap(display, backstore);
+	XFreeGC(display, gc);
+	XDestroyWindow(display, wnd);
+	if (fullscreen) {
+		attribs.override_redirect = True;
+		ui_create_window_obj(0, 0, dpy_width, dpy_height,
+									CWBackingStore | CWBackPixel | CWOverrideRedirect);
+	}
+	else {
+		attribs.override_redirect = False;
+		ui_create_window_obj(0, 0, width, height,
+									CWBackingStore | CWBackPixel);
+	}
+	ui_set_cursor(cache_get_cursor(0));
+	ui_move_pointer(width / 2, height / 2);
+	reset_keys();
+	/* restore window contents */
+	if (ownbackstore)
+		XCopyArea(display, pixmap, backstore, gc, 0, 0, width, height, 0, 0);
+	XCopyArea(display, pixmap, wnd, gc, 0, 0, width, height, 0, 0);
+	XFreePixmap(display, pixmap);
+}
+
 static void
 xwin_process_events()
 {
@@ -420,7 +495,7 @@ xwin_process_events()
 	char str[256];
 	Status status;
 
-	/* Refresh keyboard mapping if it has changed. This is important for 
+	/* Refresh keyboard mapping if it has changed. This is important for
 	   Xvnc, since it allocates keycodes dynamically */
 	if (XCheckTypedEvent(display, MappingNotify, &xevent))
 	{
@@ -464,6 +539,12 @@ xwin_process_events()
 						      str, sizeof(str), &keysym, NULL);
 				}
 
+				/* FIXME needs alt modifier */
+				if (keysym == XK_Break) /* toggle full screen */
+				{
+					toggle_fullscreen();
+					break;
+				}
 				ksname = get_ksname(keysym);
 				DEBUG_KBD(("\nKeyPress for (keysym 0x%lx, %s)\n", keysym, ksname));
 
@@ -530,13 +611,7 @@ xwin_process_events()
 				break;
 
 			case FocusOut:
-				/* reset keys */
-				rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_LCTRL);
-				rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_LALT);
-				rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_LSHIFT);
-				rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_RCTRL);
-				rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_RALT);
-				rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_RSHIFT);
+				reset_keys();
 				/* fall through */
 			case LeaveNotify:
 				if (grab_keyboard)

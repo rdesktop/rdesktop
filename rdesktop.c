@@ -2,17 +2,17 @@
    rdesktop: A Remote Desktop Protocol client.
    Entrypoint and utility functions
    Copyright (C) Matthew Chapman 1999-2001
-   
+
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation; either version 2 of the License, or
    (at your option) any later version.
-   
+
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
-   
+
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -29,6 +29,7 @@
 #include <sys/times.h>		/* times */
 #include "rdesktop.h"
 
+char title[32];
 char username[16];
 char hostname[16];
 char keymapname[16];
@@ -78,7 +79,6 @@ main(int argc, char *argv[])
 	char *askpass_result;
 	char shell[32];
 	char directory[32];
-	char title[32];
 	struct passwd *pw;
 	char *server, *p;
 	uint32 flags;
@@ -247,7 +247,7 @@ main(int argc, char *argv[])
 
 	printf("Connection successful.\n");
 
-	if (ui_create_window(title))
+	if (ui_create_window())
 	{
 		rdp_main_loop();
 		ui_destroy_window();
