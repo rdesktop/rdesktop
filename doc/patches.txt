@@ -167,9 +167,14 @@ Applied.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/patch19-7-2.xyPos.emptyPassword.patch
 Description:
-TDB
+This patch adds:
+1) Support for empty passwords
+2) Support for asking for password interactively
+3) Support for +<xoff>+<yoff> geometry. 
+
 Status:
-Not yet examined. 
+1) and 2) can be solved by the -P parameter; patch not needed. 
+Functionality for 3) is currently missing. 
 
 
 URL:
