@@ -59,7 +59,6 @@ static Pixmap backstore;
 }
 
 /* colour maps */
-static BOOL owncolmap;
 static Colormap xcolmap;
 static uint32 *colmap;
 
@@ -71,9 +70,8 @@ static XIC IC = NULL;
 /* toggle fullscreen globals */
 static unsigned long input_mask;
 
-#define TRANSLATE(col)		( owncolmap ? col : translate_colour(colmap[col]) )
-#define SET_FOREGROUND(col)	XSetForeground(display, gc, TRANSLATE(col));
-#define SET_BACKGROUND(col)	XSetBackground(display, gc, TRANSLATE(col));
+#define SET_FOREGROUND(col)	XSetForeground(display, gc, translate_colour(colmap[col]));
+#define SET_BACKGROUND(col)	XSetBackground(display, gc, translate_colour(colmap[col]));
 
 static int rop2_map[] = {
 	GXclear,		/* 0 */
@@ -333,10 +331,7 @@ ui_init()
 		return False;
 	}
 
-	if (depth <= 8)
-		owncolmap = True;
-	else
-		xcolmap = DefaultColormapOfScreen(screen);
+	xcolmap = DefaultColormapOfScreen(screen);
 
 	if (DoesBackingStore(screen) == NotUseful)
 		ownbackstore = True;
@@ -637,7 +632,7 @@ ui_create_bitmap(int width, int height, uint8 * data)
 	Pixmap bitmap;
 	uint8 *tdata;
 
-	tdata = (owncolmap ? data : translate_image(width, height, data));
+	tdata = translate_image(width, height, data);
 	bitmap = XCreatePixmap(display, wnd, width, height, depth);
 	image = XCreateImage(display, visual, depth, ZPixmap, 0,
 			     (char *) tdata, width, height, 8, 0);
@@ -645,8 +640,7 @@ ui_create_bitmap(int width, int height, uint8 * data)
 	XPutImage(display, bitmap, gc, image, 0, 0, 0, 0, width, height);
 
 	XFree(image);
-	if (!owncolmap)
-		xfree(tdata);
+	xfree(tdata);
 	return (HBITMAP) bitmap;
 }
 
@@ -656,7 +650,7 @@ ui_paint_bitmap(int x, int y, int cx, int cy, int width, int height, uint8 * dat
 	XImage *image;
 	uint8 *tdata;
 
-	tdata = (owncolmap ? data : translate_image(width, height, data));
+	tdata = translate_image(width, height, data);
 	image = XCreateImage(display, visual, depth, ZPixmap, 0,
 			     (char *) tdata, width, height, 8, 0);
 
@@ -671,8 +665,7 @@ ui_paint_bitmap(int x, int y, int cx, int cy, int width, int height, uint8 * dat
 	}
 
 	XFree(image);
-	if (!owncolmap)
-		xfree(tdata);
+	xfree(tdata);
 }
 
 void
@@ -807,67 +800,77 @@ ui_create_colourmap(COLOURMAP * colours)
 {
 	COLOURENTRY *entry;
 	int i, ncolours = colours->ncolours;
-
-	if (owncolmap)
+	uint32 *map = xmalloc(sizeof(*colmap) * ncolours);
+	XColor xentry;
+	XColor xc_cache[256];
+	uint32 colour;
+	int colLookup = 256;
+	for (i = 0; i < ncolours; i++)
 	{
-		XColor *xcolours, *xentry;
-		Colormap map;
+		entry = &colours->colours[i];
+		MAKE_XCOLOR(&xentry, entry);
 
-		xcolours = xmalloc(sizeof(XColor) * ncolours);
-		for (i = 0; i < ncolours; i++)
+		if (XAllocColor(display, xcolmap, &xentry) == 0)
 		{
-			entry = &colours->colours[i];
-			xentry = &xcolours[i];
-			xentry->pixel = i;
-			MAKE_XCOLOR(xentry, entry);
+			/* Allocation failed, find closest match. */
+			int j = 256;
+			int nMinDist = 3 * 256 * 256;
+			long nDist = nMinDist;
+
+			/* only get the colors once */
+			while( colLookup-- ){
+				xc_cache[colLookup].pixel = colLookup;
+				xc_cache[colLookup].red = xc_cache[colLookup].green = xc_cache[colLookup].blue = 0;
+				xc_cache[colLookup].flags = 0;
+				XQueryColor(display, DefaultColormap(display, DefaultScreen(display)), &xc_cache[colLookup]);
+			}
+			colLookup = 0;
+
+			/* approximate the pixel */
+			while( j-- ){
+				if( xc_cache[j].flags ){
+					nDist = 
+					((long) (xc_cache[j].red >> 8) - (long) (xentry.red >> 8)) *
+					((long) (xc_cache[j].red >> 8) - (long) (xentry.red >> 8)) +
+					((long) (xc_cache[j].green >> 8) - (long) (xentry.green >> 8)) *
+					((long) (xc_cache[j].green >> 8) - (long) (xentry.green >> 8)) +
+					((long) (xc_cache[j].blue >> 8) - (long) (xentry.blue >> 8)) *
+					((long) (xc_cache[j].blue >> 8) - (long) (xentry.blue >> 8));
+				}
+				if( nDist < nMinDist ){
+					nMinDist = nDist;
+					xentry.pixel = j;
+				}
+			}
+		}
+		colour = xentry.pixel;
+
+		/* update our cache */
+		if( xentry.pixel < 256 ){
+			xc_cache[xentry.pixel].red = xentry.red;
+			xc_cache[xentry.pixel].green = xentry.green;
+			xc_cache[xentry.pixel].blue = xentry.blue;
+
 		}
 
-		map = XCreateColormap(display, wnd, visual, AllocAll);
-		XStoreColors(display, map, xcolours, ncolours);
 
-		xfree(xcolours);
-		return (HCOLOURMAP) map;
+		/* byte swap here to make translate_image faster */
+		map[i] = translate_colour(colour);
 	}
-	else
-	{
-		uint32 *map = xmalloc(sizeof(*colmap) * ncolours);
-		XColor xentry;
-		uint32 colour;
 
-		for (i = 0; i < ncolours; i++)
-		{
-			entry = &colours->colours[i];
-			MAKE_XCOLOR(&xentry, entry);
-
-			if (XAllocColor(display, xcolmap, &xentry) != 0)
-				colour = xentry.pixel;
-			else
-				colour = WhitePixelOfScreen(screen);
-
-			/* byte swap here to make translate_image faster */
-			map[i] = translate_colour(colour);
-		}
-
-		return map;
-	}
+	return map;
 }
 
 void
 ui_destroy_colourmap(HCOLOURMAP map)
 {
-	if (owncolmap)
-		XFreeColormap(display, (Colormap) map);
-	else
-		xfree(map);
+	xfree(map);
 }
 
 void
 ui_set_colourmap(HCOLOURMAP map)
 {
-	if (owncolmap)
-		XSetWindowColormap(display, wnd, (Colormap) map);
-	else
-		colmap = map;
+	colmap = map;
 }
 
 void
