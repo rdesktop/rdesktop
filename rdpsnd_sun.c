@@ -25,13 +25,14 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/ioctl.h>
-#include <sys/audio.h>
+#include <sys/audioio.h>
 #include <stropts.h>
 
 #define MAX_QUEUE	10
 
 int g_dsp_fd;
 BOOL g_dsp_busy;
+static BOOL reopened;
 static BOOL swapaudio;
 static short samplewidth;
 
@@ -45,7 +46,12 @@ static unsigned int queue_hi, queue_lo;
 BOOL
 wave_out_open(void)
 {
-	char *dsp_dev = "/dev/audio";
+	char *dsp_dev = getenv("AUDIODEV");
+
+	if ( dsp_dev == NULL )
+	{
+		dsp_dev="/dev/audio";
+	}
 
 	if ((g_dsp_fd = open(dsp_dev, O_WRONLY|O_NONBLOCK)) == -1)
 	{
@@ -53,16 +59,27 @@ wave_out_open(void)
 		return False;
 	}
 
-
 	/* Non-blocking so that user interface is responsive */
 	fcntl(g_dsp_fd, F_SETFL, fcntl(g_dsp_fd, F_GETFL)|O_NONBLOCK);
+	
 	queue_lo = queue_hi = 0;
+	reopened = True;
+	
 	return True;
 }
 
 void
 wave_out_close(void)
 {
+	/* Ack all remaining packets */
+	while ( queue_lo != queue_hi )
+	{
+		rdpsnd_send_completion(packet_queue[queue_lo].tick, packet_queue[queue_lo].index);
+		free(packet_queue[queue_lo].s.data);
+		queue_lo = (queue_lo + 1) % MAX_QUEUE;
+	}
+
+	/* Flush the audiobuffer */
 	ioctl(g_dsp_fd,I_FLUSH,FLUSHW);
 	close(g_dsp_fd);
 }
@@ -94,13 +111,14 @@ wave_out_set_format(WAVEFORMATEX *pwfx)
 	if (pwfx->wBitsPerSample == 8)
 	{
 		info.play.encoding = AUDIO_ENCODING_LINEAR8;
-		samplewidth=1;
+		samplewidth = 1;
 	}
 	else if (pwfx->wBitsPerSample == 16)
 	{
 		info.play.encoding = AUDIO_ENCODING_LINEAR;
+		samplewidth = 2;
+		/* Do we need to swap the 16bit values? (Are we BigEndian) */
 		swapaudio = !(*(uint8 *) (&test));
-		samplewidth=2;
 	}
 
 	if (pwfx->nChannels == 1 )
@@ -110,7 +128,7 @@ wave_out_set_format(WAVEFORMATEX *pwfx)
 	else if (pwfx->nChannels == 2 )
 	{
 		info.play.channels = AUDIO_CHANNELS_STEREO;
-		samplewidth*=2;
+		samplewidth *= 2;
 	}
 
 	info.play.sample_rate = pwfx->nSamplesPerSec;
@@ -165,11 +183,20 @@ wave_out_play(void)
 	STREAM out;
 	static BOOL swapped = False;
 	static BOOL sentcompletion = True;
-	static int samplecnt;
-	static int numsamples;
+	static uint32 samplecnt = 0;
+	static uint32 numsamples;
 
 	while (1)
 	{
+		if ( reopened )
+		{
+			/* Device was just (re)openend */
+			samplecnt = 0;
+			swapped = False;
+			sentcompletion = True;
+			reopened = False;
+		}
+
 		if (queue_lo == queue_hi)
 		{
 			g_dsp_busy = 0;
@@ -179,6 +206,7 @@ wave_out_play(void)
 		packet = &packet_queue[queue_lo];
 		out = &packet->s;
 
+		/* Swap the current packet, but only once */
 		if ( swapaudio && ! swapped )
 		{
 			for ( i = 0; i < out->end - out->p; i+=2 )
@@ -192,19 +220,13 @@ wave_out_play(void)
 
 		if ( sentcompletion )
 		{
-			if (ioctl(g_dsp_fd, AUDIO_GETINFO, &info) == -1)
-			{
-				perror("AUDIO_GETINFO");
-				return;
-			}
-			samplecnt=info.play.samples;
 			sentcompletion = False;
-			numsamples = (out->end-out->p)/samplewidth;
+			numsamples = (out->end - out->p)/samplewidth;
 		}
 
 		len=0;
 
-		if ( out->end - out->p != 0 )
+		if ( out->end != out->p )
 		{
 			len = write(g_dsp_fd, out->p, out->end - out->p);
 			if (len == -1)
@@ -224,8 +246,11 @@ wave_out_play(void)
 				perror("AUDIO_GETINFO");
 				return;
 			}
-			if ( info.play.samples >= samplecnt+(numsamples)*0.9 )
+
+			/* Ack the packet, if we have played at least 70% */
+			if ( info.play.samples >= samplecnt+((numsamples*7)/10) )
 			{
+				samplecnt += numsamples;
 				rdpsnd_send_completion(packet->tick, packet->index);
 				free(out->data);
 				queue_lo = (queue_lo + 1) % MAX_QUEUE;
