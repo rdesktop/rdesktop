@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <dirent.h>
+#include <sys/select.h>
 
 #define VERSION "1.3.1"
 
