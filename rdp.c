@@ -618,7 +618,7 @@ process_palette(STREAM s)
 		in_uint8(s, entry->red);
 		in_uint8(s, entry->green);
 		in_uint8(s, entry->blue);
-        }
+	}
 
 	hmap = ui_create_colourmap(&map);
 	ui_set_colourmap(hmap);

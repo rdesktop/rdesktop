@@ -275,18 +275,12 @@ handle_special_keys(uint32 keysym, unsigned int state, uint32 ev_time, BOOL pres
 			   is released. */
 			if (pressed)
 			{
-				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS,
-					       0xe1, 0);
-				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS,
-					       0x1d, 0);
-				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS,
-					       0x45, 0);
-				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS,
-					       0xe1, 0);
-				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS,
-					       0x9d, 0);
-				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS,
-					       0xc5, 0);
+				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS, 0xe1, 0);
+				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS, 0x1d, 0);
+				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS, 0x45, 0);
+				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS, 0xe1, 0);
+				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS, 0x9d, 0);
+				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS, 0xc5, 0);
 			}
 			else
 			{
