@@ -124,12 +124,12 @@ licence_send_request(uint8 * client_random, uint8 * rsa_data, char *user, char *
 	out_uint8p(s, rsa_data, SEC_MODULUS_SIZE);
 	out_uint8s(s, SEC_PADDING_SIZE);
 
-	out_uint16(s, LICENCE_TAG_USER);
-	out_uint16(s, userlen);
+	out_uint16_le(s, LICENCE_TAG_USER);
+	out_uint16_le(s, userlen);
 	out_uint8p(s, user, userlen);
 
-	out_uint16(s, LICENCE_TAG_HOST);
-	out_uint16(s, hostlen);
+	out_uint16_le(s, LICENCE_TAG_HOST);
+	out_uint16_le(s, hostlen);
 	out_uint8p(s, host, hostlen);
 
 	s_mark_end(s);

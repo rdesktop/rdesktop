@@ -176,7 +176,7 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 		{
 			out_uint16_le(s, len_password);
 		}
-		out_uint16_le(s, 0);	/* Seems to be length of a 512 byte blob with
+		out_uint16(s, 0);	/* Seems to be length of a 512 byte blob with
 					   completely unknown data, but hopefully we'll do
 					   with a 0 length block as well */
 		out_uint16_le(s, len_program);
@@ -187,8 +187,8 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 		}
 		rdp_out_unistr(s, domain, len_domain);
 		rdp_out_unistr(s, user, len_user);
-		out_uint16_le(s, 0);
-		out_uint16_le(s, 0);
+		out_uint16(s, 0);
+		out_uint16(s, 0);
 		if (0 < len_program)
 			rdp_out_unistr(s, program, len_program);
 		if (0 < len_directory)
@@ -204,11 +204,11 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 		out_uint32_le(s, 0x0a0000);
 		out_uint32_le(s, 0x050000);
 		out_uint32_le(s, 2);
-		out_uint32_le(s, 0);
+		out_uint32(s, 0);
 		out_uint32_le(s, 0xffffffc4);
 		out_uint32_le(s, 0xfffffffe);
 		out_uint32_le(s, 0x0f);
-		out_uint32_le(s, 0);
+		out_uint32(s, 0);
 
 		rdp_out_unistr(s, "GTB, sommartid", 2 * strlen("GTB, sommartid") - 1);
 		out_uint8s(s, 30 - 2 * strlen("GTP, sommartid"));
@@ -216,11 +216,11 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 		out_uint32_le(s, 0x030000);
 		out_uint32_le(s, 0x050000);
 		out_uint32_le(s, 2);
-		out_uint32_le(s, 0);
+		out_uint32(s, 0);
 		out_uint32_le(s, 0xffffffc4);
 		out_uint32_le(s, 0xfffffffe);
 		out_uint32_le(s, 0x0f);
-		out_uint32_le(s, 0);
+		out_uint32(s, 0);
 
 	}
 	s_mark_end(s);
@@ -308,7 +308,7 @@ rdp_out_general_caps(STREAM s)
 	out_uint16_le(s, 0x200);	/* Protocol version */
 	out_uint16(s, 0);	/* Pad */
 	out_uint16(s, 0);	/* Compression types */
-	out_uint16(s, use_rdp5 ? 0x40d : 0);
+	out_uint16_le(s, use_rdp5 ? 0x40d : 0);
 	/* Pad, according to T.128. 0x40d seems to 
 	   trigger
 	   the server to start sending RDP5 packets. 

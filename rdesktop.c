@@ -622,12 +622,12 @@ save_licence(unsigned char *data, int length)
 	s_ptr = &s;
 	s_ptr->p = data;
 	/* Skip first two bytes */
-	in_uint16(s_ptr, len);
+	in_uint16_le(s_ptr, len);
 
 	/* Skip three strings */
 	for (i = 0; i < 3; i++)
 	{
-		in_uint32(s_ptr, len);
+		in_uint32_le(s_ptr, len);
 		s_ptr->p += len;
 		/* Make sure that we won't be past the end of data after
 		 * reading the next length value
@@ -640,7 +640,7 @@ save_licence(unsigned char *data, int length)
 			return;
 		}
 	}
-	in_uint32(s_ptr, len);
+	in_uint32_le(s_ptr, len);
 	if (s_ptr->p + len > data + length)
 	{
 		printf("Error in parsing licence key.\n");

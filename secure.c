@@ -447,7 +447,7 @@ sec_out_mcs_data(STREAM s)
 			out_uint16_le(s, 0xca04);
 			break;
 	}
-	out_uint16(s, 1);
+	out_uint16_le(s, 1);
 
 	out_uint32(s, 0);
 	out_uint8(s, server_bpp);
@@ -459,13 +459,13 @@ sec_out_mcs_data(STREAM s)
 	out_uint16_le(s, SEC_TAG_CLI_4);
 	out_uint16_le(s, 12);
 	out_uint32_le(s, 9);
-	out_uint32_le(s, 0);
+	out_uint32(s, 0);
 
 	/* Client encryption settings */
 	out_uint16_le(s, SEC_TAG_CLI_CRYPT);
 	out_uint16_le(s, 12);	/* length */
 	out_uint32_le(s, encryption ? 0x3 : 0);	/* encryption supported, 128-bit supported */
-	out_uint32_le(s, 0);	/* Unknown */
+	out_uint32(s, 0);	/* Unknown */
 
 	out_uint16_le(s, SEC_TAG_CLI_CHANNELS);
 	out_uint16_le(s, 20);	/* length */
