@@ -116,13 +116,34 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 void
 wave_out_volume(uint16 left, uint16 right)
 {
+	static BOOL use_dev_mixer = False;
 	uint32 volume;
+	int fd_mix = -1;
 
 	volume = left / (65536 / 100);
 	volume |= right / (65536 / 100) << 8;
+
+	if (use_dev_mixer)
+	{
+		if ((fd_mix = open( "/dev/mixer", O_RDWR|O_NONBLOCK )) == -1 )
+		{
+			perror("open /dev/mixer");
+			return;
+		}
+
+		if (ioctl(fd_mix, MIXER_WRITE(SOUND_MIXER_PCM), &volume) == -1)
+		{
+			perror("MIXER_WRITE(SOUND_MIXER_PCM)");
+			return;
+		}
+
+		close(fd_mix);
+	}
+
 	if (ioctl(g_dsp_fd, MIXER_WRITE(SOUND_MIXER_PCM), &volume) == -1)
 	{
 		perror("MIXER_WRITE(SOUND_MIXER_PCM)");
+		use_dev_mixer = True;
 		return;
 	}
 }
