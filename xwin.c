@@ -910,6 +910,7 @@ ui_patblt(uint8 opcode,
 			FILL_RECTANGLE(x, y, cx, cy);
 
 			XSetFillStyle(display, gc, FillSolid);
+			XSetTSOrigin(display, gc, 0, 0);
 			ui_destroy_glyph((HGLYPH) fill);
 			break;
 
