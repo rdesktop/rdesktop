@@ -35,7 +35,7 @@ Composing/Multi_key is supported. For more information, see:
 
 Keymap-files
 ============
-The keymaps are line based. There are three different types of lines:
+The keymaps are line based. There are four different types of lines:
 
 1) include-lines
 Syntax:
