@@ -42,6 +42,7 @@ case $arg in
     extrassldir=$optarg
     ;;
   --without-openssl*)
+    withoutopenssl=yes
     ;;
   --with-egd-socket=*)
     extraegdpath=$optarg
@@ -65,6 +66,7 @@ case $arg in
     echo "Build configuration:"
     echo " --with-x=DIR            look for X Window System at DIR/include, DIR/lib"
     echo " --with-openssl=DIR      look for OpenSSL at DIR/include, DIR/lib"
+    echo " --without-openssl       use in-tree crypto, even if OpenSSL is available"
     echo " --with-egd-socket=PATH  look for Entropy Gathering Daemon socket at PATH"
     echo " --with-debug            enable protocol debugging output"
     echo " --with-debug-kbd        enable debugging of keyboard handling"
@@ -140,40 +142,41 @@ fi
 ldflags="$ldflags -lX11"
 
 
-# Find OpenSSL installation if available
-
-ssldirs="$extrassldir /usr/openssl /usr/ssl /usr /usr/local/openssl /usr/local/ssl /usr/local"
-
-for dir in $ssldirs; do
-    if [ -f $dir/include/openssl/rc4.h ]; then
-	ssldir=$dir
-	break
+if [ -z "$withoutopenssl" ]; then
+    # Find OpenSSL installation if available
+    ssldirs="$extrassldir /usr/openssl /usr/ssl /usr /usr/local/openssl /usr/local/ssl /usr/local"
+    
+    for dir in $ssldirs; do
+    	if [ -f $dir/include/openssl/rc4.h ]; then
+    	    ssldir=$dir
+    	    break
+    	fi
+    done
+    
+    if [ -z "$ssldir" ]; then
+    	echo "WARNING: could not find OpenSSL headers"
+    	echo "(searched for include/openssl/rc4.h in: $ssldirs)"
+    	echo "Using in-tree crypto; installing OpenSSL is recommended."
+    	echo
+    else
+    	echo "OpenSSL:"
+    	echo "  includes  $ssldir/include"
+    	echo "  libraries $ssldir/lib"
+    	echo
+    
+    	echo "CRYPTOBJ    =" >>Makeconf
+    
+    	if [ $ssldir != "/usr" ]; then
+    	    cflags="$cflags -I$ssldir/include"
+    	    ldflags="$ldflags -L$ssldir/lib"
+    	    rpath="$rpath:$ssldir/lib"
+    	fi
+    
+    	cflags="$cflags -DWITH_OPENSSL"
+    	ldflags="$ldflags -lcrypto"
     fi
-done
-
-if [ -z "$ssldir" ]; then
-    echo "WARNING: could not find OpenSSL headers"
-    echo "(searched for include/openssl/rc4.h in: $ssldirs)"
-    echo "Using in-tree crypto; installing OpenSSL is recommended."
-    echo
-else
-    echo "OpenSSL:"
-    echo "  includes  $ssldir/include"
-    echo "  libraries $ssldir/lib"
-    echo
-
-    echo "CRYPTOBJ    =" >>Makeconf
-
-    if [ $ssldir != "/usr" ]; then
-	cflags="$cflags -I$ssldir/include"
-	ldflags="$ldflags -L$ssldir/lib"
-	rpath="$rpath:$ssldir/lib"
-    fi
-
-    cflags="$cflags -DWITH_OPENSSL"
-    ldflags="$ldflags -lcrypto"
 fi
-
+    
 
 # Find EGD socket if we don't have /dev/urandom or /dev/random
 
