@@ -245,7 +245,7 @@ main(int argc, char *argv[])
 		width = (width + 3) & ~3;
 	}
 
-	if (!strlen(title)) 
+	if (!strlen(title))
 	{
 		strcpy(title, "rdesktop - ");
 		strncat(title, server, sizeof(title) - sizeof("rdesktop - "));
