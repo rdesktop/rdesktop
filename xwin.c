@@ -1371,6 +1371,15 @@ ui_destblt(uint8 opcode,
 	RESET_FUNCTION(opcode);
 }
 
+static uint8 hatch_patterns[] = {
+	0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0x00, /* 0 - bsHorizontal */
+	0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0x08, /* 1 - bsVertical */
+	0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01, /* 2 - bsFDiagonal */
+	0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, /* 3 - bsBDiagonal */
+	0x08, 0x08, 0x08, 0xff, 0x08, 0x08, 0x08, 0x08, /* 4 - bsCross */
+	0x81, 0x42, 0x24, 0x18, 0x18, 0x24, 0x42, 0x81  /* 5 - bsDiagCross */
+};
+
 void
 ui_patblt(uint8 opcode,
 	  /* dest */ int x, int y, int cx, int cy,
@@ -1386,6 +1395,19 @@ ui_patblt(uint8 opcode,
 		case 0:	/* Solid */
 			SET_FOREGROUND(fgcolour);
 			FILL_RECTANGLE(x, y, cx, cy);
+			break;
+
+		case 2:	/* Hatch */
+			fill = (Pixmap) ui_create_glyph(8, 8, hatch_patterns + brush->pattern[0] * 8);
+			SET_FOREGROUND(bgcolour);
+			SET_BACKGROUND(fgcolour);
+			XSetFillStyle(display, gc, FillOpaqueStippled);
+			XSetStipple(display, gc, fill);
+			XSetTSOrigin(display, gc, brush->xorigin, brush->yorigin);
+			FILL_RECTANGLE(x, y, cx, cy);
+			XSetFillStyle(display, gc, FillSolid);
+			XSetTSOrigin(display, gc, 0, 0);
+			ui_destroy_glyph((HGLYPH) fill);
 			break;
 
 		case 3:	/* Pattern */
