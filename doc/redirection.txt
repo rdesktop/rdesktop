@@ -63,8 +63,7 @@ sound mapping
 -------------
 Multiple mappings possible: no
 Default: off
-Planned syntax: -r sound:[local|off|remote]
-Current syntax: -r sound
+Syntax: -r sound:[local|off|remote]
 
 "local" means "Bring to this computer"
 "off" means "Do not play"
