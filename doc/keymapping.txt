@@ -13,16 +13,10 @@ the plain old interface as well, at least.
 
 There are still some small problems.
 
-* NumLock handling: NumLock is switched off when typing a non-numlock
-  key. rdesktop does not know which keys are NumLock-dependent and
-  not. When you type a numlock-dependent key again, NumLock is
-  switched on on the server again. The only problem really is that the
-  NumLock indicator in Wordpad etc switches on and off when you type. 
-
-* CapsLock: CapsLock changes are never sent to the RDP server. This is
-  a problem of the same type as NumLock: rdesktop does not know which
-  keys that are modified by CapsLock and which are not. So, the
-  CapsLock indicator in Wordpad etc will always be off. 
+* CapsLock: CapsLock changes are never sent to the RDP
+  server. rdesktop does not know which keys that are modified by
+  CapsLock and which are not. So, the CapsLock indicator in Wordpad
+  etc will always be off.
 
 Composing/Multi_key is supported. For more information, see:
 
@@ -71,8 +65,8 @@ scancode value to put into the map file by running:
 
 python -c "print hex(0x80 | 0x52)"
 
-If flags are "altgr", "shift", "numlock", the scancode sent for this
-keysym will be prefix with AltGr, Shift or Numlock. 
+If flags are "altgr", "shift", the scancode sent for this
+keysym will be prefix with AltGr, or Shift. 
 
 If flags include "addupper", an translation for this keysyms uppercase
 name will as well, in addition to the non-uppercase name. Example:

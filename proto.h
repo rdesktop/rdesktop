@@ -59,21 +59,21 @@ void unimpl(char *format, ...);
 void hexdump(unsigned char *p, int len);
 int load_licence(unsigned char **data);
 void save_licence(unsigned char *data, int length);
+/* rdp5.c */
+void rdp5_process(STREAM s, BOOL encryption);
 /* rdp.c */
 void rdp_out_unistr(STREAM s, char *string, int len);
 void rdp_send_input(uint32 time, uint16 message_type, uint16 device_flags, uint16 param1,
 		    uint16 param2);
-void process_null_system_pointer_pdu(STREAM s);
 void process_colour_pointer_pdu(STREAM s);
 void process_cached_pointer_pdu(STREAM s);
+void process_system_pointer_pdu(STREAM s);
 void process_bitmap_updates(STREAM s);
 void process_palette(STREAM s);
 BOOL rdp_main_loop(void);
 BOOL rdp_connect(char *server, uint32 flags, char *domain, char *password, char *command,
 		 char *directory);
 void rdp_disconnect(void);
-/* rdp5.c */
-void rdp5_process(STREAM s, BOOL encryption);
 /* rdpdr.c */
 void rdpdr_send_connect(void);
 void rdpdr_send_name(void);
@@ -86,6 +86,7 @@ STREAM rdpsnd_init_packet(uint16 type, uint16 size);
 void rdpsnd_send(STREAM s);
 void rdpsnd_send_completion(uint16 tick, uint8 packet_index);
 void rdpsnd_process_negotiate(STREAM in);
+void rdpsnd_process_unknown6(STREAM in);
 void rdpsnd_process(STREAM s);
 BOOL rdpsnd_init(void);
 /* rdpsnd_oss.c */
@@ -93,9 +94,9 @@ BOOL wave_out_open(void);
 void wave_out_close(void);
 BOOL wave_out_format_supported(WAVEFORMATEX * pwfx);
 BOOL wave_out_set_format(WAVEFORMATEX * pwfx);
+void wave_out_volume(uint16 left, uint16 right);
 void wave_out_write(STREAM s, uint16 tick, uint8 index);
 void wave_out_play(void);
-void wave_out_volume(uint16 left, uint16 right);
 /* secure.c */
 void sec_hash_48(uint8 * out, uint8 * in, uint8 * salt1, uint8 * salt2, uint8 salt);
 void sec_hash_16(uint8 * out, uint8 * in, uint8 * salt1, uint8 * salt2);
@@ -132,7 +133,9 @@ char *get_ksname(uint32 keysym);
 void save_remote_modifiers(uint8 scancode);
 void restore_remote_modifiers(uint32 ev_time, uint8 scancode);
 void ensure_remote_modifiers(uint32 ev_time, key_translation tr);
-void reset_modifier_keys(unsigned int state);
+unsigned int read_keyboard_state(void);
+uint16 ui_get_numlock_state(unsigned int state);
+void reset_modifier_keys(void);
 void rdp_send_scancode(uint32 time, uint16 flags, uint8 scancode);
 /* xwin.c */
 BOOL get_key_state(unsigned int state, uint32 keysym);

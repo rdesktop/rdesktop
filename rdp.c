@@ -600,7 +600,7 @@ process_demand_active(STREAM s)
 	rdp_recv(&type);	/* RDP_PDU_SYNCHRONIZE */
 	rdp_recv(&type);	/* RDP_CTL_COOPERATE */
 	rdp_recv(&type);	/* RDP_CTL_GRANT_CONTROL */
-	rdp_send_input(0, RDP_INPUT_SYNCHRONIZE, 0, 0, 0);
+	rdp_send_input(0, RDP_INPUT_SYNCHRONIZE, 0, ui_get_numlock_state(read_keyboard_state()), 0);
 	rdp_send_fonts(1);
 	rdp_send_fonts(2);
 	rdp_recv(&type);	/* RDP_PDU_UNKNOWN 0x28 */

@@ -988,9 +988,6 @@ xwin_process_events(void)
 	key_translation tr;
 	char str[256];
 	Status status;
-	unsigned int state;
-	Window wdummy;
-	int dummy;
 
 	while (XPending(g_display) > 0)
 	{
@@ -1163,9 +1160,7 @@ xwin_process_events(void)
 				if (xevent.xfocus.mode == NotifyGrab)
 					break;
 				g_focused = True;
-				XQueryPointer(g_display, g_wnd, &wdummy, &wdummy, &dummy, &dummy,
-					      &dummy, &dummy, &state);
-				reset_modifier_keys(state);
+				reset_modifier_keys();
 				if (g_grab_keyboard && g_mouse_in_wnd)
 					XGrabKeyboard(g_display, g_wnd, True,
 						      GrabModeAsync, GrabModeAsync, CurrentTime);

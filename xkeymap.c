@@ -38,6 +38,7 @@
 #define KEYMAP_MAX_LINE_LENGTH 80
 
 extern Display *g_display;
+extern Window g_wnd;
 extern char keymapname[16];
 extern int keylayout;
 extern int g_win_button_size;
@@ -183,11 +184,6 @@ xkeymap_read(char *mapname)
 		if (strstr(line_rest, "shift"))
 		{
 			MASK_ADD_BITS(modifiers, MapLeftShiftMask);
-		}
-
-		if (strstr(line_rest, "numlock"))
-		{
-			MASK_ADD_BITS(modifiers, MapNumLockMask);
 		}
 
 		if (strstr(line_rest, "localstate"))
@@ -500,29 +496,6 @@ ensure_remote_modifiers(uint32 ev_time, key_translation tr)
 	if (is_modifier(tr.scancode))
 		return;
 
-	/* NumLock */
-	if (MASK_HAS_BITS(tr.modifiers, MapNumLockMask)
-	    != MASK_HAS_BITS(remote_modifier_state, MapNumLockMask))
-	{
-		/* The remote modifier state is not correct */
-		uint16 new_remote_state;
-
-		if (MASK_HAS_BITS(tr.modifiers, MapNumLockMask))
-		{
-			DEBUG_KBD(("Remote NumLock state is incorrect, activating NumLock.\n"));
-			new_remote_state = KBD_FLAG_NUMLOCK;
-			remote_modifier_state = MapNumLockMask;
-		}
-		else
-		{
-			DEBUG_KBD(("Remote NumLock state is incorrect, deactivating NumLock.\n"));
-			new_remote_state = 0;
-			remote_modifier_state = 0;
-		}
-
-		rdp_send_input(0, RDP_INPUT_SYNCHRONIZE, 0, new_remote_state, 0);
-	}
-
 	/* Shift. Left shift and right shift are treated as equal; either is fine. */
 	if (MASK_HAS_BITS(tr.modifiers, MapShiftMask)
 	    != MASK_HAS_BITS(remote_modifier_state, MapShiftMask))
@@ -571,9 +544,35 @@ ensure_remote_modifiers(uint32 ev_time, key_translation tr)
 }
 
 
-void
-reset_modifier_keys(unsigned int state)
+unsigned int
+read_keyboard_state()
 {
+	unsigned int state;
+	Window wdummy;
+	int dummy;
+
+	XQueryPointer(g_display, g_wnd, &wdummy, &wdummy, &dummy, &dummy, &dummy, &dummy, &state);
+	return state;
+}
+
+
+uint16
+ui_get_numlock_state(unsigned int state)
+{
+	uint16 numlock_state = 0;
+
+	if (get_key_state(state, XK_Num_Lock))
+		numlock_state = KBD_FLAG_NUMLOCK;
+
+	return numlock_state;
+}
+
+
+void
+reset_modifier_keys()
+{
+	unsigned int state = read_keyboard_state();
+
 	/* reset keys */
 	uint32 ev_time;
 	ev_time = time(NULL);
@@ -600,6 +599,8 @@ reset_modifier_keys(unsigned int state)
 	if (MASK_HAS_BITS(remote_modifier_state, MapRightAltMask) &&
 	    !get_key_state(state, XK_Alt_R) && !get_key_state(state, XK_Mode_switch))
 		rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_RALT);
+
+	rdp_send_input(ev_time, RDP_INPUT_SYNCHRONIZE, 0, ui_get_numlock_state(state), 0);
 }
 
 
@@ -637,19 +638,6 @@ update_modifier_state(uint8 scancode, BOOL pressed)
 			break;
 		case SCANCODE_CHAR_RWIN:
 			MASK_CHANGE_BIT(remote_modifier_state, MapRightWinMask, pressed);
-			break;
-		case SCANCODE_CHAR_NUMLOCK:
-			/* KeyReleases for NumLocks are sent immediately. Toggle the
-			   modifier state only on Keypress */
-			if (pressed)
-			{
-				BOOL newNumLockState;
-				newNumLockState =
-					(MASK_HAS_BITS
-					 (remote_modifier_state, MapNumLockMask) == False);
-				MASK_CHANGE_BIT(remote_modifier_state,
-						MapNumLockMask, newNumLockState);
-			}
 			break;
 	}
 
