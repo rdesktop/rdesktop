@@ -357,9 +357,8 @@
 #define SCANCODE_KEY_125 0x46
 #define SCANCODE_CHAR_SCROLLLOCK SCANCODE_KEY_125
 
-/* FIXME */
-#define SCANCODE_KEY_126 0x0
-#define SCANCODE_CHAR_PAUSE SCANCODE_KEY_125
+/* Key 126: The Pause and Break sequences is complicated, and
+   hardcoded in xkeymap.c */
 
 /* 
    The keys below does not have any key location number
