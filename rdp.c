@@ -161,7 +161,7 @@ rdp_out_unistr(STREAM s, char *string, int len)
 #ifdef HAVE_ICONV
 	size_t ibl = strlen(string), obl = len + 2;
 	static iconv_t iconv_h = (iconv_t) - 1;
-	char *pin = string, *pout = s->p;
+	char *pin = string, *pout = (char *)s->p;
 
 	memset(pout, 0, len + 4);
 
@@ -176,7 +176,8 @@ rdp_out_unistr(STREAM s, char *string, int len)
 					g_codepage, WINDOWS_CODEPAGE, (int) iconv_h);
 
 				g_iconv_works = False;
-				return (rdp_out_unistr(s, string, len));
+				rdp_out_unistr(s, string, len);
+				return;
 			}
 			if (iconv(iconv_h, (ICONV_CONST char **) &pin, &i, &pout, &o) ==
 			    (size_t) - 1)
@@ -186,7 +187,8 @@ rdp_out_unistr(STREAM s, char *string, int len)
 				warning("rdp_out_unistr: iconv(1) fail, errno %d\n", errno);
 
 				g_iconv_works = False;
-				return (rdp_out_unistr(s, string, len));
+				rdp_out_unistr(s, string, len);
+				return;
 			}
 			pin = string;
 			pout = (char *) s->p;
@@ -199,7 +201,8 @@ rdp_out_unistr(STREAM s, char *string, int len)
 			warning("rdp_out_unistr: iconv(2) fail, errno %d\n", errno);
 
 			g_iconv_works = False;
-			return (rdp_out_unistr(s, string, len));
+			rdp_out_unistr(s, string, len);
+			return;
 		}
 
 		s->p += len + 2;
@@ -231,7 +234,7 @@ rdp_in_unistr(STREAM s, char *string, int uni_len)
 {
 #ifdef HAVE_ICONV
 	size_t ibl = uni_len, obl = uni_len;
-	char *pin = s->p, *pout = string;
+	char *pin = (char *)s->p, *pout = string;
 	static iconv_t iconv_h = (iconv_t) - 1;
 
 	if (g_iconv_works)
