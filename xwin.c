@@ -252,7 +252,7 @@ translate8to16(uint8 * data, uint8 * out, uint8 * end)
 	uint16 value;
 
 	if (g_arch_match)
-		REPEAT(*(((uint16 *) out)++) = g_colmap[*(data++)];
+		REPEAT(*((uint16*)out) = g_colmap[*(data++)]; out += 2;
 		)
 	else if (g_xserver_be)
 	{
@@ -308,7 +308,7 @@ translate8to32(uint8 * data, uint8 * out, uint8 * end)
 	uint32 value;
 
 	if (g_arch_match)
-		REPEAT(*(((uint32 *) out)++) = g_colmap[*(data++)];
+		REPEAT(*((uint32 *)out) = g_colmap[*(data++)]; out += 4;
 		)
 	else if (g_xserver_be)
 	{

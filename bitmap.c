@@ -38,7 +38,7 @@
 #define CVAL2(p, v) { v = (*(p++)) << 8; v |= (*(p++)); }
 #endif /* L_ENDIAN */
 #else
-#define CVAL2(p, v) v = (*(((uint16*)p)++));
+#define CVAL2(p, v) { v = (*((uint16*)p)); p += 2; }
 #endif /* NEED_ALIGN */
 
 #define UNROLL8(exp) { exp exp exp exp exp exp exp exp }
