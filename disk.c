@@ -241,8 +241,7 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 	flags = 0;
 	mode = S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
 
-
-	if (filename[strlen(filename) - 1] == '/')
+	if (*filename && filename[strlen(filename) - 1] == '/')
 		filename[strlen(filename) - 1] = 0;
 	sprintf(path, "%s%s", g_rdpdr_device[device_id].local_path, filename);
 
