@@ -662,6 +662,7 @@ translate16to32(const uint16 * data, uint8 * out, uint8 * end)
 		}
 		else
 		{
+			while (out < end)
 			{
 				pixel = *(data++);
 				SPLITCOLOUR16(pixel, pc);
