@@ -76,6 +76,32 @@ esac
 done
 
 
+# Find compiler
+
+compilers="$CC gcc cc"
+
+for compiler in $compilers; do
+    if [ -x "`which $compiler`" ]; then
+	cc=$compiler
+	break
+    fi
+done
+
+if [ -z "$cc" ]; then
+    echo "ERROR: could not find a C compiler (tried: $compilers)"
+    echo "You probably want to install gcc"
+    exit 1
+fi
+
+echo "CC          = $cc" >>Makeconf
+
+if $cc -v 2>&1 |grep '^gcc' >/dev/null; then
+    cflags="$cflags -Wall -O2"
+else
+    cflags="$cflags -O"
+fi
+
+
 # Find X installation
 
 xdirs="$extraxdir /usr/X11R6 /usr/X11 /usr/openwin /usr /usr/local/X11R6 /usr/local/X11 /usr/local"
