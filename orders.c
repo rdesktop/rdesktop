@@ -718,6 +718,8 @@ process_polyline(STREAM s, POLYLINE_ORDER * os, uint32 present, BOOL delta)
 		ui_polyline(os->opcode - 1, points, os->lines + 1, &pen);
 	else
 		error("polyline parse error\n");
+
+	xfree(points);
 }
 
 /* Process an ellipse order */
