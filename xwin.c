@@ -469,7 +469,8 @@ xwin_process_events(void)
 						      str, sizeof(str), &keysym, NULL);
 				}
 
-				DEBUG_KBD(("KeyPress for (keysym 0x%lx, %s)\n", keysym, get_ksname(keysym)));
+				DEBUG_KBD(("KeyPress for (keysym 0x%lx, %s)\n", keysym,
+					   get_ksname(keysym)));
 
 				ev_time = time(NULL);
 				if (handle_special_keys(keysym, xevent.xkey.state, ev_time, True))
@@ -528,7 +529,8 @@ xwin_process_events(void)
 				if (xevent.xfocus.mode == NotifyGrab)
 					break;
 				focused = True;
-				XQueryPointer(display, wnd, &wdummy, &wdummy, &dummy, &dummy, &dummy, &dummy, &state);
+				XQueryPointer(display, wnd, &wdummy, &wdummy, &dummy, &dummy,
+					      &dummy, &dummy, &state);
 				reset_modifier_keys(state);
 				if (grab_keyboard && mouse_in_wnd)
 					XGrabKeyboard(display, wnd, True,
@@ -549,7 +551,8 @@ xwin_process_events(void)
 				mouse_in_wnd = True;
 				if (fullscreen)
 				{
-					XSetInputFocus(display, wnd, RevertToPointerRoot, CurrentTime);
+					XSetInputFocus(display, wnd, RevertToPointerRoot,
+						       CurrentTime);
 					break;
 				}
 				if (focused)
