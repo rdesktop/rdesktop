@@ -45,8 +45,12 @@ char g_username[64];
 char hostname[16];
 char keymapname[16];
 int keylayout = 0x409;		/* Defaults to US keyboard layout */
-int g_width = 800;		/* If width or height are reset to zero, the geometry will
-				   be fetched from _NET_WORKAREA */
+
+int g_width = 800;		/* width is special: If 0, the
+				   geometry will be fetched from
+				   _NET_WORKAREA. If negative,
+				   absolute value specifies the
+				   percent of the whole screen. */
 int g_height = 600;
 int tcp_port_rdp = TCP_PORT_RDP;
 int g_server_bpp = 8;
@@ -304,14 +308,24 @@ main(int argc, char *argv[])
 				}
 
 				g_width = strtol(optarg, &p, 10);
-				if (*p == 'x')
-					g_height = strtol(p + 1, NULL, 10);
-
-				if ((g_width == 0) || (g_height == 0))
+				if (g_width <= 0)
 				{
 					error("invalid geometry\n");
 					return 1;
 				}
+
+				if (*p == 'x')
+					g_height = strtol(p + 1, NULL, 10);
+
+				if (g_height <= 0)
+				{
+					error("invalid geometry\n");
+					return 1;
+				}
+
+				if (*p == '%')
+					g_width = -g_width;
+
 				break;
 
 			case 'f':

@@ -719,7 +719,16 @@ ui_init(void)
 	g_host_be = !(BOOL) (*(uint8 *) (&test));
 	g_xserver_be = (ImageByteOrder(g_display) == MSBFirst);
 
-	if ((g_width == 0) || (g_height == 0))
+	/*
+	 * Determine desktop size
+	 */
+	if (g_width < 0)
+	{
+		/* Percent of screen */
+		g_height = HeightOfScreen(g_screen) * (-g_width) / 100;
+		g_width = WidthOfScreen(g_screen) * (-g_width) / 100;
+	}
+	else if (g_width == 0)
 	{
 		/* Fetch geometry from _NET_WORKAREA */
 		uint32 x, y, cx, cy;
@@ -736,8 +745,7 @@ ui_init(void)
 			g_height = 600;
 		}
 	}
-
-	if (g_fullscreen)
+	else if (g_fullscreen)
 	{
 		g_width = WidthOfScreen(g_screen);
 		g_height = HeightOfScreen(g_screen);
