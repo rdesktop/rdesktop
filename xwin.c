@@ -705,7 +705,11 @@ ui_init(void)
 		return False;
 	}
 
-	if (g_owncolmap != True)
+	/* private colour map code only works for 8 bpp */
+	if (g_owncolmap && (g_bpp > 8))
+		g_owncolmap = False;
+
+	if (!g_owncolmap)
 	{
 		g_xcolmap = DefaultColormapOfScreen(g_screen);
 		if (g_depth <= 8)
