@@ -568,20 +568,19 @@ xwin_process_events()
 					       MOUSE_FLAG_MOVE, xevent.xmotion.x, xevent.xmotion.y);
 				break;
 
-			case FocusIn:
-				/* fall through */
 			case EnterNotify:
 				if (grab_keyboard)
 					XGrabKeyboard(display, wnd, True,
 						      GrabModeAsync, GrabModeAsync, CurrentTime);
 				break;
 
-			case FocusOut:
-				xwin_reset_keys();
-				/* fall through */
 			case LeaveNotify:
 				if (grab_keyboard)
 					XUngrabKeyboard(display, CurrentTime);
+				break;
+
+			case FocusOut:
+				xwin_reset_keys();
 				break;
 
 			case Expose:
