@@ -1,4 +1,3 @@
-The files in this directory implement the encryption algorithms used in
-the RDP protocol, and are subject to their respective licenses.
-
-RC4 may also be subject to patent restrictions in some countries.
+The files in this directory are taken from OpenSSL (http://www.openssl.org/),
+with minor changes.  They provide the basic cryptographic algorithms
+needed by rdesktop if the OpenSSL library if not available.

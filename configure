@@ -11,19 +11,26 @@ for arg in $*; do
 optarg=`echo $arg | sed 's/[-a-z]*=//'`    
 case $arg in
   --prefix=*)
-    echo "PREFIX  = $optarg" >>Makeconf
+    echo "PREFIX   = $optarg" >>Makeconf
     ;;
   --exec-prefix=*)
-    echo "EPREFIX = $optarg" >>Makeconf
+    echo "EPREFIX  = $optarg" >>Makeconf
     ;;
   --bindir=*)
-    echo "BINDIR  = $optarg" >>Makeconf
+    echo "BINDIR   = $optarg" >>Makeconf
     ;;
   --mandir=*)
-    echo "MANDIR  = $optarg" >>Makeconf
+    echo "MANDIR   = $optarg" >>Makeconf
+    ;;
+  --with-openssl*)
+    echo "CFLAGS  += -DWITH_OPENSSL" >>Makeconf
+    echo "LDLIBS  += -lcrypto" >>Makeconf
+    echo "CRYPTOBJ =" >>Makeconf
+    ;;
+  --without-openssl*)
     ;;
   --with-debug*)
-    echo "CFLAGS += -g -DWITH_DEBUG" >>Makeconf
+    echo "CFLAGS  += -g -DWITH_DEBUG" >>Makeconf
     ;;
   --without-debug*)
     ;;
@@ -37,6 +44,7 @@ case $arg in
     echo " --mandir=MANDIR        location for man pages [PREFIX/man]"
     echo
     echo "Build configuration:"
+    echo " --with-openssl         use system OpenSSL libraries for crypto"
     echo " --with-debug           enable debugging output"
     echo
     rm -f Makeconf

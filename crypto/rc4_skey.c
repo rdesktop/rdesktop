@@ -1,5 +1,5 @@
-/* crypto/rc4/rc4_enc.org */
-/* Copyright (C) 1995-1997 Eric Young (eay@cryptsoft.com)
+/* crypto/rc4/rc4_skey.c */
+/* Copyright (C) 1995-1998 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
  * This package is an SSL implementation written
@@ -57,9 +57,6 @@
  */
 
 #include "rc4.h"
-#include "rc4_locl.h"
-
-/* char *RC4_version="RC4 part of SSLeay 0.8.2b 08-Jan-1998"; */
 
 /* RC4 as implemented from a posting from
  * Newsgroups: sci.crypt
@@ -69,10 +66,7 @@
  * Date: Wed, 14 Sep 1994 06:35:31 GMT
  */
 
-void RC4_set_key(key, len, data)
-RC4_KEY *key;
-int len;
-register unsigned char *data;
+void RC4_set_key(RC4_KEY *key, int len, const unsigned char *data)
 	{
         register RC4_INT tmp;
         register int id1,id2;

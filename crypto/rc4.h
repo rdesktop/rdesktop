@@ -1,4 +1,4 @@
-/* crypto/rc4/rc4.org */
+/* crypto/rc4/rc4.h */
 /* Copyright (C) 1995-1997 Eric Young (eay@cryptsoft.com)
  * All rights reserved.
  *
@@ -56,16 +56,12 @@
  * [including the GNU Public Licence.]
  */
 
-/* WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING
- *
- * Always modify rc4.org since rc4.h is automatically generated from
- * it during SSLeay configuration.
- *
- * WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING 
- */
-
 #ifndef HEADER_RC4_H
 #define HEADER_RC4_H
+
+#ifdef NO_RC4
+#error RC4 is disabled.
+#endif
 
 #ifdef  __cplusplus
 extern "C" {
@@ -73,7 +69,22 @@ extern "C" {
 
 /* using int types make the structure larger but make the code faster
  * on most boxes I have tested - up to %20 faster. */
+/*
+ * I don't know what does "most" mean, but declaring "int" is a must on:
+ * - Intel P6 because partial register stalls are very expensive;
+ * - elder Alpha because it lacks byte load/store instructions;
+ */
 #define RC4_INT unsigned int
+
+/*
+ * This enables code handling data aligned at natural CPU word
+ * boundary. See rc4_enc.c for further details.
+ */
+#undef RC4_CHUNK
+
+/* if this is defined data[i] is used instead of *data, this is a %20
+ * speedup on x86 */
+#define RC4_INDEX
 
 typedef struct rc4_key_st
 	{
@@ -81,20 +92,11 @@ typedef struct rc4_key_st
 	RC4_INT data[256];
 	} RC4_KEY;
 
-#ifndef NOPROTO
  
-char *RC4_options(void);
-void RC4_set_key(RC4_KEY *key, int len, unsigned char *data);
-void RC4(RC4_KEY *key, unsigned long len, unsigned char *indata,
+const char *RC4_options(void);
+void RC4_set_key(RC4_KEY *key, int len, const unsigned char *data);
+void RC4(RC4_KEY *key, unsigned long len, const unsigned char *indata,
 		unsigned char *outdata);
-
-#else
-
-char *RC4_options();
-void RC4_set_key();
-void RC4();
-
-#endif
 
 #ifdef  __cplusplus
 }

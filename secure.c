@@ -19,10 +19,18 @@
 */
 
 #include "rdesktop.h"
+
+#ifdef WITH_OPENSSL
+#include <openssl/rc4.h>
+#include <openssl/md5.h>
+#include <openssl/sha.h>
+#include <openssl/bn.h>
+#else
 #include "crypto/rc4.h"
 #include "crypto/md5.h"
 #include "crypto/sha.h"
-#include "crypto/arith.h"
+#include "crypto/bn.h"
+#endif
 
 extern char hostname[16];
 extern int width;
@@ -262,30 +270,17 @@ sec_decrypt(uint8 *data, int length)
 	use_count++;
 }
 
-/* Read in a NUMBER from a buffer */
 static void
-sec_read_number(NUMBER * num, uint8 *buffer, int len)
+reverse(uint8 *p, int len)
 {
-	INT *data = num->n_part;
 	int i, j;
+	uint8 temp;
 
-	for (i = 0, j = 0; j < len; i++, j += 2)
-		data[i] = buffer[j] | (buffer[j + 1] << 8);
-
-	num->n_len = i;
-}
-
-/* Write a NUMBER to a buffer */
-static void
-sec_write_number(NUMBER * num, uint8 *buffer, int len)
-{
-	INT *data = num->n_part;
-	int i, j;
-
-	for (i = 0, j = 0; j < len; i++, j += 2)
+	for (i = 0, j = len-1; i < j; i++, j--)
 	{
-		buffer[j] = data[i] & 0xff;
-		buffer[j + 1] = data[i] >> 8;
+		temp = p[i];
+		p[i] = p[j];
+		p[j] = temp;
 	}
 }
 
@@ -294,17 +289,36 @@ static void
 sec_rsa_encrypt(uint8 *out, uint8 *in, int len,
 		uint8 *modulus, uint8 *exponent)
 {
-	NUMBER data, key;
+	BN_CTX ctx;
+	BIGNUM mod, exp, x, y;
+	uint8 inr[SEC_MODULUS_SIZE];
+	int outlen;
 
-	/* Set modulus for arithmetic */
-	sec_read_number(&key, modulus, SEC_MODULUS_SIZE);
-	m_init(&key, NULL);
+	reverse(modulus, SEC_MODULUS_SIZE);
+	reverse(exponent, SEC_EXPONENT_SIZE);
+	memcpy(inr, in, len);
+	reverse(inr, len);
 
-	/* Exponentiate */
-	sec_read_number(&data, in, len);
-	sec_read_number(&key, exponent, SEC_EXPONENT_SIZE);
-	m_exp(&data, &key, &data);
-	sec_write_number(&data, out, SEC_MODULUS_SIZE);
+	BN_CTX_init(&ctx);
+	BN_init(&mod);
+	BN_init(&exp);
+	BN_init(&x);
+	BN_init(&y);
+
+	BN_bin2bn(modulus, SEC_MODULUS_SIZE, &mod);
+	BN_bin2bn(exponent, SEC_EXPONENT_SIZE, &exp);
+	BN_bin2bn(inr, len, &x);
+	BN_mod_exp(&y, &x, &exp, &mod, &ctx);
+	outlen = BN_bn2bin(&y, out);
+	reverse(out, outlen);
+	if (outlen < SEC_MODULUS_SIZE)
+		memset(out+outlen, 0, SEC_MODULUS_SIZE-outlen);
+
+	BN_free(&y);
+	BN_clear_free(&x);
+	BN_free(&exp);
+	BN_free(&mod);
+	BN_CTX_free(&ctx);
 }
 
 /* Initialise secure transport packet */
