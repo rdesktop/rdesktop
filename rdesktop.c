@@ -63,7 +63,7 @@ usage(char *program)
 	printf("   -e: disable encryption (French TS)\n");
 	printf("   -m: do not send motion events\n");
 	printf("   -l: do not request licence\n");
-	printf("   -t: rdp tcp port\n\n");
+	printf("   -t: rdp tcp port\n");
 	printf("   -K: keep window manager key bindings\n");
 }
 
