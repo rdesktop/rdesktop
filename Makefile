@@ -46,7 +46,7 @@ installman: doc/rdesktop.1
 installkeymaps:
 	mkdir -p $(DESTDIR)/$(KEYMAP_PATH)
 # Prevent copying the CVS directory
-	cp keymaps/?? $(DESTDIR)/$(KEYMAP_PATH)
+	cp keymaps/?? keymaps/??-?? $(DESTDIR)/$(KEYMAP_PATH)
 	cp keymaps/common $(DESTDIR)/$(KEYMAP_PATH)
 	cp keymaps/modifiers $(DESTDIR)/$(KEYMAP_PATH)
 	chmod 644 $(DESTDIR)/$(KEYMAP_PATH)/*
@@ -68,8 +68,9 @@ dist:
 	rdesktop/crypto/*.h \
 	rdesktop/*.c \
 	rdesktop/*.h \
-	rdesktop/keymaps/common \
 	rdesktop/keymaps/?? \
+	rdesktop/keymaps/??-?? \
+	rdesktop/keymaps/common \
 	rdesktop/keymaps/modifiers \
 	rdesktop/keymaps/convert-map \
 	rdesktop/doc/HACKING \
