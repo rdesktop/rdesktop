@@ -893,9 +893,12 @@ process_data_pdu(STREAM s)
 	uint8 data_pdu_type;
 	uint8 ctype;
 	uint16 clen;
-	int roff, rlen, len, ret;
+	int len;
+#if 0
+	int roff, rlen, ret;
 	static struct stream ns;
 	static signed char *dict = 0;
+#endif
 
 	in_uint8s(s, 6);	/* shareid, pad, streamid */
 	in_uint16(s, len);
