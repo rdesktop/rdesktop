@@ -1,6 +1,6 @@
 /*
    rdesktop: A Remote Desktop Protocol client.
-   User interface services - X-Windows
+   Common data types
    Copyright (C) Matthew Chapman 1999-2000
    
    This program is free software; you can redistribute it and/or modify
@@ -18,23 +18,74 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
+typedef int BOOL;
 
-typedef struct window
-{
-	struct connection *conn;
-	int width;
-	int height;
+#ifndef True
+#define True  (1)
+#define False (0)
+#endif
 
-	Display *display;
-	Window wnd;
-	GC gc;
-	Visual *visual;
-
-} *HWINDOW;
+typedef unsigned char uint8;
+typedef unsigned short uint16;
+typedef unsigned int uint32;
 
 typedef void *HBITMAP;
 typedef void *HGLYPH;
 typedef void *HCOLOURMAP;
 
+typedef struct _COLOURENTRY
+{
+	uint8 red;
+	uint8 green;
+	uint8 blue;
+
+} COLOURENTRY;
+
+typedef struct _COLOURMAP
+{
+	uint16 ncolours;
+	COLOURENTRY *colours;
+
+} COLOURMAP;
+
+typedef struct _BOUNDS
+{
+	uint16 left;
+	uint16 top;
+	uint16 right;
+	uint16 bottom;
+
+} BOUNDS;
+
+typedef struct _PEN
+{
+	uint8 style;
+	uint8 width;
+	uint8 colour;
+
+} PEN;
+
+typedef struct _BRUSH
+{
+	uint8 xorigin;
+	uint8 yorigin;
+	uint8 style;
+	uint8 pattern[8];
+
+} BRUSH;
+
+typedef struct _FONTGLYPH
+{
+	uint16 baseline;
+	uint16 width;
+	uint16 height;
+	HBITMAP pixmap;
+
+} FONTGLYPH;
+
+typedef struct _DATABLOB
+{
+	void *data;
+	int size;
+
+} DATABLOB;

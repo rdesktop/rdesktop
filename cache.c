@@ -18,70 +18,84 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include "includes.h"
+#include "rdesktop.h"
 
-HBITMAP cache_get_bitmap(HCONN conn, uint8 cache_id, uint16 cache_idx)
+#define NUM_ELEMENTS(array) (sizeof(array) / sizeof(array[0]))
+
+
+/* BITMAP CACHE */
+static HBITMAP bmpcache[3][600];
+
+/* Retrieve a bitmap from the cache */
+HBITMAP cache_get_bitmap(uint8 cache_id, uint16 cache_idx)
 {
 	HBITMAP bitmap;
 
-	if ((cache_id < NUM_ELEMENTS(conn->bmpcache))
-			&& (cache_idx < NUM_ELEMENTS(conn->bmpcache[0])))
+	if ((cache_id < NUM_ELEMENTS(bmpcache))
+			&& (cache_idx < NUM_ELEMENTS(bmpcache[0])))
 	{
-		bitmap = conn->bmpcache[cache_id][cache_idx];
+		bitmap = bmpcache[cache_id][cache_idx];
 		if (bitmap != NULL)
 			return bitmap;
 	}
 
-	ERROR("Bitmap %d:%d not found\n", cache_id, cache_idx);
+	ERROR("get bitmap %d:%d\n", cache_id, cache_idx);
 	return NULL;
 }
 
-void cache_put_bitmap(HCONN conn, uint8 cache_id, uint16 cache_idx, HBITMAP bitmap)
+/* Store a bitmap in the cache */
+void cache_put_bitmap(uint8 cache_id, uint16 cache_idx, HBITMAP bitmap)
 {
 	HBITMAP old;
 
-	if ((cache_id < NUM_ELEMENTS(conn->bmpcache))
-			&& (cache_idx < NUM_ELEMENTS(conn->bmpcache[0])))
+	if ((cache_id < NUM_ELEMENTS(bmpcache))
+			&& (cache_idx < NUM_ELEMENTS(bmpcache[0])))
 	{
-		old = conn->bmpcache[cache_id][cache_idx];
+		old = bmpcache[cache_id][cache_idx];
 		if (old != NULL)
-			ui_destroy_bitmap(conn->wnd, old);
+			ui_destroy_bitmap(old);
 
-		conn->bmpcache[cache_id][cache_idx] = bitmap;
+		bmpcache[cache_id][cache_idx] = bitmap;
 	}
 	else
 	{
-		ERROR("Bitmap %d:%d past end of cache\n", cache_id, cache_idx);
+		ERROR("put bitmap %d:%d\n", cache_id, cache_idx);
 	}
 }
 
-FONT_GLYPH *cache_get_font(HCONN conn, uint8 font, uint16 character)
-{
-	FONT_GLYPH *glyph;
 
-	if ((font < NUM_ELEMENTS(conn->fontcache))
-			&& (character < NUM_ELEMENTS(conn->fontcache[0])))
+/* FONT CACHE */
+static FONTGLYPH fontcache[12][256];
+
+/* Retrieve a glyph from the font cache */
+FONTGLYPH *cache_get_font(uint8 font, uint16 character)
+{
+	FONTGLYPH *glyph;
+
+	if ((font < NUM_ELEMENTS(fontcache))
+			&& (character < NUM_ELEMENTS(fontcache[0])))
 	{
-		glyph = &conn->fontcache[font][character];
+		glyph = &fontcache[font][character];
 		if (glyph->pixmap != NULL)
 			return glyph;
 	}
 
-	ERROR("Font %d character %d not found\n", font, character);
+	ERROR("get font %d:%d\n", font, character);
 	return NULL;
 }
 
-void cache_put_font(HCONN conn, uint8 font, uint32 character, uint16 baseline,
+/* Store a glyph in the font cache */
+void cache_put_font(uint8 font, uint32 character, uint16 baseline,
 		    uint16 width, uint16 height, HGLYPH pixmap)
 {
-	FONT_GLYPH *glyph;
+	FONTGLYPH *glyph;
 
-	if ((font < NUM_ELEMENTS(conn->fontcache))
-			&& (character < NUM_ELEMENTS(conn->fontcache[0])))
+	if ((font < NUM_ELEMENTS(fontcache))
+			&& (character < NUM_ELEMENTS(fontcache[0])))
 	{
-		glyph = &conn->fontcache[font][character];
+		glyph = &fontcache[font][character];
 		if (glyph->pixmap != NULL)
-			ui_destroy_glyph(conn->wnd, glyph->pixmap);
+			ui_destroy_glyph(glyph->pixmap);
 
 		glyph->baseline = baseline;
 		glyph->width = width;
@@ -90,42 +104,77 @@ void cache_put_font(HCONN conn, uint8 font, uint32 character, uint16 baseline,
 	}
 	else
 	{
-		ERROR("Font %d character %d past end of cache\n",
-		      font, character);
+		ERROR("put font %d:%d\n", font, character);
 	}
 }
 
-BLOB *cache_get_text(HCONN conn, uint8 cache_id)
-{
-	BLOB *text;
 
-	if (cache_id < NUM_ELEMENTS(conn->textcache))
+/* TEXT CACHE */
+static DATABLOB textcache[256];
+
+/* Retrieve a text item from the cache */
+DATABLOB *cache_get_text(uint8 cache_id)
+{
+	DATABLOB *text;
+
+	if (cache_id < NUM_ELEMENTS(textcache))
 	{
-		text = &conn->textcache[cache_id];
+		text = &textcache[cache_id];
 		if (text->data != NULL)
 			return text;
 	}
 
-	ERROR("Text cache id %d not found\n", cache_id);
+	ERROR("get text %d\n", cache_id);
 	return NULL;
 }
 
-void cache_put_text(HCONN conn, uint8 cache_id, void *data, int length)
+/* Store a text item in the cache */
+void cache_put_text(uint8 cache_id, void *data, int length)
 {
-	BLOB *text;
+	DATABLOB *text;
 
-	if (cache_id < NUM_ELEMENTS(conn->textcache))
+	if (cache_id < NUM_ELEMENTS(textcache))
 	{
-		text = &conn->textcache[cache_id];
+		text = &textcache[cache_id];
 		if (text->data != NULL)
-			free(text->data);
+			xfree(text->data);
 
-		text->data = malloc(length);
+		text->data = xmalloc(length);
 		text->size = length;
 		memcpy(text->data, data, length);
 	}
 	else
 	{
-		ERROR("Text cache id %d past end of cache\n", cache_id);
+		ERROR("put text %d\n", cache_id);
 	}
 }
+
+
+/* DESKTOP CACHE */
+static uint8 deskcache[0x38400];
+
+/* Retrieve desktop data from the cache */
+uint8 *cache_get_desktop(uint32 offset, uint32 length)
+{
+	if ((offset + length) <= sizeof(deskcache))
+	{
+		return &deskcache[offset];
+	}
+
+	ERROR("get desktop %d:%d\n", offset, length);
+	return NULL;
+}
+
+/* Store desktop data in the cache */
+void cache_put_desktop(uint32 offset, uint32 length, uint8 *data)
+{
+	if ((offset + length) <= sizeof(deskcache))
+	{
+		memcpy(&deskcache[offset], data, length);
+	}
+	else
+	{
+		ERROR("put desktop %d:%d\n", offset, length);
+	}
+}
+

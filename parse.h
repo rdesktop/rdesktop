@@ -1,6 +1,6 @@
 /*
    rdesktop: A Remote Desktop Protocol client.
-   Protocol services - parsing layer
+   Parsing primitives
    Copyright (C) Matthew Chapman 1999-2000
    
    This program is free software; you can redistribute it and/or modify
@@ -21,47 +21,72 @@
 /* Parser state */
 typedef struct stream
 {
-	/* Parsing layer */
+	unsigned char *p;
+	unsigned char *end;
         unsigned char *data;
 	unsigned int size;
-        unsigned int offset;
-	unsigned int end;
-        BOOL marshall;
-        BOOL error;
 
-	/* Other layers */
-	int iso_offset;
-	int mcs_offset;
-	int rdp_offset;
+	/* Offsets of various headers */
+	unsigned char *iso_hdr;
+	unsigned char *mcs_hdr;
+	unsigned char *sec_hdr;
+	unsigned char *rdp_hdr;
 
 } *STREAM;
 
-/* Connection state */
-typedef struct connection
-{
-	/* User interface */
-	HWINDOW wnd;
-	HBITMAP bmpcache[3][600];
-	FONT_GLYPH fontcache[12][256];
-	BLOB textcache[256];
-	uint8 deskcache[0x38400];
+#define s_push_layer(s,h,n)	{ (s)->h = (s)->p; (s)->p += n; }
+#define s_pop_layer(s,h)	(s)->p = (s)->h;
+#define s_mark_end(s)		(s)->end = (s)->p;
+#define s_check(s)		((s)->p <= (s)->end)
+#define s_check_rem(s,n)	((s)->p + n <= (s)->end)
+#define s_check_end(s)		((s)->p == (s)->end)
 
-	/* Parsing layer */
-	struct stream in;
-	struct stream out;
+#if defined(L_ENDIAN) && !defined(NEED_ALIGN)
+#define in_uint16_le(s,v)	{ v = *(uint16 *)((s)->p); (s)->p += 2; }
+#define in_uint32_le(s,v)	{ v = *(uint32 *)((s)->p); (s)->p += 4; }
+#define out_uint16_le(s,v)	{ *(uint16 *)((s)->p) = v; (s)->p += 2; }
+#define out_uint32_le(s,v)	{ *(uint32 *)((s)->p) = v; (s)->p += 4; }
 
-	/* TCP layer */
-	int tcp_socket;
+#else
+#define in_uint16_le(s,v)	{ v = *((s)->p++); v += *((s)->p++) << 8; }
+#define in_uint32_le(s,v)	{ in_uint16_le(s,v) \
+				v += *((s)->p++) << 16; v += *((s)->p++) << 24; }
+#define out_uint16_le(s,v)	{ *((s)->p++) = (v) & 0xff; *((s)->p++) = ((v) >> 8) & 0xff; }
+#define out_uint32_le(s,v)	{ out_uint16_le(s, (v) & 0xffff); out_uint16_le(s, ((v) >> 16) & 0xffff); }
+#endif
 
-	/* MCS layer */
-	uint16 mcs_userid;
+#if defined(B_ENDIAN) && !defined(NEED_ALIGN)
+#define in_uint16_be(s,v)	{ v = *(uint16 *)((s)->p); (s)->p += 2; }
+#define in_uint32_be(s,v)	{ v = *(uint32 *)((s)->p); (s)->p += 4; }
+#define out_uint16_be(s,v)	{ *(uint16 *)((s)->p) = v; (s)->p += 2; }
+#define out_uint32_be(s,v)	{ *(uint32 *)((s)->p) = v; (s)->p += 4; }
 
-} *HCONN;
+#define B_ENDIAN_PREFERRED
+#define in_uint16(s,v)		in_uint16_be(s,v)
+#define in_uint32(s,v)		in_uint32_be(s,v)
+#define out_uint16(s,v)		out_uint16_be(s,v)
+#define out_uint32(s,v)		out_uint32_be(s,b)
 
-#define STREAM_INIT(s,m)   { s.data = xmalloc(2048); s.end = s.size = 2048; s.offset = 0; s.marshall = m; s.error = False; }
-#define STREAM_SIZE(s,l)   { if (l > s.size) { s.data = xrealloc(s.data,l); s.end = s.size = l; } }
-#define REMAINING(s)       ( s->end - s->offset )
-#define PUSH_LAYER(s,v,l)  { s.v = s.offset; s.offset += l; }
-#define POP_LAYER(s,v)     { s.offset = s.v; }
-#define MARK_END(s)        { s.end = s.offset; }
-#define PRS_ERROR(s)       (!(s)->error)
+#else
+#define next_be(s,v)		v = ((v) << 8) + *((s)->p++);
+#define in_uint16_be(s,v)	{ v = *((s)->p++); next_be(s,v); }
+#define in_uint32_be(s,v)	{ in_uint16_be(s,v); next_be(s,v); next_be(s,v); }
+#define out_uint16_be(s,v)	{ *((s)->p++) = ((v) >> 8) & 0xff; *((s)->p++) = (v) & 0xff; }
+#define out_uint32_be(s,v)	{ out_uint16_be(s, ((v) >> 16) & 0xffff); out_uint16_be(s, (v) & 0xffff); }
+#endif
+
+#ifndef B_ENDIAN_PREFERRED
+#define in_uint16(s,v)		in_uint16_le(s,v)
+#define in_uint32(s,v)		in_uint32_le(s,v)
+#define out_uint16(s,v)		out_uint16_le(s,v)
+#define out_uint32(s,v)		out_uint32_le(s,v)
+#endif
+
+#define in_uint8(s,v)		v = *((s)->p++);
+#define in_uint8p(s,v,n)	{ v = (s)->p; (s)->p += n; }
+#define in_uint8a(s,v,n)	{ memcpy(v,(s)->p,n); (s)->p += n; }
+#define in_uint8s(s,n)		(s)->p += n;
+#define out_uint8(s,v)		*((s)->p++) = v;
+#define out_uint8p(s,v,n)	{ memcpy((s)->p,v,n); (s)->p += n; }
+#define out_uint8a(s,v,n)	out_uint8p(s,v,n);
+#define out_uint8s(s,n)		{ memset((s)->p,0,n); (s)->p += n; }

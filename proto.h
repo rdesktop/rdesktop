@@ -1,184 +1,95 @@
-/* bitmap.c */
-BOOL bitmap_decompress(unsigned char *output, int width, int height, unsigned char *input, int size);
-/* cache.c */
-HBITMAP cache_get_bitmap(HCONN conn, uint8 cache_id, uint16 cache_idx);
-void cache_put_bitmap(HCONN conn, uint8 cache_id, uint16 cache_idx, HBITMAP bitmap);
-FONT_GLYPH *cache_get_font(HCONN conn, uint8 font, uint16 character);
-void cache_put_font(HCONN conn, uint8 font, uint32 character, uint16 baseline, uint16 width, uint16 height, HGLYPH pixmap);
-BLOB *cache_get_text(HCONN conn, uint8 cache_id);
-void cache_put_text(HCONN conn, uint8 cache_id, void *data, int length);
-/* client.c */
+/* rdesktop.c */
 int main(int argc, char *argv[]);
-/* iso.c */
-HCONN iso_connect(char *server);
-void iso_disconnect(HCONN conn);
-BOOL iso_send_msg(HCONN conn, uint8 code);
-BOOL iso_recv_msg(HCONN conn, uint8 *code);
-void iso_init(struct connection *conn);
-BOOL iso_recv(HCONN conn);
-BOOL iso_send(HCONN conn);
-void iso_make_tpkt(TPKT *tpkt, int length);
-BOOL iso_io_tpkt(STREAM s, TPKT *tpkt);
-void iso_make_tpdu(TPDU *tpdu, uint8 code);
-BOOL iso_io_tpdu(STREAM s, TPDU *tpdu);
-/* mcs.c */
-HCONN mcs_connect(char *server);
-BOOL mcs_join_channel(HCONN conn, uint16 chanid);
-void mcs_disconnect(HCONN conn);
-void mcs_send_connect_initial(HCONN conn);
-void mcs_send_edrq(HCONN conn);
-void mcs_send_aurq(HCONN conn);
-void mcs_send_cjrq(HCONN conn, uint16 chanid);
-void mcs_init_data(HCONN conn);
-void mcs_send_data(HCONN conn, uint16 chanid, BOOL request);
-BOOL mcs_recv(HCONN conn, BOOL request);
-void mcs_make_domain_params(DOMAIN_PARAMS *dp, uint16 max_channels, uint16 max_users, uint16 max_tokens, uint16 max_pdusize);
-void mcs_make_connect_initial(MCS_CONNECT_INITIAL *mci);
-BOOL ber_io_header(STREAM s, BOOL islong, int tagval, int *length);
-BOOL ber_io_octet_string(STREAM s, OCTET_STRING *os);
-BOOL ber_io_integer(STREAM s, uint16 *word_int);
-BOOL ber_io_uint8(STREAM s, uint8 *i, int tagval);
-BOOL mcs_io_domain_params(STREAM s, DOMAIN_PARAMS *dp);
-BOOL mcs_io_connect_initial(STREAM s, MCS_CONNECT_INITIAL *mci);
-BOOL mcs_io_connect_response(STREAM s, MCS_CONNECT_RESPONSE *mcr);
-BOOL mcs_io_edrq(STREAM s, MCS_EDRQ *edrq);
-BOOL mcs_io_aurq(STREAM s, MCS_AURQ *aurq);
-BOOL mcs_io_aucf(STREAM s, MCS_AUCF *aucf);
-BOOL mcs_io_cjrq(STREAM s, MCS_CJRQ *cjrq);
-BOOL mcs_io_cjcf(STREAM s, MCS_CJCF *cjcf);
-BOOL mcs_io_data(STREAM s, MCS_DATA *dt, BOOL request);
-/* misc.c */
+void generate_random(uint8 *random);
 void *xmalloc(int size);
 void *xrealloc(void *oldmem, int size);
-void dump_data(unsigned char *p, int len);
-/* parse.c */
-BOOL prs_io_uint8(STREAM s, uint8 *i);
-BOOL prs_io_uint8s(STREAM s, uint8 *p, unsigned int length);
-BOOL msb_io_uint16(STREAM s, uint16 *i);
-BOOL lsb_io_uint16(STREAM s, uint16 *i);
-BOOL lsb_io_uint32(STREAM s, uint32 *i);
-/* process.c */
-void rdp_main_loop(HCONN conn);
-void process_demand_active(HCONN conn);
-void process_pointer_pdu(HCONN conn);
-void process_update_pdu(HCONN conn, RDP_ORDER_STATE *os);
-void process_orders(HCONN conn, RDP_ORDER_STATE *os);
-void process_destblt(HCONN conn, DESTBLT_ORDER *os, uint32 present, BOOL delta);
-void process_patblt(HCONN conn, PATBLT_ORDER *os, uint32 present, BOOL delta);
-void process_screenblt(HCONN conn, SCREENBLT_ORDER *os, uint32 present, BOOL delta);
-void process_line(HCONN conn, LINE_ORDER *os, uint32 present, BOOL delta);
-void process_rect(HCONN conn, RECT_ORDER *os, uint32 present, BOOL delta);
-void process_desksave(HCONN conn, DESKSAVE_ORDER *os, uint32 present, BOOL delta);
-void process_memblt(HCONN conn, MEMBLT_ORDER *os, uint32 present, BOOL delta);
-void process_triblt(HCONN conn, TRIBLT_ORDER *os, uint32 present, BOOL delta);
-void process_text2(HCONN conn, TEXT2_ORDER *os, uint32 present, BOOL delta);
-void process_raw_bmpcache(HCONN conn);
-void process_bmpcache(HCONN conn);
-void process_colcache(HCONN conn);
-void process_fontcache(HCONN conn);
-/* rdp.c */
-HCONN rdp_connect(char *server, int width, int height);
-void rdp_establish_key(HCONN conn);
-void rdp_establish_key_e1(HCONN conn);
-void rdp_establish_key_e2(HCONN conn);
-void rdp_send_cert(HCONN conn);
-void rdp_init(HCONN conn);
-void rdp_send(HCONN conn, uint16 pdu_type);
-void rdp_init_data(HCONN conn);
-void rdp_send_data(HCONN conn, uint16 data_pdu_type);
-void rdp_send_confirm_active(HCONN conn, uint32 shareid, int width, int height);
-void rdp_send_synchronize(HCONN conn);
-void rdp_send_control(HCONN conn, uint16 action);
-void rdp_send_fonts(HCONN conn, uint16 seqno);
-void rdp_send_input(HCONN conn, uint16 message_type, uint16 device_flags, uint16 param1, uint16 param2);
-BOOL rdp_recv_pdu(HCONN conn, uint8 *type);
-void rdp_disconnect(HCONN conn);
-void rdp_make_header(RDP_HEADER *hdr, uint16 length, uint16 pdu_type, uint16 userid);
-BOOL rdp_io_header(STREAM s, RDP_HEADER *hdr);
-void rdp_make_data_header(RDP_DATA_HEADER *hdr, uint32 shareid, uint16 length, uint16 data_pdu_type);
-BOOL rdp_io_data_header(STREAM s, RDP_DATA_HEADER *hdr);
-BOOL rdp_io_present(STREAM s, uint32 *present, uint8 flags, int size);
-BOOL rdp_io_coord(STREAM s, uint16 *coord, BOOL delta);
-BOOL rdp_io_colour(STREAM s, uint8 *colour);
-BOOL rdp_io_colourmap(STREAM s, COLOURMAP *colours);
-BOOL rdp_io_bounds(STREAM s, BOUNDS *bounds);
-BOOL rdp_io_pen(STREAM s, PEN *pen, uint32 present);
-BOOL rdp_io_brush(STREAM s, BRUSH *brush, uint32 present);
-void rdp_make_active_pdu(RDP_ACTIVE_PDU *pdu, uint32 shareid, uint16 userid, int width, int height);
-BOOL rdp_io_active_pdu(STREAM s, RDP_ACTIVE_PDU *pdu, int pdutype);
-void rdp_make_control_pdu(RDP_CONTROL_PDU *pdu, uint16 action);
-BOOL rdp_io_control_pdu(STREAM s, RDP_CONTROL_PDU *pdu);
-void rdp_make_synchronise_pdu(RDP_SYNCHRONISE_PDU *pdu, uint16 userid);
-BOOL rdp_io_synchronise_pdu(STREAM s, RDP_SYNCHRONISE_PDU *pdu);
-BOOL rdp_io_input_event(STREAM s, RDP_INPUT_EVENT *evt);
-void rdp_make_input_pdu(RDP_INPUT_PDU *pdu, uint16 message_type, uint16 device_flags, uint16 param1, uint16 param2);
-BOOL rdp_io_input_pdu(STREAM s, RDP_INPUT_PDU *pdu);
-void rdp_make_font_pdu(RDP_FONT_PDU *pdu, uint16 seqno);
-BOOL rdp_io_font_info(STREAM s, RDP_FONT_INFO *font);
-BOOL rdp_io_font_pdu(STREAM s, RDP_FONT_PDU *pdu);
-BOOL rdp_io_pointer_pdu(STREAM s, RDP_POINTER_PDU *ptr);
-BOOL rdp_io_update_pdu(STREAM s, RDP_UPDATE_PDU *pdu);
-BOOL rdp_io_destblt_order(STREAM s, DESTBLT_ORDER *os, uint32 present, BOOL delta);
-BOOL rdp_io_patblt_order(STREAM s, PATBLT_ORDER *os, uint32 present, BOOL delta);
-BOOL rdp_io_screenblt_order(STREAM s, SCREENBLT_ORDER *os, uint32 present, BOOL delta);
-BOOL rdp_io_line_order(STREAM s, LINE_ORDER *os, uint32 present, BOOL delta);
-BOOL rdp_io_rect_order(STREAM s, RECT_ORDER *os, uint32 present, BOOL delta);
-BOOL rdp_io_desksave_order(STREAM s, DESKSAVE_ORDER *os, uint32 present, BOOL delta);
-BOOL rdp_io_memblt_order(STREAM s, MEMBLT_ORDER *os, uint32 present, BOOL delta);
-BOOL rdp_io_triblt_order(STREAM s, TRIBLT_ORDER *os, uint32 present, BOOL delta);
-BOOL rdp_io_text2_order(STREAM s, TEXT2_ORDER *os, uint32 present, BOOL delta);
-BOOL rdp_io_secondary_order(STREAM s, RDP_SECONDARY_ORDER *rso);
-BOOL rdp_io_raw_bmpcache_order(STREAM s, RDP_RAW_BMPCACHE_ORDER *rbo);
-BOOL rdp_io_bmpcache_order(STREAM s, RDP_BMPCACHE_ORDER *rbo);
-BOOL rdp_io_colcache_order(STREAM s, RDP_COLCACHE_ORDER *colours);
-BOOL rdp_io_fontcache_order(STREAM s, RDP_FONTCACHE_ORDER *font);
-void rdp_make_general_caps(RDP_GENERAL_CAPS *caps);
-BOOL rdp_io_general_caps(STREAM s, RDP_GENERAL_CAPS *caps);
-void rdp_make_bitmap_caps(RDP_BITMAP_CAPS *caps, int width, int height);
-BOOL rdp_io_bitmap_caps(STREAM s, RDP_BITMAP_CAPS *caps);
-void rdp_make_order_caps(RDP_ORDER_CAPS *caps);
-BOOL rdp_io_order_caps(STREAM s, RDP_ORDER_CAPS *caps);
-void rdp_make_bmpcache_caps(RDP_BMPCACHE_CAPS *caps);
-BOOL rdp_io_bmpcache_info(STREAM s, RDP_BMPCACHE_INFO *info);
-BOOL rdp_io_bmpcache_caps(STREAM s, RDP_BMPCACHE_CAPS *caps);
-void rdp_make_control_caps(RDP_CONTROL_CAPS *caps);
-BOOL rdp_io_control_caps(STREAM s, RDP_CONTROL_CAPS *caps);
-void rdp_make_activate_caps(RDP_ACTIVATE_CAPS *caps);
-BOOL rdp_io_activate_caps(STREAM s, RDP_ACTIVATE_CAPS *caps);
-void rdp_make_pointer_caps(RDP_POINTER_CAPS *caps);
-BOOL rdp_io_pointer_caps(STREAM s, RDP_POINTER_CAPS *caps);
-void rdp_make_share_caps(RDP_SHARE_CAPS *caps, uint16 userid);
-BOOL rdp_io_share_caps(STREAM s, RDP_SHARE_CAPS *caps);
-void rdp_make_colcache_caps(RDP_COLCACHE_CAPS *caps);
-BOOL rdp_io_colcache_caps(STREAM s, RDP_COLCACHE_CAPS *caps);
-BOOL rdp_io_unknown_caps(STREAM s, void *caps);
+void xfree(void *mem);
+void hexdump(unsigned char *p, unsigned int len);
+
 /* tcp.c */
-HCONN tcp_connect(char *server);
-void tcp_disconnect(HCONN conn);
-BOOL tcp_send(HCONN conn);
-BOOL tcp_recv(HCONN conn, int length);
+STREAM tcp_init(int maxlen);
+void tcp_send(STREAM s);
+STREAM tcp_recv(int length);
+BOOL tcp_connect(char *server);
+void tcp_disconnect(void);
+
+/* iso.c */
+STREAM iso_init(int length);
+void iso_send(STREAM s);
+STREAM iso_recv(void);
+BOOL iso_connect(char *server);
+void iso_disconnect(void);
+
+/* mcs.c */
+STREAM mcs_init(int length);
+void mcs_send(STREAM s);
+STREAM mcs_recv(void);
+BOOL mcs_connect(char *server, STREAM mcs_data);
+void mcs_disconnect(void);
+
+/* secure.c */
+void sec_hash_48(uint8 *out, uint8 *in, uint8 *salt1, uint8 *salt2, uint8 salt);
+void sec_hash_16(uint8 *out, uint8 *in, uint8 *salt1, uint8 *salt2);
+void buf_out_uint32(uint8 *buffer, uint32 value);
+void sec_sign(uint8 *signature, uint8 *session_key, int length, uint8 *data, int datalen);
+STREAM sec_init(uint32 flags, int maxlen);
+void sec_send(STREAM s, uint32 flags);
+STREAM sec_recv(void);
+BOOL sec_connect(char *server);
+void sec_disconnect(void);
+
+/* licence.c */
+void licence_generate_keys(uint8 *client_key, uint8 *server_key, uint8 *client_rsa);
+void licence_process(STREAM s);
+
+/* rdp.c */
+void rdp_out_unistr(STREAM s, char *string, int len);
+void rdp_send_input(uint32 time, uint16 message_type, uint16 device_flags, uint16 param1, uint16 param2);
+void rdp_main_loop(void);
+BOOL rdp_connect(char *server);
+void rdp_disconnect(void);
+
+/* orders.c */
+void process_orders(STREAM s);
+void reset_order_state(void);
+
+/* bitmap.c */
+BOOL bitmap_decompress(unsigned char *output, int width, int height, unsigned char *input, int size);
+
+/* cache.c */
+HBITMAP cache_get_bitmap(uint8 cache_id, uint16 cache_idx);
+void cache_put_bitmap(uint8 cache_id, uint16 cache_idx, HBITMAP bitmap);
+FONTGLYPH *cache_get_font(uint8 font, uint16 character);
+void cache_put_font(uint8 font, uint32 character, uint16 baseline, uint16 width, uint16 height, HGLYPH pixmap);
+DATABLOB *cache_get_text(uint8 cache_id);
+void cache_put_text(uint8 cache_id, void *data, int length);
+uint8 *cache_get_desktop(uint32 offset, uint32 length);
+void cache_put_desktop(uint32 offset, uint32 length, uint8 *data);
+
 /* xwin.c */
-HWINDOW ui_create_window(HCONN conn, int width, int height);
-void ui_destroy_window(HWINDOW wnd);
-void ui_process_events(HWINDOW wnd, HCONN conn);
-void ui_move_pointer(HWINDOW wnd, int x, int y);
-HBITMAP ui_create_bitmap(HWINDOW wnd, int width, int height, uint8 *data);
-void ui_destroy_bitmap(HWINDOW wnd, HBITMAP bmp);
-HGLYPH ui_create_glyph(HWINDOW wnd, int width, int height, uint8 *data);
-void ui_destroy_glyph(HWINDOW wnd, HGLYPH glyph);
-HCOLOURMAP ui_create_colourmap(HWINDOW wnd, COLOURMAP *colours);
-void ui_destroy_colourmap(HWINDOW wnd, HCOLOURMAP map);
-void ui_set_colourmap(HWINDOW wnd, HCOLOURMAP map);
-void ui_set_clip(HWINDOW wnd, int x, int y, int cx, int cy);
-void ui_reset_clip(HWINDOW wnd);
-void ui_destblt(HWINDOW wnd, uint8 opcode, int x, int y, int cx, int cy);
-void ui_patblt(HWINDOW wnd, uint8 opcode, int x, int y, int cx, int cy, BRUSH *brush, int bgcolour, int fgcolour);
-void ui_screenblt(HWINDOW wnd, uint8 opcode, int x, int y, int cx, int cy, int srcx, int srcy);
-void ui_memblt(HWINDOW wnd, uint8 opcode, int x, int y, int cx, int cy, HBITMAP src, int srcx, int srcy);
-void ui_triblt(HWINDOW wnd, uint8 opcode, int x, int y, int cx, int cy, HBITMAP src, int srcx, int srcy, BRUSH *brush, int bgcolour, int fgcolour);
-void ui_line(HWINDOW wnd, uint8 opcode, int startx, int starty, int endx, int endy, PEN *pen);
-void ui_rect(HWINDOW wnd, int x, int y, int cx, int cy, int colour);
-void ui_draw_glyph(HWINDOW wnd, int mixmode, int x, int y, int cx, int cy, HGLYPH glyph, int srcx, int srcy, int bgcolour, int fgcolour);
-void ui_draw_text(HWINDOW wnd, uint8 font, uint8 flags, int mixmode, int x, int y, int boxx, int boxy, int boxcx, int boxcy, int bgcolour, int fgcolour, uint8 *text, uint8 length);
-void ui_desktop_save(HWINDOW wnd, uint8 *data, int x, int y, int cx, int cy);
-void ui_desktop_restore(HWINDOW wnd, uint8 *data, int x, int y, int cx, int cy);
+BOOL ui_create_window(char *title);
+void ui_destroy_window(void);
+void ui_process_events(void);
+void ui_move_pointer(int x, int y);
+HBITMAP ui_create_bitmap(int width, int height, uint8 *data);
+void ui_paint_bitmap(int x, int y, int cx, int cy, int width, int height, uint8 *data);
+void ui_destroy_bitmap(HBITMAP bmp);
+HGLYPH ui_create_glyph(int width, int height, uint8 *data);
+void ui_destroy_glyph(HGLYPH glyph);
+HCOLOURMAP ui_create_colourmap(COLOURMAP *colours);
+void ui_destroy_colourmap(HCOLOURMAP map);
+void ui_set_colourmap(HCOLOURMAP map);
+void ui_set_clip(int x, int y, int cx, int cy);
+void ui_reset_clip(void);
+void ui_bell(void);
+void ui_destblt(uint8 opcode, int x, int y, int cx, int cy);
+void ui_patblt(uint8 opcode, int x, int y, int cx, int cy, BRUSH *brush, int bgcolour, int fgcolour);
+void ui_screenblt(uint8 opcode, int x, int y, int cx, int cy, int srcx, int srcy);
+void ui_memblt(uint8 opcode, int x, int y, int cx, int cy, HBITMAP src, int srcx, int srcy);
+void ui_triblt(uint8 opcode, int x, int y, int cx, int cy, HBITMAP src, int srcx, int srcy, BRUSH *brush, int bgcolour, int fgcolour);
+void ui_line(uint8 opcode, int startx, int starty, int endx, int endy, PEN *pen);
+void ui_rect(int x, int y, int cx, int cy, int colour);
+void ui_draw_glyph(int mixmode, int x, int y, int cx, int cy, HGLYPH glyph, int srcx, int srcy, int bgcolour, int fgcolour);
+void ui_draw_text(uint8 font, uint8 flags, int mixmode, int x, int y, int boxx, int boxy, int boxcx, int boxcy, int bgcolour, int fgcolour, uint8 *text, uint8 length);
+void ui_desktop_save(uint32 offset, int x, int y, int cx, int cy);
+void ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy);

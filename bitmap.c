@@ -18,7 +18,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include "includes.h"
+#include "rdesktop.h"
 
 #define CVAL(p)   (*(p++))
 #define SVAL(p)   ((*((p++) + 1) << 8) | CVAL(p))
@@ -30,11 +30,11 @@ BOOL bitmap_decompress(unsigned char *output, int width, int height,
 		       unsigned char *input, int size)
 {
 	unsigned char *end = input + size;
-	unsigned char *prevline, *line = NULL;
+	unsigned char *prevline = NULL, *line = NULL;
 	int opcode, count, offset, isfillormix, x = width;
 	int lastopcode = -1, insertmix = False;
-	uint8 code, colour1, colour2, mask, mixmask;
-	uint8 mix = 0xff;
+	uint8 code, colour1 = 0, colour2 = 0;
+	uint8 mixmask, mask = 0, mix = 0xff;
 
 	while (input < end)
 	{

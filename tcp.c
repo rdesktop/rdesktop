@@ -18,15 +18,102 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include "includes.h"
+#include <unistd.h>	/* select read write close */
+#include <sys/socket.h>	/* socket connect setsockopt */
+#include <sys/time.h>	/* timeval */
+#include <netdb.h>	/* gethostbyname */
+#include <netinet/tcp.h> /* TCP_NODELAY */
+#include <arpa/inet.h>	/* inet_aton */
+#include <errno.h>	/* errno */
+#include "rdesktop.h"
+
+static int sock;
+static struct stream in;
+static struct stream out;
+
+/* Initialise TCP transport data packet */
+STREAM tcp_init(int maxlen)
+{
+	if (maxlen > out.size)
+	{
+		out.data = xrealloc(out.data, maxlen);
+		out.size = maxlen;
+	}
+
+	out.p = out.data;
+	out.end = out.data + out.size;
+	return &out;
+}
+
+/* Send TCP transport data packet */
+void tcp_send(STREAM s)
+{
+	int length = s->end - s->data; 
+	int sent, total = 0;
+
+	while (total < length)
+	{
+		sent = write(sock, s->data + total, length - total);
+
+		if (sent <= 0)
+		{
+			STATUS("write: %s\n", strerror(errno));
+			return;
+		}
+
+		total += sent;
+	}
+}
+
+/* Receive a message on the TCP layer */
+STREAM tcp_recv(int length)
+{
+	int ret, rcvd = 0;
+	struct timeval tv;
+	fd_set rfds;
+
+	if (length > in.size)
+	{
+		in.data = xrealloc(in.data, length);
+		in.size = length;
+	}
+
+	in.end = in.p = in.data;
+
+	while (length > 0)
+	{
+		ui_process_events();
+
+		FD_ZERO(&rfds);
+		FD_SET(sock, &rfds);
+		tv.tv_sec = 0;
+		tv.tv_usec = 100;
+
+		ret = select(sock+1, &rfds, NULL, NULL, &tv);
+
+		if (ret)
+		{
+			rcvd = read(sock, in.end, length);
+
+			if (rcvd <= 0)
+			{
+				STATUS("read: %s\n", strerror(errno));
+				return NULL;
+			}
+
+			in.end += rcvd;
+			length -= rcvd;
+		}
+	}
+
+	return &in;
+}
 
 /* Establish a connection on the TCP layer */
-HCONN tcp_connect(char *server)
+BOOL tcp_connect(char *server)
 {
 	struct hostent *nslookup;
 	struct sockaddr_in servaddr;
-	struct connection *conn;
-	int sock;
 	int true = 1;
 
 	if ((nslookup = gethostbyname(server)) != NULL)
@@ -35,14 +122,14 @@ HCONN tcp_connect(char *server)
 	}
 	else if (!inet_aton(server, &servaddr.sin_addr))
 	{
-		fprintf(stderr, "%s: unable to resolve host\n", server);
-		return NULL;
+		STATUS("%s: unable to resolve host\n", server);
+		return False;
 	}
 
 	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 	{
-		fprintf(stderr, "socket: %s\n", strerror(errno));
-		return NULL;
+		STATUS("socket: %s\n", strerror(errno));
+		return False;
 	}
 
 	servaddr.sin_family = AF_INET;
@@ -50,90 +137,24 @@ HCONN tcp_connect(char *server)
 
 	if (connect(sock, (struct sockaddr *)&servaddr, sizeof(struct sockaddr)) < 0)
 	{
-		fprintf(stderr, "connect: %s\n", strerror(errno));
+		STATUS("connect: %s\n", strerror(errno));
 		close(sock);
-		return NULL;
+		return False;
 	}
 
 	setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &true, sizeof(true));
 
-	conn = xmalloc(sizeof(struct connection));
-	STREAM_INIT(conn->in,  False);
-	STREAM_INIT(conn->out, True);
+	in.size = 4096;
+	in.data = xmalloc(in.size);
 
-	conn->tcp_socket = sock;
-	return conn;
+	out.size = 4096;
+	out.data = xmalloc(out.size);
+
+	return True;
 }
 
 /* Disconnect on the TCP layer */
-void tcp_disconnect(HCONN conn)
+void tcp_disconnect()
 {
-	close(conn->tcp_socket);
-	free(conn);
-}
-
-/* Send TCP transport data packet */
-BOOL tcp_send(HCONN conn)
-{
-	int length = conn->out.end;
-	int sent, total = 0;
-
-	while (total < length)
-	{
-		sent = write(conn->tcp_socket, conn->out.data + total,
-			     length - total);
-
-		if (sent <= 0)
-		{
-			fprintf(stderr, "write: %s\n", strerror(errno));
-			return False;
-		}
-
-		total += sent;
-	}
-
-	conn->out.offset = 0;
-	conn->out.end = conn->out.size;
-	return True;
-}
-
-/* Receive a message on the TCP layer */
-BOOL tcp_recv(HCONN conn, int length)
-{
-	int ret, rcvd = 0;
-	struct timeval tv;
-	fd_set rfds;
-
-	STREAM_SIZE(conn->in, length);
-	conn->in.end = conn->in.offset = 0;
-
-	while (length > 0)
-	{
-		ui_process_events(conn->wnd, conn);
-
-		FD_ZERO(&rfds);
-		FD_SET(conn->tcp_socket, &rfds);
-		tv.tv_sec = 0;
-		tv.tv_usec = 100;
-
-		ret = select(conn->tcp_socket+1, &rfds, NULL, NULL, &tv);
-
-		if (ret)
-		{
-			rcvd = read(conn->tcp_socket, conn->in.data
-					+ conn->in.end, length);
-
-			if (rcvd <= 0)
-			{
-				fprintf(stderr, "read: %s\n",
-						strerror(errno));
-				return False;
-			}
-
-			conn->in.end += rcvd;
-			length -= rcvd;
-		}
-	}
-
-	return True;
+	close(sock);
 }

@@ -1,19 +1,24 @@
 ##############################################
 # rdesktop: A Remote Desktop Protocol client #
-# Linux Makefile                             #
+# Basic Makefile                             #
 # Copyright (C) Matthew Chapman 1999-2000    #
 ##############################################
 
-CC     = gcc
-CFLAGS = -g -Wall -DDUMP
-LIBS   = -L/usr/X11R6/lib -lX11
-OBJECTS = client.o parse.o tcp.o iso.o mcs.o rdp.o process.o bitmap.o cache.o xwin.o misc.o
+# Uncomment to enable debugging
+# DEBUG = -g -DRDP_DEBUG
 
-rdesktop: $(OBJECTS)
-	@$(CC) $(CFLAGS) -o rdesktop $(LIBS) $(OBJECTS)
+CC     = gcc
+CFLAGS = -O2 -Wall $(DEBUG)
+LIBS   = -L/usr/X11R6/lib -lX11
+
+RDPOBJ = rdesktop.o tcp.o iso.o mcs.o secure.o licence.o rdp.o orders.o bitmap.o cache.o xwin.o
+CRYPTOBJ = crypto/rc4_enc.o crypto/rc4_skey.o crypto/md5_dgst.o crypto/sha1dgst.o crypto/arith.o
+
+rdesktop: $(RDPOBJ) $(CRYPTOBJ)
+	@$(CC) $(CFLAGS) -o rdesktop $(LIBS) $(RDPOBJ) $(CRYPTOBJ)
 
 proto:
-	@cproto -D MAKE_PROTO -o proto.h *.c
+	@cproto -DMAKE_PROTO -o proto.h *.c
 
 clean:
-	rm -f *.o
+	rm -f *.o crypto/*.o *~

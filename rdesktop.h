@@ -1,6 +1,6 @@
 /*
    rdesktop: A Remote Desktop Protocol client.
-   Entrypoint and utility functions
+   Master include file
    Copyright (C) Matthew Chapman 1999-2000
    
    This program is free software; you can redistribute it and/or modify
@@ -18,53 +18,26 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include "includes.h"
+#include <stdio.h>
+#include <string.h>
 
-void *xmalloc(int size)
-{
-	void *mem = malloc(size);
-	if (mem == NULL)
-	{
-		fprintf(stderr, "xmalloc: Out of memory.\n");
-		exit(1);
-	}
-	return mem;
-}
+#define VERSION "0.9.0-alpha1"
 
-void *xrealloc(void *oldmem, int size)
-{
-	void *mem = realloc(oldmem, size);
-	if (mem == NULL)
-	{
-		fprintf(stderr, "xrealloc: Out of memory.\n");
-		exit(1);
-	}
-	return mem;
-}
+#define STATUS(args...) fprintf(stderr, args);
+#define ERROR(args...)  fprintf(stderr, "ERROR: "args);
+#define WARN(args...)   fprintf(stderr, "WARNING: "args);
+#define NOTIMP(args...) fprintf(stderr, "NOTIMP: "args);
 
-void dump_data(unsigned char *p, int len)
-{
-	unsigned char *line = p;
-	int i, j;
+#ifdef RDP_DEBUG
+#define DEBUG(args...)  fprintf(stderr, args);
+#else
+#define DEBUG(args...)
+#endif
 
-	fprintf(stderr, "0000 ");
+#include "constants.h"
+#include "types.h"
+#include "parse.h"
 
-	for (i = 0; i < len; i++)
-	{
-		if ((i & 15) == 0)
-		{
-			if (i != 0)
-			{
-				for (j = 0; j < 16; j++)
-					fputc(isprint(line[j]) ? line[j] : '.',
-					      stderr);
-				line = p + i;
-				fprintf(stderr, "\n%04x ", line-p);
-			}
-		}
-
-		fprintf(stderr, "%02X ", p[i]);
-	}
-
-	fputc('\n', stderr);
-}
+#ifndef MAKE_PROTO
+#include "proto.h"
+#endif

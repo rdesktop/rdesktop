@@ -18,157 +18,136 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include "includes.h"
+#include "rdesktop.h"
 
-/* Establish a connection up to the ISO layer */
-HCONN iso_connect(char *server)
+/* Send a self-contained ISO PDU */
+static void iso_send_msg(uint8 code)
 {
-	HCONN conn;
-	uint8 code;
+	STREAM s;
 
-	if ((conn = tcp_connect(server)) == NULL)
-		return NULL;
+	s = tcp_init(11);
 
-	iso_send_msg(conn, ISO_PDU_CR);
+	out_uint8(s, 3); /* version */
+	out_uint8(s, 0); /* reserved */
+	out_uint16_be(s, 11); /* length */
 
-	if (!iso_recv_msg(conn, &code) || (code != ISO_PDU_CC))
-	{
-		ERROR("ISO error, expected CC\n");
-		tcp_disconnect(conn);
-		return NULL;
-	}
+	out_uint8(s, 6);  /* hdrlen */
+	out_uint8(s, code);
+	out_uint16(s, 0); /* dst_ref */
+	out_uint16(s, 0); /* src_ref */
+	out_uint8(s, 0);  /* class */
 
-	return conn;
-}
-
-/* Disconnect from the ISO layer */
-void iso_disconnect(HCONN conn)
-{
-	iso_send_msg(conn, ISO_PDU_DR);
-	tcp_disconnect(conn);
-}
-
-/* Send self-contained ISO message identified by code */
-BOOL iso_send_msg(HCONN conn, uint8 code)
-{
-	TPKT tpkt;
-	TPDU tpdu;
-
-	iso_make_tpkt(&tpkt, 11);
-	iso_io_tpkt(&conn->out, &tpkt);
-	iso_make_tpdu(&tpdu, code);
-	iso_io_tpdu(&conn->out, &tpdu);
-	MARK_END(conn->out);
-	return tcp_send(conn);
+	s_mark_end(s);
+	tcp_send(s);
 }
 
 /* Receive a message on the ISO layer, return code */
-BOOL iso_recv_msg(HCONN conn, uint8 *code)
+static STREAM iso_recv_msg(uint8 *code)
 {
-	TPDU tpdu;
-	TPKT tpkt;
-	BOOL res;
+	STREAM s;
+	uint16 length;
+	uint8 version;
 
-	res = tcp_recv(conn, 4);
-	res = res ? iso_io_tpkt(&conn->in, &tpkt) : False;
-	res = res ? tcp_recv(conn, tpkt.length - 4) : False;
-	res = res ? iso_io_tpdu(&conn->in, &tpdu) : False;
+	s = tcp_recv(4);
+	if (s == NULL)
+		return False;
 
-	*code = tpdu.code;
-	return res;
+	in_uint8(s, version);
+	if (version != 3)
+	{
+		ERROR("TPKT v%d\n", version);
+		return False;
+	}
+
+	in_uint8s(s, 1); /* pad */
+	in_uint16_be(s, length);
+
+	s = tcp_recv(length - 4);
+	if (s == NULL)
+		return False;
+
+	in_uint8s(s, 1); /* hdrlen */
+	in_uint8(s, *code);
+
+	if (*code == ISO_PDU_DT)
+	{
+		in_uint8s(s, 1); /* eot */
+		return s; 
+	}
+
+	in_uint8s(s, 5); /* dst_ref, src_ref, class */
+	return s;
 }
 
 /* Initialise ISO transport data packet */
-void iso_init(struct connection *conn)
+STREAM iso_init(int length)
 {
-	PUSH_LAYER(conn->out, iso_offset, 7);
+	STREAM s;
+
+	s = tcp_init(length + 7);
+	s_push_layer(s, iso_hdr, 7);
+
+	return s;
+}
+
+/* Send an ISO data PDU */
+void iso_send(STREAM s)
+{
+	uint16 length;
+
+	s_pop_layer(s, iso_hdr);
+	length = s->end - s->p;
+
+	out_uint8(s, 3); /* version */
+	out_uint8(s, 0); /* reserved */
+	out_uint16_be(s, length);
+
+	out_uint8(s, 2);  /* hdrlen */
+	out_uint8(s, ISO_PDU_DT); /* code */
+	out_uint8(s, 0x80); /* eot */
+
+	tcp_send(s);
 }
 
 /* Receive ISO transport data packet */
-BOOL iso_recv(HCONN conn)
+STREAM iso_recv()
+{
+	STREAM s;
+	uint8 code;
+
+	s = iso_recv_msg(&code);
+	if ((s == NULL) || (code != ISO_PDU_DT))
+	{
+		ERROR("expected DT, got %d\n", code);
+		return False;
+	}
+
+	return s;
+}
+
+/* Establish a connection up to the ISO layer */
+BOOL iso_connect(char *server)
 {
 	uint8 code;
 
-	if (!iso_recv_msg(conn, &code) || (code != ISO_PDU_DT))
+	if (!tcp_connect(server))
+		return False;
+
+	iso_send_msg(ISO_PDU_CR);
+
+	if ((iso_recv_msg(&code) == NULL) || (code != ISO_PDU_CC))
 	{
-		ERROR("ISO error, expected DT\n");
+		ERROR("expected CC, got %d\n", code);
+		tcp_disconnect();
 		return False;
 	}
 
 	return True;
 }
 
-/* Receive ISO transport data packet */
-BOOL iso_send(HCONN conn)
+/* Disconnect from the ISO layer */
+void iso_disconnect()
 {
-	TPKT tpkt;
-	TPDU tpdu;
-
-	POP_LAYER(conn->out, iso_offset);
-	iso_make_tpkt(&tpkt, conn->out.end);
-	iso_io_tpkt(&conn->out, &tpkt);
-	iso_make_tpdu(&tpdu, ISO_PDU_DT);
-	iso_io_tpdu(&conn->out, &tpdu);
-	return tcp_send(conn);
-}
-
-/* Initialise a TPKT structure */
-void iso_make_tpkt(TPKT *tpkt, int length)
-{
-	tpkt->version = 3;
-	tpkt->reserved = 0;
-	tpkt->length = length;
-}
-
-/* Marshall/demarshall a TPKT structure */
-BOOL iso_io_tpkt(STREAM s, TPKT *tpkt)
-{
-	if (!prs_io_uint8(s, &tpkt->version))
-		return False;
-
-	if (tpkt->version != 3)
-	{
-		ERROR("Wrong TPKT version %d\n", tpkt->version);
-		return False;
-	}
-
-	if (!prs_io_uint8 (s, &tpkt->reserved))
-		return False;
-
-	if (!msb_io_uint16(s, &tpkt->length))
-		return False;
-
-	return True;
-}
-
-/* Initialise a TPDU structure */
-void iso_make_tpdu(TPDU *tpdu, uint8 code)
-{
-	tpdu->hlen = (code == ISO_PDU_DT) ? 2 : 6;
-	tpdu->code = code;
-	tpdu->dst_ref = tpdu->src_ref = 0;
-	tpdu->class = 0;
-	tpdu->eot = 0x80;
-}
-
-/* Marshall/demarshall a TPDU structure */
-BOOL iso_io_tpdu(STREAM s, TPDU *tpdu)
-{
-	BOOL res = True;
-
-	res = res ? prs_io_uint8 (s, &tpdu->hlen) : False;
-	res = res ? prs_io_uint8 (s, &tpdu->code) : False;
-
-	if (tpdu->code == ISO_PDU_DT)
-	{
-		res = res ? prs_io_uint8(s, &tpdu->eot) : False;
-	}
-	else
-	{
-		res = res ? msb_io_uint16(s, &tpdu->dst_ref) : False;
-		res = res ? msb_io_uint16(s, &tpdu->src_ref) : False;
-		res = res ? prs_io_uint8 (s, &tpdu->class  ) : False;
-	}
-
-	return res;
+	iso_send_msg(ISO_PDU_DR);
+	tcp_disconnect();
 }

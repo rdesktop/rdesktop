@@ -1,0 +1,33 @@
+===============================
+ANNOUNCING rdesktop 0.9.0alpha1
+===============================
+
+rdesktop is an open source client for Windows NT Terminal Server,
+capable of natively speaking its Remote Desktop Protocol. No server
+extensions are required.
+
+0.9.0alpha1 is a milestone release including experimental support for
+much of the protocol. It is NOT a stable, production-quality release.
+Users should be prepared to submit bug reports and, ideally, patches.
+
+The current X-Windows driver is rather limited - an Xlib guru's
+assistance would be appreciated. In particular, this version requires
+the X display to support windows of 8-bit depth, which in most cases
+means running X in 8-bit mode. Keyboard mapping may also be problematic.
+
+The -l option will disable licence negotiation, which is probably
+what you want during testing.
+
+Tested platforms include Linux, Solaris and IRIX, but it is should be
+fairly straight-forward to port to other platforms and even windowing
+systems.
+
+rdesktop is released under the GNU Public License.
+
+See http://www.cse.unsw.edu.au/~matthewc/rdesktop/ for more information
+and download instructions. Please send feedback to me.
+
+Cheers,
+
+Matt Chapman <matthewc@cse.unsw.edu.au>
+rdesktop Author
