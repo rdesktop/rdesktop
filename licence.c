@@ -291,21 +291,26 @@ licence_process(STREAM s)
 	switch (tag)
 	{
 		case LICENCE_TAG_DEMAND:
+        	case LICENCE_TAG_DEMAND_5:
 			licence_process_demand(s);
 			break;
 
 		case LICENCE_TAG_AUTHREQ:
+		case LICENCE_TAG_AUTHREQ_5:
 			licence_process_authreq(s);
 			break;
 
 		case LICENCE_TAG_ISSUE:
+		case LICENCE_TAG_ISSUE_5:
 			licence_process_issue(s);
 			break;
 
 		case LICENCE_TAG_REISSUE:
+		case LICENCE_TAG_REISSUE_5:
 			break;
 
 		case LICENCE_TAG_RESULT:
+	        case LICENCE_TAG_RESULT_5:
 			break;
 
 		default:
