@@ -66,6 +66,7 @@ BOOL g_grab_keyboard = True;
 BOOL g_hide_decorations = False;
 BOOL g_use_rdp5 = True;
 BOOL g_console_session = False;
+BOOL g_numlock_sync = False;
 extern BOOL g_owncolmap;
 
 #ifdef WITH_RDPSND
@@ -110,6 +111,7 @@ usage(char *program)
 	fprintf(stderr, "   -K: keep window manager key bindings\n");
 	fprintf(stderr, "   -S: caption button size (single application mode)\n");
 	fprintf(stderr, "   -T: window title\n");
+	fprintf(stderr, "   -N: enable numlock syncronization\n");
 	fprintf(stderr, "   -a: connection colour depth\n");
 	fprintf(stderr, "   -r: enable specified device redirection (currently: sound)\n");
 	fprintf(stderr, "   -0: attach to console\n");
@@ -229,7 +231,7 @@ main(int argc, char *argv[])
 #define VNCOPT
 #endif
 
-	while ((c = getopt(argc, argv, VNCOPT "u:d:s:c:p:n:k:g:fbeEmCDKS:T:a:r:045h?")) != -1)
+	while ((c = getopt(argc, argv, VNCOPT "u:d:s:c:p:n:k:g:fbeEmCDKS:T:Na:r:045h?")) != -1)
 	{
 		switch (c)
 		{
@@ -366,6 +368,10 @@ main(int argc, char *argv[])
 
 			case 'T':
 				STRNCPY(g_title, optarg, sizeof(g_title));
+				break;
+
+			case 'N':
+				g_numlock_sync = True;
 				break;
 
 			case 'a':

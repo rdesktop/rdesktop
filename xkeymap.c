@@ -44,6 +44,7 @@ extern int keylayout;
 extern int g_win_button_size;
 extern BOOL g_enable_compose;
 extern BOOL g_use_rdp5;
+extern BOOL g_numlock_sync;
 
 static BOOL keymap_loaded;
 static key_translation keymap[KEYMAP_SIZE];
@@ -184,6 +185,11 @@ xkeymap_read(char *mapname)
 		if (strstr(line_rest, "shift"))
 		{
 			MASK_ADD_BITS(modifiers, MapLeftShiftMask);
+		}
+
+		if (strstr(line_rest, "numlock"))
+		{
+			MASK_ADD_BITS(modifiers, MapNumLockMask);
 		}
 
 		if (strstr(line_rest, "localstate"))
@@ -361,6 +367,12 @@ handle_special_keys(uint32 keysym, unsigned int state, uint32 ev_time, BOOL pres
 			if (g_win_button_size
 			    && (get_key_state(state, XK_Alt_L) || get_key_state(state, XK_Alt_R)))
 				return True;
+		case XK_Num_Lock:
+			/* FIXME: We might want to do RDP_INPUT_SYNCHRONIZE here, if g_numlock_sync */
+			if (!g_numlock_sync)
+				/* Inhibit */
+				return True;
+
 
 	}
 	return False;
@@ -507,6 +519,33 @@ ensure_remote_modifiers(uint32 ev_time, key_translation tr)
 	if (is_modifier(tr.scancode))
 		return;
 
+	if (!g_numlock_sync)
+	{
+		/* NumLock */
+		if (MASK_HAS_BITS(tr.modifiers, MapNumLockMask)
+		    != MASK_HAS_BITS(remote_modifier_state, MapNumLockMask))
+		{
+			/* The remote modifier state is not correct */
+			uint16 new_remote_state;
+
+			if (MASK_HAS_BITS(tr.modifiers, MapNumLockMask))
+			{
+				DEBUG_KBD(("Remote NumLock state is incorrect, activating NumLock.\n"));
+				new_remote_state = KBD_FLAG_NUMLOCK;
+				remote_modifier_state = MapNumLockMask;
+			}
+			else
+			{
+				DEBUG_KBD(("Remote NumLock state is incorrect, deactivating NumLock.\n"));
+				new_remote_state = 0;
+				remote_modifier_state = 0;
+			}
+
+			rdp_send_input(0, RDP_INPUT_SYNCHRONIZE, 0, new_remote_state, 0);
+		}
+	}
+
+
 	/* Shift. Left shift and right shift are treated as equal; either is fine. */
 	if (MASK_HAS_BITS(tr.modifiers, MapShiftMask)
 	    != MASK_HAS_BITS(remote_modifier_state, MapShiftMask))
@@ -613,7 +652,8 @@ reset_modifier_keys()
 
 	reset_winkey(ev_time);
 
-	rdp_send_input(ev_time, RDP_INPUT_SYNCHRONIZE, 0, ui_get_numlock_state(state), 0);
+	if (g_numlock_sync)
+		rdp_send_input(ev_time, RDP_INPUT_SYNCHRONIZE, 0, ui_get_numlock_state(state), 0);
 }
 
 
@@ -652,6 +692,18 @@ update_modifier_state(uint8 scancode, BOOL pressed)
 		case SCANCODE_CHAR_RWIN:
 			MASK_CHANGE_BIT(remote_modifier_state, MapRightWinMask, pressed);
 			break;
+		case SCANCODE_CHAR_NUMLOCK:
+			/* KeyReleases for NumLocks are sent immediately. Toggle the
+			   modifier state only on Keypress */
+			if (pressed && !g_numlock_sync)
+			{
+				BOOL newNumLockState;
+				newNumLockState =
+					(MASK_HAS_BITS
+					 (remote_modifier_state, MapNumLockMask) == False);
+				MASK_CHANGE_BIT(remote_modifier_state,
+						MapNumLockMask, newNumLockState);
+			}
 	}
 
 #ifdef WITH_DEBUG_KBD

@@ -92,6 +92,11 @@ size, in pixels. The special word "standard" means 18 pixels.
 .BR "-T <title>"
 Sets the window title.
 .TP
+.BR "-N"
+Enable numlock syncronization between the Xserver and the remote RDP
+session.  This is useful with applications that looks at the numlock
+state, but might cause problems with some Xservers like Xvnc. 
+.TP
 .BR "-a <bpp>"
 Sets the colour depth for the connection (8, 15, 16 or 24).
 More than 8 bpp are only supported when connecting to Windows XP
