@@ -132,7 +132,7 @@ usage(char *program)
 	fprintf(stderr, "         '-r printer:mydeskjet': enable printer redirection\n");
 	fprintf(stderr,
 		"             or      mydeskjet=\"HP LaserJet IIIP\" to enter server driver as well\n");
-	fprintf(stderr, "         '-r sound:[on|off|remote]': enable sound redirection\n");
+	fprintf(stderr, "         '-r sound:[local|off|remote]': enable sound redirection\n");
 	fprintf(stderr, "                     remote would leave sound on server\n");
 	fprintf(stderr, "   -0: attach to console\n");
 	fprintf(stderr, "   -4: use RDP version 4\n");
@@ -425,7 +425,7 @@ main(int argc, char *argv[])
 							if (strncmp("remote", optarg, 6) == 0)
 								flags |= RDP_LOGON_LEAVE_AUDIO;
 
-							if (strncmp("on", optarg, 2) == 0)
+							if (strncmp("local", optarg, 5) == 0)
 #ifdef WITH_RDPSND
 								g_rdpsnd = True;
 #else
