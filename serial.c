@@ -121,10 +121,10 @@
 
 /* FIONREAD should really do the same thing as TIOCINQ, where it is
  * not available */
-#ifndef TIOCINQ
+#if !defined(TIOCINQ) && defined(FIONREAD)
 #define TIOCINQ FIONREAD
 #endif
-#ifndef TIOCOUTQ
+#if !defined(TIOCOUTQ) && defined(FIONWRITE)
 #define TIOCOUTQ FIONWRITE
 #endif
 
@@ -646,7 +646,7 @@ serial_read(NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 
 	}
 	tcsetattr(handle, TCSANOW, ptermios);
 
-#ifdef WITH_DEBUG_SERIAL
+#if defined(WITH_DEBUG_SERIAL) && defined(TIOCINQ)
 	ioctl(handle, TIOCINQ, &bytes_inqueue);
 	DEBUG_SERIAL(("serial_read inqueue: %d expected %d\n", bytes_inqueue, length));
 #endif
@@ -794,7 +794,8 @@ serial_device_control(NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 			break;
 		case SERIAL_GET_WAIT_MASK:
 			DEBUG_SERIAL(("serial_ioctl -> SERIAL_GET_WAIT_MASK %X\n",
-				      pser_inf->wait_mask); out_uint32(out, pser_inf->wait_mask));
+				      pser_inf->wait_mask);
+				     out_uint32(out, pser_inf->wait_mask));
 			break;
 		case SERIAL_SET_WAIT_MASK:
 			in_uint32(in, pser_inf->wait_mask);
@@ -854,14 +855,18 @@ serial_device_control(NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 			out_uint32_le(out, 0);	/* Hold reasons */
 
 			result = 0;
+#ifdef TIOCINQ
 			ioctl(handle, TIOCINQ, &result);
+#endif
 			out_uint32_le(out, result);	/* Amount in in queue */
 			if (result)
 				DEBUG_SERIAL(("serial_ioctl -> SERIAL_GET_COMMSTATUS in queue %d\n",
 					      result));
 
 			result = 0;
+#ifdef TIOCOUTQ
 			ioctl(handle, TIOCOUTQ, &result);
+#endif
 			out_uint32_le(out, result);	/* Amount in out queue */
 			if (result)
 				DEBUG_SERIAL(("serial_ioctl -> SERIAL_GET_COMMSTATUS out queue %d\n", result));
@@ -934,8 +939,8 @@ serial_get_event(NTHANDLE handle, uint32 * result)
 	if (index < 0)
 		return False;
 
+#ifdef TIOCINQ
 	pser_inf = (SERIAL_DEVICE *) g_rdpdr_device[index].pdevice_data;
-
 
 	ioctl(handle, TIOCINQ, &bytes);
 
@@ -972,8 +977,9 @@ serial_get_event(NTHANDLE handle, uint32 * result)
 	{
 		pser_inf->event_rlsd = 0;
 	}
+#endif
 
-
+#ifdef TIOCOUTQ
 	ioctl(handle, TIOCOUTQ, &bytes);
 	if ((bytes == 0)
 	    && (pser_inf->event_txempty > 0) && (pser_inf->wait_mask & SERIAL_EV_TXEMPTY))
@@ -984,7 +990,7 @@ serial_get_event(NTHANDLE handle, uint32 * result)
 		ret = True;
 	}
 	pser_inf->event_txempty = bytes;
-
+#endif
 
 	ioctl(handle, TIOCMGET, &bytes);
 	if ((bytes & TIOCM_DSR) != pser_inf->event_dsr)

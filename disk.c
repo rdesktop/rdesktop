@@ -18,6 +18,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+#include "rdesktop.h"
 #include "disk.h"
 
 #include <sys/types.h>
@@ -67,7 +68,7 @@
 #define F_NAMELEN(buf) ((buf).f_namemax)
 
 #elif (defined(__alpha) && !defined(linux))
-#include <sys/mount.h>                /* osf1 statfs */
+#include <sys/mount.h>		/* osf1 statfs */
 #define STATFS_FN(path, buf) (statfs(path,buf,sizeof(buf)))
 #define STATFS_T statfs
 #define F_NAMELEN(buf) (255)
@@ -81,8 +82,6 @@
 #define STATFS_T statfs
 #define F_NAMELEN(buf) ((buf).f_namelen)
 #endif
-
-#include "rdesktop.h"
 
 extern RDPDR_DEVICE g_rdpdr_device[];
 
