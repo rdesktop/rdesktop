@@ -159,7 +159,7 @@ cliprdr_handle_SelectionNotify(XSelectionEvent * event)
 
 	int format;
 	Atom type_return;
-	Atom best_target;
+	Atom best_target, text_target;
 	Atom *supported_targets;
 
 	STREAM out;
@@ -202,12 +202,19 @@ cliprdr_handle_SelectionNotify(XSelectionEvent * event)
 			/* FIXME: We should choose format here based
 			   on what the server wanted */
 			supported_targets = (Atom *) data;
+			best_target = XInternAtom(display, "STRING", False);
+			text_target = XInternAtom(display, "TEXT", False);
 			for (i = 0; i < nitems; i++)
 			{
 				DEBUG_CLIPBOARD(("Target %d: %s\n",
 						 i, XGetAtomName(display, supported_targets[i])));
+				if (text_target == supported_targets[i])
+				{
+					DEBUG_CLIPBOARD(("Other party supports TEXT, choosing that as best_target\n"));
+					best_target = supported_targets[i];
+				}
 			}
-			best_target = XInternAtom(display, "TEXT", False);
+
 
 
 		}
