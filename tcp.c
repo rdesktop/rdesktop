@@ -228,3 +228,19 @@ tcp_disconnect(void)
 {
 	close(sock);
 }
+
+char *
+tcp_get_address()
+{
+	static char ipaddr[32];
+	struct sockaddr_in sockaddr;
+	size_t len = sizeof(sockaddr);
+	if (getsockname(sock, (struct sockaddr *) &sockaddr, &len) == 0)
+	{
+		unsigned char *ip = (unsigned char *) &sockaddr.sin_addr;
+		sprintf(ipaddr, "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+	}
+	else
+		strcpy(ipaddr, "127.0.0.1");
+	return ipaddr;
+}
