@@ -201,13 +201,27 @@ make_colour16(PixelColour pc)
 static uint32
 make_colour24(PixelColour pc)
 {
-	return (pc.red << 16) | (pc.green << 8) | pc.blue;
+	if (g_xserver_be)
+	{
+		return pc.red | (pc.green << 8) | (pc.blue << 16);
+	}
+	else
+	{
+		return (pc.red << 16) | (pc.green << 8) | pc.blue;
+	}
 }
 
 static uint32
 make_colour32(PixelColour pc)
 {
-	return (pc.red << 16) | (pc.green << 8) | pc.blue;
+	if (g_xserver_be)
+	{
+		return pc.red | (pc.green << 8) | (pc.blue << 16);
+	}
+	else
+	{
+		return (pc.red << 16) | (pc.green << 8) | pc.blue;
+	}
 }
 
 #define BSWAP16(x) { x = (((x & 0xff) << 8) | (x >> 8)); }
@@ -344,8 +358,21 @@ translate15to24(uint16 * data, uint8 * out, uint8 * end)
 static void
 translate15to32(uint16 * data, uint32 * out, uint32 * end)
 {
+	uint16 pixel;
+
 	while (out < end)
-		*(out++) = make_colour32(split_colour15(*(data++)));
+	{
+		if (g_host_be)
+		{
+			pixel = *(data++);
+			pixel = (pixel & 0xff) << 8 | (pixel & 0xff00) >> 8;
+			*(out++) = make_colour32(split_colour15(pixel));
+		}
+		else
+		{
+			*(out++) = make_colour32(split_colour15(*(data++)));
+		}
+	}
 }
 
 static void
@@ -373,8 +400,21 @@ translate16to24(uint16 * data, uint8 * out, uint8 * end)
 static void
 translate16to32(uint16 * data, uint32 * out, uint32 * end)
 {
+	uint16 pixel;
+
 	while (out < end)
-		*(out++) = make_colour32(split_colour16(*(data++)));
+	{
+		if (g_host_be)
+		{
+			pixel = *(data++);
+			pixel = (pixel & 0xff) << 8 | (pixel & 0xff00) >> 8;
+			*(out++) = make_colour32(split_colour16(pixel));
+		}
+		else
+		{
+			*(out++) = make_colour32(split_colour16(*(data++)));
+		}
+	}
 }
 
 static void
@@ -405,9 +445,18 @@ translate24to32(uint8 * data, uint32 * out, uint32 * end)
 	uint32 pixel = 0;
 	while (out < end)
 	{
-		pixel = *(data++);
-		pixel |= *(data++) << 8;
-		pixel |= *(data++) << 16;
+		if (g_host_be)
+		{
+			pixel = *(data++) << 16;
+			pixel |= *(data++) << 8;
+			pixel |= *(data++);
+		}
+		else
+		{
+			pixel = *(data++);
+			pixel |= *(data++) << 8;
+			pixel |= *(data++) << 16;
+		}
 		*(out++) = pixel;
 	}
 }
