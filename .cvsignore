@@ -4,3 +4,5 @@ autom4te.cache
 Makefile
 config.log
 config.status
+configure
+rdesktop*.tar.gz
