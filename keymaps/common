@@ -78,8 +78,8 @@ F8 0x42 localstate
 F9 0x43 localstate
 F10 0x44 localstate
 F11 0x57 localstate
-F12 0x58 localstate
 SunF36 0x57 localstate
+F12 0x58 localstate
 SunF37 0x58 localstate
 
 # Printscreen, Scrollock and Pause
@@ -88,7 +88,9 @@ SunF37 0x58 localstate
 Print 0xb7 localstate
 Sys_Req 0xb7 localstate
 Execute 0xb7 localstate
+F22 0xb7 localstate
 Scroll_Lock 0x46
+F23 0x46
 
 #
 # Insert - PgDown
