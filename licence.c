@@ -36,20 +36,20 @@ BOOL g_licence_issued = False;
 
 /* Generate a session key and RC4 keys, given client and server randoms */
 static void
-licence_generate_keys(uint8 * client_key, uint8 * server_key, uint8 * client_rsa)
+licence_generate_keys(uint8 * client_random, uint8 * server_random, uint8 * pre_master_secret)
 {
-	uint8 session_key[48];
-	uint8 temp_hash[48];
+	uint8 master_secret[48];
+	uint8 key_block[48];
 
-	/* Generate session key - two rounds of sec_hash_48 */
-	sec_hash_48(temp_hash, client_rsa, client_key, server_key, 65);
-	sec_hash_48(session_key, temp_hash, server_key, client_key, 65);
+	/* Generate master secret and then key material */
+	sec_hash_48(master_secret, pre_master_secret, client_random, server_random, 'A');
+	sec_hash_48(key_block,     master_secret,     server_random, client_random, 'A');
 
-	/* Store first 16 bytes of session key, for generating signatures */
-	memcpy(g_licence_sign_key, session_key, 16);
+	/* Store first 16 bytes of session key as MAC secret */
+	memcpy(g_licence_sign_key, key_block, 16);
 
-	/* Generate RC4 key */
-	sec_hash_16(g_licence_key, &session_key[16], client_key, server_key);
+	/* Generate RC4 key from next 16 bytes */
+	sec_hash_16(g_licence_key, &key_block[16], client_random, server_random);
 }
 
 static void
