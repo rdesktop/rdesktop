@@ -634,9 +634,25 @@ cliprdr_handle_server_data_request(STREAM s)
 	}
 	else
 	{
-		DEBUG_CLIPBOARD(("There were no owner for PRIMARY, sending empty string\n"));	// FIXME: Should we always send an empty string?
 
-		cliprdr_send_empty_datapacket();
+		selectionowner = XGetSelectionOwner(display, clipboard_atom);
+		if (None != selectionowner)
+		{
+			XConvertSelection(display, clipboard_atom,
+					  targets_atom,
+					  rdesktop_clipboard_target_atom, wnd, CurrentTime);
+
+			/* The rest of the transfer is handled in 
+			   cliprdr_handle_SelectionNotify */
+
+		}
+		else
+		{
+
+			DEBUG_CLIPBOARD(("There were no owner for PRIMARY nor CLIPBOARD, sending empty string\n"));	// FIXME: Should we always send an empty string?
+
+			cliprdr_send_empty_datapacket();
+		}
 	}
 
 
