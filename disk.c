@@ -438,7 +438,7 @@ disk_query_information(HANDLE handle, uint32 info_class, STREAM out)
 	// Return requested data
 	switch (info_class)
 	{
-		case 4:	/* FileBasicInformation */
+		case FileBasicInformation:
 			seconds_since_1970_to_filetime(get_create_time(&filestat), &ft_high,
 						       &ft_low);
 			out_uint32_le(out, ft_low);	//create_access_time
@@ -459,7 +459,7 @@ disk_query_information(HANDLE handle, uint32 info_class, STREAM out)
 			out_uint32_le(out, file_attributes);
 			break;
 
-		case 5:	/* FileStandardInformation */
+		case FileStandardInformation:
 
 			out_uint32_le(out, filestat.st_size);	//Allocation size
 			out_uint32_le(out, 0);
@@ -470,7 +470,7 @@ disk_query_information(HANDLE handle, uint32 info_class, STREAM out)
 			out_uint8(out, S_ISDIR(filestat.st_mode) ? 1 : 0);	//Directory
 			break;
 
-		case 35:	/* FileObjectIdInformation */
+		case FileObjectIdInformation:
 
 			out_uint32_le(out, file_attributes);	/* File Attributes */
 			out_uint32_le(out, 0);	/* Reparse Tag */
@@ -501,7 +501,7 @@ disk_set_information(HANDLE handle, uint32 info_class, STREAM in, STREAM out)
 
 	switch (info_class)
 	{
-		case 4:	/* FileBasicInformation */
+		case FileBasicInformation:
 			write_time = change_time = access_time = 0;
 
 			in_uint8s(in, 4);	/* Handle of root dir? */
@@ -581,7 +581,7 @@ disk_set_information(HANDLE handle, uint32 info_class, STREAM in, STREAM out)
 
 			break;
 
-		case 10:	/* FileRenameInformation */
+		case FileRenameInformation:
 
 			in_uint8s(in, 4);	/* Handle of root dir? */
 			in_uint8s(in, 0x1a);	/* unknown */
@@ -607,7 +607,7 @@ disk_set_information(HANDLE handle, uint32 info_class, STREAM in, STREAM out)
 			}
 			break;
 
-		case 13:	/* FileDispositionInformation */
+		case FileDispositionInformation:
 
 			//unimpl("IRP Set File Information class: FileDispositionInformation\n");
 
@@ -623,12 +623,12 @@ disk_set_information(HANDLE handle, uint32 info_class, STREAM in, STREAM out)
 
 			break;
 
-		case 19:	/* FileAllocationInformation */
+		case FileAllocationInformation:
 
 			unimpl("IRP Set File Information class: FileAllocationInformation\n");
 			break;
 
-		case 20:	/* FileEndOfFileInformation */
+		case FileEndOfFileInformation:
 			in_uint8s(in, 28);	/* unknown */
 			in_uint32_le(in, length);	/* file size */
 
@@ -736,7 +736,7 @@ disk_query_volume_information(HANDLE handle, uint32 info_class, STREAM out)
 
 	switch (info_class)
 	{
-		case 1:	/* FileFsVolumeInformation */
+		case FileFsVolumeInformation:
 
 			out_uint32_le(out, 0);	/* volume creation time low */
 			out_uint32_le(out, 0);	/* volume creation time high */
@@ -748,7 +748,7 @@ disk_query_volume_information(HANDLE handle, uint32 info_class, STREAM out)
 			rdp_out_unistr(out, fsinfo->label, 2 * strlen(fsinfo->label) - 2);
 			break;
 
-		case 3:	/* FileFsSizeInformation */
+		case FileFsSizeInformation:
 
 			out_uint32_le(out, stat_fs.f_blocks);	/* Total allocation units low */
 			out_uint32_le(out, 0);	/* Total allocation high units */
@@ -758,7 +758,7 @@ disk_query_volume_information(HANDLE handle, uint32 info_class, STREAM out)
 			out_uint32_le(out, 0x200);	/* Bytes per sector */
 			break;
 
-		case 5:	/* FileFsAttributeInformation */
+		case FileFsAttributeInformation:
 
 			out_uint32_le(out, FS_CASE_SENSITIVE | FS_CASE_IS_PRESERVED);	/* fs attributes */
 			out_uint32_le(out, F_NAMELEN(stat_fs));	/* max length of filename */
@@ -767,12 +767,13 @@ disk_query_volume_information(HANDLE handle, uint32 info_class, STREAM out)
 			rdp_out_unistr(out, fsinfo->type, 2 * strlen(fsinfo->type) - 2);
 			break;
 
-		case 2:	/* FileFsLabelInformation */
-		case 4:	/* FileFsDeviceInformation */
-		case 6:	/* FileFsControlInformation */
-		case 7:	/* FileFsFullSizeInformation */
-		case 8:	/* FileFsObjectIdInformation */
-		case 9:	/* FileFsMaximumInformation */
+		case FileFsLabelInformation:
+		case FileFsDeviceInformation:
+		case FileFsControlInformation:
+		case FileFsFullSizeInformation:
+		case FileFsObjectIdInformation:
+		case FileFsMaximumInformation:
+
 		default:
 
 			unimpl("IRP Query Volume Information class: 0x%x\n", info_class);

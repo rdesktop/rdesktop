@@ -80,3 +80,62 @@
 #define ERROR_ALREADY_EXISTS			183L
 
 #define	MAX_OPEN_FILES	0x100
+
+typedef enum _FILE_INFORMATION_CLASS
+{
+	FileDirectoryInformation = 1,
+	FileFullDirectoryInformation,
+	FileBothDirectoryInformation,
+	FileBasicInformation,
+	FileStandardInformation,
+	FileInternalInformation,
+	FileEaInformation,
+	FileAccessInformation,
+	FileNameInformation,
+	FileRenameInformation,
+	FileLinkInformation,
+	FileNamesInformation,
+	FileDispositionInformation,
+	FilePositionInformation,
+	FileFullEaInformation,
+	FileModeInformation,
+	FileAlignmentInformation,
+	FileAllInformation,
+	FileAllocationInformation,
+	FileEndOfFileInformation,
+	FileAlternateNameInformation,
+	FileStreamInformation,
+	FilePipeInformation,
+	FilePipeLocalInformation,
+	FilePipeRemoteInformation,
+	FileMailslotQueryInformation,
+	FileMailslotSetInformation,
+	FileCompressionInformation,
+	FileObjectIdInformation,
+	FileCompletionInformation,
+	FileMoveClusterInformation,
+	FileQuotaInformation,
+	FileReparsePointInformation,
+	FileNetworkOpenInformation,
+	FileAttributeTagInformation,
+	FileTrackingInformation,
+	FileIdBothDirectoryInformation,
+	FileIdFullDirectoryInformation,
+	FileValidDataLengthInformation,
+	FileShortNameInformation,
+	FileMaximumInformation
+} FILE_INFORMATION_CLASS, *PFILE_INFORMATION_CLASS;
+
+typedef enum _FSINFOCLASS
+{
+	FileFsVolumeInformation = 1,
+	FileFsLabelInformation,
+	FileFsSizeInformation,
+	FileFsDeviceInformation,
+	FileFsAttributeInformation,
+	FileFsControlInformation,
+	FileFsFullSizeInformation,
+	FileFsObjectIdInformation,
+	FileFsDriverPathInformation,
+	FileFsMaximumInformation
+} FS_INFORMATION_CLASS, *PFS_INFORMATION_CLASS;
