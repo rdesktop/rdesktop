@@ -82,12 +82,21 @@
 #include <fnmatch.h>
 #include <errno.h>		/* errno */
 
-#ifdef SOLARIS
+#if defined(SOLARIS)
 #include <sys/statvfs.h>	/* solaris statvfs */
 #define HAVE_STATVFS
+#define F_NAMELEN(buf) ((buf).f_namemax)
+
+#elif defined(__OpenBSD__)
+#include <sys/param.h>
+#include <sys/mount.h>
+#define HAVE_STATFS
+#define F_NAMELEN(buf) (NAME_MAX)
+
 #else
 #include <sys/vfs.h>		/* linux statfs */
 #define HAVE_STATFS
+#define F_NAMELEN(buf) ((buf).f_namelen)
 #endif
 
 #include "rdesktop.h"
@@ -506,10 +515,8 @@ int fsstat(const char *path, struct fsinfo *buf)
 
 #if defined(HAVE_STATFS)
 	ret = statfs(path, &statbuf);
-	buf->f_namelen = statbuf.f_namelen;
 #elif defined(HAVE_STATVFS)
 	ret = statvfs(path, &statbuf);
-	buf->f_namelen = statbuf.f_namemax;
 #else
 	ret=-1;
 #endif
@@ -517,6 +524,7 @@ int fsstat(const char *path, struct fsinfo *buf)
 	buf->f_blocks = statbuf.f_blocks;
 	buf->f_bfree = statbuf.f_bfree;
 	buf->f_bsize = statbuf.f_bsize;
+	buf->f_namelen = F_NAMELEN(statbuf);
 
 	return ret;
 }
