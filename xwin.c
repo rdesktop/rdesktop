@@ -459,8 +459,8 @@ xwin_toggle_fullscreen()
 
 	XUnmapWindow(display, wnd);
 	attribs.override_redirect = fullscreen;
+	XMoveResizeWindow(display, wnd, 0, 0, newwidth, newheight);
 	XChangeWindowAttributes(display, wnd, CWOverrideRedirect, &attribs);
-	XResizeWindow(display, wnd, newwidth, newheight);
 	xwin_map_window();
 }
 
