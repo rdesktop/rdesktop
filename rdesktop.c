@@ -750,28 +750,45 @@ next_arg(char *src, char needle)
 {
 	char *nextval;
 	char *p;
+	char *mvp = 0;
 
-	// EOS
+	/* EOS */
 	if (*src == (char) 0x00)
 		return 0;
 
 	p = src;
-	// skip escaped needles.
+	/*  skip escaped needles */
 	while( (nextval = strchr(p, needle) ) )
 	{
-		if( *(nextval-1) != '\\' )
+		mvp = nextval - 1;
+		/* found backslashed needle */
+		if( *mvp == '\\' && (mvp > src) )
+		{
+			/* move string one to the left */
+			while( *(mvp+1) != (char)0x00 )
+			{
+				*mvp = *(mvp+1);
+				*mvp++;
+			}
+			*mvp = (char)0x00;
+			p = nextval;
+		}
+		else
+		{
+			p = nextval +1;
 			break;
-		p = nextval +1;
+		}
+
 	}
 
-	// more args available
+	/* more args available */
 	if (nextval)
 	{
 		*nextval = (char) 0x00;
 		return ++nextval;
 	}
 
-	// no more args after this, jump to EOS
+	/* no more args after this, jump to EOS */
 	nextval = src + strlen(src);
 	return nextval;
 }
