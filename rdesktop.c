@@ -18,12 +18,12 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include <stdlib.h>		/* malloc realloc free */
 #include <stdarg.h>		/* va_list va_start va_end */
 #include <unistd.h>		/* read close getuid getgid getpid getppid gethostname */
 #include <fcntl.h>		/* open */
 #include <pwd.h>		/* getpwuid */
 #include <limits.h>		/* PATH_MAX */
+#include <termios.h>		/* tcgetattr tcsetattr */
 #include <sys/stat.h>		/* stat */
 #include <sys/time.h>		/* gettimeofday */
 #include <sys/times.h>		/* times */
@@ -59,7 +59,7 @@ usage(char *program)
 	fprintf(stderr, "   -d: domain\n");
 	fprintf(stderr, "   -s: shell\n");
 	fprintf(stderr, "   -c: working directory\n");
-	fprintf(stderr, "   -p: password (autologon)\n");
+	fprintf(stderr, "   -p: password (- to prompt)\n");
 	fprintf(stderr, "   -P: askpass-program (autologon)\n");
 	fprintf(stderr, "   -n: client hostname\n");
 	fprintf(stderr, "   -k: keyboard layout on terminal server (us,sv,gr etc.)\n");
@@ -74,6 +74,42 @@ usage(char *program)
 	fprintf(stderr, "   -w: window title\n");
 }
 
+static BOOL
+read_password(char *password, int size)
+{
+	struct termios tios;
+	BOOL ret = False;
+	int istty = 0;
+	char *p;
+
+	if (tcgetattr(STDIN_FILENO, &tios) == 0)
+	{
+		fprintf(stderr, "Password: ");
+		tios.c_lflag &= ~ECHO;
+		tcsetattr(STDIN_FILENO, TCSANOW, &tios);
+		istty = 1;
+	}
+
+	if (fgets(password, size, stdin) != NULL)
+	{
+		ret = True;
+
+		/* strip final newline */
+		p = strchr(password, '\n');
+		if (p != NULL)
+			*p = 0;
+	}
+
+	if (istty)
+	{
+		tios.c_lflag |= ECHO;
+		tcsetattr(STDIN_FILENO, TCSANOW, &tios);
+		fprintf(stderr, "\n");
+	}
+
+	return ret;
+}
+
 /* Client program */
 int
 main(int argc, char *argv[])
@@ -84,12 +120,14 @@ main(int argc, char *argv[])
 	char *askpass_result;
 	char shell[32];
 	char directory[32];
+	BOOL prompt_password;
 	struct passwd *pw;
 	char *server, *p;
 	uint32 flags;
 	int c;
 
 	flags = RDP_LOGON_NORMAL;
+	prompt_password = False;
 	domain[0] = password[0] = shell[0] = directory[0] = 0;
 	strcpy(keymapname, "us");
 
@@ -114,8 +152,16 @@ main(int argc, char *argv[])
 				break;
 
 			case 'p':
+				if ((optarg[0] == '-') && (optarg[1] == 0))
+				{
+					prompt_password = True;
+					break;
+				}
+
 				STRNCPY(password, optarg, sizeof(password));
 				flags |= RDP_LOGON_AUTO;
+
+				/* try to overwrite argument so it won't appear in ps */
 				p = optarg;
 				while (*p)
 					*(p++) = 'X';
@@ -226,18 +272,10 @@ main(int argc, char *argv[])
 		STRNCPY(hostname, fullhostname, sizeof(hostname));
 	}
 
-	if (!strcmp(password, "-"))
-	{
-		p = getpass("Password: ");
-		if (p == NULL)
-		{
-			error("failed to read password\n");
-			return 0;
-		}
-		STRNCPY(password, p, sizeof(password));
-	}
+	if (prompt_password && read_password(password, sizeof(password)))
+		flags |= RDP_LOGON_AUTO;
 
-	if (!strlen(title))
+	if (title[0] == 0)
 	{
 		strcpy(title, "rdesktop - ");
 		strncat(title, server, sizeof(title) - sizeof("rdesktop - "));
@@ -250,6 +288,7 @@ main(int argc, char *argv[])
 		return 1;
 
 	DEBUG(("Connection successful.\n"));
+	memset(password, 0, sizeof(password));
 
 	if (ui_create_window())
 	{
