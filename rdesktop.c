@@ -148,6 +148,106 @@ usage(char *program)
 	fprintf(stderr, "   -5: use RDP version 5 (default)\n");
 }
 
+void
+print_disconnect_reason(uint16 reason)
+{
+	char *text;
+
+	switch (reason)
+	{
+		case exDiscReasonNoInfo:
+			text = "No information available";
+			break;
+
+		case exDiscReasonAPIInitiatedDisconnect:
+			text = "Server initiated disconnect";
+			break;
+
+		case exDiscReasonAPIInitiatedLogoff:
+			text = "Server initiated logoff";
+			break;
+
+		case exDiscReasonServerIdleTimeout:
+			text = "Server idle timeout reached";
+			break;
+
+		case exDiscReasonServerLogonTimeout:
+			text = "Server logon timeout reached";
+			break;
+
+		case exDiscReasonReplacedByOtherConnection:
+			text = "The session was replaced";
+			break;
+
+		case exDiscReasonOutOfMemory:
+			text = "The server is out of memory";
+			break;
+
+		case exDiscReasonServerDeniedConnection:
+			text = "The server denied the connection";
+			break;
+
+		case exDiscReasonServerDeniedConnectionFips:
+			text = "The server denied the connection for security reason";
+			break;
+
+		case exDiscReasonLicenseInternal:
+			text = "Internal licensing error";
+			break;
+
+		case exDiscReasonLicenseNoLicenseServer:
+			text = "No license server available";
+			break;
+
+		case exDiscReasonLicenseNoLicense:
+			text = "No valid license available";
+			break;
+
+		case exDiscReasonLicenseErrClientMsg:
+			text = "Invalid licensing message";
+			break;
+
+		case exDiscReasonLicenseHwidDoesntMatchLicense:
+			text = "Hardware id doesn't match software license";
+			break;
+
+		case exDiscReasonLicenseErrClientLicense:
+			text = "Client license error";
+			break;
+
+		case exDiscReasonLicenseCantFinishProtocol:
+			text = "Network error during licensing protocol";
+			break;
+
+		case exDiscReasonLicenseClientEndedProtocol:
+			text = "Licensing protocol was not completed";
+			break;
+
+		case exDiscReasonLicenseErrClientEncryption:
+			text = "Incorrect client license enryption";
+			break;
+
+		case exDiscReasonLicenseCantUpgradeLicense:
+			text = "Can't upgrade license";
+			break;
+
+		case exDiscReasonLicenseNoRemoteConnections:
+			text = "The server is not licensed to accept remote connections";
+			break;
+
+		default:
+			if (reason > 0x1000 && reason < 0x7fff)
+			{
+				text = "Internal protocol error";
+			}
+			else
+			{
+				text = "Unknown reason";
+			}
+	}
+	fprintf(stderr, "disconnect: %s.\n", text);
+}
+
 static BOOL
 read_password(char *password, int size)
 {
@@ -242,9 +342,9 @@ main(int argc, char *argv[])
 	char password[64];
 	char shell[128];
 	char directory[32];
-	BOOL prompt_password, rdp_retval = False;
+	BOOL prompt_password, deactivated;
 	struct passwd *pw;
-	uint32 flags;
+	uint32 flags, ext_disc_reason = 0;
 	char *p;
 	int c;
 
@@ -604,7 +704,7 @@ main(int argc, char *argv[])
 
 	if (ui_create_window())
 	{
-		rdp_retval = rdp_main_loop();
+		rdp_main_loop(&deactivated, &ext_disc_reason);
 		ui_destroy_window();
 	}
 
@@ -612,10 +712,28 @@ main(int argc, char *argv[])
 	rdp_disconnect();
 	ui_deinit();
 
-	if (True == rdp_retval)
+	if (ext_disc_reason >= 2)
+		print_disconnect_reason(ext_disc_reason);
+
+	if (deactivated)
+	{
+		/* clean disconnect */
 		return 0;
+	}
 	else
-		return 2;
+	{
+		if (ext_disc_reason == exDiscReasonAPIInitiatedDisconnect
+		    || ext_disc_reason == exDiscReasonAPIInitiatedLogoff)
+		{
+			/* not so clean disconnect, but nothing to worry about */
+			return 0;
+		}
+		else
+		{
+			/* return error */
+			return 2;
+		}
+	}
 
 #endif
 

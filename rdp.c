@@ -886,9 +886,18 @@ process_update_pdu(STREAM s)
 
 }
 
+/* Process a disconnect PDU */
+void
+process_disconnect_pdu(STREAM s, uint32 * ext_disc_reason)
+{
+	in_uint32_le(s, *ext_disc_reason);
+
+	DEBUG(("Received disconnect PDU\n"));
+}
+
 /* Process data PDU */
-static void
-process_data_pdu(STREAM s)
+static BOOL
+process_data_pdu(STREAM s, uint32 * ext_disc_reason)
 {
 	uint8 data_pdu_type;
 	uint8 ctype;
@@ -939,6 +948,14 @@ process_data_pdu(STREAM s)
 			process_update_pdu(s);
 			break;
 
+		case RDP_DATA_PDU_CONTROL:
+			DEBUG(("Received Control PDU\n"));
+			break;
+
+		case RDP_DATA_PDU_SYNCHRONISE:
+			DEBUG(("Received Sync PDU\n"));
+			break;
+
 		case RDP_DATA_PDU_POINTER:
 			process_pointer_pdu(s);
 			break;
@@ -953,21 +970,21 @@ process_data_pdu(STREAM s)
 			break;
 
 		case RDP_DATA_PDU_DISCONNECT:
-			/* Normally received when user logs out or disconnects from a
-			   console session on Windows XP and 2003 Server */
-			DEBUG(("Received disconnect PDU\n"));
-			break;
+			process_disconnect_pdu(s, ext_disc_reason);
+			return True;
 
 		default:
 			unimpl("data PDU %d\n", data_pdu_type);
 	}
+	return False;
 }
 
 /* Process incoming packets */
-BOOL
-rdp_main_loop(void)
+void
+rdp_main_loop(BOOL * deactivated, uint32 * ext_disc_reason)
 {
 	uint8 type;
+	BOOL disc = False;	/* True when a disconnect PDU was received */
 	STREAM s;
 
 	while ((s = rdp_recv(&type)) != NULL)
@@ -976,20 +993,15 @@ rdp_main_loop(void)
 		{
 			case RDP_PDU_DEMAND_ACTIVE:
 				process_demand_active(s);
+				*deactivated = False;
 				break;
 
 			case RDP_PDU_DEACTIVATE:
-				DEBUG(("RDP_PDU_DEACTIVATE\n"));
-				/* We thought we could detect a clean
-				   shutdown of the session by this
-				   packet, but it seems Windows 2003
-				   is sending us one of these when we
-				   reconnect to a disconnected session
-				   return True; */
+				*deactivated = True;
 				break;
 
 			case RDP_PDU_DATA:
-				process_data_pdu(s);
+				disc = process_data_pdu(s, ext_disc_reason);
 				break;
 
 			case 0:
@@ -998,11 +1010,13 @@ rdp_main_loop(void)
 			default:
 				unimpl("PDU %d\n", type);
 		}
+
+		if (disc)
+		{
+			return;
+		}
 	}
-	return True;
-	/* We want to detect if we got a clean shutdown, but we
-	   can't. Se above.  
-	   return False;  */
+	return;
 }
 
 /* Establish a connection up to the RDP layer */

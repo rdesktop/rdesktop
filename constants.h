@@ -356,3 +356,25 @@ enum RDP_INPUT_DEVICE
 #define FILE_DIRECTORY_FILE             0x00000001
 #define FILE_NON_DIRECTORY_FILE         0x00000040
 #define FILE_OPEN_FOR_FREE_SPACE_QUERY  0x00800000
+
+/* RDP5 disconnect PDU */
+#define exDiscReasonNoInfo				0x0000
+#define exDiscReasonAPIInitiatedDisconnect		0x0001
+#define exDiscReasonAPIInitiatedLogoff			0x0002
+#define exDiscReasonServerIdleTimeout			0x0003
+#define exDiscReasonServerLogonTimeout			0x0004
+#define exDiscReasonReplacedByOtherConnection		0x0005
+#define exDiscReasonOutOfMemory				0x0006
+#define exDiscReasonServerDeniedConnection		0x0007
+#define exDiscReasonServerDeniedConnectionFips		0x0008
+#define exDiscReasonLicenseInternal			0x0100
+#define exDiscReasonLicenseNoLicenseServer		0x0101
+#define exDiscReasonLicenseNoLicense			0x0102
+#define exDiscReasonLicenseErrClientMsg			0x0103
+#define exDiscReasonLicenseHwidDoesntMatchLicense	0x0104
+#define exDiscReasonLicenseErrClientLicense		0x0105
+#define exDiscReasonLicenseCantFinishProtocol		0x0106
+#define exDiscReasonLicenseClientEndedProtocol		0x0107
+#define exDiscReasonLicenseErrClientEncryption		0x0108
+#define exDiscReasonLicenseCantUpgradeLicense		0x0109
+#define exDiscReasonLicenseNoRemoteConnections		0x010a
