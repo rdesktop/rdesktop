@@ -144,3 +144,8 @@ When you need to add a translation to a keymap file, do:
 
     3. Put the scancode (from step 2) and keysym name (found in the
     error message) into the keymap file. 
+
+
+Links
+=====
+http://www.win.tue.nl/~aeb/linux/kbd/scancodes.html
