@@ -29,6 +29,17 @@
 #include <sys/times.h>		/* times */
 #include "rdesktop.h"
 
+#ifdef EGD_SOCKET
+#include <sys/socket.h>		/* socket connect */
+#include <sys/un.h>		/* sockaddr_un */
+#endif
+
+#ifdef WITH_OPENSSL
+#include <openssl/md5.h>
+#else
+#include "crypto/md5.h"
+#endif
+
 char title[32] = "";
 char username[16];
 char hostname[16];
@@ -284,25 +295,72 @@ main(int argc, char *argv[])
 	return 0;
 }
 
+#ifdef EGD_SOCKET
+/* Read 32 random bytes from PRNGD or EGD socket (based on OpenSSL RAND_egd) */
+static BOOL
+generate_random_egd(uint8 * buf)
+{
+	struct sockaddr_un addr;
+	BOOL ret = False;
+	int fd;
+
+	fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (fd == -1)
+		return False;
+
+	addr.sun_family = AF_UNIX;
+	memcpy(addr.sun_path, EGD_SOCKET, sizeof(EGD_SOCKET));
+	if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) == -1)
+		goto err;
+
+	/* PRNGD and EGD use a simple communications protocol */
+	buf[0] = 1;  /* Non-blocking (similar to /dev/urandom) */
+	buf[1] = 32; /* Number of requested random bytes */
+	if (write(fd, buf, 2) != 2)
+		goto err;
+
+	if ((read(fd, buf, 1) != 1) || (buf[0] == 0)) /* Available? */
+		goto err;
+
+	if (read(fd, buf, 32) != 32)
+		goto err;
+
+	ret = True;
+
+err:
+	close(fd);
+	return ret;
+}
+#endif
+
 /* Generate a 32-byte random for the secure transport code. */
 void
 generate_random(uint8 * random)
 {
 	struct stat st;
 	struct tms tmsbuf;
-	uint32 *r = (uint32 *) random;
-	int fd;
+	MD5_CTX md5;
+	uint32 *r;
+	int fd, n;
 
-	/* If we have a kernel random device, use it. */
+	/* If we have a kernel random device, try that first */
 	if (((fd = open("/dev/urandom", O_RDONLY)) != -1)
 	    || ((fd = open("/dev/random", O_RDONLY)) != -1))
 	{
-		read(fd, random, 32);
+		n = read(fd, random, 32);
 		close(fd);
-		return;
+		if (n == 32)
+			return;
 	}
 
+#ifdef EGD_SOCKET
+	/* As a second preference use an EGD */
+	if (generate_random_egd(random))
+		return;
+#endif
+
 	/* Otherwise use whatever entropy we can gather - ideas welcome. */
+	r = (uint32 *)random;
 	r[0] = (getpid()) | (getppid() << 16);
 	r[1] = (getuid()) | (getgid() << 16);
 	r[2] = times(&tmsbuf);	/* system uptime (clocks) */
@@ -311,6 +369,13 @@ generate_random(uint8 * random)
 	r[5] = st.st_atime;
 	r[6] = st.st_mtime;
 	r[7] = st.st_ctime;
+
+	/* Hash both halves with MD5 to obscure possible patterns */
+	MD5_Init(&md5);
+	MD5_Update(&md5, random, 16); 
+	MD5_Final(random, &md5);
+	MD5_Update(&md5, random+16, 16);
+	MD5_Final(random+16, &md5);
 }
 
 /* malloc; exit if out of memory */

@@ -17,7 +17,7 @@ cflags=
 ldflags=
 
 for arg in $*; do
-optarg=`echo $arg | sed 's/[-a-z]*=//'`    
+optarg=`echo $arg | sed 's/[-a-z]*=//'`
 case $arg in
   --prefix=*)
     echo "prefix      = $optarg" >>Makeconf
@@ -34,9 +34,16 @@ case $arg in
   --sharedir=*)
     echo "datadir     = $optarg" >>Makeconf
     ;;
+  --with-x*)
+    extraxdir=$optarg
+    ;;
   --with-openssl*)
+    extrassldir=$optarg
     ;;
   --without-openssl*)
+    ;;
+  --with-egd-socket=*)
+    extraegdpath=$optarg
     ;;
   --with-debug)
     cflags="$cflags -g -DWITH_DEBUG"
@@ -48,15 +55,18 @@ case $arg in
     ;;
   *)
     echo "Target directories:"
-    echo " --prefix=PREFIX        location for architecture-independent files"
-    echo " --exec-prefix=EPREFIX  location for architecture-dependent files"
-    echo " --bindir=BINDIR        location for program binaries [EPREFIX/bin]"
-    echo " --mandir=MANDIR        location for man pages [PREFIX/man]"
-    echo " --sharedir=SHAREDIR    location for architecture-independent shared files [PREFIX/share/rdesktop]"
+    echo " --prefix=PREFIX         location for architecture-independent files"
+    echo " --exec-prefix=EPREFIX   location for architecture-dependent files"
+    echo " --bindir=BINDIR         location for program binaries [EPREFIX/bin]"
+    echo " --mandir=MANDIR         location for man pages [PREFIX/man]"
+    echo " --sharedir=SHAREDIR     location for architecture-independent shared files [PREFIX/share/rdesktop]"
     echo
     echo "Build configuration:"
-    echo " --with-debug           enable protocol debugging output"
-    echo " --with-debug-kbd       enable debugging of keyboard handling"
+    echo " --with-x=DIR            look for X Window System at DIR/include, DIR/lib"
+    echo " --with-openssl=DIR      look for OpenSSL at DIR/include, DIR/lib"
+    echo " --with-egd-socket=PATH  look for Entropy Gathering Daemon socket at PATH"
+    echo " --with-debug            enable protocol debugging output"
+    echo " --with-debug-kbd        enable debugging of keyboard handling"
     echo
     rm -f Makeconf
     exit 1
@@ -79,7 +89,7 @@ esac
 
 # Find X installation
 
-xdirs="/usr/X11R6 /usr/X11 /usr/openwin /usr /usr/local/X11R6 /usr/local/X11 /usr/local"
+xdirs="$extraxdir /usr/X11R6 /usr/X11 /usr/openwin /usr /usr/local/X11R6 /usr/local/X11 /usr/local"
 
 for dir in $xdirs; do
     if [ -f $dir/include/X11/Xlib.h ]; then
@@ -90,7 +100,7 @@ done
 
 if [ -z "$xdir" ]; then
     echo "ERROR: could not find X Window System headers"
-    echo "(searched for include/X11/Xlib.h in $xdirs)"
+    echo "(searched for include/X11/Xlib.h in: $xdirs)"
 
     # additional helpful information for Linux users
     if [ -f /etc/redhat_release ]; then
@@ -119,7 +129,7 @@ ldflags="$ldflags -lX11"
 
 # Find OpenSSL installation if available
 
-ssldirs="/usr/openssl /usr/ssl /usr /usr/local/openssl /usr/local/ssl /usr/local"
+ssldirs="$extrassldir /usr/openssl /usr/ssl /usr /usr/local/openssl /usr/local/ssl /usr/local"
 
 for dir in $ssldirs; do
     if [ -f $dir/include/openssl/rc4.h ]; then
@@ -130,7 +140,7 @@ done
 
 if [ -z "$ssldir" ]; then
     echo "WARNING: could not find OpenSSL headers"
-    echo "(searched for include/openssl/rc4.h in $ssldirs)"
+    echo "(searched for include/openssl/rc4.h in: $ssldirs)"
     echo "Using in-tree crypto; installing OpenSSL is recommended."
     echo
 else
@@ -153,6 +163,31 @@ else
     ldflags="$ldflags -lcrypto"
 fi
 
+
+# Find EGD socket if we don't have /dev/urandom or /dev/random
+if [ ! -c /dev/random -a ! -c /dev/urandom ]; then
+    egdpaths="$extraegdpath /var/run/egd-pool /dev/egd-pool /etc/egd-pool /etc/entropy"
+
+    for path in $egdpaths; do
+	# -e isn't portable, so we use -r
+	if [ -r $path ]; then
+	    egdpath=$path
+	    break
+	fi
+    done
+
+    if [ -z "$egdpath" ]; then
+	echo "WARNING: could not find /dev/urandom, /dev/random or Entropy Gathering Daemon (EGD) socket"
+	echo "(searched: $egdpaths)"
+	echo "Session keys may be less secure; installing a system randomness source is recommended."
+	echo
+    else
+	echo "Entropy Gathering Daemon (EGD):"
+        echo "  socket    $egdpath"
+	echo
+	cflags="$cflags -DEGD_SOCKET=\\\"$egdpath\\\""
+    fi
+fi
 
 echo "CFLAGS     += $cflags" >>Makeconf
 echo "LDFLAGS    += $ldflags" >>Makeconf
