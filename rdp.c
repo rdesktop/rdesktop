@@ -627,12 +627,14 @@ void rdp_main_loop()
 }
 
 /* Establish a connection up to the RDP layer */
-BOOL rdp_connect(char *server)
+BOOL rdp_connect(char *server, uint32 flags, char *domain, char *password,
+			char *command, char *directory)
 {
 	if (!sec_connect(server))
 		return False;
 
-	rdp_send_logon_info(0x33, "", username, "", "", "");
+	rdp_send_logon_info(flags, domain, username, password,
+				command, directory);
 	return True;
 }
 

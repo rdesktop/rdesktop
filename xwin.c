@@ -41,7 +41,10 @@ BOOL ui_create_window(char *title)
 
 	display = XOpenDisplay(NULL);
 	if (display == NULL)
+	{
+		ERROR("Failed to open display\n");
 		return False;
+	}
 
 	/* Check the screen supports 8-bit depth. */
 	screen = DefaultScreenOfDisplay(display);

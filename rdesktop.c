@@ -32,7 +32,7 @@ char hostname[16];
 int width = 800;
 int height = 600;
 int keylayout = 0x409;
-BOOL motion = False;
+BOOL motion = True;
 BOOL orders = True;
 BOOL licence = True;
 
@@ -41,12 +41,16 @@ static void usage(char *program)
 {
 	STATUS("Usage: %s [options] server\n", program);
 	STATUS("   -u: user name\n");
+	STATUS("   -d: domain\n");
+	STATUS("   -s: shell\n");
+	STATUS("   -c: working directory\n");
+	STATUS("   -p: password (autologon)\n");
 	STATUS("   -n: client hostname\n");
 	STATUS("   -w: desktop width\n");
 	STATUS("   -h: desktop height\n");
 	STATUS("   -k: keyboard layout (hex)\n");
-	STATUS("   -m: send motion events\n");
 	STATUS("   -b: force bitmap updates\n");
+	STATUS("   -m: do not send motion events\n");
 	STATUS("   -l: do not request licence\n\n");
 }
 
@@ -55,6 +59,11 @@ int main(int argc, char *argv[])
 {
 	struct passwd *pw;
 	char *server;
+	uint32 flags;
+	char domain[16];
+	char password[16];
+	char shell[32];
+	char directory[32];
 	char title[32];
 	int c;
 
@@ -62,12 +71,32 @@ int main(int argc, char *argv[])
 	STATUS("Version "VERSION". Copyright (C) 1999-2000 Matt Chapman.\n");
 	STATUS("See http://www.rdesktop.org/ for more information.\n\n");
 
-	while ((c = getopt(argc, argv, "u:n:w:h:k:mbl?")) != -1)
+	flags = RDP_LOGON_NORMAL;
+	domain[0] = password[0] = shell[0] = directory[0] = 0;
+
+	while ((c = getopt(argc, argv, "u:d:s:c:p:n:w:h:k:bml?")) != -1)
 	{
 		switch (c)
 		{
 			case 'u':
 				strncpy(username, optarg, sizeof(username));
+				break;
+
+			case 'd':
+				strncpy(domain, optarg, sizeof(domain));
+				break;
+
+			case 'p':
+				flags |= RDP_LOGON_AUTO;
+				strncpy(password, optarg, sizeof(password));
+				break;
+
+			case 's':
+				strncpy(shell, optarg, sizeof(shell));
+				break;
+
+			case 'c':
+				strncpy(directory, optarg, sizeof(directory));
 				break;
 
 			case 'n':
@@ -87,7 +116,7 @@ int main(int argc, char *argv[])
 				break;
 
 			case 'm':
-				motion = True;
+				motion = False;
 				break;
 
 			case 'b':
@@ -134,7 +163,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (!rdp_connect(server))
+	if (!rdp_connect(server, flags, domain, password, shell, directory))
 		return 1;
 
 	STATUS("Connection successful.\n");

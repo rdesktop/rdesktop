@@ -207,3 +207,7 @@ enum RDP_INPUT_DEVICE
 #define RDP_CAPLEN_UNKNOWN	0x9C
 
 #define RDP_SOURCE		"MSTSC"
+
+/* Logon flags */
+#define RDP_LOGON_NORMAL	0x33
+#define RDP_LOGON_AUTO		0x8

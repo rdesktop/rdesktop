@@ -21,7 +21,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define VERSION "0.9.0-alpha2"
+#define VERSION "1.0.0"
 
 #define STATUS(args...) fprintf(stderr, args);
 #define ERROR(args...)  fprintf(stderr, "ERROR: "args);
