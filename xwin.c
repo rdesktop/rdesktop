@@ -2263,6 +2263,21 @@ ui_polygon(uint8 opcode,
 }
 
 void
+ui_polyline(uint8 opcode,
+	    /* dest */ POINT * points, int npoints,
+	    /* pen */ PEN * pen)
+{
+	/* TODO: set join style */
+	SET_FUNCTION(opcode);
+	SET_FOREGROUND(pen->colour);
+	XDrawLines(g_display, g_wnd, g_gc, (XPoint *) points, npoints, CoordModePrevious);
+	if (g_ownbackstore)
+		XDrawLines(g_display, g_backstore, g_gc, (XPoint *) points, npoints,
+			   CoordModePrevious);
+	RESET_FUNCTION(opcode);
+}
+
+void
 ui_ellipse(uint8 opcode,
 	   /* mode */ uint8 fillmode,
 	   /* dest */ int x, int y, int cx, int cy,

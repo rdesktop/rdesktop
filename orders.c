@@ -648,11 +648,10 @@ process_polygon2(STREAM s, POLYGON2_ORDER * os, uint32 present, BOOL delta)
 static void
 process_polyline(STREAM s, POLYLINE_ORDER * os, uint32 present, BOOL delta)
 {
-	int index, line, data;
-	int x, y, xfrom, yfrom;
+	int index, next, data;
 	uint8 flags = 0;
 	PEN pen;
-	uint8 opcode;
+	POINT *points;
 
 	if (present & 0x01)
 		rdp_in_coord(s, &os->x, delta);
@@ -691,35 +690,32 @@ process_polyline(STREAM s, POLYLINE_ORDER * os, uint32 present, BOOL delta)
 		return;
 	}
 
-	opcode = os->opcode - 1;
-	x = os->x;
-	y = os->y;
-	pen.style = pen.width = 0;
-	pen.colour = os->fgcolour;
+	points = (POINT *) xmalloc((os->lines + 1) * sizeof(POINT));
+	memset(points, 0, (os->lines + 1) * sizeof(POINT));
+
+	points[0].x = os->x;
+	points[0].y = os->y;
 
 	index = 0;
 	data = ((os->lines - 1) / 4) + 1;
-	for (line = 0; (line < os->lines) && (data < os->datasize); line++)
+	for (next = 1; (next < os->lines) && (data < os->datasize); next++)
 	{
-		xfrom = x;
-		yfrom = y;
-
-		if (line % 4 == 0)
+		if ((next - 1) % 4 == 0)
 			flags = os->data[index++];
 
-		if ((flags & 0xc0) == 0)
-			flags |= 0xc0;	/* none = both */
+		if (~flags & 0x80)
+			points[next].x = parse_delta(os->data, &data);
 
-		if (flags & 0x40)
-			x += parse_delta(os->data, &data);
-
-		if (flags & 0x80)
-			y += parse_delta(os->data, &data);
-
-		ui_line(opcode, xfrom, yfrom, x, y, &pen);
+		if (~flags & 0x40)
+			points[next].y = parse_delta(os->data, &data);
 
 		flags <<= 2;
 	}
+
+	if (next - 1 == os->lines)
+		ui_polyline(os->opcode - 1, points, os->lines + 1, &pen);
+	else
+		error("polyline parse error\n");
 }
 
 /* Process an ellipse order */
