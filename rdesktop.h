@@ -78,10 +78,11 @@
 #endif
 #endif /* B_ENDIAN, L_ENDIAN from configure */
 
-/* Temporary NEED_ALIGN for alpha, should be properly detected
-   by configure in the future */
-#if defined(__alpha__)
+/* No need for alignment on x86 and amd64 */
+#if !defined(NEED_ALIGN)
+#if !(defined(__x86__) || defined(__x86_64__) || defined(__AMD64__))
 #define NEED_ALIGN
+#endif
 #endif
 
 #include "parse.h"
