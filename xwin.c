@@ -1085,8 +1085,6 @@ ui_select(int rdp_socket)
 	int n = (rdp_socket > g_x_socket) ? rdp_socket + 1 : g_x_socket + 1;
 	fd_set rfds, wfds;
 
-	FD_ZERO(&rfds);
-
 	while (True)
 	{
 		/* Process any events already waiting */
@@ -1121,7 +1119,7 @@ ui_select(int rdp_socket)
 			return 1;
 
 #ifdef WITH_RDPSND
-		if (FD_ISSET(g_dsp_fd, &wfds))
+		if (g_dsp_busy && FD_ISSET(g_dsp_fd, &wfds))
 			wave_out_play();
 #endif
 	}
