@@ -45,6 +45,7 @@ static BOOL keymap_loaded;
 static key_translation keymap[KEYMAP_SIZE];
 static int min_keycode;
 static uint16 remote_modifier_state = 0;
+static uint16 saved_remote_modifier_state = 0;
 
 static void update_modifier_state(uint8 scancode, BOOL pressed);
 
@@ -414,6 +415,21 @@ get_ksname(uint32 keysym)
 	return ksname;
 }
 
+void
+save_remote_modifiers()
+{
+	saved_remote_modifier_state = remote_modifier_state;
+}
+
+void
+restore_remote_modifiers(uint32 ev_time)
+{
+	key_translation dummy;
+
+	dummy.scancode = 0;
+	dummy.modifiers = saved_remote_modifier_state;
+	ensure_remote_modifiers(ev_time, dummy);
+}
 
 void
 ensure_remote_modifiers(uint32 ev_time, key_translation tr)

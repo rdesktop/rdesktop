@@ -833,9 +833,11 @@ xwin_process_events(void)
 				if (tr.scancode == 0)
 					break;
 
+				save_remote_modifiers();
 				ensure_remote_modifiers(ev_time, tr);
-
 				rdp_send_scancode(ev_time, RDP_KEYPRESS, tr.scancode);
+				restore_remote_modifiers();
+
 				break;
 
 			case KeyRelease:
