@@ -1445,13 +1445,13 @@ ui_select(int rdp_socket)
 
 		rdpdr_check_fds(&rfds, &wfds, (BOOL) False);
 
+		if (FD_ISSET(rdp_socket, &rfds))
+			return 1;
+
 #ifdef WITH_RDPSND
 		if (g_dsp_busy && FD_ISSET(g_dsp_fd, &wfds))
 			wave_out_play();
 #endif
-
-		if (FD_ISSET(rdp_socket, &rfds))
-			return 1;
 	}
 }
 
