@@ -605,6 +605,10 @@ process_text2(STREAM s, TEXT2_ORDER * os, uint32 present, BOOL delta)
 	if (present & 0x002000)
 		in_uint16_le(s, os->boxbottom);
 
+	if (present & 0x004000) /* fix for connecting to a server that */
+		in_uint8s(s, 10);    /* was disconnected with mstsc.exe */
+		/* 0x008000, 0x020000, and 0x040000 are present too ??? */
+
 	if (present & 0x080000)
 		in_uint16_le(s, os->x);
 
