@@ -114,7 +114,7 @@ tcp_connect(char *server)
 	{
 		memcpy(&servaddr.sin_addr, nslookup->h_addr, sizeof(servaddr.sin_addr));
 	}
-	else if (!(servaddr.sin_addr.s_addr = inet_addr(server)))
+	else if ((servaddr.sin_addr.s_addr = inet_addr(server)) == INADDR_NONE)
 	{
 		error("%s: unable to resolve host\n", server);
 		return False;
