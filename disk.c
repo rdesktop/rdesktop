@@ -660,9 +660,17 @@ disk_set_information(HANDLE handle, uint32 info_class, STREAM in, STREAM out)
 		case 13:	/* FileDispositionInformation */
 
 			//unimpl("IRP Set File Information class: FileDispositionInformation\n");
-			// in_uint32_le(in, delete_on_close);
+
+			//in_uint32_le(in, delete_on_close);
 			// disk_close(handle);
-			unlink(pfinfo->path);
+			if ((pfinfo->flags_and_attributes & FILE_DIRECTORY_FILE))	// remove a directory
+			{
+				if (rmdir(pfinfo->path) < 0)
+					return STATUS_ACCESS_DENIED;
+			}
+			else if (unlink(pfinfo->path) < 0)	// unlink a file
+				return STATUS_ACCESS_DENIED;
+
 			break;
 
 		case 19:	/* FileAllocationInformation */
