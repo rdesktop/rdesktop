@@ -46,7 +46,11 @@ installman: rdesktop.1
 
 installkeymaps:
 	mkdir -p $(KEYMAP_PATH)
-	cp keymaps/* $(KEYMAP_PATH)
+# Prevent copying the CVS directory
+	cp keymaps/?? $(KEYMAP_PATH)
+	cp keymaps/common $(KEYMAP_PATH)
+	cp keymaps/modifiers $(KEYMAP_PATH)
+	cp keymaps/README $(KEYMAP_PATH)
 	chmod 644 $(KEYMAP_PATH)/*
 
 proto:
