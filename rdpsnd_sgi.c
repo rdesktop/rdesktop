@@ -56,43 +56,45 @@ static unsigned int queue_hi, queue_lo;
 BOOL
 wave_out_open(void)
 {
-  ALparamInfo pinfo;
+	ALparamInfo pinfo;
 
 #if (defined(IRIX_DEBUG))
-    fprintf(stderr, "wave_out_open: begin\n");
+	fprintf(stderr, "wave_out_open: begin\n");
 #endif
 
-  if ( alGetParamInfo(AL_DEFAULT_OUTPUT, AL_GAIN, &pinfo) < 0 )
-  {
-    fprintf(stderr, "wave_out_open: alGetParamInfo failed: %s\n", 
-						alGetErrorString(oserror()));
-  }
-  min_volume = alFixedToDouble(pinfo.min.ll);
-  max_volume = alFixedToDouble(pinfo.max.ll);
-  volume_range = (max_volume - min_volume);
+	if (alGetParamInfo(AL_DEFAULT_OUTPUT, AL_GAIN, &pinfo) < 0)
+	{
+		fprintf(stderr, "wave_out_open: alGetParamInfo failed: %s\n",
+			alGetErrorString(oserror()));
+	}
+	min_volume = alFixedToDouble(pinfo.min.ll);
+	max_volume = alFixedToDouble(pinfo.max.ll);
+	volume_range = (max_volume - min_volume);
 #if (defined(IRIX_DEBUG))
-		fprintf(stderr, "wave_out_open: minvol = %lf, maxvol= %lf, range = %lf.\n",
-						min_volume, max_volume, volume_range);
+	fprintf(stderr, "wave_out_open: minvol = %lf, maxvol= %lf, range = %lf.\n",
+		min_volume, max_volume, volume_range);
 #endif
 
 	queue_lo = queue_hi = 0;
 
 	audioconfig = alNewConfig();
-	if (audioconfig < 0) {
-    fprintf(stderr, "wave_out_open: alNewConfig failed: %s\n",
-            alGetErrorString(oserror()));
+	if (audioconfig < 0)
+	{
+		fprintf(stderr, "wave_out_open: alNewConfig failed: %s\n",
+			alGetErrorString(oserror()));
 		return False;
 	}
 
 	output_port = alOpenPort("rdpsnd", "w", 0);
-	if (output_port == (ALport) 0) {
-    fprintf(stderr, "wave_out_open: alOpenPort failed: %s\n", 
-						alGetErrorString(oserror()));
+	if (output_port == (ALport) 0)
+	{
+		fprintf(stderr, "wave_out_open: alOpenPort failed: %s\n",
+			alGetErrorString(oserror()));
 		return False;
 	}
 
 #if (defined(IRIX_DEBUG))
-    fprintf(stderr, "wave_out_open: returning\n");
+	fprintf(stderr, "wave_out_open: returning\n");
 #endif
 	return True;
 }
@@ -102,21 +104,21 @@ wave_out_close(void)
 {
 	/* Ack all remaining packets */
 #if (defined(IRIX_DEBUG))
-    fprintf(stderr, "wave_out_close: begin\n");
+	fprintf(stderr, "wave_out_close: begin\n");
 #endif
-	
+
 	while (queue_lo != queue_hi)
 	{
 		rdpsnd_send_completion(packet_queue[queue_lo].tick, packet_queue[queue_lo].index);
 		free(packet_queue[queue_lo].s.data);
 		queue_lo = (queue_lo + 1) % MAX_QUEUE;
 	}
-	alDiscardFrames(output_port, 0);	
-	
+	alDiscardFrames(output_port, 0);
+
 	alClosePort(output_port);
 	alFreeConfig(audioconfig);
 #if (defined(IRIX_DEBUG))
-    fprintf(stderr, "wave_out_close: returning\n");
+	fprintf(stderr, "wave_out_close: returning\n");
 #endif
 }
 
@@ -137,11 +139,11 @@ BOOL
 wave_out_set_format(WAVEFORMATEX * pwfx)
 {
 	int channels;
-  int frameSize, channelCount;
-  ALpv	params;
-	
+	int frameSize, channelCount;
+	ALpv params;
+
 #if (defined(IRIX_DEBUG))
-		fprintf(stderr, "wave_out_set_format: init...\n");
+	fprintf(stderr, "wave_out_set_format: init...\n");
 #endif
 	/* limited support to configure an opened audio port in IRIX */
 	/* have to reopen the audio port, using same config */
@@ -151,7 +153,8 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 
 	if (pwfx->wBitsPerSample == 8)
 		width = AL_SAMPLE_8;
-	else if (pwfx->wBitsPerSample == 16) {
+	else if (pwfx->wBitsPerSample == 16)
+	{
 		width = AL_SAMPLE_16;
 		/* Do we need to swap the 16bit values? (Are we BigEndian) */
 #if (defined(IRIX_DEBUG))
@@ -171,41 +174,42 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 
 	output_port = alOpenPort("rdpsnd", "w", audioconfig);
 
-	if (output_port == (ALport) 0) { 
-    fprintf(stderr, "wave_out_set_format: alOpenPort failed: %s\n",
-            alGetErrorString(oserror()));
+	if (output_port == (ALport) 0)
+	{
+		fprintf(stderr, "wave_out_set_format: alOpenPort failed: %s\n",
+			alGetErrorString(oserror()));
 		return False;
 	}
 
 	resource = alGetResource(output_port);
 	maxFillable = alGetFillable(output_port);
-  channelCount = alGetChannels(audioconfig);
-  frameSize = alGetWidth(audioconfig);
+	channelCount = alGetChannels(audioconfig);
+	frameSize = alGetWidth(audioconfig);
 
-  if (frameSize == 0 || channelCount == 0)
-  {
-    fprintf(stderr, "wave_out_set_format: bad frameSize or channelCount\n");
-    return False;
-  }
-  combinedFrameSize = frameSize * channelCount;
+	if (frameSize == 0 || channelCount == 0)
+	{
+		fprintf(stderr, "wave_out_set_format: bad frameSize or channelCount\n");
+		return False;
+	}
+	combinedFrameSize = frameSize * channelCount;
 
-  params.param = AL_RATE;
-  params.value.ll = (long long) g_snd_rate << 32;
+	params.param = AL_RATE;
+	params.value.ll = (long long) g_snd_rate << 32;
 
-  if (alSetParams(resource, &params, 1) < 0)
-  {
-    fprintf(stderr, "wave_set_format: alSetParams failed: %s\n", 
-						alGetErrorString(oserror()));
-    return False;
-  }
-  if( params.sizeOut < 0 )
-  {
-    fprintf(stderr, "wave_set_format: invalid rate %d\n", g_snd_rate);
-    return False;
-  }
+	if (alSetParams(resource, &params, 1) < 0)
+	{
+		fprintf(stderr, "wave_set_format: alSetParams failed: %s\n",
+			alGetErrorString(oserror()));
+		return False;
+	}
+	if (params.sizeOut < 0)
+	{
+		fprintf(stderr, "wave_set_format: invalid rate %d\n", g_snd_rate);
+		return False;
+	}
 
 #if (defined(IRIX_DEBUG))
-		fprintf(stderr, "wave_out_set_format: returning...\n");
+	fprintf(stderr, "wave_out_set_format: returning...\n");
 #endif
 	return True;
 }
@@ -213,32 +217,33 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 void
 wave_out_volume(uint16 left, uint16 right)
 {
-  double gainleft, gainright;
-  ALpv pv[1];
-  ALfixed gain[8];
+	double gainleft, gainright;
+	ALpv pv[1];
+	ALfixed gain[8];
 
 #if (defined(IRIX_DEBUG))
-    fprintf(stderr, "wave_out_volume: begin\n");
-    fprintf(stderr, "left='%d', right='%d'\n", left, right);
+	fprintf(stderr, "wave_out_volume: begin\n");
+	fprintf(stderr, "left='%d', right='%d'\n", left, right);
 #endif
-	
-	gainleft =  (double)  left / IRIX_MAX_VOL;
+
+	gainleft = (double) left / IRIX_MAX_VOL;
 	gainright = (double) right / IRIX_MAX_VOL;
 
-  gain[0] = alDoubleToFixed(min_volume + gainleft  * volume_range);
-  gain[1] = alDoubleToFixed(min_volume + gainright * volume_range);
+	gain[0] = alDoubleToFixed(min_volume + gainleft * volume_range);
+	gain[1] = alDoubleToFixed(min_volume + gainright * volume_range);
 
-  pv[0].param = AL_GAIN;
-  pv[0].value.ptr = gain;
-  pv[0].sizeIn = 8;
-  if( alSetParams(AL_DEFAULT_OUTPUT, pv, 1) < 0)
-  {
-    fprintf(stderr, "wave_out_volume: alSetParams failed: %s\n", alGetErrorString(oserror()));
-    return;
-  }
+	pv[0].param = AL_GAIN;
+	pv[0].value.ptr = gain;
+	pv[0].sizeIn = 8;
+	if (alSetParams(AL_DEFAULT_OUTPUT, pv, 1) < 0)
+	{
+		fprintf(stderr, "wave_out_volume: alSetParams failed: %s\n",
+			alGetErrorString(oserror()));
+		return;
+	}
 
 #if (defined(IRIX_DEBUG))
-    fprintf(stderr, "wave_out_volume: returning\n");
+	fprintf(stderr, "wave_out_volume: returning\n");
 #endif
 }
 
@@ -316,15 +321,16 @@ wave_out_play(void)
 		}
 
 		len = out->end - out->p;
-		gf = alGetFillable(output_port);		
-		if (len > gf) {
+		gf = alGetFillable(output_port);
+		if (len > gf)
+		{
 			//len = gf * combinedFrameSize;
 #if (defined(IRIX_DEBUG))
 			//fprintf(stderr,"Fillable...\n");
 #endif
 		}
 
-		alWriteFrames(output_port, out->p, len/combinedFrameSize);
+		alWriteFrames(output_port, out->p, len / combinedFrameSize);
 
 		out->p += len;
 		if (out->p == out->end)
@@ -334,8 +340,7 @@ wave_out_play(void)
 
 			gettimeofday(&tv, NULL);
 			duration = (out->size * (1000000 / (g_samplewidth * g_snd_rate)));
-			elapsed =  (tv.tv_sec - startedat_s) * 1000000 
-				       + (tv.tv_usec - startedat_us);
+			elapsed = (tv.tv_sec - startedat_s) * 1000000 + (tv.tv_usec - startedat_us);
 			/* 7/10 is not good for IRIX audio port, 4x/100 is suitable */
 			if (elapsed >= (duration * 485) / 1000)
 			{
