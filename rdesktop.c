@@ -312,16 +312,16 @@ generate_random_egd(uint8 * buf)
 
 	addr.sun_family = AF_UNIX;
 	memcpy(addr.sun_path, EGD_SOCKET, sizeof(EGD_SOCKET));
-	if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) == -1)
+	if (connect(fd, (struct sockaddr *) &addr, sizeof(addr)) == -1)
 		goto err;
 
 	/* PRNGD and EGD use a simple communications protocol */
-	buf[0] = 1;  /* Non-blocking (similar to /dev/urandom) */
-	buf[1] = 32; /* Number of requested random bytes */
+	buf[0] = 1;		/* Non-blocking (similar to /dev/urandom) */
+	buf[1] = 32;		/* Number of requested random bytes */
 	if (write(fd, buf, 2) != 2)
 		goto err;
 
-	if ((read(fd, buf, 1) != 1) || (buf[0] == 0)) /* Available? */
+	if ((read(fd, buf, 1) != 1) || (buf[0] == 0))	/* Available? */
 		goto err;
 
 	if (read(fd, buf, 32) != 32)
@@ -329,7 +329,7 @@ generate_random_egd(uint8 * buf)
 
 	ret = True;
 
-err:
+      err:
 	close(fd);
 	return ret;
 }
@@ -362,7 +362,7 @@ generate_random(uint8 * random)
 #endif
 
 	/* Otherwise use whatever entropy we can gather - ideas welcome. */
-	r = (uint32 *)random;
+	r = (uint32 *) random;
 	r[0] = (getpid()) | (getppid() << 16);
 	r[1] = (getuid()) | (getgid() << 16);
 	r[2] = times(&tmsbuf);	/* system uptime (clocks) */
@@ -374,10 +374,10 @@ generate_random(uint8 * random)
 
 	/* Hash both halves with MD5 to obscure possible patterns */
 	MD5_Init(&md5);
-	MD5_Update(&md5, random, 16); 
+	MD5_Update(&md5, random, 16);
 	MD5_Final(random, &md5);
-	MD5_Update(&md5, random+16, 16);
-	MD5_Final(random+16, &md5);
+	MD5_Update(&md5, random + 16, 16);
+	MD5_Final(random + 16, &md5);
 }
 
 /* malloc; exit if out of memory */
