@@ -43,6 +43,7 @@ static Screen *g_screen;
 Window g_wnd;
 BOOL g_enable_compose = False;
 static GC g_gc;
+static BOOL g_gc_initialized = False;
 static Visual *g_visual;
 static int g_depth;
 static int g_bpp;
@@ -887,7 +888,11 @@ ui_create_window(void)
 			      CWBackPixel | CWBackingStore | CWOverrideRedirect |
 			      CWColormap | CWBorderPixel, &attribs);
 
-	g_gc = XCreateGC(g_display, g_wnd, 0, NULL);
+	if ( ! g_gc_initialized )
+	{
+		g_gc = XCreateGC(g_display, g_wnd, 0, NULL);
+		g_gc_initialized = True;
+	}
 
 	if ((g_ownbackstore) && (! g_backstore_initialized))
 	{
