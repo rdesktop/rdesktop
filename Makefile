@@ -8,7 +8,7 @@
 # DEBUG = -g -DRDP_DEBUG
 
 CC     = gcc
-CFLAGS = -O2 -Wall $(DEBUG)
+CFLAGS = -O2 -Wall $(DEBUG) -I/usr/X11R6/include
 LIBS   = -L/usr/X11R6/lib -lX11
 
 RDPOBJ = rdesktop.o tcp.o iso.o mcs.o secure.o licence.o rdp.o orders.o bitmap.o cache.o xwin.o

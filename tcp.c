@@ -22,8 +22,9 @@
 #include <sys/socket.h>	/* socket connect setsockopt */
 #include <sys/time.h>	/* timeval */
 #include <netdb.h>	/* gethostbyname */
+#include <netinet/in.h>	/* sockaddr_in */
 #include <netinet/tcp.h> /* TCP_NODELAY */
-#include <arpa/inet.h>	/* sockaddr_in inet_addr */
+#include <arpa/inet.h>	/* inet_addr */
 #include <errno.h>	/* errno */
 #include "rdesktop.h"
 
