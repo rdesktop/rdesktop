@@ -116,7 +116,7 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 
 	g_samplewidth = pwfx->wBitsPerSample / 8;
 
-	if(o_device != NULL)
+	if (o_device != NULL)
 		ao_close(o_device);
 
 	o_device = ao_open_live(default_driver, &format, NULL);
@@ -165,8 +165,8 @@ wave_out_play(void)
 {
 	struct audio_packet *packet;
 	STREAM out;
-	unsigned char expanded[WAVEOUTBUF];
-	int offset,len,i;
+	unsigned char outbuf[WAVEOUTBUF];
+	int offset, len, i;
 
 	if (queue_lo == queue_hi)
 	{
@@ -179,30 +179,31 @@ wave_out_play(void)
 
 	len = 0;
 
-	if (g_samplerate == 22050 )
+	if (g_samplerate == 22050)
 	{
 		/* Resample to 44100 */
-		for(i=0; (i<((WAVEOUTBUF/8)*(3-g_samplewidth))) && (out->p < out->end); i++)
+		for (i = 0; (i < ((WAVEOUTBUF / 8) * (3 - g_samplewidth))) && (out->p < out->end);
+		     i++)
 		{
-			offset=i*4*g_samplewidth;
-			memcpy(&expanded[0*g_samplewidth+offset],out->p,g_samplewidth);
-			memcpy(&expanded[2*g_samplewidth+offset],out->p,g_samplewidth);
+			offset = i * 4 * g_samplewidth;
+			memcpy(&outbuf[0 * g_samplewidth + offset], out->p, g_samplewidth);
+			memcpy(&outbuf[2 * g_samplewidth + offset], out->p, g_samplewidth);
 			out->p += 2;
 
-			memcpy(&expanded[1*g_samplewidth+offset],out->p,g_samplewidth);
-			memcpy(&expanded[3*g_samplewidth+offset],out->p,g_samplewidth);
+			memcpy(&outbuf[1 * g_samplewidth + offset], out->p, g_samplewidth);
+			memcpy(&outbuf[3 * g_samplewidth + offset], out->p, g_samplewidth);
 			out->p += 2;
-			len += 4*g_samplewidth;
+			len += 4 * g_samplewidth;
 		}
 	}
 	else
 	{
 		len = (WAVEOUTBUF > (out->end - out->p)) ? (out->end - out->p) : WAVEOUTBUF;
-		memcpy(expanded,out->p,len);
+		memcpy(outbuf, out->p, len);
 		out->p += len;
 	}
 
-	ao_play(o_device, expanded, len);
+	ao_play(o_device, outbuf, len);
 
 	if (out->p == out->end)
 	{
