@@ -9,7 +9,7 @@ The IPv6 support was developed by Mike Dawson <mike@dexy.mine.nu>:
     
     Since terminal services doesn't seem to bind to the ipv6 interface
     on XP I had to run 'netsh interface portproxy add v6tov4
-    listenport=3389 connectport=33 89' from the windows command prompt
+    listenport=3389 connectport=3389' from the windows command prompt
     to get it to work.
     
 

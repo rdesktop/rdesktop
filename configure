@@ -67,6 +67,9 @@ case $arg in
     ;;
   --without-debug*)
     ;;
+  --with-ipv6)
+    cflags="$cflags -DIPv6"
+    ;;
   *)
     echo "Target directories:"
     echo " --prefix=PREFIX         location for architecture-independent files"
@@ -87,6 +90,7 @@ case $arg in
     echo " --with-debug-kbd        enable debugging of keyboard handling"
     echo " --with-debug-rdp5       enable debugging of RDP5 code"
     echo " --with-debug-clipboard  enable debugging of clipboard code"
+    echo " --with-ipv6             enable support for IPv6"
     echo
     rm -f Makeconf
     exit 1
