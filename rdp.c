@@ -1203,7 +1203,7 @@ process_data_pdu(STREAM s, uint32 * ext_disc_reason)
 		if (mppc_expand(s->p, clen, ctype, &roff, &rlen) == -1)
 			error("error while decompressing packet\n");
 
-		//len -= 18;
+		/* len -= 18; */
 
 		/* allocate memory and copy the uncompressed data into the temporary stream */
 		ns->data = (uint8 *) xrealloc(ns->data, rlen);

@@ -25,8 +25,8 @@ printer_enum_devices(uint32 * id, char *optarg)
 	int count = 0;
 	int already = 0;
 
-	// we need to know how many printers we've already set up
-	// supplied from other -r flags than this one.
+	/* we need to know how many printers we've already set up
+	   supplied from other -r flags than this one. */
 	while (count < *id)
 	{
 		if (g_rdpdr_device[count].device_type == DEVICE_TYPE_PRINTER)

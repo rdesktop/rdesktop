@@ -77,19 +77,19 @@
 #define SERIAL_PURGE_RXCLEAR 0x00000008
 
 /* SERIAL_WAIT_ON_MASK */
-#define SERIAL_EV_RXCHAR           0x0001	// Any Character received
-#define SERIAL_EV_RXFLAG           0x0002	// Received certain character
-#define SERIAL_EV_TXEMPTY          0x0004	// Transmitt Queue Empty
-#define SERIAL_EV_CTS              0x0008	// CTS changed state
-#define SERIAL_EV_DSR              0x0010	// DSR changed state
-#define SERIAL_EV_RLSD             0x0020	// RLSD changed state
-#define SERIAL_EV_BREAK            0x0040	// BREAK received
-#define SERIAL_EV_ERR              0x0080	// Line status error occurred
-#define SERIAL_EV_RING             0x0100	// Ring signal detected
-#define SERIAL_EV_PERR             0x0200	// Printer error occured
-#define SERIAL_EV_RX80FULL         0x0400	// Receive buffer is 80 percent full
-#define SERIAL_EV_EVENT1           0x0800	// Provider specific event 1
-#define SERIAL_EV_EVENT2           0x1000	// Provider specific event 2
+#define SERIAL_EV_RXCHAR           0x0001	/* Any Character received */
+#define SERIAL_EV_RXFLAG           0x0002	/* Received certain character */
+#define SERIAL_EV_TXEMPTY          0x0004	/* Transmitt Queue Empty */
+#define SERIAL_EV_CTS              0x0008	/* CTS changed state */
+#define SERIAL_EV_DSR              0x0010	/* DSR changed state */
+#define SERIAL_EV_RLSD             0x0020	/* RLSD changed state */
+#define SERIAL_EV_BREAK            0x0040	/* BREAK received */
+#define SERIAL_EV_ERR              0x0080	/* Line status error occurred */
+#define SERIAL_EV_RING             0x0100	/* Ring signal detected */
+#define SERIAL_EV_PERR             0x0200	/* Printer error occured */
+#define SERIAL_EV_RX80FULL         0x0400	/* Receive buffer is 80 percent full */
+#define SERIAL_EV_EVENT1           0x0800	/* Provider specific event 1 */
+#define SERIAL_EV_EVENT2           0x1000	/* Provider specific event 2 */
 
 /* Modem Status */
 #define SERIAL_MS_DTR 0x01
@@ -503,11 +503,11 @@ serial_enum_devices(uint32 * id, char *optarg)
 	char *pos2;
 	int count = 0;
 
-	// skip the first colon
+	/* skip the first colon */
 	optarg++;
 	while ((pos = next_arg(optarg, ',')) && *id < RDPDR_MAX_DEVICES)
 	{
-		// Init data structures for device
+		/* Init data structures for device */
 		pser_inf = (SERIAL_DEVICE *) xmalloc(sizeof(SERIAL_DEVICE));
 		pser_inf->ptermios = (struct termios *) xmalloc(sizeof(struct termios));
 		memset(pser_inf->ptermios, 0, sizeof(struct termios));
@@ -523,7 +523,7 @@ serial_enum_devices(uint32 * id, char *optarg)
 		strcpy(g_rdpdr_device[*id].local_path, pos2);
 		printf("SERIAL %s to %s\n", g_rdpdr_device[*id].name,
 		       g_rdpdr_device[*id].local_path);
-		// set device type
+		/* set device type */
 		g_rdpdr_device[*id].device_type = DEVICE_TYPE_SERIAL;
 		g_rdpdr_device[*id].pdevice_data = (void *) pser_inf;
 		count++;
@@ -559,7 +559,7 @@ serial_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 disposi
 		return STATUS_ACCESS_DENIED;
 	}
 
-	// Store handle for later use
+	/* Store handle for later use */
 	g_rdpdr_device[device_id].handle = serial_fd;
 
 	/* some sane information */
@@ -618,8 +618,8 @@ serial_read(NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 
 	pser_inf = get_serial_info(handle);
 	ptermios = pser_inf->ptermios;
 
-	// Set timeouts kind of like the windows serial timeout parameters. Multiply timeout
-	// with requested read size
+	/* Set timeouts kind of like the windows serial timeout parameters. Multiply timeout
+	   with requested read size */
 	if (pser_inf->read_total_timeout_multiplier | pser_inf->read_total_timeout_constant)
 	{
 		timeout =
@@ -631,9 +631,9 @@ serial_read(NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 
 		timeout = (pser_inf->read_interval_timeout * length + 99) / 100;
 	}
 
-	// If a timeout is set, do a blocking read, which times out after some time.
-	// It will make rdesktop less responsive, but it will improve serial performance, by not
-	// reading one character at a time.
+	/* If a timeout is set, do a blocking read, which times out after some time.
+	   It will make rdesktop less responsive, but it will improve serial performance, by not
+	   reading one character at a time. */
 	if (timeout == 0)
 	{
 		ptermios->c_cc[VTIME] = 0;

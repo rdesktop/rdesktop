@@ -324,9 +324,9 @@ wave_out_play(void)
 		gf = alGetFillable(output_port);
 		if (len > gf)
 		{
-			//len = gf * combinedFrameSize;
+			/* len = gf * combinedFrameSize; */
 #if (defined(IRIX_DEBUG))
-			//fprintf(stderr,"Fillable...\n");
+			/* fprintf(stderr,"Fillable...\n"); */
 #endif
 		}
 
@@ -353,7 +353,7 @@ wave_out_play(void)
 			else
 			{
 #if (defined(IRIX_DEBUG))
-				//fprintf(stderr,"Busy playing...\n");
+				/* fprintf(stderr,"Busy playing...\n"); */
 #endif
 				g_dsp_busy = True;
 				return;

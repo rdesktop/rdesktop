@@ -32,7 +32,7 @@ parallel_enum_devices(uint32 * id, char *optarg)
 	char *pos2;
 	int count = 0;
 
-	// skip the first colon
+	/* skip the first colon */
 	optarg++;
 	while ((pos = next_arg(optarg, ',')) && *id < RDPDR_MAX_DEVICES)
 	{
@@ -47,7 +47,7 @@ parallel_enum_devices(uint32 * id, char *optarg)
 		strcpy(g_rdpdr_device[*id].local_path, pos2);
 		printf("PARALLEL %s to %s\n", optarg, pos2);
 
-		// set device type
+		/* set device type */
 		g_rdpdr_device[*id].device_type = DEVICE_TYPE_PARALLEL;
 		g_rdpdr_device[*id].pdevice_data = (void *) ppar_info;
 		g_rdpdr_device[*id].handle = 0;

@@ -239,9 +239,9 @@ printercache_process(STREAM s)
 	{
 		case 4:	/* rename item */
 			in_uint8(s, printer_length);
-			in_uint8s(s, 0x3);	// padding
+			in_uint8s(s, 0x3);	/* padding */
 			in_uint8(s, driver_length);
-			in_uint8s(s, 0x3);	// padding
+			in_uint8s(s, 0x3);	/* padding */
 
 			/* NOTE - 'driver' doesn't contain driver, it contains the new printer name */
 
@@ -253,7 +253,7 @@ printercache_process(STREAM s)
 
 		case 3:	/* delete item */
 			in_uint8(s, printer_unicode_length);
-			in_uint8s(s, 0x3);	// padding
+			in_uint8s(s, 0x3);	/* padding */
 			printer_length = rdp_in_unistr(s, printer, printer_unicode_length);
 			printercache_unlink_blob(printer);
 			break;
@@ -270,22 +270,22 @@ printercache_process(STREAM s)
 			break;
 
 		case 1:	/* save device data */
-			in_uint8a(s, device_name, 5);	// get LPTx/COMx name
+			in_uint8a(s, device_name, 5);	/* get LPTx/COMx name */
 
-			// need to fetch this data so that we can get the length of the packet to store.
-			in_uint8s(s, 0x2);	// ???
-			in_uint8s(s, 0x2)	// pad??
+			/* need to fetch this data so that we can get the length of the packet to store. */
+			in_uint8s(s, 0x2);	/* ??? */
+			in_uint8s(s, 0x2)	/* pad?? */
 				in_uint32_be(s, driver_length);
 			in_uint32_be(s, printer_length);
-			in_uint8s(s, 0x7)	// pad??
-				// next is driver in unicode
-				// next is printer in unicode
+			in_uint8s(s, 0x7)	/* pad?? */
+				/* next is driver in unicode */
+				/* next is printer in unicode */
 				/* TODO: figure out how to use this information when reconnecting */
 				/* actually - all we need to store is the driver and printer */
 				/* and figure out what the first word is. */
 				/* rewind stream so that we can save this blob   */
 				/* length is driver_length + printer_length + 19 */
-				// rewind stream
+				/* rewind stream */
 				s->p = s->p - 19;
 
 			printercache_save_blob(device_name, s->p,
