@@ -1509,9 +1509,25 @@ void ui_destblt(uint8 opcode, int x, int y, int cx, int cy)
 {
   int i, j;
 
-  for (i = 0; i < cy; i++)
-    for (j = 0; j < cx; j++)
-      set_pixel(x + j, y + i, get_pixel(x + j, y + i), opcode);
+
+  if (opcode == 0x0) /* black */
+  {
+    for (i = 0; i < cy; i++)
+      for (j = 0; j < cx; j++)
+        set_pixel(x + j, y + i, 0, 0xc);
+  }
+  else if (opcode == 0xf) /* white */
+  {
+    for (i = 0; i < cy; i++)
+      for (j = 0; j < cx; j++)
+        set_pixel(x + j, y + i, 0xffffff, 0xc);
+  }
+  else
+  {
+    for (i = 0; i < cy; i++)
+      for (j = 0; j < cx; j++)
+        set_pixel(x + j, y + i, get_pixel(x + j, y + i), opcode);
+  }
   redraw(x, y, cx, cy);
 }
 
@@ -1601,38 +1617,94 @@ void ui_screenblt(uint8 opcode, int x, int y, int cx, int cy,
   uint8 * temp;
 
   temp = (uint8*)xmalloc(cx * cy * 4);
-  if (g_server_bpp == 8)
+#ifdef QT_OPTI
+  if (opcode == 0xc)
   {
-    for (i = 0; i < cy; i++)
-      for (j = 0; j < cx; j++)
-        temp[i * cx + j] = get_pixel(srcx + j, srcy + i);
-    for (i = 0; i < cy; i++)
-      for (j = 0; j < cx; j++)
-        set_pixel(x + j, y + i, temp[i * cx + j], opcode);
-  }
-  else if (g_server_bpp == 16)
-  {
-    for (i = 0; i < cy; i++)
-      for (j = 0; j < cx; j++)
+    if (WarpCoords(&x, &y, &cx, &cy, &srcx, &srcy))
+    {
+      if (g_server_bpp == 8)
       {
-        pixel = get_pixel(srcx + j, srcy + i);
-        SETPIXEL16(temp, j, i, cx, pixel);
+        for (i = 0; i < cy; i++)
+          for (j = 0; j < cx; j++)
+          {
+            pixel = GETPIXEL8(g_BS, srcx + j, srcy + i, g_width);
+            SETPIXEL8(temp, j, i, cx, pixel);
+          }
+        for (i = 0; i < cy; i++)
+          for (j = 0; j < cx; j++)
+          {
+            pixel = GETPIXEL8(temp, j, i, cx);
+            SETPIXEL8(g_BS, x + j, y + i, g_width, pixel);
+          }
       }
-    for (i = 0; i < cy; i++)
-      for (j = 0; j < cx; j++)
+      else if (g_server_bpp == 16)
       {
-        pixel = GETPIXEL16(temp, j, i, cx);
-        set_pixel(x + j, y + i, pixel, opcode);
+        for (i = 0; i < cy; i++)
+          for (j = 0; j < cx; j++)
+          {
+            pixel = GETPIXEL16(g_BS, srcx + j, srcy + i, g_width);
+            SETPIXEL16(temp, j, i, cx, pixel);
+          }
+        for (i = 0; i < cy; i++)
+          for (j = 0; j < cx; j++)
+          {
+            pixel = GETPIXEL16(temp, j, i, cx);
+            SETPIXEL16(g_BS, x + j, y + i, g_width, pixel);
+          }
       }
+      else if (g_server_bpp == 24)
+      {
+        for (i = 0; i < cy; i++)
+          for (j = 0; j < cx; j++)
+          {
+            pixel = GETPIXEL32(g_BS, srcx + j, srcy + i, g_width);
+            SETPIXEL32(temp, j, i, cx, pixel);
+          }
+        for (i = 0; i < cy; i++)
+          for (j = 0; j < cx; j++)
+          {
+            pixel = GETPIXEL32(temp, j, i, cx);
+            SETPIXEL32(g_BS, x + j, y + i, g_width, pixel);
+          }
+      }
+    }
   }
-  else if (g_server_bpp == 24)
+  else
+#endif
   {
-    for (i = 0; i < cy; i++)
-      for (j = 0; j < cx; j++)
-        *(((uint32*)temp) + (i * cx + j)) = get_pixel(srcx + j, srcy + i);
-    for (i = 0; i < cy; i++)
-      for (j = 0; j < cx; j++)
-        set_pixel(x + j, y + i, *(((uint32*)temp) + (i * cx + j)), opcode);
+    if (g_server_bpp == 8)
+    {
+      for (i = 0; i < cy; i++)
+        for (j = 0; j < cx; j++)
+          temp[i * cx + j] = get_pixel(srcx + j, srcy + i);
+      for (i = 0; i < cy; i++)
+        for (j = 0; j < cx; j++)
+          set_pixel(x + j, y + i, temp[i * cx + j], opcode);
+    }
+    else if (g_server_bpp == 16)
+    {
+      for (i = 0; i < cy; i++)
+        for (j = 0; j < cx; j++)
+        {
+          pixel = get_pixel(srcx + j, srcy + i);
+          SETPIXEL16(temp, j, i, cx, pixel);
+        }
+      for (i = 0; i < cy; i++)
+        for (j = 0; j < cx; j++)
+        {
+          pixel = GETPIXEL16(temp, j, i, cx);
+          set_pixel(x + j, y + i, pixel, opcode);
+        }
+    }
+    else if (g_server_bpp == 24)
+    {
+      for (i = 0; i < cy; i++)
+        for (j = 0; j < cx; j++)
+          *(((uint32*)temp) + (i * cx + j)) = get_pixel(srcx + j, srcy + i);
+      for (i = 0; i < cy; i++)
+        for (j = 0; j < cx; j++)
+          set_pixel(x + j, y + i, *(((uint32*)temp) + (i * cx + j)), opcode);
+    }
   }
   xfree(temp);
   redraw(x, y, cx, cy);
