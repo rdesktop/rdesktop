@@ -40,6 +40,7 @@ extern char keymapname[16];
 extern int keylayout;
 extern int g_win_button_size;
 extern BOOL g_enable_compose;
+extern BOOL g_use_rdp5;
 
 static BOOL keymap_loaded;
 static key_translation keymap[KEYMAP_SIZE];
@@ -239,6 +240,44 @@ xkeymap_init(void)
 	XDisplayKeycodes(g_display, &min_keycode, (int *) &max_keycode);
 }
 
+static void
+send_winkey(uint32 ev_time, BOOL pressed, BOOL leftkey)
+{
+	uint8 winkey;
+
+	if (leftkey)
+		winkey = SCANCODE_CHAR_LWIN;
+	else
+		winkey = SCANCODE_CHAR_RWIN;
+
+	if (pressed)
+	{
+		if (g_use_rdp5)
+		{
+			rdp_send_scancode(ev_time, RDP_KEYPRESS, winkey);
+		}
+		else
+		{
+			/* RDP4 doesn't support winkey. Fake with Ctrl-Esc */
+			rdp_send_scancode(ev_time, RDP_KEYPRESS, SCANCODE_CHAR_LCTRL);
+			rdp_send_scancode(ev_time, RDP_KEYPRESS, SCANCODE_CHAR_ESC);
+		}
+	}
+	else
+	{
+		/* key released */
+		if (g_use_rdp5)
+		{
+			rdp_send_scancode(ev_time, RDP_KEYRELEASE, winkey);
+		}
+		else
+		{
+			rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_ESC);
+			rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_LCTRL);
+		}
+	}
+}
+
 /* Handles, for example, multi-scancode keypresses (which is not
    possible via keymap-files) */
 BOOL
@@ -299,19 +338,13 @@ handle_special_keys(uint32 keysym, unsigned int state, uint32 ev_time, BOOL pres
 		case XK_Meta_L:	/* Windows keys */
 		case XK_Super_L:
 		case XK_Hyper_L:
+			send_winkey(ev_time, pressed, True);
+			return True;
+
 		case XK_Meta_R:
 		case XK_Super_R:
 		case XK_Hyper_R:
-			if (pressed)
-			{
-				rdp_send_scancode(ev_time, RDP_KEYPRESS, SCANCODE_CHAR_LCTRL);
-				rdp_send_scancode(ev_time, RDP_KEYPRESS, SCANCODE_CHAR_ESC);
-			}
-			else
-			{
-				rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_ESC);
-				rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_LCTRL);
-			}
+			send_winkey(ev_time, pressed, False);
 			return True;
 
 		case XK_space:
