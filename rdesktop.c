@@ -21,8 +21,8 @@
 #include <stdarg.h>		/* va_list va_start va_end */
 #include <unistd.h>		/* read close getuid getgid getpid getppid gethostname */
 #include <fcntl.h>		/* open */
+#include <errno.h>		/* save licence uses it. */
 #include <pwd.h>		/* getpwuid */
-#include <limits.h>		/* PATH_MAX */
 #include <termios.h>		/* tcgetattr tcsetattr */
 #include <sys/stat.h>		/* stat */
 #include <sys/time.h>		/* gettimeofday */
@@ -492,7 +492,7 @@ hexdump(unsigned char *p, unsigned int len)
 int
 load_licence(unsigned char **data)
 {
-	char path[PATH_MAX];
+	char *path;
 	char *home;
 	struct stat st;
 	int fd;
@@ -501,8 +501,8 @@ load_licence(unsigned char **data)
 	if (home == NULL)
 		return -1;
 
-	STRNCPY(path, home, sizeof(path));
-	strncat(path, "/.rdesktop/licence", sizeof(path) - strlen(path) - 1);
+	path = xmalloc(strlen(home) + strlen(hostname) + 20);
+	sprintf(path, "%s/.rdesktop/licence.%s", home, hostname);
 
 	fd = open(path, O_RDONLY);
 	if (fd == -1)
@@ -518,28 +518,130 @@ load_licence(unsigned char **data)
 void
 save_licence(unsigned char *data, int length)
 {
-	char path[PATH_MAX];
+	char *fpath;		/* file path for licence */
+	char *fname, *fnamewrk;	/* file name for licence .inkl path. */
 	char *home;
-	int fd;
+	uint32 y;
+	struct flock fnfl;
+	int fnfd, fnwrkfd, i, wlen;
+	struct stream s, *s_ptr;
+	uint32 len;
+
+	/* Construct a stream, so that we can use macros to extract the
+	 * licence.
+	 */
+	s_ptr = &s;
+	s_ptr->p = data;
+	/* Skip first two bytes */
+	in_uint16(s_ptr, len);
+
+	/* Skip three strings */
+	for (i = 0; i < 3; i++)
+	{
+		in_uint32(s_ptr, len);
+		s_ptr->p += len;
+		/* Make sure that we won't be past the end of data after
+		 * reading the next length value
+		 */
+		if ((s_ptr->p) + 4 > data + length)
+		{
+			printf("Error in parsing licence key.\n");
+			printf("Strings %d end value %x > supplied length (%x)\n",
+			       i, s_ptr->p, data + length);
+			return;
+		}
+	}
+	in_uint32(s_ptr, len);
+	if (s_ptr->p + len > data + length)
+	{
+		printf("Error in parsing licence key.\n");
+		printf("End of licence %x > supplied length (%x)\n", s_ptr->p + len, data + length);
+		return;
+	}
 
 	home = getenv("HOME");
 	if (home == NULL)
 		return;
 
-	STRNCPY(path, home, sizeof(path));
-	strncat(path, "/.rdesktop", sizeof(path) - strlen(path) - 1);
-	mkdir(path, 0700);
+	/* set and create the directory -- if it doesn't exist. */
+	fpath = xmalloc(strlen(home) + 11);
+	STRNCPY(fpath, home, strlen(home) + 1);
 
-	strncat(path, "/licence", sizeof(path) - strlen(path) - 1);
-
-	fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0600);
-	if (fd == -1)
+	sprintf(fpath, "%s/.rdesktop", fpath);
+	if (mkdir(fpath, 0700) == -1 && errno != EEXIST)
 	{
-		perror("open");
-		return;
+		perror("mkdir");
+		exit(1);
 	}
 
-	write(fd, data, length);
-	close(fd);
+	/* set the real licence filename, and put a write lock on it. */
+	fname = xmalloc(strlen(fpath) + strlen(hostname) + 10);
+	sprintf(fname, "%s/licence.%s", fpath, hostname);
+	fnfd = open(fname, O_RDONLY);
+	if (fnfd != -1)
+	{
+		fnfl.l_type = F_WRLCK;
+		fnfl.l_whence = SEEK_SET;
+		fnfl.l_start = 0;
+		fnfl.l_len = 1;
+		fcntl(fnfd, F_SETLK, &fnfl);
+	}
+
+	/* create a temporary licence file */
+	fnamewrk = xmalloc(strlen(fname) + 12);
+	for (y = 0;; y++)
+	{
+		sprintf(fnamewrk, "%s.%lu", fname, y);
+		fnwrkfd = open(fnamewrk, O_WRONLY | O_CREAT | O_EXCL, 0600);
+		if (fnwrkfd == -1)
+		{
+			if (errno == EINTR || errno == EEXIST)
+				continue;
+			perror("create");
+			exit(1);
+		}
+		break;
+	}
+	/* write to the licence file */
+	for (y = 0; y < len;)
+	{
+		do
+		{
+			wlen = write(fnwrkfd, s_ptr->p + y, len - y);
+		}
+		while (wlen == -1 && errno == EINTR);
+		if (wlen < 1)
+		{
+			perror("write");
+			unlink(fnamewrk);
+			exit(1);
+		}
+		y += wlen;
+	}
+
+	/* close the file and rename it to fname */
+	if (close(fnwrkfd) == -1)
+	{
+		perror("close");
+		unlink(fnamewrk);
+		exit(1);
+	}
+	if (rename(fnamewrk, fname) == -1)
+	{
+		perror("rename");
+		unlink(fnamewrk);
+		exit(1);
+	}
+	/* close the file lock on fname */
+	if (fnfd != -1)
+	{
+		fnfl.l_type = F_UNLCK;
+		fnfl.l_whence = SEEK_SET;
+		fnfl.l_start = 0;
+		fnfl.l_len = 1;
+		fcntl(fnfd, F_SETLK, &fnfl);
+		close(fnfd);
+	}
+
 }
 #endif
