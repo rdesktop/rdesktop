@@ -18,7 +18,6 @@ STREAM iso_recv(void);
 BOOL iso_connect(char *server);
 void iso_disconnect(void);
 /* licence.c */
-void licence_generate_keys(uint8 *client_key, uint8 *server_key, uint8 *client_rsa);
 void licence_process(STREAM s);
 /* mcs.c */
 STREAM mcs_init(int length);

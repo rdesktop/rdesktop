@@ -31,7 +31,7 @@ static uint8 licence_sign_key[16];
 BOOL licence_issued = False;
 
 /* Generate a session key and RC4 keys, given client and server randoms */
-void
+static void
 licence_generate_keys(uint8 *client_key, uint8 *server_key, uint8 *client_rsa)
 {
 	uint8 session_key[48];
@@ -46,6 +46,53 @@ licence_generate_keys(uint8 *client_key, uint8 *server_key, uint8 *client_rsa)
 
 	/* Generate RC4 key */
 	sec_hash_16(licence_key, &session_key[16], client_key, server_key);
+}
+
+static void
+licence_generate_hwid(uint8 *hwid)
+{
+	buf_out_uint32(hwid, 2);
+	strncpy(hwid + 4, hostname, LICENCE_HWID_SIZE - 4);
+}
+
+/* Present an existing licence to the server */
+static void
+licence_present(uint8 *client_random, uint8 *rsa_data,
+		uint8 *licence_data, int licence_size,
+		uint8 *hwid, uint8 *signature)
+{
+	uint32 sec_flags = SEC_LICENCE_NEG;
+	uint16 length = 16 + SEC_RANDOM_SIZE + SEC_MODULUS_SIZE + SEC_PADDING_SIZE
+			+ licence_size + LICENCE_HWID_SIZE + LICENCE_SIGNATURE_SIZE;
+	STREAM s;
+
+	s = sec_init(sec_flags, length + 4);
+
+	out_uint16_le(s, LICENCE_TAG_PRESENT);
+	out_uint16_le(s, length);
+
+	out_uint32_le(s, 1);
+	out_uint16(s, 0);
+	out_uint16_le(s, 0x0201);
+
+	out_uint8p(s, client_random, SEC_RANDOM_SIZE);
+	out_uint16(s, 0);
+	out_uint16_le(s, (SEC_MODULUS_SIZE + SEC_PADDING_SIZE));
+	out_uint8p(s, rsa_data, SEC_MODULUS_SIZE);
+	out_uint8s(s, SEC_PADDING_SIZE);
+
+	out_uint16_le(s, 1);
+	out_uint16_le(s, licence_size);
+	out_uint8p(s, licence_data, licence_size);
+
+	out_uint16_le(s, 1);
+	out_uint16_le(s, LICENCE_HWID_SIZE);
+	out_uint8p(s, hwid, LICENCE_HWID_SIZE);
+
+	out_uint8p(s, signature, LICENCE_SIGNATURE_SIZE);
+
+	s_mark_end(s);
+	sec_send(s, sec_flags);
 }
 
 /* Send a licence request packet */
@@ -65,7 +112,8 @@ licence_send_request(uint8 *client_random, uint8 *rsa_data,
 	out_uint16_le(s, length);
 
 	out_uint32_le(s, 1);
-	out_uint32_le(s, 0xff010000);
+	out_uint16(s, 0);
+	out_uint16_le(s, 0xff01);
 
 	out_uint8p(s, client_random, SEC_RANDOM_SIZE);
 	out_uint16(s, 0);
@@ -90,7 +138,12 @@ static void
 licence_process_demand(STREAM s)
 {
 	uint8 null_data[SEC_MODULUS_SIZE];
+	uint8 hwid[LICENCE_HWID_SIZE];
+	uint8 signature[LICENCE_SIGNATURE_SIZE];
 	uint8 *server_random;
+	uint8 *licence_data;
+	int licence_size;
+	RC4_KEY crypt_key;
 
 	/* Retrieve the server random from the incoming packet */
 	in_uint8p(s, server_random, SEC_RANDOM_SIZE);
@@ -100,8 +153,24 @@ licence_process_demand(STREAM s)
 	memset(null_data, 0, sizeof(null_data));
 	licence_generate_keys(null_data, server_random, null_data);
 
-	/* Send a certificate request back to the server */
-	licence_send_request(null_data, null_data, username, hostname);
+	licence_size = load_licence(&licence_data);
+	if (licence_size == -1)
+	{
+		licence_send_request(null_data, null_data, username, hostname);
+		return;
+	}
+
+	/* Generate a signature for the HWID buffer */
+	licence_generate_hwid(hwid);
+	sec_sign(signature, licence_sign_key, 16, hwid, sizeof(hwid));
+
+	/* Now encrypt the HWID */
+	RC4_set_key(&crypt_key, 16, licence_key);
+	RC4(&crypt_key, sizeof(hwid), hwid, hwid);
+
+	licence_present(null_data, null_data, licence_data, licence_size,
+					hwid, signature);
+	xfree(licence_data);
 }
 
 /* Send an authentication response packet */
@@ -172,11 +241,8 @@ licence_process_authreq(STREAM s)
 	RC4_set_key(&crypt_key, 16, licence_key);
 	RC4(&crypt_key, LICENCE_TOKEN_SIZE, in_token, decrypt_token);
 
-	/* Construct HWID */
-	buf_out_uint32(hwid, 2);
-	strncpy(hwid + 4, hostname, LICENCE_HWID_SIZE - 4);
-
 	/* Generate a signature for a buffer of token and HWID */
+	licence_generate_hwid(hwid);
 	memcpy(sealed_buffer, decrypt_token, LICENCE_TOKEN_SIZE);
 	memcpy(sealed_buffer + LICENCE_TOKEN_SIZE, hwid, LICENCE_HWID_SIZE);
 	sec_sign(out_sig, licence_sign_key, 16,
@@ -214,8 +280,7 @@ licence_process_issue(STREAM s)
 		return;
 
 	licence_issued = True;
-
-	/* We should save the licence here */
+	save_licence(s->p, length-2);
 }
 
 /* Process a licence packet */
@@ -239,6 +304,9 @@ licence_process(STREAM s)
 
 		case LICENCE_TAG_ISSUE:
 			licence_process_issue(s);
+			break;
+
+		case LICENCE_TAG_REISSUE:
 			break;
 
 		case LICENCE_TAG_RESULT:

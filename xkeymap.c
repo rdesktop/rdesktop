@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 #include "rdesktop.h"
 
 #define KEYMAP_SIZE 4096
@@ -37,7 +38,7 @@ static unsigned int min_keycode;
 static BOOL xkeymap_read(char *mapname)
 {
 	FILE *fp;
-	char line[256], path[256];
+	char line[PATH_MAX], path[PATH_MAX];
 	char *keyname, *p;
 	KeySym keysym;
 	unsigned char keycode;

@@ -23,6 +23,7 @@
 #include <unistd.h>		/* read close getuid getgid getpid getppid gethostname */
 #include <fcntl.h>		/* open */
 #include <pwd.h>		/* getpwuid */
+#include <limits.h>		/* PATH_MAX */
 #include <sys/stat.h>		/* stat */
 #include <sys/time.h>		/* gettimeofday */
 #include <sys/times.h>		/* times */
@@ -348,3 +349,58 @@ hexdump(unsigned char *p, unsigned int len)
 		line += thisline;
 	}
 }
+
+int
+load_licence(unsigned char **data)
+{
+	char path[PATH_MAX];
+	char *home;
+	struct stat st;
+	int fd;
+
+	home = getenv("HOME");
+	if (home == NULL)
+		return -1;
+
+	STRNCPY(path, home, sizeof(path));
+	strncat(path, "/.rdesktop/licence", sizeof(path)-strlen(path)-1);
+
+	fd = open(path, O_RDONLY);
+	if (fd == -1)
+		return -1;
+
+	if (fstat(fd, &st))
+		return -1;
+
+	*data = xmalloc(st.st_size);
+	return read(fd, *data, st.st_size);
+}
+
+void
+save_licence(unsigned char *data, int length)
+{
+	char path[PATH_MAX];
+	char *home;
+	int fd;
+
+	home = getenv("HOME");
+	if (home == NULL)
+		return;
+
+	STRNCPY(path, home, sizeof(path));
+	strncat(path, "/.rdesktop", sizeof(path)-strlen(path)-1);
+	mkdir(path, 0700);
+
+	strncat(path, "/licence", sizeof(path)-strlen(path)-1);
+
+	fd = open(path, O_WRONLY|O_CREAT|O_TRUNC, 0600);
+	if (fd == -1)
+	{
+		perror("open");
+		return;
+	}
+
+	write(fd, data, length);
+	close(fd);
+}
+
