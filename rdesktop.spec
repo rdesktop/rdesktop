@@ -5,7 +5,7 @@ Release: 1
 Copyright: GPL; see COPYING
 Group: Applications/Communications
 Source: rdesktop.tgz
-BuildRoot: /var/tmp/%{name}-buildroot
+BuildRoot: %{_tmppath}/%{name}-buildroot
 Packager: Peter Åstrand <peter@cendio.se>
 Requires: XFree86-libs 
 
@@ -20,7 +20,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %setup -n rdesktop
 %build 
-./configure --prefix=/usr
+./configure --prefix=%{_prefix} --bindir=%{_bindir} --mandir=%{_mandir}
 make
 
 %install
@@ -29,9 +29,9 @@ make install DESTDIR=$RPM_BUILD_ROOT
 %files
 %defattr(-,root,root)
 %doc COPYING 
-/usr/bin/rdesktop
-/usr/man/man1/rdesktop.1.gz
-/usr/share/rdesktop/keymaps
+%{_bindir}/rdesktop
+%{_mandir}/man1/rdesktop.1.gz
+%{_datadir}/rdesktop/keymaps
 
 %post
 
