@@ -608,11 +608,25 @@ disk_set_information(HANDLE handle, uint32 info_class, STREAM in, STREAM out)
 			break;
 
 		case FileDispositionInformation:
-
-			//unimpl("IRP Set File Information class: FileDispositionInformation\n");
+			/* As far as I understand it, the correct
+			   thing to do here is to *schedule* a delete,
+			   so it will be deleted when the file is
+			   closed. Subsequent
+			   FileDispositionInformation requests with
+			   DeleteFile set to FALSE should unschedule
+			   the delete. See
+			   http://www.osronline.com/article.cfm?article=245. Currently,
+			   we are deleting the file immediately. I
+			   guess this is a FIXME. */
 
 			//in_uint32_le(in, delete_on_close);
-			// disk_close(handle);
+
+			/* Make sure we close the file before
+			   unlinking it. Not doing so would trigger
+			   silly-delete if using NFS, which might fail
+			   on FAT floppies, for example. */
+			disk_close(handle);
+
 			if ((pfinfo->flags_and_attributes & FILE_DIRECTORY_FILE))	// remove a directory
 			{
 				if (rmdir(pfinfo->path) < 0)
