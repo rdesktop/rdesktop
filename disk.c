@@ -133,16 +133,7 @@
 
 extern RDPDR_DEVICE g_rdpdr_device[];
 
-struct fileinfo
-{
-	uint32 device_id, flags_and_attributes;
-	char path[256];
-	DIR *pdir;
-	struct dirent *pdirent;
-	char pattern[64];
-	BOOL delete_on_close;
-}
-g_fileinfo[MAX_OPEN_FILES];
+FILEINFO g_fileinfo[MAX_OPEN_FILES];
 
 typedef struct
 {

@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/time.h>
+#include <dirent.h>		/* opendir, closedir, readdir */
 #include <time.h>
 #include "rdesktop.h"
 
@@ -28,6 +29,7 @@ extern DEVICE_FNS serial_fns;
 extern DEVICE_FNS printer_fns;
 extern DEVICE_FNS parallel_fns;
 extern DEVICE_FNS disk_fns;
+extern FILEINFO g_fileinfo[];
 
 static VCHANNEL *rdpdr_channel;
 
@@ -77,6 +79,26 @@ convert_to_unix_filename(char *filename)
 	{
 		*p = '/';
 	}
+}
+
+BOOL
+rdpdr_handle_ok(int device, int handle)
+{
+	switch (g_rdpdr_device[device].device_type)
+	{
+		case DEVICE_TYPE_PARALLEL:
+		case DEVICE_TYPE_SERIAL:
+		case DEVICE_TYPE_PRINTER:
+		case DEVICE_TYPE_SCARD:
+			if (g_rdpdr_device[device].handle != handle)
+				return False;
+			break;
+		case DEVICE_TYPE_DISK:
+			if (g_fileinfo[handle].device_id != device)
+				return False;
+			break;
+	}
+	return True;
 }
 
 /* Add a new io request to the table containing pending io requests so it won't block rdesktop */
@@ -391,6 +413,12 @@ rdpdr_process_irp(STREAM s)
 #if WITH_DEBUG_RDP5
 			DEBUG(("RDPDR IRP Read (length: %d, offset: %d)\n", length, offset));
 #endif
+			if (!rdpdr_handle_ok(device, file))
+			{
+				status = STATUS_INVALID_HANDLE;
+				break;
+			}
+
 			if (rw_blocking)	// Complete read immediately
 			{
 				buffer = (uint8 *) xrealloc((void *) buffer, length);
@@ -438,6 +466,12 @@ rdpdr_process_irp(STREAM s)
 #if WITH_DEBUG_RDP5
 			DEBUG(("RDPDR IRP Write (length: %d)\n", result));
 #endif
+			if (!rdpdr_handle_ok(device, file))
+			{
+				status = STATUS_INVALID_HANDLE;
+				break;
+			}
+
 			if (rw_blocking)	// Complete immediately
 			{
 				status = fns->write(file, s->p, length, offset, &result);
@@ -757,6 +791,29 @@ rdpdr_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv, BOOL * t
 	}
 }
 
+struct async_iorequest *
+rdpdr_remove_iorequest(struct async_iorequest *prev, struct async_iorequest *iorq)
+{
+	if (!iorq)
+		return NULL;
+
+	if (iorq->buffer)
+		xfree(iorq->buffer);
+	if (prev)
+	{
+		prev->next = iorq->next;
+		xfree(iorq);
+		iorq = prev->next;
+	}
+	else
+	{
+		// Even if NULL
+		g_iorequest = iorq->next;
+		xfree(iorq);
+		iorq = NULL;
+	}
+	return iorq;
+}
 
 /* Check if select() returned with one of the rdpdr file descriptors, and complete io if it did */
 void
@@ -797,9 +854,12 @@ rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
 						status = fns->read(iorq->fd,
 								   iorq->buffer + iorq->partial_len,
 								   req_size, iorq->offset, &result);
-						iorq->partial_len += result;
-						iorq->offset += result;
 
+						if (result > 0)
+						{
+							iorq->partial_len += result;
+							iorq->offset += result;
+						}
 #if WITH_DEBUG_RDP5
 						DEBUG(("RDPDR: %d bytes of data read\n", result));
 #endif
@@ -811,28 +871,12 @@ rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
 #if WITH_DEBUG_RDP5
 							DEBUG(("RDPDR: AIO total %u bytes read of %u\n", iorq->partial_len, iorq->length));
 #endif
-							/* send the data */
-							status = STATUS_SUCCESS;
 							rdpdr_send_completion(iorq->device,
 									      iorq->id, status,
 									      iorq->partial_len,
 									      iorq->buffer,
 									      iorq->partial_len);
-							xfree(iorq->buffer);
-							iorq->fd = 0;
-							if (prev != NULL)
-							{
-								prev->next = iorq->next;
-								xfree(iorq);
-								iorq = prev->next;
-							}
-							else
-							{
-								// Even if NULL
-								g_iorequest = iorq->next;
-								xfree(iorq);
-								iorq = NULL;
-							}
+							iorq = rdpdr_remove_iorequest(prev, iorq);
 						}
 					}
 					break;
@@ -852,8 +896,13 @@ rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
 								    iorq->buffer +
 								    iorq->partial_len, req_size,
 								    iorq->offset, &result);
-						iorq->partial_len += result;
-						iorq->offset += result;
+
+						if (result > 0)
+						{
+							iorq->partial_len += result;
+							iorq->offset += result;
+						}
+
 #if WITH_DEBUG_RDP5
 						DEBUG(("RDPDR: %d bytes of data written\n",
 						       result));
@@ -866,28 +915,12 @@ rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
 #if WITH_DEBUG_RDP5
 							DEBUG(("RDPDR: AIO total %u bytes written of %u\n", iorq->partial_len, iorq->length));
 #endif
-							/* send a status success */
-							status = STATUS_SUCCESS;
 							rdpdr_send_completion(iorq->device,
 									      iorq->id, status,
 									      iorq->partial_len,
 									      (uint8 *) "", 1);
 
-							xfree(iorq->buffer);
-							iorq->fd = 0;
-							if (prev != NULL)
-							{
-								prev->next = iorq->next;
-								xfree(iorq);
-								iorq = prev->next;
-							}
-							else
-							{
-								// Even if NULL
-								g_iorequest = iorq->next;
-								xfree(iorq);
-								iorq = NULL;
-							}
+							iorq = rdpdr_remove_iorequest(prev, iorq);
 						}
 					}
 					break;
@@ -920,19 +953,8 @@ rdpdr_abort_io(uint32 fd, uint32 major, NTSTATUS status)
 			result = 0;
 			rdpdr_send_completion(iorq->device, iorq->id, status, result, (uint8 *) "",
 					      1);
-			xfree(iorq->buffer);
-			iorq->fd = 0;
-			if (prev != NULL)
-			{
-				prev->next = iorq->next;
-				xfree(iorq);
-			}
-			else
-			{
-				// Even if NULL
-				g_iorequest = iorq->next;
-				xfree(iorq);
-			}
+
+			iorq = rdpdr_remove_iorequest(prev, iorq);
 			return True;
 		}
 

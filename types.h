@@ -166,6 +166,7 @@ RDPDR_DEVICE;
 typedef struct rdpdr_serial_device_info
 {
 	int dtr;
+	int rts;
 	uint32 baud_rate,
 		queue_in_size,
 		queue_out_size,
@@ -203,3 +204,14 @@ typedef struct rdpdr_printer_info
 	BOOL default_printer;
 }
 PRINTER;
+
+typedef struct fileinfo
+{
+	uint32 device_id, flags_and_attributes;
+	char path[256];
+	DIR *pdir;
+	struct dirent *pdirent;
+	char pattern[64];
+	BOOL delete_on_close;
+}
+FILEINFO;
