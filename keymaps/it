@@ -21,10 +21,8 @@ slash 0x08 shift
 braceleft 0x08 altgr
 seveneighths 0x08 shift altgr
 parenleft 0x09 shift
-bracketleft 0x09 altgr
 trademark 0x09 shift altgr
 parenright 0x0a shift
-bracketright 0x0a altgr
 plusminus 0x0a shift altgr
 equal 0x0b shift
 braceright 0x0b altgr
