@@ -1271,8 +1271,10 @@ xwin_process_events(void)
 int
 ui_select(int rdp_socket)
 {
-	int n = (rdp_socket > g_x_socket) ? rdp_socket + 1 : g_x_socket + 1;
+	int n = (rdp_socket > g_x_socket) ? rdp_socket : g_x_socket;
 	fd_set rfds, wfds;
+	struct timeval tv;
+	BOOL s_timeout = False;
 
 	while (True)
 	{
@@ -1291,18 +1293,30 @@ ui_select(int rdp_socket)
 		if (g_dsp_busy)
 		{
 			FD_SET(g_dsp_fd, &wfds);
-			n = (g_dsp_fd + 1 > n) ? g_dsp_fd + 1 : n;
+			n = (g_dsp_fd > n) ? g_dsp_fd : n;
 		}
 #endif
+		/* default timeout */
+		tv.tv_sec = 60;
+		tv.tv_usec = 0;
 
-		switch (select(n, &rfds, &wfds, NULL, NULL))
+		/* add redirection handles */
+		rdpdr_add_fds(&n, &rfds, &wfds, &tv, &s_timeout);
+
+		n++;
+
+		switch (select(n, &rfds, &wfds, NULL, &tv))
 		{
 			case -1:
 				error("select: %s\n", strerror(errno));
 
 			case 0:
+				s_timeout = True;
+				rdpdr_check_fds(&rfds, &wfds, (BOOL) True);
 				continue;
 		}
+
+		rdpdr_check_fds(&rfds, &wfds, (BOOL) False);
 
 		if (FD_ISSET(rdp_socket, &rfds))
 			return 1;

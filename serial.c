@@ -399,7 +399,13 @@ serial_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 disposi
 
 	tcsetattr(serial_fd, TCSANOW, ptermios);
 */
+
 	*handle = serial_fd;
+
+	/* all read and writes should be non blocking */
+	if (fcntl(*handle, F_SETFL, O_NONBLOCK) == -1)
+		perror("fcntl");
+
 	return STATUS_SUCCESS;
 }
 
@@ -418,11 +424,10 @@ serial_read(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * 
 	SERIAL_DEVICE *pser_inf;
 	struct termios *ptermios;
 
-//      timeout = 90;
+	timeout = 90;
 	pser_inf = get_serial_info(handle);
 	ptermios = pser_inf->ptermios;
 
-#if 0
 	// Set timeouts kind of like the windows serial timeout parameters. Multiply timeout
 	// with requested read size
 	if (pser_inf->read_total_timeout_multiplier | pser_inf->read_total_timeout_constant)
@@ -450,8 +455,10 @@ serial_read(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * 
 		ptermios->c_cc[VMIN] = 1;
 	}
 	tcsetattr(handle, TCSANOW, ptermios);
-#endif
+
+
 	*result = read(handle, data, length);
+
 	return STATUS_SUCCESS;
 }
 

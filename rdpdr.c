@@ -22,14 +22,11 @@
 #define IRP_MN_QUERY_DIRECTORY          0x01
 #define IRP_MN_NOTIFY_CHANGE_DIRECTORY  0x02
 
-//#define MAX_ASYNC_IO_REQUESTS   10
-
 extern char hostname[16];
 extern DEVICE_FNS serial_fns;
 extern DEVICE_FNS printer_fns;
 extern DEVICE_FNS parallel_fns;
 extern DEVICE_FNS disk_fns;
-
 
 static VCHANNEL *rdpdr_channel;
 
@@ -40,17 +37,19 @@ uint32 g_num_devices;
 /* Table with information about rdpdr devices */
 RDPDR_DEVICE g_rdpdr_device[RDPDR_MAX_DEVICES];
 
-#if 0
 /* Used to store incoming io request, until they are ready to be completed */
+/* using a linked list ensures that they are processed in the right order, */
+/* if multiple ios are being done on the same fd */
 struct async_iorequest
 {
-	uint32 fd, major, minor, offset, device, id, length;
+	uint32 fd, major, minor, offset, device, id, length, partial_len;
 	long timeout,		/* Total timeout */
 	  itv_timeout;		/* Interval timeout (between serial characters) */
 	uint8 *buffer;
 	DEVICE_FNS *fns;
-} g_iorequest[MAX_ASYNC_IO_REQUESTS];
-#endif
+
+	struct async_iorequest *next;	/* next element in list */
+} g_iorequest;
 
 /* Return device_id for a given handle */
 int
@@ -77,37 +76,61 @@ convert_to_unix_filename(char *filename)
 	}
 }
 
-#if 0
 /* Add a new io request to the table containing pending io requests so it won't block rdesktop */
 BOOL
 add_async_iorequest(uint32 device, uint32 file, uint32 id, uint32 major, uint32 length,
 		    DEVICE_FNS * fns, long total_timeout, long interval_timeout, uint8 * buffer)
 {
-	int i;
 	struct async_iorequest *iorq;
 
-	for (i = 0; i < MAX_ASYNC_IO_REQUESTS; i++)
+	iorq = &g_iorequest;
+	while (iorq->fd != 0)
 	{
-		iorq = &g_iorequest[i];
+		// create new element if needed
+		if (iorq->next == NULL)
+			iorq->next =
+				(struct async_iorequest *) xmalloc(sizeof(struct async_iorequest));
 
-		if (iorq->fd == 0)
-		{
-			iorq->device = device;
-			iorq->fd = file;
-			iorq->id = id;
-			iorq->major = major;
-			iorq->length = length;
-			iorq->fns = fns;
-			iorq->timeout = total_timeout;
-			iorq->itv_timeout = interval_timeout;
-			iorq->buffer = buffer;
-			return True;
-		}
+		iorq = iorq->next;
 	}
-	error("IO request table full. Increase MAX_ASYNC_IO_REQUESTS in rdpdr.c!\n");
-	return False;
+
+	/* first element is special since it doesn't get deleted */
+	/* don't want to get io out of order */
+	if (g_iorequest.fd == 0)
+	{
+		iorq = &g_iorequest;
+		/* look for first occurrence of fd */
+		while (iorq->next != NULL)
+		{
+			if (iorq->fd == file)
+				break;
+			iorq = iorq->next;
+		}
+		/* if same create new link at end of chain instead */
+		if (iorq->fd == file)
+		{
+			while (iorq->next != NULL)
+				iorq = iorq->next;
+			iorq->next =
+				(struct async_iorequest *) xmalloc(sizeof(struct async_iorequest));
+			iorq = iorq->next;
+		}
+		else
+			iorq = &g_iorequest;	/* didn't find fs use first entry */
+	}
+
+	iorq->device = device;
+	iorq->fd = file;
+	iorq->id = id;
+	iorq->major = major;
+	iorq->length = length;
+	iorq->partial_len = 0;
+	iorq->fns = fns;
+	iorq->timeout = total_timeout;
+	iorq->itv_timeout = interval_timeout;
+	iorq->buffer = buffer;
+	return True;
 }
-#endif
 
 void
 rdpdr_send_connect(void)
@@ -290,15 +313,13 @@ rdpdr_process_irp(STREAM s)
 		case DEVICE_TYPE_SERIAL:
 
 			fns = &serial_fns;
-			/* should be async when aio is finished */
-			/*rw_blocking = False; */
+			rw_blocking = False;
 			break;
 
 		case DEVICE_TYPE_PARALLEL:
 
 			fns = &parallel_fns;
-			/* should be async when aio is finished */
-			/*rw_blocking = False;*/
+			rw_blocking = False;
 			break;
 
 		case DEVICE_TYPE_PRINTER:
@@ -308,6 +329,7 @@ rdpdr_process_irp(STREAM s)
 
 		case DEVICE_TYPE_DISK:
 
+			/*rw_blocking = False; */
 			fns = &disk_fns;
 			break;
 
@@ -374,15 +396,14 @@ rdpdr_process_irp(STREAM s)
 #if WITH_DEBUG_RDP5
 			DEBUG(("RDPDR IRP Read (length: %d, offset: %d)\n", length, offset));
 #endif
-//			if (rw_blocking)	// Complete read immediately
-//			{
+			if (rw_blocking)	// Complete read immediately
+			{
 				buffer = (uint8 *) xrealloc((void *) buffer, length);
 				status = fns->read(file, buffer, length, offset, &result);
 				buffer_len = result;
 				break;
-//			}
+			}
 
-#if 0
 			// Add request to table
 			pst_buf = (uint8 *) xmalloc(length);
 			serial_get_timeout(file, length, &total_timeout, &interval_timeout);
@@ -396,7 +417,6 @@ rdpdr_process_irp(STREAM s)
 
 			status = STATUS_CANCELLED;
 			break;
-#endif
 		case IRP_MJ_WRITE:
 
 			buffer_len = 1;
@@ -413,12 +433,12 @@ rdpdr_process_irp(STREAM s)
 #if WITH_DEBUG_RDP5
 			DEBUG(("RDPDR IRP Write (length: %d)\n", result));
 #endif
-//			if (rw_blocking)	// Complete immediately
-//			{
+			if (rw_blocking)	// Complete immediately
+			{
 				status = fns->write(file, s->p, length, offset, &result);
 				break;
-//			}
-#if 0
+			}
+
 			// Add to table
 			pst_buf = (uint8 *) xmalloc(length);
 			in_uint8a(s, pst_buf, length);
@@ -432,7 +452,6 @@ rdpdr_process_irp(STREAM s)
 
 			status = STATUS_CANCELLED;
 			break;
-#endif
 
 		case IRP_MJ_QUERY_INFORMATION:
 
@@ -676,20 +695,17 @@ rdpdr_init()
 	return (rdpdr_channel != NULL);
 }
 
-#if 0
 /* Add file descriptors of pending io request to select() */
 void
 rdpdr_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv, BOOL * timeout)
 {
-	int i;
 	long select_timeout = 0;	// Timeout value to be used for select() (in millisecons).
 	struct async_iorequest *iorq;
 
-	for (i = 0; i < MAX_ASYNC_IO_REQUESTS; i++)
+	iorq = &g_iorequest;
+	while (iorq != NULL)
 	{
-		iorq = &g_iorequest[i];
-
-		if (iorq->fd != 0)	// Found a pending io request
+		if (iorq->fd != 0)
 		{
 			switch (iorq->major)
 			{
@@ -712,13 +728,14 @@ rdpdr_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv, BOOL * t
 					break;
 
 				case IRP_MJ_WRITE:
-
 					FD_SET(iorq->fd, wfds);
 					break;
 
 			}
 			*n = MAX(*n, iorq->fd);
 		}
+
+		iorq = iorq->next;
 	}
 }
 
@@ -727,11 +744,11 @@ rdpdr_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv, BOOL * t
 void
 rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
 {
-	int i;
 	NTSTATUS status;
-	uint32 result = 0, buffer_len = 0;
+	uint32 result = 0;
 	DEVICE_FNS *fns;
 	struct async_iorequest *iorq;
+	struct async_iorequest *prev;
 
 	if (timed_out)
 	{
@@ -739,55 +756,89 @@ rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
 		return;
 	}
 
-	// Walk through array of pending io_rq's
-	for (i = 0; i < MAX_ASYNC_IO_REQUESTS; i++)
+	iorq = &g_iorequest;
+	prev = NULL;
+	while (iorq != NULL)
 	{
-		iorq = &g_iorequest[i];
 
 		if (iorq->fd != 0)
 		{
 			switch (iorq->major)
 			{
-
 				case IRP_MJ_READ:
-
 					if (FD_ISSET(iorq->fd, rfds))
 					{
-						// Read, and send data.
+						/* Read the data */
 						fns = iorq->fns;
-						status = fns->read(iorq->fd, iorq->buffer,
-								   iorq->length, 0, &result);
-						buffer_len = result;
-
-						rdpdr_send_completion(iorq->device, iorq->id,
-								      status, result, iorq->buffer,
-								      buffer_len);
+						status = fns->read(iorq->fd,
+								   iorq->buffer + iorq->partial_len,
+								   iorq->length - iorq->partial_len,
+								   0, &result);
+						iorq->partial_len += result;
 #if WITH_DEBUG_RDP5
 						DEBUG(("RDPDR: %d bytes of data read\n", result));
 #endif
-						xfree(iorq->buffer);
-						iorq->fd = 0;
+						/* only delete link if all data has been transfered */
+						if (iorq->partial_len == iorq->length)
+						{
+							/* send the data */
+							status = STATUS_SUCCESS;
+							rdpdr_send_completion(iorq->device,
+									      iorq->id, status,
+									      iorq->length,
+									      iorq->buffer, result);
+
+							xfree(iorq->buffer);
+							iorq->fd = 0;
+							if (prev != NULL)
+							{
+								prev->next = iorq->next;
+								xfree(iorq);
+							}
+						}
 					}
 					break;
-
 				case IRP_MJ_WRITE:
-
 					if (FD_ISSET(iorq->fd, wfds))
 					{
-						// Write data and send completion.
+						/* Write data. */
 						fns = iorq->fns;
-						status = fns->write(iorq->fd, iorq->buffer,
-								    iorq->length, 0, &result);
-						rdpdr_send_completion(iorq->device, iorq->id,
-								      status, result, "", 1);
+						status = fns->write(iorq->fd,
+								    iorq->buffer +
+								    iorq->partial_len,
+								    iorq->length -
+								    iorq->partial_len, 0, &result);
+						iorq->partial_len += result;
+#if WITH_DEBUG_RDP5
+						DEBUG(("RDPDR: %d bytes of data written\n",
+						       result));
+#endif
+						/* only delete link if all data has been transfered */
+						if (iorq->partial_len == iorq->length)
+						{
+							/* send a status success */
+							status = STATUS_SUCCESS;
+							rdpdr_send_completion(iorq->device,
+									      iorq->id, status,
+									      iorq->length, "", 1);
 
-						xfree(iorq->buffer);
-						iorq->fd = 0;
+							xfree(iorq->buffer);
+							iorq->fd = 0;
+							if (prev != NULL)
+							{
+								prev->next = iorq->next;
+								xfree(iorq);
+							}
+						}
 					}
 					break;
 			}
+
 		}
+		prev = iorq;
+		iorq = iorq->next;
 	}
+
 }
 
 /* Abort a pending io request for a given handle and major */
@@ -795,13 +846,13 @@ BOOL
 rdpdr_abort_io(uint32 fd, uint32 major, NTSTATUS status)
 {
 	uint32 result;
-	int i;
 	struct async_iorequest *iorq;
+	struct async_iorequest *prev;
 
-	for (i = 0; i < MAX_ASYNC_IO_REQUESTS; i++)
+	iorq = &g_iorequest;
+	prev = NULL;
+	while (iorq != NULL)
 	{
-		iorq = &g_iorequest[i];
-
 		// Only remove from table when major is not set, or when correct major is supplied.
 		// Abort read should not abort a write io request.
 		if ((iorq->fd == fd) && (major == 0 || iorq->major == major))
@@ -810,9 +861,17 @@ rdpdr_abort_io(uint32 fd, uint32 major, NTSTATUS status)
 			rdpdr_send_completion(iorq->device, iorq->id, status, result, "", 1);
 			xfree(iorq->buffer);
 			iorq->fd = 0;
+			if (prev != NULL)
+			{
+				prev->next = iorq->next;
+				xfree(iorq);
+			}
 			return True;
 		}
+
+		prev = iorq;
+		iorq = iorq->next;
 	}
+
 	return False;
 }
-#endif
