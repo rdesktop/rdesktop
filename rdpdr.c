@@ -82,7 +82,8 @@ convert_to_unix_filename(char *filename)
 /* Add a new io request to the table containing pending io requests so it won't block rdesktop */
 BOOL
 add_async_iorequest(uint32 device, uint32 file, uint32 id, uint32 major, uint32 length,
-		    DEVICE_FNS * fns, uint32 total_timeout, uint32 interval_timeout, uint8 * buffer)
+		    DEVICE_FNS * fns, uint32 total_timeout, uint32 interval_timeout, uint8 * buffer,
+		    uint32 offset)
 {
 	struct async_iorequest *iorq;
 
@@ -121,6 +122,7 @@ add_async_iorequest(uint32 device, uint32 file, uint32 id, uint32 major, uint32 
 	iorq->timeout = total_timeout;
 	iorq->itv_timeout = interval_timeout;
 	iorq->buffer = buffer;
+	iorq->offset = offset;
 	return True;
 }
 
@@ -412,7 +414,7 @@ rdpdr_process_irp(STREAM s)
 			serial_get_timeout(file, length, &total_timeout, &interval_timeout);
 			if (add_async_iorequest
 			    (device, file, id, major, length, fns, total_timeout, interval_timeout,
-			     pst_buf))
+			     pst_buf, offset))
 			{
 				status = STATUS_PENDING;
 				break;
@@ -453,7 +455,7 @@ rdpdr_process_irp(STREAM s)
 			in_uint8a(s, pst_buf, length);
 
 			if (add_async_iorequest
-			    (device, file, id, major, length, fns, 0, 0, pst_buf))
+			    (device, file, id, major, length, fns, 0, 0, pst_buf, offset))
 			{
 				status = STATUS_PENDING;
 				break;
@@ -794,8 +796,9 @@ rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
 						/* never read larger chunks than 8k - chances are that it will block */
 						status = fns->read(iorq->fd,
 								   iorq->buffer + iorq->partial_len,
-								   req_size, 0, &result);
+								   req_size, iorq->offset, &result);
 						iorq->partial_len += result;
+						iorq->offset += result;
 
 #if WITH_DEBUG_RDP5
 						DEBUG(("RDPDR: %d bytes of data read\n", result));
@@ -845,9 +848,10 @@ rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
 						/* never write larger chunks than 8k - chances are that it will block */
 						status = fns->write(iorq->fd,
 								    iorq->buffer +
-								    iorq->partial_len, req_size, 0,
-								    &result);
+								    iorq->partial_len, req_size,
+								    iorq->offset, &result);
 						iorq->partial_len += result;
+						iorq->offset += result;
 #if WITH_DEBUG_RDP5
 						DEBUG(("RDPDR: %d bytes of data written\n",
 						       result));

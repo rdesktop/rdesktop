@@ -407,8 +407,8 @@ disk_read(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * re
 	}
 #endif
 
-	if (offset)
-		lseek(handle, offset, SEEK_SET);
+	lseek(handle, offset, SEEK_SET);
+
 	n = read(handle, data, length);
 
 	if (n < 0)
@@ -434,8 +434,7 @@ disk_write(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * r
 {
 	int n;
 
-	if (offset)
-		lseek(handle, offset, SEEK_SET);
+	lseek(handle, offset, SEEK_SET);
 
 	n = write(handle, data, length);
 
