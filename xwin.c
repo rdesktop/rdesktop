@@ -1279,17 +1279,17 @@ ui_draw_text(uint8 font, uint8 flags, int mixmode, int x, int y,
 						else
 							x += text[i + 2];
 					}
-					if (i + 2 < length)
-						i += 3;
-					else
-						i += 2;
-					length -= i;
-					/* this will move pointer from start to first character after FE command */
-					text = &(text[i]);
-					i = 0;
 					for (j = 0; j < entry->size; j++)
 						DO_GLYPH(((uint8 *) (entry->data)), j);
 				}
+				if (i + 2 < length)
+					i += 3;
+				else
+					i += 2;
+				length -= i;
+				/* this will move pointer from start to first character after FE command */
+				text = &(text[i]);
+				i = 0;
 				break;
 
 			default:
