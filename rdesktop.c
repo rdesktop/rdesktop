@@ -118,18 +118,14 @@ usage(char *program)
 	fprintf(stderr, "   -N: enable numlock syncronization\n");
 	fprintf(stderr, "   -a: connection colour depth\n");
 	fprintf(stderr, "   -r: enable specified device redirection (this flag can be repeated)\n");
-	fprintf(stderr,
-		"         '-r comport:COM1=/dev/ttyS0': enable serial redirection of /dev/ttyS0 to COM1\n");
+	fprintf(stderr,	"         '-r comport:COM1=/dev/ttyS0': enable serial redirection of /dev/ttyS0 to COM1\n");
 	fprintf(stderr, "             or      COM1=/dev/ttyS0,COM2=/dev/ttyS1\n");
-	fprintf(stderr,
-		"         '-r disk:A=/mnt/floppy': enable redirection of /mnt/floppy to A:\n");
+	fprintf(stderr,	"         '-r disk:A=/mnt/floppy': enable redirection of /mnt/floppy to A:\n");
 	fprintf(stderr, "             or   A=/mnt/floppy,D=/mnt/cdrom'\n");
-	fprintf(stderr,
-		"         '-r lptport:LPT1=/dev/lp0': enable parallel redirection of /dev/lp0 to LPT1\n");
+	fprintf(stderr,	"         '-r lptport:LPT1=/dev/lp0': enable parallel redirection of /dev/lp0 to LPT1\n");
 	fprintf(stderr, "             or      LPT1=/dev/lp0,LPT2=/dev/lp1\n");
 	fprintf(stderr, "         '-r printer:mydeskjet': enable printer redirection\n");
-	fprintf(stderr,
-		"             or       mydeskjet=\"HP LaserJet IIIP\" to enter server driver as well\n");
+	fprintf(stderr,	"             or       mydeskjet=\"HP LaserJet IIIP\" to enter server driver as well\n");
 	fprintf(stderr, "         '-r sound': enable sound redirection\n");
 	fprintf(stderr, "   -0: attach to console\n");
 	fprintf(stderr, "   -4: use RDP version 4\n");
@@ -732,7 +728,9 @@ hexdump(unsigned char *p, unsigned int len)
 }
 
 /*
-  input: src is the string we look in for needle
+  input: src is the string we look in for needle.
+  	 Needle may be escaped by a backslash, in
+	 that case we ignore that particular needle.
   return value: returns next src pointer, for
   	succesive executions, like in a while loop
 	if retval is 0, then there are no more args.
@@ -818,39 +816,31 @@ ltoa(long N, int base)
 {
 	static char ret[LTOA_BUFSIZE];
 
-	register int i = 2;
-	long uarg;
-	char *tail, *head = ret, buf[LTOA_BUFSIZE];
+	char *head = ret, buf[LTOA_BUFSIZE], *tail = buf + sizeof(buf);
 
-	if (36 < base || 2 > base)
+	register int divrem;
+
+	if (base < 36 || 2 > base)
 		base = 10;
 
-	tail = &buf[LTOA_BUFSIZE - 1];
-	*tail-- = '\0';
-
-	if (10 == base && N < 0L)
+	if (N < 0)
 	{
 		*head++ = '-';
-		uarg = -N;
+		N = -N;
 	}
-	else
-		uarg = N;
 
-	if (uarg)
+	tail = buf + sizeof(buf);
+	*--tail = 0;
+
+	do
 	{
-		for (i = 1; uarg; ++i)
-		{
-			register ldiv_t r;
-
-			r = ldiv(uarg, base);
-			*tail-- = (char) (r.rem + ((9L < r.rem) ? ('A' - 10L) : '0'));
-			uarg = r.quot;
-		}
+		divrem = N % base;
+		*--tail = (divrem <= 9) ? divrem + '0' : divrem + 'a' - 10;
+		N /= base;
 	}
-	else
-		*tail-- = '0';
+	while (N);
 
-	memcpy(head, ++tail, i);
+	strcpy(head, tail);
 	return ret;
 }
 
