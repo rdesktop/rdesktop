@@ -601,18 +601,29 @@ process_bitmap_updates(STREAM s)
 static void
 process_palette(STREAM s)
 {
-	HCOLOURMAP hmap;
+	COLOURENTRY *entry;
 	COLOURMAP map;
-	uint8 *colours;
+	HCOLOURMAP hmap;
+	int i;
 
 	in_uint8s(s, 2);	/* pad */
 	in_uint16_le(s, map.ncolours);
 	in_uint8s(s, 2);	/* pad */
-	in_uint8p(s, colours, (map.ncolours * 3));
-	map.colours = (COLOURENTRY *) colours;
+
+	map.colours = xmalloc(3 * map.ncolours);
+
+	for (i = 0; i < map.ncolours; i++)
+	{
+		entry = &map.colours[i];
+		in_uint8(s, entry->red);
+		in_uint8(s, entry->green);
+		in_uint8(s, entry->blue);
+        }
 
 	hmap = ui_create_colourmap(&map);
 	ui_set_colourmap(hmap);
+
+	xfree(map.colours);
 }
 
 /* Process an update PDU */
