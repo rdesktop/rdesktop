@@ -29,8 +29,11 @@ case $arg in
     ;;
   --without-openssl*)
     ;;
-  --with-debug*)
+  --with-debug)
     echo "CFLAGS  += -g -DWITH_DEBUG" >>Makeconf
+    ;;
+  --with-debug-kbd)
+    echo "CFLAGS  += -g -DWITH_DEBUG_KBD" >>Makeconf
     ;;
   --without-debug*)
     ;;

@@ -155,6 +155,15 @@ enum RDP_INPUT_DEVICE
 #define KBD_FLAG_DOWN           0x4000
 #define KBD_FLAG_UP             0x8000
 
+/* These are for synchronization; not for keystrokes */
+#define KBD_FLAG_SCROLL   0x0001
+#define KBD_FLAG_NUMLOCK  0x0002
+#define KBD_FLAG_CAPITAL  0x0004
+
+/* See T.128 */
+#define RDP_KEYPRESS 0
+#define RDP_KEYRELEASE (KBD_FLAG_DOWN | KBD_FLAG_UP)
+
 #define MOUSE_FLAG_MOVE         0x0800
 #define MOUSE_FLAG_BUTTON1      0x1000
 #define MOUSE_FLAG_BUTTON2      0x2000
@@ -219,3 +228,28 @@ enum RDP_INPUT_DEVICE
 /* Logon flags */
 #define RDP_LOGON_NORMAL	0x33
 #define RDP_LOGON_AUTO		0x8
+
+/* Keymap flags */
+#define MapRightShiftMask   (1<<0)
+#define MapLeftShiftMask    (1<<1)
+#define MapShiftMask (MapRightShiftMask | MapLeftShiftMask)
+
+#define MapRightAltMask     (1<<2)
+#define MapLeftAltMask      (1<<3)
+#define MapAltGrMask MapRightAltMask
+
+#define MapRightCtrlMask    (1<<4)
+#define MapLeftCtrlMask     (1<<5)
+#define MapCtrlMask (MapRightCtrlMask | MapLeftCtrlMask)
+
+#define MapRightWinMask     (1<<6)
+#define MapLeftWinMask      (1<<7)
+#define MapWinMask (MapRightWinMask | MapLeftWinMask)
+
+#define MapNumLockMask      (1<<8)
+#define MapCapsLockMask     (1<<9)
+
+#define MASK_ADD_BITS(var, mask) (var |= mask)
+#define MASK_REMOVE_BITS(var, mask) (var &= ~mask)
+#define MASK_HAS_BITS(var, mask) ((var & mask)>0)
+#define MASK_CHANGE_BIT(var, mask, active) (var = ((var & ~mask) | (active ? mask : 0)))
