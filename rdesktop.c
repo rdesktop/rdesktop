@@ -55,6 +55,7 @@ BOOL bitmap_compression = True;
 BOOL sendmotion = True;
 BOOL orders = True;
 BOOL encryption = True;
+BOOL packet_encryption = True;
 BOOL desktop_save = True;
 BOOL fullscreen = False;
 BOOL grab_keyboard = True;
@@ -94,6 +95,7 @@ usage(char *program)
 	fprintf(stderr, "   -f: full-screen mode\n");
 	fprintf(stderr, "   -b: force bitmap updates\n");
 	fprintf(stderr, "   -e: disable encryption (French TS)\n");
+	fprintf(stderr, "   -E: disable encryption of everything but the logon packet\n");
 	fprintf(stderr, "   -m: do not send motion events\n");
 	fprintf(stderr, "   -C: use private colour map\n");
 	fprintf(stderr, "   -K: keep window manager key bindings\n");
@@ -167,7 +169,7 @@ main(int argc, char *argv[])
 #define VNCOPT
 #endif
 
-	while ((c = getopt(argc, argv, VNCOPT "u:d:s:S:c:p:n:k:g:a:fbemCKT:Dh?54")) != -1)
+	while ((c = getopt(argc, argv, VNCOPT "u:d:s:S:c:p:n:k:g:a:fbeEmCKT:Dh?54")) != -1)
 	{
 		switch (c)
 		{
@@ -272,7 +274,9 @@ main(int argc, char *argv[])
 			case 'e':
 				encryption = False;
 				break;
-
+             		case 'E':
+				packet_encryption = False;
+				break;
 			case 'm':
 				sendmotion = False;
 				break;
@@ -379,6 +383,12 @@ main(int argc, char *argv[])
 
 	if (!rdp_connect(server, flags, domain, password, shell, directory))
 		return 1;
+
+	/* By setting encryption to False here, we have an encrypted login 
+	   packet but unencrypted transfer of other packets */
+	if (!packet_encryption) 
+		encryption = False;
+
 
 	DEBUG(("Connection successful.\n"));
 	memset(password, 0, sizeof(password));
