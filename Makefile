@@ -76,7 +76,7 @@ dist:
 	mkdir -p /tmp/rdesktop-make-dist-dir
 	ln -sf `pwd` /tmp/rdesktop-make-dist-dir/rdesktop-$(VERSION)
 	(cd /tmp/rdesktop-make-dist-dir; \
-	tar zcvf rdesktop/rdesktop-$(VERSION).tar.gz \
+	tar zcvf rdesktop-$(VERSION)/rdesktop-$(VERSION).tar.gz \
 	rdesktop-$(VERSION)/COPYING \
 	rdesktop-$(VERSION)/README \
 	rdesktop-$(VERSION)/configure \

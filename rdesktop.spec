@@ -17,7 +17,7 @@ Windows XP and Windows 2003 Server.
 %prep
 rm -rf $RPM_BUILD_ROOT
 
-%setup -n rdesktop
+%setup
 %build 
 ./configure --prefix=%{_prefix} --bindir=%{_bindir} --mandir=%{_mandir}
 make
