@@ -1,4 +1,6 @@
 #include <unistd.h>
+#include <sys/types.h>
+#include <time.h>
 #include "rdesktop.h"
 
 #define IRP_MJ_CREATE		0x00

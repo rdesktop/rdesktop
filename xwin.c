@@ -42,8 +42,7 @@ static int g_x_socket;
 static Screen *g_screen;
 Window g_wnd;
 BOOL g_enable_compose = False;
-static GC g_gc;
-static BOOL g_gc_initialized = False;
+static GC g_gc = NULL;
 static Visual *g_visual;
 static int g_depth;
 static int g_bpp;
@@ -51,7 +50,7 @@ static XIM g_IM;
 static XIC g_IC;
 static XModifierKeymap *g_mod_map;
 static Cursor g_current_cursor;
-static HCURSOR g_null_cursor;
+static HCURSOR g_null_cursor = NULL;
 static Atom g_protocol_atom, g_kill_atom;
 static BOOL g_focused;
 static BOOL g_mouse_in_wnd;
@@ -64,8 +63,7 @@ static int g_red_shift_l, g_blue_shift_l, g_green_shift_l;
 
 /* software backing store */
 static BOOL g_ownbackstore;
-static Pixmap g_backstore;
-static BOOL g_backstore_initialized = False;
+static Pixmap g_backstore = NULL;
 
 /* Moving in single app mode */
 static BOOL g_moving_wnd;
@@ -851,6 +849,9 @@ ui_deinit(void)
 {
 	if (g_IM != NULL)
 		XCloseIM(g_IM);
+	
+	if (g_null_cursor != NULL)
+		ui_destroy_cursor(g_null_cursor);
 
 	XFreeModifiermap(g_mod_map);
 
@@ -888,13 +889,10 @@ ui_create_window(void)
 			      CWBackPixel | CWBackingStore | CWOverrideRedirect |
 			      CWColormap | CWBorderPixel, &attribs);
 
-	if ( ! g_gc_initialized )
-	{
+	if (g_gc == NULL)
 		g_gc = XCreateGC(g_display, g_wnd, 0, NULL);
-		g_gc_initialized = True;
-	}
 
-	if ((g_ownbackstore) && (! g_backstore_initialized))
+	if ((g_ownbackstore) && (g_backstore == NULL))
 	{
 		g_backstore =
 			XCreatePixmap(g_display, g_wnd, g_width, g_height,
@@ -903,7 +901,6 @@ ui_create_window(void)
 		/* clear to prevent rubbish being exposed at startup */
 		XSetForeground(g_display, g_gc, BlackPixelOfScreen(g_screen));
 		XFillRectangle(g_display, g_backstore, g_gc, 0, 0, g_width, g_height);
-		g_backstore_initialized = True;
 	}
 
 	XStoreName(g_display, g_wnd, g_title);
@@ -970,7 +967,8 @@ ui_create_window(void)
 	XSetWMProtocols(g_display, g_wnd, &g_kill_atom, 1);
 
 	/* create invisible 1x1 cursor to be used as null cursor */
-	g_null_cursor = ui_create_cursor(0, 0, 1, 1, null_pointer_mask, null_pointer_data);
+	if (g_null_cursor == NULL)
+		g_null_cursor = ui_create_cursor(0, 0, 1, 1, null_pointer_mask, null_pointer_data);
 
 	return True;
 }
