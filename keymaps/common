@@ -56,7 +56,7 @@ b 0x30 addupper
 n 0x31 addupper
 m 0x32 addupper
 
-space 0x39
+space 0x39 localstate
 
 #
 # Esc and Function keys
