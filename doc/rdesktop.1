@@ -22,6 +22,14 @@ Domain for authentication.
 .BR "-s <shell>"
 Startup shell for the user - starts a specific application instead of Explorer.
 .TP
+.BR "-S <button size>"
+Enable single application mode. This option can be used when running a
+single, maximized application (via -s). When the minimize button of
+the windows application is pressed, the rdesktop window is minimized
+instead of the remote application. The maximize/restore button is
+disabled. For this to work, you must specify the correct button
+size, in pixels. The special word "standard" means 18 pixels. 
+.TP
 .BR "-c <directory>"
 The initial working directory for the user.  Often used in combination with -s
 to set up a fixed login environment.
