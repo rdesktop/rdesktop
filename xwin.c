@@ -34,15 +34,13 @@ extern BOOL g_hide_decorations;
 extern char g_title[];
 extern int g_server_bpp;
 extern int g_win_button_size;
-BOOL g_enable_compose = False;
-BOOL g_focused;
-BOOL g_mouse_in_wnd;
 
 Display *g_display;
 Time g_last_gesturetime;
 static int g_x_socket;
 static Screen *g_screen;
 Window g_wnd;
+BOOL g_enable_compose = False;
 static GC g_gc;
 static Visual *g_visual;
 static int g_depth;
@@ -52,6 +50,8 @@ static XIC g_IC;
 static XModifierKeymap *g_mod_map;
 static Cursor g_current_cursor;
 static Atom g_protocol_atom, g_kill_atom;
+static BOOL g_focused;
+static BOOL g_mouse_in_wnd;
 
 /* endianness */
 static BOOL g_host_be;
