@@ -959,7 +959,7 @@ _rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
 				{
 
 					/* iv_timeout between 2 chars, send partial_len */
-					/*printf("RDPDR: IVT total %u bytes read of %u\n", iorq->partial_len, iorq->length);*/
+					/*printf("RDPDR: IVT total %u bytes read of %u\n", iorq->partial_len, iorq->length); */
 					rdpdr_send_completion(iorq->device,
 							      iorq->id, STATUS_SUCCESS,
 							      iorq->partial_len,

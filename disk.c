@@ -120,13 +120,14 @@ struct dummy_statfs_t
 	int f_namemax;
 };
 
-int dummy_statfs(struct dummy_statfs_t *buf)
+int
+dummy_statfs(struct dummy_statfs_t *buf)
 {
-	buf->f_blocks=262144;
-	buf->f_bfree=131072;
-	buf->f_bsize=512;
-	buf->f_namelen=255;
-	buf->f_namemax=255;
+	buf->f_blocks = 262144;
+	buf->f_bfree = 131072;
+	buf->f_bsize = 512;
+	buf->f_namelen = 255;
+	buf->f_namemax = 255;
 
 	return 0;
 }

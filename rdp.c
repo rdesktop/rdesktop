@@ -161,7 +161,7 @@ rdp_out_unistr(STREAM s, char *string, int len)
 #ifdef HAVE_ICONV
 	size_t ibl = strlen(string), obl = len + 2;
 	static iconv_t iconv_h = (iconv_t) - 1;
-	char *pin = string, *pout = (char *)s->p;
+	char *pin = string, *pout = (char *) s->p;
 
 	memset(pout, 0, len + 4);
 
@@ -234,7 +234,7 @@ rdp_in_unistr(STREAM s, char *string, int uni_len)
 {
 #ifdef HAVE_ICONV
 	size_t ibl = uni_len, obl = uni_len;
-	char *pin = (char *)s->p, *pout = string;
+	char *pin = (char *) s->p, *pout = string;
 	static iconv_t iconv_h = (iconv_t) - 1;
 
 	if (g_iconv_works)
