@@ -298,6 +298,19 @@ ui_init(void)
 	host_be = !(BOOL) (*(uint8 *) (&test));
 	xserver_be = (ImageByteOrder(display) == MSBFirst);
 
+	if ((width == 0) || (height == 0))
+	{
+		/* Fetch geometry from _NET_WORKAREA */
+		uint32 xpos, ypos;
+
+		if (get_current_workarea(&xpos, &ypos, &width, &height) < 0)
+		{
+			error("Failed to get workarea.\n");
+			error("Perhaps your window manager does not support EWMH?\n");
+			exit(1);
+		}
+	}
+
 	if (fullscreen)
 	{
 		width = WidthOfScreen(screen);

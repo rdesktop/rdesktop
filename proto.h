@@ -14,6 +14,8 @@ void cache_put_desktop(uint32 offset, int cx, int cy, int scanline, int bytes_pe
 		       uint8 * data);
 HCURSOR cache_get_cursor(uint16 cache_idx);
 void cache_put_cursor(uint16 cache_idx, HCURSOR cursor);
+/* ewmhints.c */
+int get_current_workarea(uint32 * x, uint32 * y, uint32 * width, uint32 * height);
 /* iso.c */
 STREAM iso_init(int length);
 void iso_send(STREAM s);
@@ -48,8 +50,6 @@ void rdp_main_loop(void);
 BOOL rdp_connect(char *server, uint32 flags, char *domain, char *password, char *command,
 		 char *directory);
 void rdp_disconnect(void);
-/* readpass.c */
-char *askpass(char *askpass, const char *msg);
 /* secure.c */
 void sec_hash_48(uint8 * out, uint8 * in, uint8 * salt1, uint8 * salt2, uint8 salt);
 void sec_hash_16(uint8 * out, uint8 * in, uint8 * salt1, uint8 * salt2);
@@ -77,6 +77,7 @@ void ensure_remote_modifiers(uint32 ev_time, key_translation tr);
 void reset_modifier_keys(unsigned int state);
 void rdp_send_scancode(uint32 time, uint16 flags, uint8 scancode);
 /* xwin.c */
+void mwm_hide_decorations(void);
 BOOL get_key_state(unsigned int state, uint32 keysym);
 BOOL ui_init(void);
 void ui_deinit(void);

@@ -45,7 +45,8 @@ char username[16];
 char hostname[16];
 char keymapname[16];
 int keylayout = 0x409;		/* Defaults to US keyboard layout */
-int width = 800;
+int width = 800;		/* If width or height are reset to zero, the geometry will 
+				   be fetched from _NET_WORKAREA */
 int height = 600;
 int tcp_port_rdp = TCP_PORT_RDP;
 BOOL bitmap_compression = True;
@@ -185,6 +186,12 @@ main(int argc, char *argv[])
 				break;
 
 			case 'g':
+				if (!strcmp(optarg, "workarea"))
+				{
+					width = height = 0;
+					break;
+				}
+
 				width = strtol(optarg, &p, 10);
 				if (*p == 'x')
 					height = strtol(p + 1, NULL, 10);
