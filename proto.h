@@ -72,13 +72,14 @@ void tcp_disconnect(void);
 /* xkeymap.c */
 void xkeymap_init1(void);
 void xkeymap_init2(void);
+BOOL handle_special_keys(KeySym keysym, uint32 ev_time, BOOL pressed);
 key_translation xkeymap_translate_key(KeySym keysym, unsigned int keycode, unsigned int state);
 uint16 xkeymap_translate_button(unsigned int button);
 char *get_ksname(KeySym keysym);
-BOOL inhibit_key(KeySym keysym);
 void ensure_remote_modifiers(uint32 ev_time, key_translation tr);
 void rdp_send_scancode(uint32 time, uint16 flags, uint16 scancode);
 /* xwin.c */
+BOOL get_key_state(int keysym);
 BOOL ui_init(void);
 void ui_create_window_obj(int xpos, int ypos, int width, int height, int valuemask);
 BOOL ui_create_window(void);

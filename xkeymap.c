@@ -228,6 +228,43 @@ xkeymap_init2(void)
 	XDisplayKeycodes(display, &min_keycode, (int *) &max_keycode);
 }
 
+/* Handles, for example, multi-scancode keypresses (which is not
+   possible via keymap-files) */
+BOOL
+handle_special_keys(KeySym keysym, uint32 ev_time, BOOL pressed)
+{
+	switch (keysym)
+	{
+		case XK_Break:	/* toggle full screen */
+			if (pressed && (get_key_state(XK_Alt_L) || get_key_state(XK_Alt_R)))
+			{
+				toggle_fullscreen();
+				return True;
+			}
+			break;
+
+		case XK_Meta_L:	/* Windows keys */
+		case XK_Super_L:
+		case XK_Hyper_L:
+		case XK_Meta_R:
+		case XK_Super_R:
+		case XK_Hyper_R:
+			if (pressed)
+			{
+				rdp_send_scancode(ev_time, RDP_KEYPRESS, SCANCODE_CHAR_LCTRL);
+				rdp_send_scancode(ev_time, RDP_KEYPRESS, SCANCODE_CHAR_ESC);
+			}
+			else
+			{
+				rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_ESC);
+				rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_LCTRL);
+			}
+			return True;
+			break;
+	}
+	return False;
+}
+
 
 key_translation
 xkeymap_translate_key(KeySym keysym, unsigned int keycode, unsigned int state)

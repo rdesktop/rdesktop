@@ -247,7 +247,7 @@ close_inputmethod(void)
 	}
 }
 
-static BOOL
+BOOL
 get_key_state(int keysym)
 {
 	int keysymMask = 0, modifierpos, key;
@@ -574,17 +574,11 @@ xwin_process_events()
 						      str, sizeof(str), &keysym, NULL);
 				}
 
-				if (keysym == XK_Break)	/* toggle full screen */
-				{
-					if (get_key_state(XK_Alt_L) || get_key_state(XK_Alt_R))
-					{
-						toggle_fullscreen();
-						break;
-					}
-				}
-
 				ksname = get_ksname(keysym);
 				DEBUG_KBD(("\nKeyPress for (keysym 0x%lx, %s)\n", keysym, ksname));
+
+				if (handle_special_keys(keysym, ev_time, True))
+					break;
 
 				tr = xkeymap_translate_key(keysym,
 							   xevent.xkey.keycode, xevent.xkey.state);
@@ -603,6 +597,9 @@ xwin_process_events()
 				ksname = get_ksname(keysym);
 				DEBUG_KBD(("\nKeyRelease for (keysym 0x%lx, %s)\n", keysym,
 					   ksname));
+
+				if (handle_special_keys(keysym, ev_time, False))
+					break;
 
 				tr = xkeymap_translate_key(keysym,
 							   xevent.xkey.keycode, xevent.xkey.state);
