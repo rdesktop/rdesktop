@@ -280,24 +280,6 @@ translate_colour(uint32 colour)
 			}
 			break;
 	}
-	switch (g_bpp)
-	{
-		case 16:
-			if (g_host_be != g_xserver_be)
-				BSWAP16(colour);
-			break;
-
-		case 24:
-			if (g_xserver_be)
-				BSWAP24(colour);
-			break;
-
-		case 32:
-			if (g_host_be != g_xserver_be)
-				BSWAP32(colour);
-			break;
-	}
-
 	return colour;
 }
 
@@ -340,42 +322,96 @@ translate8to32(uint8 * data, uint32 * out, uint32 * end)
 /* todo the remaining translate function might need some big endian check ?? */
 
 static void
-translate15to16(uint16 * data, uint16 * out, uint16 * end)
+translate15to16(uint16 * data, uint8 * out, uint8 * end)
 {
+	uint16 pixel;
+	uint16 value;
+
 	while (out < end)
-		*(out++) = (uint16) make_colour16(split_colour15(*(data++)));
+	{
+		pixel = *(data++);
+
+		if (g_host_be)
+		{
+			BSWAP16(pixel)
+		}
+
+		value = make_colour16(split_colour15(pixel));
+
+		if (g_xserver_be)
+		{
+			*(out++) = value >> 8;
+			*(out++) = value;
+		}
+		else
+		{
+			*(out++) = value;
+			*(out++) = value >> 8;
+		}
+	}
 }
 
 static void
 translate15to24(uint16 * data, uint8 * out, uint8 * end)
 {
 	uint32 value;
-
-	while (out < end)
-	{
-		value = make_colour24(split_colour15(*(data++)));
-		*(out++) = value;
-		*(out++) = value >> 8;
-		*(out++) = value >> 16;
-	}
-}
-
-static void
-translate15to32(uint16 * data, uint32 * out, uint32 * end)
-{
 	uint16 pixel;
 
 	while (out < end)
 	{
+		pixel = *(data++);
+
 		if (g_host_be)
 		{
-			pixel = *(data++);
-			pixel = (pixel & 0xff) << 8 | (pixel & 0xff00) >> 8;
-			*(out++) = make_colour32(split_colour15(pixel));
+			BSWAP16(pixel)
+		}
+
+		value = make_colour24(split_colour15(pixel));
+		if (g_xserver_be)
+		{
+			*(out++) = value >> 16;
+			*(out++) = value >> 8;
+			*(out++) = value;
 		}
 		else
 		{
-			*(out++) = make_colour32(split_colour15(*(data++)));
+			*(out++) = value;
+			*(out++) = value >> 8;
+			*(out++) = value >> 16;
+		}
+	}
+}
+
+static void
+translate15to32(uint16 * data, uint8 * out, uint8 * end)
+{
+	uint16 pixel;
+	uint32 value;
+
+	while (out < end)
+	{
+		pixel = *(data++);
+
+		if (g_host_be)
+		{
+			BSWAP16(pixel);
+		}
+
+		value = make_colour32(split_colour15(pixel));
+
+		if (g_xserver_be)
+		{
+			*(out++) = value >> 24;
+			*(out++) = value >> 16;
+			*(out++) = value >> 8;
+			*(out++) = value;
+		}
+		else
+		{
+			*(out++) = value;
+			*(out++) = value >> 8;
+			*(out++) = value >> 16;
+			*(out++) = value >> 24;
 		}
 	}
 }
@@ -383,8 +419,29 @@ translate15to32(uint16 * data, uint32 * out, uint32 * end)
 static void
 translate16to16(uint16 * data, uint16 * out, uint16 * end)
 {
-	while (out < end)
-		*(out++) = (uint16) (*(data++));
+	uint16 value;
+
+	if (g_xserver_be)
+	{
+		while (out < end)
+		{
+			value = *data;
+			BSWAP16(value);
+			*out = value;
+			data++;
+			out++;
+		}
+
+	}
+	else
+	{
+		while (out < end)
+		{
+			*out = *data;
+			out++;
+			data++;
+		}
+	}
 }
 
 
@@ -392,46 +449,91 @@ static void
 translate16to24(uint16 * data, uint8 * out, uint8 * end)
 {
 	uint32 value;
-
-	while (out < end)
-	{
-		value = make_colour24(split_colour16(*(data++)));
-		*(out++) = value;
-		*(out++) = value >> 8;
-		*(out++) = value >> 16;
-	}
-}
-
-static void
-translate16to32(uint16 * data, uint32 * out, uint32 * end)
-{
 	uint16 pixel;
 
 	while (out < end)
 	{
+		pixel = *(data++);
+
 		if (g_host_be)
 		{
-			pixel = *(data++);
-			pixel = (pixel & 0xff) << 8 | (pixel & 0xff00) >> 8;
-			*(out++) = make_colour32(split_colour16(pixel));
+			BSWAP16(pixel)
+		}
+
+		value = make_colour24(split_colour16(pixel));
+
+		if (g_xserver_be)
+		{
+			*(out++) = value >> 16;
+			*(out++) = value >> 8;
+			*(out++) = value;
 		}
 		else
 		{
-			*(out++) = make_colour32(split_colour16(*(data++)));
+			*(out++) = value;
+			*(out++) = value >> 8;
+			*(out++) = value >> 16;
 		}
 	}
 }
 
 static void
-translate24to16(uint8 * data, uint16 * out, uint16 * end)
+translate16to32(uint16 * data, uint8 * out, uint8 * end)
+{
+	uint16 pixel;
+	uint32 value;
+
+	while (out < end)
+	{
+		pixel = *(data++);
+
+		if (g_host_be)
+		{
+			BSWAP16(pixel)
+		}
+
+		value = make_colour32(split_colour16(pixel));
+
+		if (g_xserver_be)
+		{
+			*(out++) = value >> 24;
+			*(out++) = value >> 16;
+			*(out++) = value >> 8;
+			*(out++) = value;
+ 		}
+ 		else
+ 		{
+			*(out++) = value;
+			*(out++) = value >> 8;
+			*(out++) = value >> 16;
+			*(out++) = value >> 24;
+ 		}
+ 	}
+}
+
+static void
+translate24to16(uint8 * data, uint8 * out, uint8 * end)
 {
 	uint32 pixel = 0;
+	uint16 value;
 	while (out < end)
 	{
 		pixel = *(data++) << 16;
 		pixel |= *(data++) << 8;
 		pixel |= *(data++);
-		*(out++) = (uint16) make_colour16(split_colour24(pixel));
+
+		value = (uint16) make_colour16(split_colour24(pixel));
+
+		if (g_xserver_be)
+		{
+			*(out++) = value >> 8;
+			*(out++) = value;
+		}
+		else
+		{
+			*(out++) = value;
+			*(out++) = value >> 8;
+		}
 	}
 }
 
@@ -445,24 +547,24 @@ translate24to24(uint8 * data, uint8 * out, uint8 * end)
 }
 
 static void
-translate24to32(uint8 * data, uint32 * out, uint32 * end)
+translate24to32(uint8 * data, uint8 * out, uint8 * end)
 {
-	uint32 pixel = 0;
 	while (out < end)
 	{
-		if (g_host_be)
+		if (g_xserver_be)
 		{
-			pixel = *(data++) << 16;
-			pixel |= *(data++) << 8;
-			pixel |= *(data++);
+			*(out++) = 0x00;
+			*(out++) = *(data++);
+			*(out++) = *(data++);
+			*(out++) = *(data++);
 		}
 		else
 		{
-			pixel = *(data++);
-			pixel |= *(data++) << 8;
-			pixel |= *(data++) << 16;
+			*(out++) = *(data++);
+			*(out++) = *(data++);
+			*(out++) = *(data++);
+			*(out++) = 0x00;
 		}
-		*(out++) = pixel;
 	}
 }
 
@@ -479,13 +581,13 @@ translate_image(int width, int height, uint8 * data)
 			switch (g_bpp)
 			{
 				case 32:
-					translate24to32(data, (uint32 *) out, (uint32 *) end);
+					translate24to32(data, out, end);
 					break;
 				case 24:
 					translate24to24(data, out, end);
 					break;
 				case 16:
-					translate24to16(data, (uint16 *) out, (uint16 *) end);
+					translate24to16(data, out, end);
 					break;
 			}
 			break;
@@ -493,8 +595,7 @@ translate_image(int width, int height, uint8 * data)
 			switch (g_bpp)
 			{
 				case 32:
-					translate16to32((uint16 *) data, (uint32 *) out,
-							(uint32 *) end);
+					translate16to32((uint16 *) data, out, end);
 					break;
 				case 24:
 					translate16to24((uint16 *) data, out, end);
@@ -509,15 +610,13 @@ translate_image(int width, int height, uint8 * data)
 			switch (g_bpp)
 			{
 				case 32:
-					translate15to32((uint16 *) data, (uint32 *) out,
-							(uint32 *) end);
+					translate15to32((uint16 *) data, out, end);
 					break;
 				case 24:
 					translate15to24((uint16 *) data, out, end);
 					break;
 				case 16:
-					translate15to16((uint16 *) data, (uint16 *) out,
-							(uint16 *) end);
+					translate15to16((uint16 *) data, out, end);
 					break;
 			}
 			break;
