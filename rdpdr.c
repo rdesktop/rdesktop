@@ -81,7 +81,7 @@ convert_to_unix_filename(char *filename)
 /* Add a new io request to the table containing pending io requests so it won't block rdesktop */
 BOOL
 add_async_iorequest(uint32 device, uint32 file, uint32 id, uint32 major, uint32 length,
-		    DEVICE_FNS * fns, long total_timeout, long interval_timeout, uint8 * buffer)
+		    DEVICE_FNS * fns, uint32 total_timeout, uint32 interval_timeout, uint8 * buffer)
 {
 	struct async_iorequest *iorq;
 
@@ -687,7 +687,7 @@ rdpdr_init()
 void
 rdpdr_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv, BOOL * timeout)
 {
-	long select_timeout = 0;	// Timeout value to be used for select() (in millisecons).
+	uint32 select_timeout = 0;	// Timeout value to be used for select() (in millisecons).
 	struct async_iorequest *iorq;
 
 	iorq = g_iorequest;
