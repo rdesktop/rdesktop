@@ -7,7 +7,7 @@ http://bibl4.oru.se/projects/rdesktop/patch19/patches/Makefile.diff
 Description:
 TDB
 Status:
-Not yet examined. 
+Adopted. 
 
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/assar_19-7-2.hostlen.patch
