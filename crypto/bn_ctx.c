@@ -63,7 +63,6 @@
 #include <assert.h>
 #include "bn.h"
 
-#if 0
 BN_CTX *BN_CTX_new(void)
 	{
 	BN_CTX *ret;
@@ -79,7 +78,6 @@ BN_CTX *BN_CTX_new(void)
 	ret->flags=BN_FLG_MALLOCED;
 	return(ret);
 	}
-#endif
 
 void BN_CTX_init(BN_CTX *ctx)
 	{
