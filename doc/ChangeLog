@@ -2,13 +2,13 @@ rdesktop (1.4.0)
    * Basic disk-, parallel-, printer- and serial-redirection
    * Fix timezone-redirection
    * Backing-store fixes
-   * Fix client-IP sent to the TS
+   * Fix client-IP sent to TS
    * XEmbed support for embedding rdesktop in other applications (KRDC)
    * Support for setting the RDP5 experience
    * Keyboard and keymap fixes
    * Performance improvements
-   * Report disconnect-reasons
-   * Support for RDP-compression at (currently only for 8bpp)
+   * Report disconnect-reason
+   * Support for RDP-compression (currently only for 8bpp)
    * Support for persistent bitmap caching
    * Sound-driver for SGI
 
