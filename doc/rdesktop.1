@@ -1,4 +1,4 @@
-.TH rdesktop 1 "October 2002"
+.TH rdesktop 1 "January 2004"
 .SH NAME
 .I rdesktop
 \- Remote Desktop Protocol client
@@ -105,9 +105,34 @@ limited by the server configuration.
 .TP
 .BR "-r <device>"
 Enable redirection of the specified device on the client, such
-that it appears on the server.  The only device currently supported
-is "sound" (requires Windows XP or newer).  Note that the allowed
+that it appears on the server. Note that the allowed
 redirections may be restricted by the server configuration.
+
+Following devices are currently supported:
+.TP
+.BR "-r comport:<comport>=<device>,..."
+Redirects serial devices on your client to the
+server. Note that if you need to change any settings on the serial device(s),
+do so with an appropriate tool before starting rdesktop. In most
+OSes you would use stty.
+.TP
+.BR "-r disk:<driveletter>=<path>,..."
+Redirects a path to the drive letter of your choice on the server.
+(requires Windows XP or newer).
+.TP
+.BR "-r lptport:<lptport>=<device>,..."
+Redirects parallel devices on your client to the server.
+.TP
+.BR "-r printer:<printername>[=<driver>],..."
+Redirects a printer queue on the client to the server. The <printername>
+is the name of the queue in your local system. <driver> defaults to a
+simple PS-driver unless you specify one. Keep in mind that you need a
+100% match in the server environment, or the driver will fail. The first
+printer on the command line will be set as your default printer.
+.TP
+.BR "-r sound"
+Redirects sound generated on the server to the client ( Requires
+Windows XP or newer).
 .TP
 .BR "-0"
 Attach to the console of the server (requires Windows Server 2003
@@ -118,7 +143,6 @@ Use RDP version 4.
 .TP
 .BR "-5"
 Use RDP version 5 (default).
-
 .PP
 .SH LINKS
 Main website of rdesktop
