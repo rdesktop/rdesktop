@@ -450,7 +450,9 @@ sec_out_mcs_data(STREAM s)
 	out_uint16(s, 1);
 
 	out_uint32(s, 0);
-	out_uint32_le(s, 0x070008);
+	out_uint8(s, server_bpp);
+	out_uint16_le(s, 0x0700);
+	out_uint8(s, 0);
 	out_uint32_le(s, 1);
 	out_uint8s(s, 64);	/* End of client info */
 
@@ -772,6 +774,9 @@ sec_recv(void)
 
 			if (sec_flags & SEC_LICENCE_NEG)
 			{
+				if (sec_flags & SEC_ENCRYPT) {
+					DEBUG_RDP5(("Encrypted license detected\n"));
+				} 
 				licence_process(s);
 				continue;
 			}
