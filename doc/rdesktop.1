@@ -1,8 +1,4 @@
-.TH RDESKTOP 1 "September 2002" "Manual page for rdesktop"
-.\"
-.\" Man page author:
-.\"    Hugo Trippaers <spark@ision.nl>
-.\"    Peter Åstrand <peter@cendio.se>
+.TH rdesktop 1 "October 2002"
 .SH NAME
 .I rdesktop
 \- Remote Desktop Protocol client
@@ -11,96 +7,75 @@
 .br
 .SH DESCRIPTION
 .I rdesktop
-is a client for Windows NT4 Terminal Server and Windows 2000 Terminal
-Services.  rdesktop implements the RDP version 4 protocol, which used
-by Windows NT4 Terminal Server, and parts of RDP version 5, which is
-used by Windows 2000 Terminal Services.
+is a client for Microsoft Windows NT Terminal Server, Windows 2000 Terminal
+Services, Windows XP Remote Desktop, and possibly other Terminal Services
+products.  rdesktop currently implements the RDP version 4 protocol.
 
 .SH OPTIONS
 .TP
 .BR "-u <username>"
-The username for authentication on the terminal server, together with -p 
-this can be used for autologon. 
+Username for authentication on the terminal server.
 .TP
 .BR "-d <domain>"
-The domain to to which the user belongs. 
+Domain for authentication.
 .TP
 .BR "-s <shell>"
-The startup shell for the user.  Use this to start a specific application, 
-instead of a regular desktop. 
+Startup shell for the user - starts a specific application instead of Explorer.
 .TP
 .BR "-c <directory>"
-The current working directory for the user.  Often used in combination with -s 
-to setup a fixed environment for the user after logon.
+The initial working directory for the user.  Often used in combination with -s
+to set up a fixed login environment.
 .TP
 .BR "-p <password>"
-The password to authenticate with.  Use -p - to make rdesktop request a
-password at startup (from standard input).
-WARNING: if you specify a password on the command line it may be visible
-to other users when they use tools like ps.
+The password to authenticate with.  Note that this may have no effect if
+"Always prompt for password" is enabled on the server.  WARNING: if you specify
+a password on the command line it may be visible to other users when they use
+tools like ps.  Use -p - to make rdesktop request a password at startup (from
+standard input).
 .TP
-.BR "-n <name>"
-Client name.  The default is the hostname. 
+.BR "-n <hostname>"
+Client hostname.  Normally rdesktop automatically obtains the hostname of the
+client.
 .TP
 .BR "-k <layout>"
-keyboard layout on terminal server (us,sv,gr etc.)
+Keyboard layout on terminal server (us,sv,gr,etc.).  This requires a
+corresponding keymap file to be installed (normally the keymaps are found in
+/usr/share/rdesktop/keymaps/ or /usr/local/share/rdesktop/keymaps/).
 .TP
 .BR "-g <geometry>"
 Desktop geometry (WxH). 
 .TP
 .BR "-f"
-Enable fullscreen mode.  The -g option will be ignored when using -f,
-rdesktop will get the current height and width from the current
-desktop.
+Enable fullscreen mode.  This overrides the window manager and causes the
+rdesktop window to fully cover the current screen.  Fullscreen mode can be
+toggled at any time using Ctrl-Alt-Break.
 .TP
 .BR "-b"
-Force bitmap updates. 
-.TP
-.BR "-e"
-Do not use encryption, this is only for people who are not allowed to
-use encryption in Windows products.  If you live in France you
-probably need this switch.
+Force the server to send screen updates as bitmaps rather than using
+higher-level drawing operations.
 .TP
 .BR "-m"
-Do not send motion events.
+Do not send mouse motion events.  This saves bandwidth, although some Windows
+applications may rely on receiving mouse motion.
 .TP
-.BR "-l"
-Do not request licence. 
+.BR "-e"
+Disable encryption.  This option is only needed (and will only work) if you
+have a French version of NT TSE.
 .TP
 .BR "-t <port>"
-Connect to this TCP port. The default is 3389. 
+Connect to the specified TCP port instead of 3389.
 .TP
 .BR "-K"
-Keep window manager key bindings. 
+Do not override window manager key bindings.  By default rdesktop attempts
+to grab all keyboard input when it is in focus.
 .TP
 .BR "-w <title>"
-Set window title to <title>. 
+Window title.
 
 .PP
-.SH "RETURN VALUES"
-None are defined (yet). 
 .SH LINKS
 Main website of rdesktop
 .br
-\fIhttp://www.rdesktop.org
+\fIhttp://www.rdesktop.org/
 .LP
-.SH BUGS
-We suggest you visit the website at http://www.rdesktop.org and follow
-the links to the Bug Tracker.
-.SH VERSION
-This manual page documents version 1.2. 
-.SH AUTHOR
-rdesktop is written by Matt Chapman <matthewc@cse.unsw.edu.au>
-.LP
-The following persons have contributed to the project:
-.LP
-Peter Bystrom <peter.bystrom@ub.oru.se>
-.br
-Hugo Trippaers <spark@ision.nl>
-.br
-Jay Sorg 
-.br
-Peter Åstrand
-.SH THANKS
-Thanks to all the mailinglist members for their contributions to rdesktop.
 .PP

@@ -1,17 +1,31 @@
-rdesktop is an open source client for Windows NT Terminal Server and
-Windows 2000 Terminal Services, capable of natively speaking Remote
-Desktop Protocol (RDP) in order to present the user's NT
-desktop. Unlike Citrix ICA, no server extensions are required.
+===========================================
+rdesktop: A Remote Desktop Protocol client.
+===========================================
 
-rdesktop currently runs on most UNIX based platforms with the X Window
-System, and other ports should be fairly straightforward.
+rdesktop is a client for Microsoft Windows NT Terminal Server, Windows 2000
+Terminal Services, Windows XP Remote Desktop, and possibly other Terminal
+Services products.  rdesktop currently implements the RDP version 4 protocol.
 
-rdesktop was written by Matt Chapman (matthewc@cse.unsw.edu.au) based
-on various scarce documentation, wire sniffs, and trial-and-error. It
-is released under the GNU Public Licence (GPL).  Please send feedback,
-bug reports and patches to the appropriate mailing list
-(http://sourceforge.net/mail/?group_id=24366)
+Installation
+------------
+rdesktop uses a typical GNU-style build procedure:
 
-rdesktop is a Sourceforge project.  See the Sourceforge rdesktop
-project info (http://sourceforge.net/projects/rdesktop/) for more
-information.
+	% ./configure [options]
+	% make
+	% make install
+
+where documentation for [options] can be found by running "./configure --help".
+Usually no options are necessary.  The default is to install under /usr/local,
+this can be changed with --prefix=directory.
+
+Invocation
+----------
+
+	% rdesktop [options] server
+
+where server is the name of the Terminal Services machine.  Note: if you
+receive "Connection refused", this probably means that the server does not have
+Terminal Services enabled, or there is a firewall blocking access.
+
+The rdesktop manual page lists the possible options ("man rdesktop").
+
