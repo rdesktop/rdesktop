@@ -24,7 +24,7 @@
 #include <X11/Xlib.h>
 #include "rdesktop.h"
 
-extern Display *display;
+extern Display *g_display;
 
 /* 
    Get window property value (32 bit format) 
@@ -40,14 +40,14 @@ get_property_value(char *propname, long max_length,
 	int actual_format_return;
 	unsigned long bytes_after_return;
 
-	property = XInternAtom(display, propname, True);
+	property = XInternAtom(g_display, propname, True);
 	if (property == None)
 	{
 		fprintf(stderr, "Atom %s does not exist\n", propname);
 		return (-1);
 	}
 
-	result = XGetWindowProperty(display, DefaultRootWindow(display), property, 0,	/* long_offset */
+	result = XGetWindowProperty(g_display, DefaultRootWindow(g_display), property, 0,	/* long_offset */
 				    max_length,	/* long_length */
 				    False,	/* delete */
 				    AnyPropertyType,	/* req_type */

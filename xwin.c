@@ -29,42 +29,42 @@ extern int g_width;
 extern int g_height;
 extern BOOL g_sendmotion;
 extern BOOL g_fullscreen;
-extern BOOL grab_keyboard;
-extern BOOL hide_decorations;
-extern char title[];
+extern BOOL g_grab_keyboard;
+extern BOOL g_hide_decorations;
+extern char g_title[];
 extern int g_server_bpp;
-extern int win_button_size;
+extern int g_win_button_size;
 BOOL g_enable_compose = False;
 BOOL g_focused;
 BOOL g_mouse_in_wnd;
 
-Display *display;
-Time last_gesturetime;
-static int x_socket;
-static Screen *screen;
-Window wnd;
-static GC gc;
-static Visual *visual;
-static int depth;
-static int bpp;
-static XIM IM;
-static XIC IC;
-static XModifierKeymap *mod_map;
-static Cursor current_cursor;
-static Atom protocol_atom, kill_atom;
+Display *g_display;
+Time g_last_gesturetime;
+static int g_x_socket;
+static Screen *g_screen;
+Window g_wnd;
+static GC g_gc;
+static Visual *g_visual;
+static int g_depth;
+static int g_bpp;
+static XIM g_IM;
+static XIC g_IC;
+static XModifierKeymap *g_mod_map;
+static Cursor g_current_cursor;
+static Atom g_protocol_atom, g_kill_atom;
 
 /* endianness */
-static BOOL host_be;
-static BOOL xserver_be;
+static BOOL g_host_be;
+static BOOL g_xserver_be;
 
 /* software backing store */
-static BOOL ownbackstore;
-static Pixmap backstore;
+static BOOL g_ownbackstore;
+static Pixmap g_backstore;
 
 /* Moving in single app mode */
-static BOOL moving_wnd;
-static int move_x_offset = 0;
-static int move_y_offset = 0;
+static BOOL g_moving_wnd;
+static int g_move_x_offset = 0;
+static int g_move_y_offset = 0;
 
 /* MWM decorations */
 #define MWM_HINTS_DECORATIONS   (1L << 1)
@@ -90,24 +90,24 @@ PixelColour;
 
 #define FILL_RECTANGLE(x,y,cx,cy)\
 { \
-	XFillRectangle(display, wnd, gc, x, y, cx, cy); \
-	if (ownbackstore) \
-		XFillRectangle(display, backstore, gc, x, y, cx, cy); \
+	XFillRectangle(g_display, g_wnd, g_gc, x, y, cx, cy); \
+	if (g_ownbackstore) \
+		XFillRectangle(g_display, g_backstore, g_gc, x, y, cx, cy); \
 }
 
 #define FILL_RECTANGLE_BACKSTORE(x,y,cx,cy)\
 { \
-	XFillRectangle(display, ownbackstore ? backstore : wnd, gc, x, y, cx, cy); \
+	XFillRectangle(g_display, g_ownbackstore ? g_backstore : g_wnd, g_gc, x, y, cx, cy); \
 }
 
 /* colour maps */
-BOOL owncolmap = False;
-static Colormap xcolmap;
-static uint32 *colmap = NULL;
+BOOL g_owncolmap = False;
+static Colormap g_xcolmap;
+static uint32 *g_colmap = NULL;
 
-#define TRANSLATE(col)		( g_server_bpp != 8 ? translate_colour(col) : owncolmap ? col : translate_colour(colmap[col]) )
-#define SET_FOREGROUND(col)	XSetForeground(display, gc, TRANSLATE(col));
-#define SET_BACKGROUND(col)	XSetBackground(display, gc, TRANSLATE(col));
+#define TRANSLATE(col)		( g_server_bpp != 8 ? translate_colour(col) : g_owncolmap ? col : translate_colour(g_colmap[col]) )
+#define SET_FOREGROUND(col)	XSetForeground(g_display, g_gc, TRANSLATE(col));
+#define SET_BACKGROUND(col)	XSetBackground(g_display, g_gc, TRANSLATE(col));
 
 static int rop2_map[] = {
 	GXclear,		/* 0 */
@@ -128,8 +128,8 @@ static int rop2_map[] = {
 	GXset			/* 1 */
 };
 
-#define SET_FUNCTION(rop2)	{ if (rop2 != ROP2_COPY) XSetFunction(display, gc, rop2_map[rop2]); }
-#define RESET_FUNCTION(rop2)	{ if (rop2 != ROP2_COPY) XSetFunction(display, gc, GXcopy); }
+#define SET_FUNCTION(rop2)	{ if (rop2 != ROP2_COPY) XSetFunction(g_display, g_gc, rop2_map[rop2]); }
+#define RESET_FUNCTION(rop2)	{ if (rop2 != ROP2_COPY) XSetFunction(g_display, g_gc, GXcopy); }
 
 static void
 mwm_hide_decorations(void)
@@ -142,14 +142,14 @@ mwm_hide_decorations(void)
 	motif_hints.decorations = 0;
 
 	/* get the atom for the property */
-	hintsatom = XInternAtom(display, "_MOTIF_WM_HINTS", False);
+	hintsatom = XInternAtom(g_display, "_MOTIF_WM_HINTS", False);
 	if (!hintsatom)
 	{
 		warning("Failed to get atom _MOTIF_WM_HINTS: probably your window manager does not support MWM hints\n");
 		return;
 	}
 
-	XChangeProperty(display, wnd, hintsatom, hintsatom, 32, PropModeReplace,
+	XChangeProperty(g_display, g_wnd, hintsatom, hintsatom, 32, PropModeReplace,
 			(unsigned char *) &motif_hints, PROP_MOTIF_WM_HINTS_ELEMENTS);
 }
 
@@ -221,7 +221,7 @@ translate_colour(uint32 colour)
 	switch (g_server_bpp)
 	{
 		case 15:
-			switch (bpp)
+			switch (g_bpp)
 			{
 				case 16:
 					colour = make_colour16(split_colour15(colour));
@@ -235,7 +235,7 @@ translate_colour(uint32 colour)
 			}
 			break;
 		case 16:
-			switch (bpp)
+			switch (g_bpp)
 			{
 				case 16:
 					break;
@@ -248,7 +248,7 @@ translate_colour(uint32 colour)
 			}
 			break;
 		case 24:
-			switch (bpp)
+			switch (g_bpp)
 			{
 				case 16:
 					colour = make_colour16(split_colour24(colour));
@@ -261,20 +261,20 @@ translate_colour(uint32 colour)
 			}
 			break;
 	}
-	switch (bpp)
+	switch (g_bpp)
 	{
 		case 16:
-			if (host_be != xserver_be)
+			if (g_host_be != g_xserver_be)
 				BSWAP16(colour);
 			break;
 
 		case 24:
-			if (xserver_be)
+			if (g_xserver_be)
 				BSWAP24(colour);
 			break;
 
 		case 32:
-			if (host_be != xserver_be)
+			if (g_host_be != g_xserver_be)
 				BSWAP32(colour);
 			break;
 	}
@@ -286,14 +286,14 @@ static void
 translate8to8(uint8 * data, uint8 * out, uint8 * end)
 {
 	while (out < end)
-		*(out++) = (uint8) colmap[*(data++)];
+		*(out++) = (uint8) g_colmap[*(data++)];
 }
 
 static void
 translate8to16(uint8 * data, uint16 * out, uint16 * end)
 {
 	while (out < end)
-		*(out++) = (uint16) colmap[*(data++)];
+		*(out++) = (uint16) g_colmap[*(data++)];
 }
 
 /* little endian - conversion happens when colourmap is built */
@@ -304,7 +304,7 @@ translate8to24(uint8 * data, uint8 * out, uint8 * end)
 
 	while (out < end)
 	{
-		value = colmap[*(data++)];
+		value = g_colmap[*(data++)];
 		*(out++) = value;
 		*(out++) = value >> 8;
 		*(out++) = value >> 16;
@@ -315,7 +315,7 @@ static void
 translate8to32(uint8 * data, uint32 * out, uint32 * end)
 {
 	while (out < end)
-		*(out++) = colmap[*(data++)];
+		*(out++) = g_colmap[*(data++)];
 }
 
 /* todo the remaining translate function might need some big endian check ?? */
@@ -415,14 +415,14 @@ translate24to32(uint8 * data, uint32 * out, uint32 * end)
 static uint8 *
 translate_image(int width, int height, uint8 * data)
 {
-	int size = width * height * bpp / 8;
+	int size = width * height * g_bpp / 8;
 	uint8 *out = (uint8 *) xmalloc(size);
 	uint8 *end = out + size;
 
 	switch (g_server_bpp)
 	{
 		case 24:
-			switch (bpp)
+			switch (g_bpp)
 			{
 				case 32:
 					translate24to32(data, (uint32 *) out, (uint32 *) end);
@@ -436,7 +436,7 @@ translate_image(int width, int height, uint8 * data)
 			}
 			break;
 		case 16:
-			switch (bpp)
+			switch (g_bpp)
 			{
 				case 32:
 					translate16to32((uint16 *) data, (uint32 *) out,
@@ -452,7 +452,7 @@ translate_image(int width, int height, uint8 * data)
 			}
 			break;
 		case 15:
-			switch (bpp)
+			switch (g_bpp)
 			{
 				case 32:
 					translate15to32((uint16 *) data, (uint32 *) out,
@@ -468,7 +468,7 @@ translate_image(int width, int height, uint8 * data)
 			}
 			break;
 		case 8:
-			switch (bpp)
+			switch (g_bpp)
 			{
 				case 8:
 					translate8to8(data, out, end);
@@ -494,18 +494,18 @@ get_key_state(unsigned int state, uint32 keysym)
 	int modifierpos, key, keysymMask = 0;
 	int offset;
 
-	KeyCode keycode = XKeysymToKeycode(display, keysym);
+	KeyCode keycode = XKeysymToKeycode(g_display, keysym);
 
 	if (keycode == NoSymbol)
 		return False;
 
 	for (modifierpos = 0; modifierpos < 8; modifierpos++)
 	{
-		offset = mod_map->max_keypermod * modifierpos;
+		offset = g_mod_map->max_keypermod * modifierpos;
 
-		for (key = 0; key < mod_map->max_keypermod; key++)
+		for (key = 0; key < g_mod_map->max_keypermod; key++)
 		{
-			if (mod_map->modifiermap[offset + key] == keycode)
+			if (g_mod_map->modifiermap[offset + key] == keycode)
 				keysymMask |= 1 << modifierpos;
 		}
 	}
@@ -520,55 +520,55 @@ ui_init(void)
 	uint16 test;
 	int i;
 
-	display = XOpenDisplay(NULL);
-	if (display == NULL)
+	g_display = XOpenDisplay(NULL);
+	if (g_display == NULL)
 	{
 		error("Failed to open display: %s\n", XDisplayName(NULL));
 		return False;
 	}
 
-	x_socket = ConnectionNumber(display);
-	screen = DefaultScreenOfDisplay(display);
-	visual = DefaultVisualOfScreen(screen);
-	depth = DefaultDepthOfScreen(screen);
+	g_x_socket = ConnectionNumber(g_display);
+	g_screen = DefaultScreenOfDisplay(g_display);
+	g_visual = DefaultVisualOfScreen(g_screen);
+	g_depth = DefaultDepthOfScreen(g_screen);
 
-	pfm = XListPixmapFormats(display, &i);
+	pfm = XListPixmapFormats(g_display, &i);
 	if (pfm != NULL)
 	{
 		/* Use maximum bpp for this depth - this is generally
 		   desirable, e.g. 24 bits->32 bits. */
 		while (i--)
 		{
-			if ((pfm[i].depth == depth) && (pfm[i].bits_per_pixel > bpp))
+			if ((pfm[i].depth == g_depth) && (pfm[i].bits_per_pixel > g_bpp))
 			{
-				bpp = pfm[i].bits_per_pixel;
+				g_bpp = pfm[i].bits_per_pixel;
 			}
 		}
 		XFree(pfm);
 	}
 
-	if (bpp < 8)
+	if (g_bpp < 8)
 	{
 		error("Less than 8 bpp not currently supported.\n");
-		XCloseDisplay(display);
+		XCloseDisplay(g_display);
 		return False;
 	}
 
-	if (owncolmap != True)
+	if (g_owncolmap != True)
 	{
-		xcolmap = DefaultColormapOfScreen(screen);
-		if (depth <= 8)
+		g_xcolmap = DefaultColormapOfScreen(g_screen);
+		if (g_depth <= 8)
 			warning("Screen depth is 8 bits or lower: you may want to use -C for a private colourmap\n");
 	}
 
-	gc = XCreateGC(display, RootWindowOfScreen(screen), 0, NULL);
+	g_gc = XCreateGC(g_display, RootWindowOfScreen(g_screen), 0, NULL);
 
-	if (DoesBackingStore(screen) != Always)
-		ownbackstore = True;
+	if (DoesBackingStore(g_screen) != Always)
+		g_ownbackstore = True;
 
 	test = 1;
-	host_be = !(BOOL) (*(uint8 *) (&test));
-	xserver_be = (ImageByteOrder(display) == MSBFirst);
+	g_host_be = !(BOOL) (*(uint8 *) (&test));
+	g_xserver_be = (ImageByteOrder(g_display) == MSBFirst);
 
 	if ((g_width == 0) || (g_height == 0))
 	{
@@ -590,34 +590,34 @@ ui_init(void)
 
 	if (g_fullscreen)
 	{
-		g_width = WidthOfScreen(screen);
-		g_height = HeightOfScreen(screen);
+		g_width = WidthOfScreen(g_screen);
+		g_height = HeightOfScreen(g_screen);
 	}
 
 	/* make sure width is a multiple of 4 */
 	g_width = (g_width + 3) & ~3;
 
-	if (ownbackstore)
+	if (g_ownbackstore)
 	{
-		backstore =
-			XCreatePixmap(display, RootWindowOfScreen(screen), g_width, g_height,
-				      depth);
+		g_backstore =
+			XCreatePixmap(g_display, RootWindowOfScreen(g_screen), g_width, g_height,
+				      g_depth);
 
 		/* clear to prevent rubbish being exposed at startup */
-		XSetForeground(display, gc, BlackPixelOfScreen(screen));
-		XFillRectangle(display, backstore, gc, 0, 0, g_width, g_height);
+		XSetForeground(g_display, g_gc, BlackPixelOfScreen(g_screen));
+		XFillRectangle(g_display, g_backstore, g_gc, 0, 0, g_width, g_height);
 	}
 
-	mod_map = XGetModifierMapping(display);
+	g_mod_map = XGetModifierMapping(g_display);
 
 	if (g_enable_compose)
-		IM = XOpenIM(display, NULL, NULL, NULL);
+		g_IM = XOpenIM(g_display, NULL, NULL, NULL);
 
 	xkeymap_init();
 	xclip_init();
 
 	/* todo take this out when high colour is done */
-	printf("server bpp %d client bpp %d depth %d\n", g_server_bpp, bpp, depth);
+	printf("server bpp %d client bpp %d depth %d\n", g_server_bpp, g_bpp, g_depth);
 
 	return True;
 }
@@ -625,17 +625,17 @@ ui_init(void)
 void
 ui_deinit(void)
 {
-	if (IM != NULL)
-		XCloseIM(IM);
+	if (g_IM != NULL)
+		XCloseIM(g_IM);
 
-	XFreeModifiermap(mod_map);
+	XFreeModifiermap(g_mod_map);
 
-	if (ownbackstore)
-		XFreePixmap(display, backstore);
+	if (g_ownbackstore)
+		XFreePixmap(g_display, g_backstore);
 
-	XFreeGC(display, gc);
-	XCloseDisplay(display);
-	display = NULL;
+	XFreeGC(g_display, g_gc);
+	XCloseDisplay(g_display);
+	g_display = NULL;
 }
 
 BOOL
@@ -648,27 +648,27 @@ ui_create_window(void)
 	long input_mask, ic_input_mask;
 	XEvent xevent;
 
-	wndwidth = g_fullscreen ? WidthOfScreen(screen) : g_width;
-	wndheight = g_fullscreen ? HeightOfScreen(screen) : g_height;
+	wndwidth = g_fullscreen ? WidthOfScreen(g_screen) : g_width;
+	wndheight = g_fullscreen ? HeightOfScreen(g_screen) : g_height;
 
-	attribs.background_pixel = BlackPixelOfScreen(screen);
-	attribs.backing_store = ownbackstore ? NotUseful : Always;
+	attribs.background_pixel = BlackPixelOfScreen(g_screen);
+	attribs.backing_store = g_ownbackstore ? NotUseful : Always;
 	attribs.override_redirect = g_fullscreen;
 
-	wnd = XCreateWindow(display, RootWindowOfScreen(screen), 0, 0, wndwidth, wndheight,
+	g_wnd = XCreateWindow(g_display, RootWindowOfScreen(g_screen), 0, 0, wndwidth, wndheight,
 			    0, CopyFromParent, InputOutput, CopyFromParent,
 			    CWBackPixel | CWBackingStore | CWOverrideRedirect, &attribs);
 
-	XStoreName(display, wnd, title);
+	XStoreName(g_display, g_wnd, g_title);
 
-	if (hide_decorations)
+	if (g_hide_decorations)
 		mwm_hide_decorations();
 
 	classhints = XAllocClassHint();
 	if (classhints != NULL)
 	{
 		classhints->res_name = classhints->res_class = "rdesktop";
-		XSetClassHint(display, wnd, classhints);
+		XSetClassHint(g_display, g_wnd, classhints);
 		XFree(classhints);
 	}
 
@@ -678,7 +678,7 @@ ui_create_window(void)
 		sizehints->flags = PMinSize | PMaxSize;
 		sizehints->min_width = sizehints->max_width = g_width;
 		sizehints->min_height = sizehints->max_height = g_height;
-		XSetWMNormalHints(display, wnd, sizehints);
+		XSetWMNormalHints(g_display, g_wnd, sizehints);
 		XFree(sizehints);
 	}
 
@@ -687,30 +687,30 @@ ui_create_window(void)
 
 	if (g_sendmotion)
 		input_mask |= PointerMotionMask;
-	if (ownbackstore)
+	if (g_ownbackstore)
 		input_mask |= ExposureMask;
-	if (g_fullscreen || grab_keyboard)
+	if (g_fullscreen || g_grab_keyboard)
 		input_mask |= EnterWindowMask;
-	if (grab_keyboard)
+	if (g_grab_keyboard)
 		input_mask |= LeaveWindowMask;
 
-	if (IM != NULL)
+	if (g_IM != NULL)
 	{
-		IC = XCreateIC(IM, XNInputStyle, (XIMPreeditNothing | XIMStatusNothing),
-			       XNClientWindow, wnd, XNFocusWindow, wnd, NULL);
+		g_IC = XCreateIC(g_IM, XNInputStyle, (XIMPreeditNothing | XIMStatusNothing),
+			       XNClientWindow, g_wnd, XNFocusWindow, g_wnd, NULL);
 
-		if ((IC != NULL)
-		    && (XGetICValues(IC, XNFilterEvents, &ic_input_mask, NULL) == NULL))
+		if ((g_IC != NULL)
+		    && (XGetICValues(g_IC, XNFilterEvents, &ic_input_mask, NULL) == NULL))
 			input_mask |= ic_input_mask;
 	}
 
-	XSelectInput(display, wnd, input_mask);
-	XMapWindow(display, wnd);
+	XSelectInput(g_display, g_wnd, input_mask);
+	XMapWindow(g_display, g_wnd);
 
 	/* wait for VisibilityNotify */
 	do
 	{
-		XMaskEvent(display, VisibilityChangeMask, &xevent);
+		XMaskEvent(g_display, VisibilityChangeMask, &xevent);
 	}
 	while (xevent.type != VisibilityNotify);
 
@@ -718,9 +718,9 @@ ui_create_window(void)
 	g_mouse_in_wnd = False;
 
 	/* handle the WM_DELETE_WINDOW protocol */
-	protocol_atom = XInternAtom(display, "WM_PROTOCOLS", True);
-	kill_atom = XInternAtom(display, "WM_DELETE_WINDOW", True);
-	XSetWMProtocols(display, wnd, &kill_atom, 1);
+	g_protocol_atom = XInternAtom(g_display, "WM_PROTOCOLS", True);
+	g_kill_atom = XInternAtom(g_display, "WM_DELETE_WINDOW", True);
+	XSetWMProtocols(g_display, g_wnd, &g_kill_atom, 1);
 
 	return True;
 }
@@ -728,10 +728,10 @@ ui_create_window(void)
 void
 ui_destroy_window(void)
 {
-	if (IC != NULL)
-		XDestroyIC(IC);
+	if (g_IC != NULL)
+		XDestroyIC(g_IC);
 
-	XDestroyWindow(display, wnd);
+	XDestroyWindow(g_display, g_wnd);
 }
 
 void
@@ -739,23 +739,23 @@ xwin_toggle_fullscreen(void)
 {
 	Pixmap contents = 0;
 
-	if (!ownbackstore)
+	if (!g_ownbackstore)
 	{
 		/* need to save contents of window */
-		contents = XCreatePixmap(display, wnd, g_width, g_height, depth);
-		XCopyArea(display, wnd, contents, gc, 0, 0, g_width, g_height, 0, 0);
+		contents = XCreatePixmap(g_display, g_wnd, g_width, g_height, g_depth);
+		XCopyArea(g_display, g_wnd, contents, g_gc, 0, 0, g_width, g_height, 0, 0);
 	}
 
 	ui_destroy_window();
 	g_fullscreen = !g_fullscreen;
 	ui_create_window();
 
-	XDefineCursor(display, wnd, current_cursor);
+	XDefineCursor(g_display, g_wnd, g_current_cursor);
 
-	if (!ownbackstore)
+	if (!g_ownbackstore)
 	{
-		XCopyArea(display, contents, wnd, gc, 0, 0, g_width, g_height, 0, 0);
-		XFreePixmap(display, contents);
+		XCopyArea(g_display, contents, g_wnd, g_gc, 0, 0, g_width, g_height, 0, 0);
+		XFreePixmap(g_display, contents);
 	}
 }
 
@@ -775,11 +775,11 @@ xwin_process_events(void)
 	Window wdummy;
 	int dummy;
 
-	while (XPending(display) > 0)
+	while (XPending(g_display) > 0)
 	{
-		XNextEvent(display, &xevent);
+		XNextEvent(g_display, &xevent);
 
-		if ((IC != NULL) && (XFilterEvent(&xevent, None) == True))
+		if ((g_IC != NULL) && (XFilterEvent(&xevent, None) == True))
 		{
 			DEBUG_KBD(("Filtering event\n"));
 			continue;
@@ -791,18 +791,18 @@ xwin_process_events(void)
 		{
 			case ClientMessage:
 				/* the window manager told us to quit */
-				if ((xevent.xclient.message_type == protocol_atom)
-				    && ((Atom) xevent.xclient.data.l[0] == kill_atom))
+				if ((xevent.xclient.message_type == g_protocol_atom)
+				    && ((Atom) xevent.xclient.data.l[0] == g_kill_atom))
 					/* Quit */
 					return 0;
 				break;
 
 			case KeyPress:
-				last_gesturetime = xevent.xkey.time;
-				if (IC != NULL)
+				g_last_gesturetime = xevent.xkey.time;
+				if (g_IC != NULL)
 					/* Multi_key compatible version */
 				{
-					XmbLookupString(IC,
+					XmbLookupString(g_IC,
 							&xevent.xkey, str, sizeof(str), &keysym,
 							&status);
 					if (!((status == XLookupKeySym) || (status == XLookupBoth)))
@@ -841,7 +841,7 @@ xwin_process_events(void)
 				break;
 
 			case KeyRelease:
-				last_gesturetime = xevent.xkey.time;
+				g_last_gesturetime = xevent.xkey.time;
 				XLookupString((XKeyEvent *) & xevent, str,
 					      sizeof(str), &keysym, NULL);
 
@@ -866,26 +866,26 @@ xwin_process_events(void)
 				/* fall through */
 
 			case ButtonRelease:
-				last_gesturetime = xevent.xbutton.time;
+				g_last_gesturetime = xevent.xbutton.time;
 				button = xkeymap_translate_button(xevent.xbutton.button);
 				if (button == 0)
 					break;
 
 				/* If win_button_size is nonzero, enable single app mode */
-				if (xevent.xbutton.y < win_button_size)
+				if (xevent.xbutton.y < g_win_button_size)
 				{
 					/* Stop moving window when button is released, regardless of cursor position */
-					if (moving_wnd && (xevent.type == ButtonRelease))
-						moving_wnd = False;
+					if (g_moving_wnd && (xevent.type == ButtonRelease))
+						g_moving_wnd = False;
 
 					/*  Check from right to left: */
 
-					if (xevent.xbutton.x >= g_width - win_button_size)
+					if (xevent.xbutton.x >= g_width - g_win_button_size)
 					{
 						/* The close button, continue */
 						;
 					}
-					else if (xevent.xbutton.x >= g_width - win_button_size * 2)
+					else if (xevent.xbutton.x >= g_width - g_win_button_size * 2)
 					{
 						/* The maximize/restore button. Do not send to
 						   server.  It might be a good idea to change the
@@ -893,14 +893,14 @@ xwin_process_events(void)
 						   that rdesktop inhibited this click */
 						break;
 					}
-					else if (xevent.xbutton.x >= g_width - win_button_size * 3)
+					else if (xevent.xbutton.x >= g_width - g_win_button_size * 3)
 					{
 						/* The minimize button. Iconify window. */
-						XIconifyWindow(display, wnd,
-							       DefaultScreen(display));
+						XIconifyWindow(g_display, g_wnd,
+							       DefaultScreen(g_display));
 						break;
 					}
-					else if (xevent.xbutton.x <= win_button_size)
+					else if (xevent.xbutton.x <= g_win_button_size)
 					{
 						/* The system menu. Ignore. */
 						break;
@@ -909,11 +909,11 @@ xwin_process_events(void)
 					{
 						/* The title bar. */
 						if ((xevent.type == ButtonPress) && !g_fullscreen
-						    && hide_decorations)
+						    && g_hide_decorations)
 						{
-							moving_wnd = True;
-							move_x_offset = xevent.xbutton.x;
-							move_y_offset = xevent.xbutton.y;
+							g_moving_wnd = True;
+							g_move_x_offset = xevent.xbutton.x;
+							g_move_y_offset = xevent.xbutton.y;
 						}
 						break;
 
@@ -925,16 +925,16 @@ xwin_process_events(void)
 				break;
 
 			case MotionNotify:
-				if (moving_wnd)
+				if (g_moving_wnd)
 				{
-					XMoveWindow(display, wnd,
-						    xevent.xmotion.x_root - move_x_offset,
-						    xevent.xmotion.y_root - move_y_offset);
+					XMoveWindow(g_display, g_wnd,
+						    xevent.xmotion.x_root - g_move_x_offset,
+						    xevent.xmotion.y_root - g_move_y_offset);
 					break;
 				}
 
 				if (g_fullscreen && !g_focused)
-					XSetInputFocus(display, wnd, RevertToPointerRoot,
+					XSetInputFocus(g_display, g_wnd, RevertToPointerRoot,
 						       CurrentTime);
 				rdp_send_input(time(NULL), RDP_INPUT_MOUSE,
 					       MOUSE_FLAG_MOVE, xevent.xmotion.x, xevent.xmotion.y);
@@ -944,11 +944,11 @@ xwin_process_events(void)
 				if (xevent.xfocus.mode == NotifyGrab)
 					break;
 				g_focused = True;
-				XQueryPointer(display, wnd, &wdummy, &wdummy, &dummy, &dummy,
+				XQueryPointer(g_display, g_wnd, &wdummy, &wdummy, &dummy, &dummy,
 					      &dummy, &dummy, &state);
 				reset_modifier_keys(state);
-				if (grab_keyboard && g_mouse_in_wnd)
-					XGrabKeyboard(display, wnd, True,
+				if (g_grab_keyboard && g_mouse_in_wnd)
+					XGrabKeyboard(g_display, g_wnd, True,
 						      GrabModeAsync, GrabModeAsync, CurrentTime);
 				break;
 
@@ -957,7 +957,7 @@ xwin_process_events(void)
 					break;
 				g_focused = False;
 				if (xevent.xfocus.mode == NotifyWhileGrabbed)
-					XUngrabKeyboard(display, CurrentTime);
+					XUngrabKeyboard(g_display, CurrentTime);
 				break;
 
 			case EnterNotify:
@@ -966,23 +966,23 @@ xwin_process_events(void)
 				g_mouse_in_wnd = True;
 				if (g_fullscreen)
 				{
-					XSetInputFocus(display, wnd, RevertToPointerRoot,
+					XSetInputFocus(g_display, g_wnd, RevertToPointerRoot,
 						       CurrentTime);
 					break;
 				}
 				if (g_focused)
-					XGrabKeyboard(display, wnd, True,
+					XGrabKeyboard(g_display, g_wnd, True,
 						      GrabModeAsync, GrabModeAsync, CurrentTime);
 				break;
 
 			case LeaveNotify:
 				/* we only register for this event when grab_keyboard */
 				g_mouse_in_wnd = False;
-				XUngrabKeyboard(display, CurrentTime);
+				XUngrabKeyboard(g_display, CurrentTime);
 				break;
 
 			case Expose:
-				XCopyArea(display, backstore, wnd, gc,
+				XCopyArea(g_display, g_backstore, g_wnd, g_gc,
 					  xevent.xexpose.x, xevent.xexpose.y,
 					  xevent.xexpose.width,
 					  xevent.xexpose.height,
@@ -998,8 +998,8 @@ xwin_process_events(void)
 
 				if (xevent.xmapping.request == MappingModifier)
 				{
-					XFreeModifiermap(mod_map);
-					mod_map = XGetModifierMapping(display);
+					XFreeModifiermap(g_mod_map);
+					g_mod_map = XGetModifierMapping(g_display);
 				}
 				break;
 
@@ -1026,7 +1026,7 @@ xwin_process_events(void)
 int
 ui_select(int rdp_socket)
 {
-	int n = (rdp_socket > x_socket) ? rdp_socket + 1 : x_socket + 1;
+	int n = (rdp_socket > g_x_socket) ? rdp_socket + 1 : g_x_socket + 1;
 	fd_set rfds;
 
 	FD_ZERO(&rfds);
@@ -1040,7 +1040,7 @@ ui_select(int rdp_socket)
 
 		FD_ZERO(&rfds);
 		FD_SET(rdp_socket, &rfds);
-		FD_SET(x_socket, &rfds);
+		FD_SET(g_x_socket, &rfds);
 
 		switch (select(n, &rfds, NULL, NULL, NULL))
 		{
@@ -1059,7 +1059,7 @@ ui_select(int rdp_socket)
 void
 ui_move_pointer(int x, int y)
 {
-	XWarpPointer(display, wnd, wnd, 0, 0, 0, 0, x, y);
+	XWarpPointer(g_display, g_wnd, g_wnd, 0, 0, 0, 0, x, y);
 }
 
 HBITMAP
@@ -1069,15 +1069,15 @@ ui_create_bitmap(int width, int height, uint8 * data)
 	Pixmap bitmap;
 	uint8 *tdata;
 
-	tdata = (owncolmap ? data : translate_image(width, height, data));
-	bitmap = XCreatePixmap(display, wnd, width, height, depth);
-	image = XCreateImage(display, visual, depth, ZPixmap, 0,
-			     (char *) tdata, width, height, g_server_bpp == 8 ? 8 : bpp, 0);
+	tdata = (g_owncolmap ? data : translate_image(width, height, data));
+	bitmap = XCreatePixmap(g_display, g_wnd, width, height, g_depth);
+	image = XCreateImage(g_display, g_visual, g_depth, ZPixmap, 0,
+			     (char *) tdata, width, height, g_server_bpp == 8 ? 8 : g_bpp, 0);
 
-	XPutImage(display, bitmap, gc, image, 0, 0, 0, 0, width, height);
+	XPutImage(g_display, bitmap, g_gc, image, 0, 0, 0, 0, width, height);
 
 	XFree(image);
-	if (!owncolmap)
+	if (!g_owncolmap)
 		xfree(tdata);
 	return (HBITMAP) bitmap;
 }
@@ -1087,29 +1087,29 @@ ui_paint_bitmap(int x, int y, int cx, int cy, int width, int height, uint8 * dat
 {
 	XImage *image;
 	uint8 *tdata;
-	tdata = (owncolmap ? data : translate_image(width, height, data));
-	image = XCreateImage(display, visual, depth, ZPixmap, 0,
-			     (char *) tdata, width, height, g_server_bpp == 8 ? 8 : bpp, 0);
+	tdata = (g_owncolmap ? data : translate_image(width, height, data));
+	image = XCreateImage(g_display, g_visual, g_depth, ZPixmap, 0,
+			     (char *) tdata, width, height, g_server_bpp == 8 ? 8 : g_bpp, 0);
 
-	if (ownbackstore)
+	if (g_ownbackstore)
 	{
-		XPutImage(display, backstore, gc, image, 0, 0, x, y, cx, cy);
-		XCopyArea(display, backstore, wnd, gc, x, y, cx, cy, x, y);
+		XPutImage(g_display, g_backstore, g_gc, image, 0, 0, x, y, cx, cy);
+		XCopyArea(g_display, g_backstore, g_wnd, g_gc, x, y, cx, cy, x, y);
 	}
 	else
 	{
-		XPutImage(display, wnd, gc, image, 0, 0, x, y, cx, cy);
+		XPutImage(g_display, g_wnd, g_gc, image, 0, 0, x, y, cx, cy);
 	}
 
 	XFree(image);
-	if (!owncolmap)
+	if (!g_owncolmap)
 		xfree(tdata);
 }
 
 void
 ui_destroy_bitmap(HBITMAP bmp)
 {
-	XFreePixmap(display, (Pixmap) bmp);
+	XFreePixmap(g_display, (Pixmap) bmp);
 }
 
 HGLYPH
@@ -1122,26 +1122,26 @@ ui_create_glyph(int width, int height, uint8 * data)
 
 	scanline = (width + 7) / 8;
 
-	bitmap = XCreatePixmap(display, wnd, width, height, 1);
-	gc = XCreateGC(display, bitmap, 0, NULL);
+	bitmap = XCreatePixmap(g_display, g_wnd, width, height, 1);
+	gc = XCreateGC(g_display, bitmap, 0, NULL);
 
-	image = XCreateImage(display, visual, 1, ZPixmap, 0, (char *) data,
+	image = XCreateImage(g_display, g_visual, 1, ZPixmap, 0, (char *) data,
 			     width, height, 8, scanline);
 	image->byte_order = MSBFirst;
 	image->bitmap_bit_order = MSBFirst;
 	XInitImage(image);
 
-	XPutImage(display, bitmap, gc, image, 0, 0, 0, 0, width, height);
+	XPutImage(g_display, bitmap, gc, image, 0, 0, 0, 0, width, height);
 
 	XFree(image);
-	XFreeGC(display, gc);
+	XFreeGC(g_display, gc);
 	return (HGLYPH) bitmap;
 }
 
 void
 ui_destroy_glyph(HGLYPH glyph)
 {
-	XFreePixmap(display, (Pixmap) glyph);
+	XFreePixmap(g_display, (Pixmap) glyph);
 }
 
 HCURSOR
@@ -1205,7 +1205,7 @@ ui_create_cursor(unsigned int x, unsigned int y, int width, int height,
 	maskglyph = ui_create_glyph(width, height, mask);
 
 	xcursor =
-		XCreatePixmapCursor(display, (Pixmap) cursorglyph,
+		XCreatePixmapCursor(g_display, (Pixmap) cursorglyph,
 				    (Pixmap) maskglyph, &fg, &bg, x, y);
 
 	ui_destroy_glyph(maskglyph);
@@ -1218,14 +1218,14 @@ ui_create_cursor(unsigned int x, unsigned int y, int width, int height,
 void
 ui_set_cursor(HCURSOR cursor)
 {
-	current_cursor = (Cursor) cursor;
-	XDefineCursor(display, wnd, current_cursor);
+	g_current_cursor = (Cursor) cursor;
+	XDefineCursor(g_display, g_wnd, g_current_cursor);
 }
 
 void
 ui_destroy_cursor(HCURSOR cursor)
 {
-	XFreeCursor(display, (Cursor) cursor);
+	XFreeCursor(g_display, (Cursor) cursor);
 }
 
 #define MAKE_XCOLOR(xc,c) \
@@ -1240,9 +1240,9 @@ ui_create_colourmap(COLOURMAP * colours)
 {
 	COLOURENTRY *entry;
 	int i, ncolours = colours->ncolours;
-	if (!owncolmap)
+	if (!g_owncolmap)
 	{
-		uint32 *map = (uint32 *) xmalloc(sizeof(*colmap) * ncolours);
+		uint32 *map = (uint32 *) xmalloc(sizeof(*g_colmap) * ncolours);
 		XColor xentry;
 		XColor xc_cache[256];
 		uint32 colour;
@@ -1252,7 +1252,7 @@ ui_create_colourmap(COLOURMAP * colours)
 			entry = &colours->colours[i];
 			MAKE_XCOLOR(&xentry, entry);
 
-			if (XAllocColor(display, xcolmap, &xentry) == 0)
+			if (XAllocColor(g_display, g_xcolmap, &xentry) == 0)
 			{
 				/* Allocation failed, find closest match. */
 				int j = 256;
@@ -1266,9 +1266,9 @@ ui_create_colourmap(COLOURMAP * colours)
 					xc_cache[colLookup].red = xc_cache[colLookup].green =
 						xc_cache[colLookup].blue = 0;
 					xc_cache[colLookup].flags = 0;
-					XQueryColor(display,
-						    DefaultColormap(display,
-								    DefaultScreen(display)),
+					XQueryColor(g_display,
+						    DefaultColormap(g_display,
+								    DefaultScreen(g_display)),
 						    &xc_cache[colLookup]);
 				}
 				colLookup = 0;
@@ -1329,8 +1329,8 @@ ui_create_colourmap(COLOURMAP * colours)
 			MAKE_XCOLOR(xentry, entry);
 		}
 
-		map = XCreateColormap(display, wnd, visual, AllocAll);
-		XStoreColors(display, map, xcolours, ncolours);
+		map = XCreateColormap(g_display, g_wnd, g_visual, AllocAll);
+		XStoreColors(g_display, map, xcolours, ncolours);
 
 		xfree(xcolours);
 		return (HCOLOURMAP) map;
@@ -1340,24 +1340,24 @@ ui_create_colourmap(COLOURMAP * colours)
 void
 ui_destroy_colourmap(HCOLOURMAP map)
 {
-	if (!owncolmap)
+	if (!g_owncolmap)
 		xfree(map);
 	else
-		XFreeColormap(display, (Colormap) map);
+		XFreeColormap(g_display, (Colormap) map);
 }
 
 void
 ui_set_colourmap(HCOLOURMAP map)
 {
-	if (!owncolmap)
+	if (!g_owncolmap)
 	{
-		if (colmap)
-			xfree(colmap);
+		if (g_colmap)
+			xfree(g_colmap);
 
-		colmap = (uint32 *) map;
+		g_colmap = (uint32 *) map;
 	}
 	else
-		XSetWindowColormap(display, wnd, (Colormap) map);
+		XSetWindowColormap(g_display, g_wnd, (Colormap) map);
 }
 
 void
@@ -1369,7 +1369,7 @@ ui_set_clip(int x, int y, int cx, int cy)
 	rect.y = y;
 	rect.width = cx;
 	rect.height = cy;
-	XSetClipRectangles(display, gc, 0, 0, &rect, 1, YXBanded);
+	XSetClipRectangles(g_display, g_gc, 0, 0, &rect, 1, YXBanded);
 }
 
 void
@@ -1381,13 +1381,13 @@ ui_reset_clip(void)
 	rect.y = 0;
 	rect.width = g_width;
 	rect.height = g_height;
-	XSetClipRectangles(display, gc, 0, 0, &rect, 1, YXBanded);
+	XSetClipRectangles(g_display, g_gc, 0, 0, &rect, 1, YXBanded);
 }
 
 void
 ui_bell(void)
 {
-	XBell(display, 0);
+	XBell(g_display, 0);
 }
 
 void
@@ -1430,12 +1430,12 @@ ui_patblt(uint8 opcode,
 							hatch_patterns + brush->pattern[0] * 8);
 			SET_FOREGROUND(bgcolour);
 			SET_BACKGROUND(fgcolour);
-			XSetFillStyle(display, gc, FillOpaqueStippled);
-			XSetStipple(display, gc, fill);
-			XSetTSOrigin(display, gc, brush->xorigin, brush->yorigin);
+			XSetFillStyle(g_display, g_gc, FillOpaqueStippled);
+			XSetStipple(g_display, g_gc, fill);
+			XSetTSOrigin(g_display, g_gc, brush->xorigin, brush->yorigin);
 			FILL_RECTANGLE(x, y, cx, cy);
-			XSetFillStyle(display, gc, FillSolid);
-			XSetTSOrigin(display, gc, 0, 0);
+			XSetFillStyle(g_display, g_gc, FillSolid);
+			XSetTSOrigin(g_display, g_gc, 0, 0);
 			ui_destroy_glyph((HGLYPH) fill);
 			break;
 
@@ -1446,14 +1446,14 @@ ui_patblt(uint8 opcode,
 
 			SET_FOREGROUND(bgcolour);
 			SET_BACKGROUND(fgcolour);
-			XSetFillStyle(display, gc, FillOpaqueStippled);
-			XSetStipple(display, gc, fill);
-			XSetTSOrigin(display, gc, brush->xorigin, brush->yorigin);
+			XSetFillStyle(g_display, g_gc, FillOpaqueStippled);
+			XSetStipple(g_display, g_gc, fill);
+			XSetTSOrigin(g_display, g_gc, brush->xorigin, brush->yorigin);
 
 			FILL_RECTANGLE(x, y, cx, cy);
 
-			XSetFillStyle(display, gc, FillSolid);
-			XSetTSOrigin(display, gc, 0, 0);
+			XSetFillStyle(g_display, g_gc, FillSolid);
+			XSetTSOrigin(g_display, g_gc, 0, 0);
 			ui_destroy_glyph((HGLYPH) fill);
 			break;
 
@@ -1470,9 +1470,9 @@ ui_screenblt(uint8 opcode,
 	     /* src */ int srcx, int srcy)
 {
 	SET_FUNCTION(opcode);
-	XCopyArea(display, wnd, wnd, gc, srcx, srcy, cx, cy, x, y);
-	if (ownbackstore)
-		XCopyArea(display, backstore, backstore, gc, srcx, srcy, cx, cy, x, y);
+	XCopyArea(g_display, g_wnd, g_wnd, g_gc, srcx, srcy, cx, cy, x, y);
+	if (g_ownbackstore)
+		XCopyArea(g_display, g_backstore, g_backstore, g_gc, srcx, srcy, cx, cy, x, y);
 	RESET_FUNCTION(opcode);
 }
 
@@ -1482,9 +1482,9 @@ ui_memblt(uint8 opcode,
 	  /* src */ HBITMAP src, int srcx, int srcy)
 {
 	SET_FUNCTION(opcode);
-	XCopyArea(display, (Pixmap) src, wnd, gc, srcx, srcy, cx, cy, x, y);
-	if (ownbackstore)
-		XCopyArea(display, (Pixmap) src, backstore, gc, srcx, srcy, cx, cy, x, y);
+	XCopyArea(g_display, (Pixmap) src, g_wnd, g_gc, srcx, srcy, cx, cy, x, y);
+	if (g_ownbackstore)
+		XCopyArea(g_display, (Pixmap) src, g_backstore, g_gc, srcx, srcy, cx, cy, x, y);
 	RESET_FUNCTION(opcode);
 }
 
@@ -1528,9 +1528,9 @@ ui_line(uint8 opcode,
 {
 	SET_FUNCTION(opcode);
 	SET_FOREGROUND(pen->colour);
-	XDrawLine(display, wnd, gc, startx, starty, endx, endy);
-	if (ownbackstore)
-		XDrawLine(display, backstore, gc, startx, starty, endx, endy);
+	XDrawLine(g_display, g_wnd, g_gc, startx, starty, endx, endy);
+	if (g_ownbackstore)
+		XDrawLine(g_display, g_backstore, g_gc, startx, starty, endx, endy);
 	RESET_FUNCTION(opcode);
 }
 
@@ -1553,14 +1553,14 @@ ui_draw_glyph(int mixmode,
 	SET_FOREGROUND(fgcolour);
 	SET_BACKGROUND(bgcolour);
 
-	XSetFillStyle(display, gc,
+	XSetFillStyle(g_display, g_gc,
 		      (mixmode == MIX_TRANSPARENT) ? FillStippled : FillOpaqueStippled);
-	XSetStipple(display, gc, (Pixmap) glyph);
-	XSetTSOrigin(display, gc, x, y);
+	XSetStipple(g_display, g_gc, (Pixmap) glyph);
+	XSetTSOrigin(g_display, g_gc, x, y);
 
 	FILL_RECTANGLE_BACKSTORE(x, y, cx, cy);
 
-	XSetFillStyle(display, gc, FillSolid);
+	XSetFillStyle(g_display, g_gc, FillSolid);
 }
 
 #define DO_GLYPH(ttext,idx) \
@@ -1667,13 +1667,13 @@ ui_draw_text(uint8 font, uint8 flags, int mixmode, int x, int y,
 				break;
 		}
 	}
-	if (ownbackstore)
+	if (g_ownbackstore)
 	{
 		if (boxcx > 1)
-			XCopyArea(display, backstore, wnd, gc, boxx,
+			XCopyArea(g_display, g_backstore, g_wnd, g_gc, boxx,
 				  boxy, boxcx, boxcy, boxx, boxy);
 		else
-			XCopyArea(display, backstore, wnd, gc, clipx,
+			XCopyArea(g_display, g_backstore, g_wnd, g_gc, clipx,
 				  clipy, clipcx, clipcy, clipx, clipy);
 	}
 }
@@ -1684,20 +1684,20 @@ ui_desktop_save(uint32 offset, int x, int y, int cx, int cy)
 	Pixmap pix;
 	XImage *image;
 
-	if (ownbackstore)
+	if (g_ownbackstore)
 	{
-		image = XGetImage(display, backstore, x, y, cx, cy, AllPlanes, ZPixmap);
+		image = XGetImage(g_display, g_backstore, x, y, cx, cy, AllPlanes, ZPixmap);
 	}
 	else
 	{
-		pix = XCreatePixmap(display, wnd, cx, cy, depth);
-		XCopyArea(display, wnd, pix, gc, x, y, cx, cy, 0, 0);
-		image = XGetImage(display, pix, 0, 0, cx, cy, AllPlanes, ZPixmap);
-		XFreePixmap(display, pix);
+		pix = XCreatePixmap(g_display, g_wnd, cx, cy, g_depth);
+		XCopyArea(g_display, g_wnd, pix, g_gc, x, y, cx, cy, 0, 0);
+		image = XGetImage(g_display, pix, 0, 0, cx, cy, AllPlanes, ZPixmap);
+		XFreePixmap(g_display, pix);
 	}
 
-	offset *= bpp / 8;
-	cache_put_desktop(offset, cx, cy, image->bytes_per_line, bpp / 8, (uint8 *) image->data);
+	offset *= g_bpp / 8;
+	cache_put_desktop(offset, cx, cy, image->bytes_per_line, g_bpp / 8, (uint8 *) image->data);
 
 	XDestroyImage(image);
 }
@@ -1708,22 +1708,22 @@ ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy)
 	XImage *image;
 	uint8 *data;
 
-	offset *= bpp / 8;
-	data = cache_get_desktop(offset, cx, cy, bpp / 8);
+	offset *= g_bpp / 8;
+	data = cache_get_desktop(offset, cx, cy, g_bpp / 8);
 	if (data == NULL)
 		return;
 
-	image = XCreateImage(display, visual, depth, ZPixmap, 0,
-			     (char *) data, cx, cy, BitmapPad(display), cx * bpp / 8);
+	image = XCreateImage(g_display, g_visual, g_depth, ZPixmap, 0,
+			     (char *) data, cx, cy, BitmapPad(g_display), cx * g_bpp / 8);
 
-	if (ownbackstore)
+	if (g_ownbackstore)
 	{
-		XPutImage(display, backstore, gc, image, 0, 0, x, y, cx, cy);
-		XCopyArea(display, backstore, wnd, gc, x, y, cx, cy, x, y);
+		XPutImage(g_display, g_backstore, g_gc, image, 0, 0, x, y, cx, cy);
+		XCopyArea(g_display, g_backstore, g_wnd, g_gc, x, y, cx, cy, x, y);
 	}
 	else
 	{
-		XPutImage(display, wnd, gc, image, 0, 0, x, y, cx, cy);
+		XPutImage(g_display, g_wnd, g_gc, image, 0, 0, x, y, cx, cy);
 	}
 
 	XFree(image);

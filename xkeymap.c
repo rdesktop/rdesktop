@@ -35,10 +35,10 @@
 #define KEYMAP_MASK 0xffff
 #define KEYMAP_MAX_LINE_LENGTH 80
 
-extern Display *display;
+extern Display *g_display;
 extern char keymapname[16];
 extern int keylayout;
-extern int win_button_size;
+extern int g_win_button_size;
 extern BOOL g_enable_compose;
 
 static BOOL keymap_loaded;
@@ -236,7 +236,7 @@ xkeymap_init(void)
 			keymap_loaded = True;
 	}
 
-	XDisplayKeycodes(display, &min_keycode, (int *) &max_keycode);
+	XDisplayKeycodes(g_display, &min_keycode, (int *) &max_keycode);
 }
 
 /* Handles, for example, multi-scancode keypresses (which is not
@@ -316,7 +316,7 @@ handle_special_keys(uint32 keysym, unsigned int state, uint32 ev_time, BOOL pres
 
 		case XK_space:
 			/* Prevent access to the Windows system menu in single app mode */
-			if (win_button_size
+			if (g_win_button_size
 			    && (get_key_state(state, XK_Alt_L) || get_key_state(state, XK_Alt_R)))
 				return True;
 

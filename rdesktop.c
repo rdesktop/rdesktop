@@ -40,7 +40,7 @@
 #include "crypto/md5.h"
 #endif
 
-char title[32] = "";
+char g_title[32] = "";
 char g_username[16];
 char hostname[16];
 char keymapname[16];
@@ -50,7 +50,7 @@ int g_width = 800;		/* If width or height are reset to zero, the geometry will
 int g_height = 600;
 int tcp_port_rdp = TCP_PORT_RDP;
 int g_server_bpp = 8;
-int win_button_size = 0;	/* If zero, disable single app mode */
+int g_win_button_size = 0;	/* If zero, disable single app mode */
 BOOL g_bitmap_compression = True;
 BOOL g_sendmotion = True;
 BOOL g_orders = True;
@@ -58,10 +58,10 @@ BOOL g_encryption = True;
 BOOL packet_encryption = True;
 BOOL g_desktop_save = True;
 BOOL g_fullscreen = False;
-BOOL grab_keyboard = True;
-BOOL hide_decorations = False;
+BOOL g_grab_keyboard = True;
+BOOL g_hide_decorations = False;
 BOOL g_use_rdp5 = False;
-extern BOOL owncolmap;
+extern BOOL g_owncolmap;
 
 #ifdef RDP2VNC
 extern int rfb_port;
@@ -251,11 +251,11 @@ main(int argc, char *argv[])
 			case 'S':
 				if (!strcmp(optarg, "standard"))
 				{
-					win_button_size = 18;
+					g_win_button_size = 18;
 					break;
 				}
 
-				win_button_size = strtol(optarg, &p, 10);
+				g_win_button_size = strtol(optarg, &p, 10);
 
 				if (*p)
 				{
@@ -330,19 +330,19 @@ main(int argc, char *argv[])
 				break;
 
 			case 'C':
-				owncolmap = True;
+				g_owncolmap = True;
 				break;
 
 			case 'K':
-				grab_keyboard = False;
+				g_grab_keyboard = False;
 				break;
 
 			case 'T':
-				STRNCPY(title, optarg, sizeof(title));
+				STRNCPY(g_title, optarg, sizeof(g_title));
 				break;
 
 			case 'D':
-				hide_decorations = True;
+				g_hide_decorations = True;
 				break;
 
 			case 'a':
@@ -405,10 +405,10 @@ main(int argc, char *argv[])
 	if (prompt_password && read_password(password, sizeof(password)))
 		flags |= RDP_LOGON_AUTO;
 
-	if (title[0] == 0)
+	if (g_title[0] == 0)
 	{
-		strcpy(title, "rdesktop - ");
-		strncat(title, server, sizeof(title) - sizeof("rdesktop - "));
+		strcpy(g_title, "rdesktop - ");
+		strncat(g_title, server, sizeof(g_title) - sizeof("rdesktop - "));
 	}
 
 #ifdef RDP2VNC
