@@ -78,7 +78,7 @@ esac
 
 # Find X installation
 
-xdirs="/usr /usr/X11R6 /usr/X11 /usr/openwin /usr/local /usr/local/X11R6 /usr/local/X11"
+xdirs="/usr/X11R6 /usr/X11 /usr/openwin /usr /usr/local/X11R6 /usr/local/X11 /usr/local"
 
 for dir in $xdirs; do
     if [ -f $dir/include/X11/Xlib.h ]; then
@@ -113,7 +113,7 @@ ldflags="$ldflags -lX11"
 
 # Find OpenSSL installation if available
 
-ssldirs="/usr /usr/openssl /usr/ssl /usr/local /usr/local/openssl /usr/local/ssl"
+ssldirs="/usr/openssl /usr/ssl /usr /usr/local/openssl /usr/local/ssl /usr/local"
 
 for dir in $ssldirs; do
     if [ -f $dir/include/openssl/rc4.h ]; then
