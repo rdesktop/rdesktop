@@ -229,9 +229,10 @@ OpenSSL.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/rdesktop.vncviewer_patch
 Description:
-
+Hack for making the old (broken) keyboard mapping implementation work
+with the VNC Xserver. 
 Status:
-Not yet examined. 
+Not needed anymore, with the new keyboard mapping implementation. 
 
 
 URL:
