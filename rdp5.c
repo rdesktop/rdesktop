@@ -26,7 +26,7 @@ extern uint8 *g_next_packet;
 extern RDPCOMP g_mppc_dict;
 
 void
-rdp5_process(STREAM s, BOOL encryption)
+rdp5_process(STREAM s)
 {
 	uint16 length, count, x, y;
 	uint8 type, ctype;
@@ -35,12 +35,6 @@ rdp5_process(STREAM s, BOOL encryption)
 	uint32 roff, rlen;
 	struct stream *ns = &(g_mppc_dict.ns);
 	struct stream *ts;
-
-	if (encryption)
-	{
-		in_uint8s(s, 8);	/* signature */
-		sec_decrypt(s->p, s->end - s->p);
-	}
 
 #if 0
 	printf("RDP5 data:\n");

@@ -820,14 +820,26 @@ sec_process_mcs_data(STREAM s)
 
 /* Receive secure transport packet */
 STREAM
-sec_recv(void)
+sec_recv(uint8 * rdpver)
 {
 	uint32 sec_flags;
 	uint16 channel;
 	STREAM s;
 
-	while ((s = mcs_recv(&channel)) != NULL)
+	while ((s = mcs_recv(&channel, rdpver)) != NULL)
 	{
+		if (rdpver != NULL)
+		{
+			if (*rdpver != 3)
+			{
+				if (*rdpver & 0x80)
+				{
+					in_uint8s(s, 8);	/* signature */
+					sec_decrypt(s->p, s->end - s->p);
+				}
+				return s;
+			}
+		}
 		if (g_encryption || !g_licence_issued)
 		{
 			in_uint32_le(s, sec_flags);

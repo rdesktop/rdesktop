@@ -72,58 +72,44 @@ iso_send_connection_request(char *username)
 
 /* Receive a message on the ISO layer, return code */
 static STREAM
-iso_recv_msg(uint8 * code)
+iso_recv_msg(uint8 * code, uint8 * rdpver)
 {
 	STREAM s;
 	uint16 length;
 	uint8 version;
 
-      next_packet:
 	s = tcp_recv(NULL, 4);
 	if (s == NULL)
 		return NULL;
-
 	in_uint8(s, version);
-	switch (version & 3)
+	if (rdpver != NULL)
+		*rdpver = version;
+	if (version == 3)
 	{
-		case 0:
-			in_uint8(s, length);
-			if (length & 0x80)
-			{
-				length &= ~0x80;
-				next_be(s, length);
-			}
-			break;
-
-		case 3:
-			in_uint8s(s, 1);	/* pad */
-			in_uint16_be(s, length);
-			break;
-
-		default:
-			error("TPKT v%d\n", version);
-			return NULL;
+		in_uint8s(s, 1);	/* pad */
+		in_uint16_be(s, length);
 	}
-
+	else
+	{
+		in_uint8(s, length);
+		if (length & 0x80)
+		{
+			length &= ~0x80;
+			next_be(s, length);
+		}
+	}
 	s = tcp_recv(s, length - 4);
 	if (s == NULL)
 		return NULL;
-
-	if ((version & 3) == 0)
-	{
-		rdp5_process(s, version & 0x80);
-		goto next_packet;
-	}
-
+	if (version != 3)
+		return s;
 	in_uint8s(s, 1);	/* hdrlen */
 	in_uint8(s, *code);
-
 	if (*code == ISO_PDU_DT)
 	{
 		in_uint8s(s, 1);	/* eot */
 		return s;
 	}
-
 	in_uint8s(s, 5);	/* dst_ref, src_ref, class */
 	return s;
 }
@@ -162,21 +148,22 @@ iso_send(STREAM s)
 
 /* Receive ISO transport data packet */
 STREAM
-iso_recv(void)
+iso_recv(uint8 * rdpver)
 {
 	STREAM s;
-	uint8 code;
+	uint8 code = 0;
 
-	s = iso_recv_msg(&code);
+	s = iso_recv_msg(&code, rdpver);
 	if (s == NULL)
 		return NULL;
-
+	if (rdpver != NULL)
+		if (*rdpver != 3)
+			return s;
 	if (code != ISO_PDU_DT)
 	{
 		error("expected DT, got 0x%x\n", code);
 		return NULL;
 	}
-
 	return s;
 }
 
@@ -184,14 +171,14 @@ iso_recv(void)
 BOOL
 iso_connect(char *server, char *username)
 {
-	uint8 code;
+	uint8 code = 0;
 
 	if (!tcp_connect(server))
 		return False;
 
 	iso_send_connection_request(username);
 
-	if (iso_recv_msg(&code) == NULL)
+	if (iso_recv_msg(&code, NULL) == NULL)
 		return False;
 
 	if (code != ISO_PDU_CC)

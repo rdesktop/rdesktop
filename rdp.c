@@ -51,12 +51,20 @@ rdp_recv(uint8 * type)
 {
 	static STREAM rdp_s;
 	uint16 length, pdu_type;
+	uint8 rdpver;
 
 	if ((rdp_s == NULL) || (g_next_packet >= rdp_s->end))
 	{
-		rdp_s = sec_recv();
+		rdp_s = sec_recv(&rdpver);
 		if (rdp_s == NULL)
 			return NULL;
+		if (rdpver != 3)
+		{
+			/* rdp5_process should move g_next_packet ok */
+			rdp5_process(rdp_s);
+			*type = 0;
+			return rdp_s;
+		}
 
 		g_next_packet = rdp_s->p;
 	}
@@ -1135,47 +1143,15 @@ process_data_pdu(STREAM s, uint32 * ext_disc_reason)
 }
 
 /* Process incoming packets */
+/* nevers gets out of here till app is done */
 void
 rdp_main_loop(BOOL * deactivated, uint32 * ext_disc_reason)
 {
-	uint8 type;
-	BOOL disc = False;	/* True when a disconnect PDU was received */
-	STREAM s;
-
-	while ((s = rdp_recv(&type)) != NULL)
-	{
-		switch (type)
-		{
-			case RDP_PDU_DEMAND_ACTIVE:
-				process_demand_active(s);
-				*deactivated = False;
-				break;
-
-			case RDP_PDU_DEACTIVATE:
-				DEBUG(("RDP_PDU_DEACTIVATE\n"));
-				*deactivated = True;
-				break;
-
-			case RDP_PDU_DATA:
-				disc = process_data_pdu(s, ext_disc_reason);
-				break;
-
-			case 0:
-				break;
-
-			default:
-				unimpl("PDU %d\n", type);
-		}
-
-		if (disc)
-		{
-			return;
-		}
-	}
-	return;
+	while (rdp_loop(deactivated, ext_disc_reason))
+		;
 }
 
-/* used in uiports, processes the rdp packets waiting */
+/* used in uiports and rdp_main_loop, processes the rdp packets waiting */
 BOOL
 rdp_loop(BOOL * deactivated, uint32 * ext_disc_reason)
 {

@@ -39,7 +39,7 @@ int get_current_workarea(uint32 * x, uint32 * y, uint32 * width, uint32 * height
 /* iso.c */
 STREAM iso_init(int length);
 void iso_send(STREAM s);
-STREAM iso_recv(void);
+STREAM iso_recv(uint8 * rdpver);
 BOOL iso_connect(char *server, char *username);
 void iso_disconnect(void);
 /* licence.c */
@@ -48,7 +48,7 @@ void licence_process(STREAM s);
 STREAM mcs_init(int length);
 void mcs_send_to_channel(STREAM s, uint16 channel);
 void mcs_send(STREAM s);
-STREAM mcs_recv(uint16 * channel);
+STREAM mcs_recv(uint16 * channel, uint8 * rdpver);
 BOOL mcs_connect(char *server, STREAM mcs_data, char *username);
 void mcs_disconnect(void);
 /* orders.c */
@@ -91,7 +91,7 @@ int rd_write_file(int fd, void* ptr, int len);
 int rd_lseek_file(int fd, int offset);
 BOOL rd_lock_file(int fd, int start, int len);
 /* rdp5.c */
-void rdp5_process(STREAM s, BOOL encryption);
+void rdp5_process(STREAM s);
 /* rdp.c */
 void rdp_out_unistr(STREAM s, char *string, int len);
 int rdp_in_unistr(STREAM s, char *string, int uni_len);
@@ -138,7 +138,7 @@ STREAM sec_init(uint32 flags, int maxlen);
 void sec_send_to_channel(STREAM s, uint32 flags, uint16 channel);
 void sec_send(STREAM s, uint32 flags);
 void sec_process_mcs_data(STREAM s);
-STREAM sec_recv(void);
+STREAM sec_recv(uint8 * rdpver);
 BOOL sec_connect(char *server, char *username);
 void sec_disconnect(void);
 /* serial.c */
