@@ -8,8 +8,11 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
-#include <linux/lp.h>
 #include <errno.h>
+
+#if defined(__linux__)
+#include <linux/lp.h>
+#endif
 
 extern int errno;
 
@@ -86,7 +89,10 @@ parallel_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 dispo
 	if (fcntl(parallel_fd, F_SETFL, O_NONBLOCK) == -1)
 		perror("fcntl");
 
+#if defined(LPABORT)
+	/* Retry on errors */
 	ioctl(parallel_fd, LPABORT, (int) 1);
+#endif
 
 	g_rdpdr_device[device_id].handle = parallel_fd;
 
@@ -134,11 +140,13 @@ parallel_write(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32
 			default:
 				rc = STATUS_DEVICE_POWERED_OFF;
 		}
+#if defined(LPGETSTATUS)
 		if (ioctl(handle, LPGETSTATUS, &status) == 0)
 		{
 			/* coming soon: take care for the printer status */
 			printf("parallel_write: status = %d, errno = %d\n", status, errno);
 		}
+#endif
 	}
 	*result = n;
 	return rc;
