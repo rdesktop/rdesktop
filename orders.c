@@ -1,4 +1,4 @@
-/*
+/* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    RDP order processing
    Copyright (C) Matthew Chapman 1999-2002
@@ -23,6 +23,7 @@
 
 extern uint8 *next_packet;
 static RDP_ORDER_STATE order_state;
+extern BOOL use_rdp5;
 
 /* Read field indicating which parameters are present */
 static void
@@ -680,21 +681,36 @@ process_bmpcache(STREAM s)
 	uint16 cache_idx, size;
 	uint8 cache_id, width, height, bpp, Bpp;
 	uint8 *data, *bmpdata;
+	uint16 bufsize, pad2, row_size, final_size;
+	uint8 pad1;
 
 	in_uint8(s, cache_id);
-	in_uint8s(s, 1);	/* pad */
+	in_uint8(s, pad1);	/* pad */
 	in_uint8(s, width);
 	in_uint8(s, height);
 	in_uint8(s, bpp);
 	Bpp = (bpp + 7) / 8;
-	in_uint8s(s, 2);	/* bufsize */
+	in_uint16_le(s, bufsize);	/* bufsize */
 	in_uint16_le(s, cache_idx);
-	in_uint8s(s, 2);	/* pad */
-	in_uint16_le(s, size);
-	in_uint8s(s, 4);	/* row_size, final_size */
+
+	if (!use_rdp5) {
+
+		/* Begin compressedBitmapData */
+		in_uint16_le(s, pad2);	/* pad */
+		in_uint16_le(s, size);
+		//	in_uint8s(s, 4);	/* row_size, final_size */
+		in_uint16_le(s, row_size);
+		in_uint16_le(s, final_size);
+
+	} else {
+		size = bufsize;
+	}
 	in_uint8p(s, data, size);
 
-	DEBUG(("BMPCACHE(cx=%d,cy=%d,id=%d,idx=%d)\n", width, height, cache_id, cache_idx));
+	DEBUG(("BMPCACHE(cx=%d,cy=%d,id=%d,idx=%d,bpp=%d,size=%d,pad1=%d,bufsize=%d,pad2=%d,rs=%d,fs=%d)\n", 
+	       width, height, 
+	       cache_id, cache_idx,
+	       bpp, size, pad1, bufsize, pad2, row_size, final_size));
 
 	bmpdata = xmalloc(width * height * Bpp);
 
