@@ -43,12 +43,12 @@ static int rc4_key_len;
 static RC4_KEY rc4_decrypt_key;
 static RC4_KEY rc4_encrypt_key;
 
-static uint8 sec_sign_key[8];
+static uint8 sec_sign_key[16];
 static uint8 sec_decrypt_key[16];
 static uint8 sec_encrypt_key[16];
-static uint8 sec_decrypt_update_key[8];
-static uint8 sec_encrypt_update_key[8];
-static uint8 sec_crypted_random[64];
+static uint8 sec_decrypt_update_key[16];
+static uint8 sec_encrypt_update_key[16];
+static uint8 sec_crypted_random[SEC_MODULUS_SIZE];
 
 /*
  * General purpose 48-byte transformation, using two 32-byte salts (generally,
@@ -123,8 +123,8 @@ sec_generate_keys(uint8 *client_key, uint8 *server_key, int rc4_key_size)
 	sec_hash_48(temp_hash, input, client_key, server_key, 65);
 	sec_hash_48(session_key, temp_hash, client_key, server_key, 88);
 
-	/* Store first 8 bytes of session key, for generating signatures */
-	memcpy(sec_sign_key, session_key, 8);
+	/* Store first 16 bytes of session key, for generating signatures */
+	memcpy(sec_sign_key, session_key, 16);
 
 	/* Generate RC4 keys */
 	sec_hash_16(sec_decrypt_key, &session_key[16], client_key,
@@ -146,9 +146,9 @@ sec_generate_keys(uint8 *client_key, uint8 *server_key, int rc4_key_size)
 		rc4_key_len = 16;
 	}
 
-	/* Store first 8 bytes of RC4 keys as update keys */
-	memcpy(sec_decrypt_update_key, sec_decrypt_key, 8);
-	memcpy(sec_encrypt_update_key, sec_encrypt_key, 8);
+	/* Save initial RC4 keys as update keys */
+	memcpy(sec_decrypt_update_key, sec_decrypt_key, 16);
+	memcpy(sec_encrypt_update_key, sec_encrypt_key, 16);
 
 	/* Initialise RC4 state arrays */
 	RC4_set_key(&rc4_decrypt_key, rc4_key_len, sec_decrypt_key);
@@ -193,14 +193,14 @@ sec_sign(uint8 *signature, uint8 *session_key, int length,
 	buf_out_uint32(lenhdr, datalen);
 
 	SHA1_Init(&sha);
-	SHA1_Update(&sha, session_key, length);
+	SHA1_Update(&sha, session_key, rc4_key_len);
 	SHA1_Update(&sha, pad_54, 40);
 	SHA1_Update(&sha, lenhdr, 4);
 	SHA1_Update(&sha, data, datalen);
 	SHA1_Final(shasig, &sha);
 
 	MD5_Init(&md5);
-	MD5_Update(&md5, session_key, length);
+	MD5_Update(&md5, session_key, rc4_key_len);
 	MD5_Update(&md5, pad_92, 48);
 	MD5_Update(&md5, shasig, 20);
 	MD5_Final(md5sig, &md5);
@@ -218,13 +218,13 @@ sec_update(uint8 *key, uint8 *update_key)
 	RC4_KEY update;
 
 	SHA1_Init(&sha);
-	SHA1_Update(&sha, update_key, 8);
+	SHA1_Update(&sha, update_key, rc4_key_len);
 	SHA1_Update(&sha, pad_54, 40);
-	SHA1_Update(&sha, key, 8);
+	SHA1_Update(&sha, key, rc4_key_len);
 	SHA1_Final(shasig, &sha);
 
 	MD5_Init(&md5);
-	MD5_Update(&md5, update_key, 8);
+	MD5_Update(&md5, update_key, rc4_key_len);
 	MD5_Update(&md5, pad_92, 48);
 	MD5_Update(&md5, shasig, 20);
 	MD5_Final(key, &md5);
@@ -432,7 +432,7 @@ sec_out_mcs_data(STREAM s)
 	/* Client encryption settings */
 	out_uint16_le(s, SEC_TAG_CLI_CRYPT);
 	out_uint16(s, 8);	/* length */
-	out_uint32_le(s, encryption ? 1 : 0);	/* encryption enabled */
+	out_uint32_le(s, encryption ? 0x3 : 0);	/* encryption supported, 128-bit supported */
 	s_mark_end(s);
 }
 
