@@ -1190,10 +1190,10 @@ void draw_glyph (int x, int y, HGLYPH glyph, int fgcolour)
 }
 
 /*****************************************************************************/
-void ui_draw_text(uint8 font, uint8 flags, int mixmode,
+void ui_draw_text(uint8 font, uint8 flags, uint8 opcode, int mixmode,
                   int x, int y,
                   int clipx, int clipy, int clipcx, int clipcy,
-                  int boxx, int boxy, int boxcx, int boxcy,
+                  int boxx, int boxy, int boxcx, int boxcy, BRUSH * brush,
                   int bgcolour, int fgcolour, uint8* text, uint8 length)
 {
   int i;
@@ -1631,6 +1631,24 @@ void ui_end_update(void)
 {
   draw_cache_rects();
   draw_cursor();
+}
+
+/*****************************************************************************/
+void ui_polygon(uint8 opcode, uint8 fillmode, POINT * point, int npoints,
+                BRUSH * brush, int bgcolour, int fgcolour)
+{
+}
+
+/*****************************************************************************/
+void ui_polyline(uint8 opcode, POINT * points, int npoints, PEN * pen)
+{
+}
+
+/*****************************************************************************/
+void ui_ellipse(uint8 opcode, uint8 fillmode,
+                int x, int y, int cx, int cy,
+                BRUSH * brush, int bgcolour, int fgcolour)
+{
 }
 
 /*****************************************************************************/
