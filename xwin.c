@@ -499,13 +499,13 @@ xwin_process_events()
 				else
 				{
 					/* Plain old XLookupString */
-					DEBUG_KBD(("No input context, using XLookupString\n"));
+					DEBUG_KBD(("\nNo input context, using XLookupString\n"));
 					XLookupString((XKeyEvent *) & xevent,
 						      str, sizeof(str), &keysym, NULL);
 				}
 
 				ksname = get_ksname(keysym);
-				DEBUG_KBD(("\nKeyPress for (keysym 0x%lx, %s)\n", keysym, ksname));
+				DEBUG_KBD(("KeyPress for (keysym 0x%lx, %s)\n", keysym, ksname));
 
 				if (handle_special_keys(keysym, ev_time, True))
 					break;
