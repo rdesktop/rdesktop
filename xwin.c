@@ -89,7 +89,7 @@ BOOL owncolmap = False;
 static Colormap xcolmap;
 static uint32 *colmap;
 
-#define TRANSLATE(col)		( server_bpp != 8 ? col : owncolmap ? col : translate_colour(colmap[col]) )
+#define TRANSLATE(col)		( server_bpp != 8 ? translate_colour(col) : owncolmap ? col : translate_colour(colmap[col]) )
 #define SET_FOREGROUND(col)	XSetForeground(display, gc, TRANSLATE(col));
 #define SET_BACKGROUND(col)	XSetBackground(display, gc, TRANSLATE(col));
 
@@ -137,69 +137,31 @@ mwm_hide_decorations(void)
 			(unsigned char *) &motif_hints, PROP_MOTIF_WM_HINTS_ELEMENTS);
 }
 
-static void
-translate8(uint8 * data, uint8 * out, uint8 * end)
+uint32
+colour16to24(uint32 colour)
 {
-	while (out < end)
-		*(out++) = (uint8) colmap[*(data++)];
+	int r;
+	int g;
+	int b;
+	r = (colour & 0xf800) >> 11;
+	r = (r * 0xff) / 0x1f;
+	g = (colour & 0x07e0) >> 5;
+	g = (g * 0xff) / 0x3f;
+	b = (colour & 0x001f);
+	b = (b * 0xff) / 0x1f;
+	return (r << 16) | (g << 8) | b;
 }
 
-static void
-translate16(uint8 * data, uint16 * out, uint16 * end)
+uint32
+colour16to32(uint32 colour)
 {
-	while (out < end)
-		*(out++) = (uint16) colmap[*(data++)];
+	return colour16to24(colour);
 }
 
-/* little endian - conversion happens when colourmap is built */
-static void
-translate24(uint8 * data, uint8 * out, uint8 * end)
+uint32
+colour24to32(uint32 colour)
 {
-	uint32 value;
-
-	while (out < end)
-	{
-		value = colmap[*(data++)];
-		*(out++) = value;
-		*(out++) = value >> 8;
-		*(out++) = value >> 16;
-	}
-}
-
-static void
-translate32(uint8 * data, uint32 * out, uint32 * end)
-{
-	while (out < end)
-		*(out++) = colmap[*(data++)];
-}
-
-static uint8 *
-translate_image(int width, int height, uint8 * data)
-{
-	int size = width * height * bpp / 8;
-	uint8 *out = xmalloc(size);
-	uint8 *end = out + size;
-
-	switch (bpp)
-	{
-		case 8:
-			translate8(data, out, end);
-			break;
-
-		case 16:
-			translate16(data, (uint16 *) out, (uint16 *) end);
-			break;
-
-		case 24:
-			translate24(data, out, end);
-			break;
-
-		case 32:
-			translate32(data, (uint32 *) out, (uint32 *) end);
-			break;
-	}
-
-	return out;
+	return colour;
 }
 
 #define BSWAP16(x) { x = (((x & 0xff) << 8) | (x >> 8)); }
@@ -210,6 +172,32 @@ translate_image(int width, int height, uint8 * data)
 static uint32
 translate_colour(uint32 colour)
 {
+	switch (server_bpp)
+	{
+		case 16:
+			switch (bpp)
+			{
+				case 16:
+					break;
+				case 24:
+					colour = colour16to24(colour);
+					break;
+				case 32:
+					colour = colour16to32(colour);
+					break;
+			}
+			break;
+		case 24:
+			switch (bpp)
+			{
+				case 24:
+					break;
+				case 32:
+					colour = colour24to32(colour);
+					break;
+			}
+			break;
+	}
 	switch (bpp)
 	{
 		case 16:
@@ -229,6 +217,110 @@ translate_colour(uint32 colour)
 	}
 
 	return colour;
+}
+
+static void
+translate8to8(uint8 * data, uint8 * out, uint8 * end)
+{
+	while (out < end)
+		*(out++) = (uint8) colmap[*(data++)];
+}
+
+static void
+translate8to16(uint8 * data, uint16 * out, uint16 * end)
+{
+	while (out < end)
+		*(out++) = (uint16) colmap[*(data++)];
+}
+
+static void
+translate16to16(uint16 * data, uint16 * out, uint16 * end)
+{
+	while (out < end)
+		*(out++) = (uint16) translate_colour(*(data++));
+}
+
+/* little endian - conversion happens when colourmap is built */
+static void
+translate8to24(uint8 * data, uint8 * out, uint8 * end)
+{
+	uint32 value;
+
+	while (out < end)
+	{
+		value = colmap[*(data++)];
+		*(out++) = value;
+		*(out++) = value >> 8;
+		*(out++) = value >> 16;
+	}
+}
+
+static void
+translate16to24(uint16 * data, uint8 * out, uint8 * end)
+{
+	uint32 value;
+
+	while (out < end)
+	{
+		value = translate_colour(*(data++));
+		*(out++) = value;
+		*(out++) = value >> 8;
+		*(out++) = value >> 16;
+	}
+}
+
+static void
+translate8to32(uint8 * data, uint32 * out, uint32 * end)
+{
+	while (out < end)
+		*(out++) = colmap[*(data++)];
+}
+
+static void
+translate16to32(uint16 * data, uint32 * out, uint32 * end)
+{
+	while (out < end)
+		*(out++) = translate_colour(*(data++));
+}
+
+static uint8 *
+translate_image(int width, int height, uint8 * data)
+{
+	int size = width * height * bpp / 8;
+	uint8 *out = xmalloc(size);
+	uint8 *end = out + size;
+
+	if (server_bpp == 16)
+	{
+		if (bpp == 16)
+			translate16to16((uint16 *) data, (uint16 *) out, (uint16 *) end);
+		else if (bpp == 24)
+			translate16to24((uint16 *) data, out, end); /* todo, check this one */
+		else if (bpp == 32)
+			translate16to32((uint16 *) data, (uint32 *) out, (uint32 *) end);
+		return out;
+	}
+	/* todo needs server_bpp == 24 */
+	switch (bpp)
+	{
+		case 8:
+			translate8to8(data, out, end);
+			break;
+
+		case 16:
+			translate8to16(data, (uint16 *) out, (uint16 *) end);
+			break;
+
+		case 24:
+			translate8to24(data, out, end);
+			break;
+
+		case 32:
+			translate8to32(data, (uint32 *) out, (uint32 *) end);
+			break;
+	}
+
+	return out;
 }
 
 BOOL
@@ -734,7 +826,7 @@ ui_create_bitmap(int width, int height, uint8 * data)
 	tdata = (owncolmap ? data : translate_image(width, height, data));
 	bitmap = XCreatePixmap(display, wnd, width, height, depth);
 	image = XCreateImage(display, visual, depth, ZPixmap, 0,
-			     (char *) tdata, width, height, 8, 0);
+			     (char *) tdata, width, height, server_bpp == 8 ? 8 : bpp, 0);
 
 	XPutImage(display, bitmap, gc, image, 0, 0, 0, 0, width, height);
 
@@ -749,28 +841,9 @@ ui_paint_bitmap(int x, int y, int cx, int cy, int width, int height, uint8 * dat
 {
 	XImage *image;
 	uint8 *tdata;
-
-	if (server_bpp == 16)
-	{
-		image = XCreateImage(display, visual, depth, ZPixmap, 0,
-				     (char *) data, width, height, 16, 0);
-
-		if (ownbackstore)
-		{
-			XPutImage(display, backstore, gc, image, 0, 0, x, y, cx, cy);
-			XCopyArea(display, backstore, wnd, gc, x, y, cx, cy, x, y);
-		}
-		else
-		{
-			XPutImage(display, wnd, gc, image, 0, 0, x, y, cx, cy);
-		}
-
-		XFree(image);
-		return;
-	}
 	tdata = (owncolmap ? data : translate_image(width, height, data));
 	image = XCreateImage(display, visual, depth, ZPixmap, 0,
-			     (char *) tdata, width, height, 8, 0);
+			     (char *) tdata, width, height, server_bpp == 8 ? 8 : bpp, 0);
 
 	if (ownbackstore)
 	{
