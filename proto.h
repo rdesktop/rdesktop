@@ -28,10 +28,10 @@ void cliprdr_send_data(uint8 * data, uint32 length);
 BOOL cliprdr_init(void);
 /* disk.c */
 int disk_enum_devices(uint32 * id, char *optarg);
-NTSTATUS disk_query_information(HANDLE handle, uint32 info_class, STREAM out);
-NTSTATUS disk_set_information(HANDLE handle, uint32 info_class, STREAM in, STREAM out);
-NTSTATUS disk_query_volume_information(HANDLE handle, uint32 info_class, STREAM out);
-NTSTATUS disk_query_directory(HANDLE handle, uint32 info_class, char *pattern, STREAM out);
+NTSTATUS disk_query_information(NTHANDLE handle, uint32 info_class, STREAM out);
+NTSTATUS disk_set_information(NTHANDLE handle, uint32 info_class, STREAM in, STREAM out);
+NTSTATUS disk_query_volume_information(NTHANDLE handle, uint32 info_class, STREAM out);
+NTSTATUS disk_query_directory(NTHANDLE handle, uint32 info_class, char *pattern, STREAM out);
 /* mppc.c */
 int mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen);
 /* ewmhints.c */
@@ -108,7 +108,7 @@ BOOL rdp_connect(char *server, uint32 flags, char *domain, char *password, char 
 		 char *directory);
 void rdp_disconnect(void);
 /* rdpdr.c */
-int get_device_index(HANDLE handle);
+int get_device_index(NTHANDLE handle);
 void convert_to_unix_filename(char *filename);
 BOOL rdpdr_init(void);
 void rdpdr_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv, BOOL * timeout);
@@ -143,7 +143,7 @@ BOOL sec_connect(char *server, char *username);
 void sec_disconnect(void);
 /* serial.c */
 int serial_enum_devices(uint32 * id, char *optarg);
-BOOL serial_get_timeout(HANDLE handle, uint32 length, uint32 * timeout, uint32 * itv_timeout);
+BOOL serial_get_timeout(NTHANDLE handle, uint32 length, uint32 * timeout, uint32 * itv_timeout);
 /* tcp.c */
 STREAM tcp_init(uint32 maxlen);
 void tcp_send(STREAM s);

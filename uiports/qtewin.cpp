@@ -1,8 +1,7 @@
 /*
    rdesktop: A Remote Desktop Protocol client.
    User interface services - X Window System
-   Copyright (C) Matthew Chapman 1999-2004
-   qte.cpp by Jay Sorg
+   Copyright (C) Jay Sorg 2004
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -21,7 +20,6 @@
 
 //#define SHARP
 
-#include "../rdesktop.h"
 #ifdef SHARP
 #include <qpe/qpeapplication.h>
 #else
@@ -41,9 +39,25 @@
 #include <qfile.h>
 #include <qcheckbox.h>
 #include <qpopupmenu.h>
-#include "qtewin.h"
 #include <stdlib.h>
 #include <stdarg.h> // va_list va_start va_end
+
+#include "../rdesktop.h"
+#include "qtewin.h"
+
+/* types */
+struct QColorMap
+{
+  uint32 RGBColors[256];
+  int NumColors;
+};
+
+struct bitmap
+{
+  int w;
+  int h;
+  uint8* data;
+};
 
 uint32 g_flags = 0;
 char g_server[64] = "";
@@ -79,29 +93,15 @@ QPEApplication* g_App = 0;
 #else
 QApplication* g_App = 0;
 #endif
-QMyMainWindow* g_MW = 0;
-QMyScrollView* g_SV = 0;
-struct QColorMap
-{
-  uint32 RGBColors[256];
-  int NumColors;
-};
-struct QColorMap* g_CM = 0;
-uint8* g_BS = 0;
+static QMyMainWindow *g_MW = 0;
+static QMyScrollView *g_SV = 0;
+static struct QColorMap *g_CM = 0;
+static uint8 *g_BS = 0;
 
-int g_clipx = 0;
-int g_clipy = 0;
-int g_clipcx = 0;
-int g_clipcy = 0;
-
-struct bitmap
-{
-  int w;
-  int h;
-  uint8* data;
-};
-
-int owncolmap = False;
+static int g_clipx = 0;
+static int g_clipy = 0;
+static int g_clipcx = 0;
+static int g_clipcy = 0;
 
 //*****************************************************************************
 void CleanString(QString* Item)

@@ -65,7 +65,7 @@ extern FILEINFO g_fileinfo[];
 static VCHANNEL *rdpdr_channel;
 
 /* If select() times out, the request for the device with handle g_min_timeout_fd is aborted */
-HANDLE g_min_timeout_fd;
+NTHANDLE g_min_timeout_fd;
 uint32 g_num_devices;
 
 /* Table with information about rdpdr devices */
@@ -90,7 +90,7 @@ struct async_iorequest *g_iorequest;
 
 /* Return device_id for a given handle */
 int
-get_device_index(HANDLE handle)
+get_device_index(NTHANDLE handle)
 {
 	int i;
 	for (i = 0; i < RDPDR_MAX_DEVICES; i++)

@@ -19,7 +19,7 @@ extern int errno;
 extern RDPDR_DEVICE g_rdpdr_device[];
 
 static PARALLEL_DEVICE *
-get_parallel_data(HANDLE handle)
+get_parallel_data(NTHANDLE handle)
 {
 	int index;
 
@@ -74,7 +74,7 @@ parallel_enum_devices(uint32 * id, char *optarg)
 
 static NTSTATUS
 parallel_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 disposition,
-		uint32 flags, char *filename, HANDLE * handle)
+		uint32 flags, char *filename, NTHANDLE * handle)
 {
 	int parallel_fd;
 
@@ -102,7 +102,7 @@ parallel_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 dispo
 }
 
 static NTSTATUS
-parallel_close(HANDLE handle)
+parallel_close(NTHANDLE handle)
 {
 	int i = get_device_index(handle);
 	if (i >= 0)
@@ -112,14 +112,14 @@ parallel_close(HANDLE handle)
 }
 
 static NTSTATUS
-parallel_read(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
+parallel_read(NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
 {
 	*result = read(handle, data, length);
 	return STATUS_SUCCESS;
 }
 
 static NTSTATUS
-parallel_write(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
+parallel_write(NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
 {
 	int rc = STATUS_SUCCESS;
 
@@ -153,7 +153,7 @@ parallel_write(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32
 }
 
 static NTSTATUS
-parallel_device_control(HANDLE handle, uint32 request, STREAM in, STREAM out)
+parallel_device_control(NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 {
 	if ((request >> 16) != FILE_DEVICE_PARALLEL)
 		return STATUS_INVALID_PARAMETER;

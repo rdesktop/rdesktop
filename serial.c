@@ -88,7 +88,7 @@
 extern RDPDR_DEVICE g_rdpdr_device[];
 
 static SERIAL_DEVICE *
-get_serial_info(HANDLE handle)
+get_serial_info(NTHANDLE handle)
 {
 	int index;
 
@@ -101,7 +101,7 @@ get_serial_info(HANDLE handle)
 }
 
 static BOOL
-get_termios(SERIAL_DEVICE * pser_inf, HANDLE serial_fd)
+get_termios(SERIAL_DEVICE * pser_inf, NTHANDLE serial_fd)
 {
 	speed_t speed;
 	struct termios *ptermios;
@@ -224,7 +224,7 @@ get_termios(SERIAL_DEVICE * pser_inf, HANDLE serial_fd)
 }
 
 static void
-set_termios(SERIAL_DEVICE * pser_inf, HANDLE serial_fd)
+set_termios(SERIAL_DEVICE * pser_inf, NTHANDLE serial_fd)
 {
 	speed_t speed;
 
@@ -407,9 +407,9 @@ serial_enum_devices(uint32 * id, char *optarg)
 
 static NTSTATUS
 serial_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 disposition,
-	      uint32 flags_and_attributes, char *filename, HANDLE * handle)
+	      uint32 flags_and_attributes, char *filename, NTHANDLE * handle)
 {
-	HANDLE serial_fd;
+	NTHANDLE serial_fd;
 	SERIAL_DEVICE *pser_inf;
 	struct termios *ptermios;
 
@@ -462,7 +462,7 @@ serial_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 disposi
 }
 
 static NTSTATUS
-serial_close(HANDLE handle)
+serial_close(NTHANDLE handle)
 {
 	int i = get_device_index(handle);
 	if (i >= 0)
@@ -472,7 +472,7 @@ serial_close(HANDLE handle)
 }
 
 static NTSTATUS
-serial_read(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
+serial_read(NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
 {
 	long timeout;
 	SERIAL_DEVICE *pser_inf;
@@ -519,14 +519,14 @@ serial_read(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * 
 }
 
 static NTSTATUS
-serial_write(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
+serial_write(NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
 {
 	*result = write(handle, data, length);
 	return STATUS_SUCCESS;
 }
 
 static NTSTATUS
-serial_device_control(HANDLE handle, uint32 request, STREAM in, STREAM out)
+serial_device_control(NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 {
 #if 0
 	int flush_mask, purge_mask;
@@ -684,7 +684,7 @@ serial_device_control(HANDLE handle, uint32 request, STREAM in, STREAM out)
 
 /* Read timeout for a given file descripter (device) when adding fd's to select() */
 BOOL
-serial_get_timeout(HANDLE handle, uint32 length, uint32 * timeout, uint32 * itv_timeout)
+serial_get_timeout(NTHANDLE handle, uint32 length, uint32 * timeout, uint32 * itv_timeout)
 {
 	int index;
 	SERIAL_DEVICE *pser_inf;

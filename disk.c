@@ -169,9 +169,9 @@ disk_enum_devices(uint32 * id, char *optarg)
 /* Opens or creates a file or directory */
 static NTSTATUS
 disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create_disposition,
-	    uint32 flags_and_attributes, char *filename, HANDLE * phandle)
+	    uint32 flags_and_attributes, char *filename, NTHANDLE * phandle)
 {
-	HANDLE handle;
+	NTHANDLE handle;
 	DIR *dirp;
 	int flags, mode;
 	char path[256];
@@ -325,7 +325,7 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 }
 
 static NTSTATUS
-disk_close(HANDLE handle)
+disk_close(NTHANDLE handle)
 {
 	struct fileinfo *pfinfo;
 
@@ -345,7 +345,7 @@ disk_close(HANDLE handle)
 }
 
 static NTSTATUS
-disk_read(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
+disk_read(NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
 {
 	int n;
 
@@ -382,7 +382,7 @@ disk_read(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * re
 }
 
 static NTSTATUS
-disk_write(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
+disk_write(NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
 {
 	int n;
 
@@ -409,7 +409,7 @@ disk_write(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * r
 }
 
 NTSTATUS
-disk_query_information(HANDLE handle, uint32 info_class, STREAM out)
+disk_query_information(NTHANDLE handle, uint32 info_class, STREAM out)
 {
 	uint32 file_attributes, ft_high, ft_low;
 	struct stat filestat;
@@ -490,7 +490,7 @@ disk_query_information(HANDLE handle, uint32 info_class, STREAM out)
 }
 
 NTSTATUS
-disk_set_information(HANDLE handle, uint32 info_class, STREAM in, STREAM out)
+disk_set_information(NTHANDLE handle, uint32 info_class, STREAM in, STREAM out)
 {
 	uint32 device_id, length, file_attributes, ft_high, ft_low;
 	char newname[256], fullpath[256];
@@ -744,7 +744,7 @@ FsVolumeInfo(char *fpath)
 
 
 NTSTATUS
-disk_query_volume_information(HANDLE handle, uint32 info_class, STREAM out)
+disk_query_volume_information(NTHANDLE handle, uint32 info_class, STREAM out)
 {
 	struct STATFS_T stat_fs;
 	struct fileinfo *pfinfo;
@@ -809,7 +809,7 @@ disk_query_volume_information(HANDLE handle, uint32 info_class, STREAM out)
 }
 
 NTSTATUS
-disk_query_directory(HANDLE handle, uint32 info_class, char *pattern, STREAM out)
+disk_query_directory(NTHANDLE handle, uint32 info_class, char *pattern, STREAM out)
 {
 	uint32 file_attributes, ft_low, ft_high;
 	char *dirname, fullpath[256];
@@ -919,7 +919,7 @@ disk_query_directory(HANDLE handle, uint32 info_class, char *pattern, STREAM out
 
 
 static NTSTATUS
-disk_device_control(HANDLE handle, uint32 request, STREAM in, STREAM out)
+disk_device_control(NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 {
 	uint32 result;
 

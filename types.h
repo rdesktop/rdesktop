@@ -166,19 +166,19 @@ RDPCOMP;
 
 /* RDPDR */
 typedef uint32 NTSTATUS;
-typedef uint32 HANDLE;
+typedef uint32 NTHANDLE;
 
 typedef struct _DEVICE_FNS
 {
 	NTSTATUS(*create) (uint32 device, uint32 desired_access, uint32 share_mode,
 			   uint32 create_disposition, uint32 flags_and_attributes, char *filename,
-			   HANDLE * handle);
-	NTSTATUS(*close) (HANDLE handle);
-	NTSTATUS(*read) (HANDLE handle, uint8 * data, uint32 length, uint32 offset,
+			   NTHANDLE * handle);
+	NTSTATUS(*close) (NTHANDLE handle);
+	NTSTATUS(*read) (NTHANDLE handle, uint8 * data, uint32 length, uint32 offset,
 			 uint32 * result);
-	NTSTATUS(*write) (HANDLE handle, uint8 * data, uint32 length, uint32 offset,
+	NTSTATUS(*write) (NTHANDLE handle, uint8 * data, uint32 length, uint32 offset,
 			  uint32 * result);
-	NTSTATUS(*device_control) (HANDLE handle, uint32 request, STREAM in, STREAM out);
+	NTSTATUS(*device_control) (NTHANDLE handle, uint32 request, STREAM in, STREAM out);
 }
 DEVICE_FNS;
 
@@ -186,7 +186,7 @@ DEVICE_FNS;
 typedef struct rdpdr_device_info
 {
 	uint32 device_type;
-	HANDLE handle;
+	NTHANDLE handle;
 	char name[8];
 	char *local_path;
 	void *pdevice_data;
