@@ -89,6 +89,8 @@ add_async_iorequest(uint32 device, uint32 file, uint32 id, uint32 major, uint32 
 	if (g_iorequest == NULL)
 	{
 		g_iorequest = (struct async_iorequest *) xmalloc(sizeof(struct async_iorequest));
+		if (!g_iorequest)
+			return False;
 		g_iorequest->fd = 0;
 		g_iorequest->next = NULL;
 	}
@@ -102,6 +104,8 @@ add_async_iorequest(uint32 device, uint32 file, uint32 id, uint32 major, uint32 
 		{
 			iorq->next =
 				(struct async_iorequest *) xmalloc(sizeof(struct async_iorequest));
+			if (!iorq->next)
+				return False;
 			iorq->next->fd = 0;
 			iorq->next->next = NULL;
 		}
@@ -388,6 +392,11 @@ rdpdr_process_irp(STREAM s)
 			if (rw_blocking)	// Complete read immediately
 			{
 				buffer = (uint8 *) xrealloc((void *) buffer, length);
+				if (!buffer)
+				{
+					status = STATUS_CANCELLED;
+					break;
+				}
 				status = fns->read(file, buffer, length, offset, &result);
 				buffer_len = result;
 				break;
@@ -395,6 +404,11 @@ rdpdr_process_irp(STREAM s)
 
 			// Add request to table
 			pst_buf = (uint8 *) xmalloc(length);
+			if (!pst_buf)
+			{
+				status = STATUS_CANCELLED;
+				break;
+			}
 			serial_get_timeout(file, length, &total_timeout, &interval_timeout);
 			if (add_async_iorequest
 			    (device, file, id, major, length, fns, total_timeout, interval_timeout,
@@ -430,6 +444,12 @@ rdpdr_process_irp(STREAM s)
 
 			// Add to table
 			pst_buf = (uint8 *) xmalloc(length);
+			if (!pst_buf)
+			{
+				status = STATUS_CANCELLED;
+				break;
+			}
+
 			in_uint8a(s, pst_buf, length);
 
 			if (add_async_iorequest
@@ -553,6 +573,12 @@ rdpdr_process_irp(STREAM s)
 			in_uint8s(s, 0x14);
 
 			buffer = (uint8 *) xrealloc((void *) buffer, bytes_out + 0x14);
+			if (!buffer)
+			{
+				status = STATUS_CANCELLED;
+				break;
+			}
+
 			out.data = out.p = buffer;
 			out.size = sizeof(buffer);
 			status = fns->device_control(file, request, s, &out);
@@ -568,8 +594,9 @@ rdpdr_process_irp(STREAM s)
 	{
 		rdpdr_send_completion(device, id, status, result, buffer, buffer_len);
 	}
-	xfree(buffer);
-
+	if (buffer)
+		xfree(buffer);
+	buffer = NULL;
 }
 
 void

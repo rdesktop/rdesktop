@@ -137,7 +137,6 @@ struct fileinfo
 }
 g_fileinfo[MAX_OPEN_FILES];
 
-
 time_t
 get_create_time(struct stat *st)
 {
@@ -182,7 +181,7 @@ convert_1970_to_filetime(uint32 high, uint32 low)
 
 /* Enumeration of devices from rdesktop.c        */
 /* returns numer of units found and initialized. */
-/* optarg looks like ':h:=/mnt/floppy,b:=/mnt/usbdevice1' */
+/* optarg looks like ':h=/mnt/floppy,b=/mnt/usbdevice1' */
 /* when it arrives to this function.             */
 int
 disk_enum_devices(uint32 * id, char *optarg)
@@ -341,6 +340,9 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 				case ENOENT:
 
 					return STATUS_NO_SUCH_FILE;
+				case EEXIST:
+
+					return STATUS_OBJECT_NAME_COLLISION;
 				default:
 
 					perror("open");
@@ -547,6 +549,7 @@ disk_set_information(HANDLE handle, uint32 info_class, STREAM in, STREAM out)
 	struct stat filestat;
 	time_t write_time, change_time, access_time, mod_time;
 	struct utimbuf tvs;
+	struct STATFS_T stat_fs;
 
 	pfinfo = &(g_fileinfo[handle]);
 
@@ -629,6 +632,12 @@ disk_set_information(HANDLE handle, uint32 info_class, STREAM in, STREAM out)
 
 			if (fchmod(handle, mode))
 				return STATUS_ACCESS_DENIED;
+
+			/* prevents start of writing if not enough space left on device */
+			if (STATFS_FN(g_rdpdr_device[pfinfo->device_id].local_path, &stat_fs) == 0)
+				if (stat_fs.f_bsize * stat_fs.f_bfree < length)
+					return STATUS_DISK_FULL;
+
 			break;
 
 		case 10:	/* FileRenameInformation */

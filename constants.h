@@ -240,6 +240,7 @@ enum RDP_INPUT_DEVICE
 #define RDP_LOGON_NORMAL	0x33
 #define RDP_LOGON_AUTO		0x8
 #define RDP_LOGON_BLOB		0x100
+#define RDP_COMPRESSION		0x80
 
 /* Keymap flags */
 #define MapRightShiftMask   (1<<0)
@@ -326,6 +327,7 @@ enum RDP_INPUT_DEVICE
 #define STATUS_PENDING                  0x00000103
 #define STATUS_CANCELLED                0xc0000120
 #define STATUS_TIMEOUT                  0xc0000102
+#define STATUS_OBJECT_NAME_COLLISION    0xc0000035
 
 /* RDPDR constants */
 #define RDPDR_MAX_DEVICES               0x10
