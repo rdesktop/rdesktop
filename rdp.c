@@ -184,7 +184,8 @@ rdp_out_unistr(STREAM s, char *string, int len)
 			printf("rdp_out_unistr: iconv(1) fail, errno %d\n", errno);
 			return;
 		}
-		pin = string; pout = s->p;
+		pin = string;
+		pout = (char*)s->p;
 	}
 
 	if (iconv(iconv_h, (ICONV_CONST char**)&pin, &ibl, &pout, &obl) == (size_t)-1)
@@ -196,7 +197,7 @@ rdp_out_unistr(STREAM s, char *string, int len)
 	}
 
 #ifdef B_ENDIAN
-	swab(ss, s->p, len + 4);
+	swab(ss, (char*)s->p, len + 4);
 #endif
 
 	s->p += len + 2;
@@ -230,7 +231,7 @@ rdp_in_unistr(STREAM s, char *string, int uni_len)
 #ifdef B_ENDIAN
 	char ss[4096];	// FIXME: global MAX_BUF_SIZE macro need
 
-	swab(s->p, ss, uni_len);
+	swab((char*)s->p, ss, uni_len);
 	pin = ss;
 #else
 	pin = s->p;
