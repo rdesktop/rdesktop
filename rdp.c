@@ -29,6 +29,7 @@ extern BOOL g_encryption;
 extern BOOL g_desktop_save;
 extern BOOL g_use_rdp5;
 extern uint16 g_server_rdp_version;
+extern uint32 g_rdp5_performanceflags;
 extern int g_server_bpp;
 
 uint8 *g_next_packet;
@@ -297,7 +298,7 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 		out_uint32(s, 0);
 		out_uint32_le(s, 0xffffffc4);
 		out_uint32_le(s, 0xfffffffe);
-		out_uint32_le(s, 0x0f);
+		out_uint32_le(s, g_rdp5_performanceflags);
 		out_uint32(s, 0);
 
 

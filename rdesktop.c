@@ -71,6 +71,7 @@ BOOL g_numlock_sync = False;
 extern BOOL g_owncolmap;
 extern BOOL g_ownbackstore;
 extern uint32 g_embed_wnd;
+uint32 g_rdp5_performanceflags = RDP5_NO_WALLPAPER | RDP5_NO_FULLWINDOWDRAG | RDP5_NO_MENUANIMATIONS;
 
 #ifdef WITH_RDPSND
 BOOL g_rdpsnd = False;
@@ -121,6 +122,7 @@ usage(char *program)
 	fprintf(stderr, "   -N: enable numlock syncronization\n");
 	fprintf(stderr, "   -X: embed into another window with a given id.\n");
 	fprintf(stderr, "   -a: connection colour depth\n");
+	fprintf(stderr, "   -x: RDP5 experience (m[odem 28.8], b[roadband], l[an] or hex number)\n");
 	fprintf(stderr, "   -r: enable specified device redirection (this flag can be repeated)\n");
 	fprintf(stderr,
 		"         '-r comport:COM1=/dev/ttyS0': enable serial redirection of /dev/ttyS0 to COM1\n");
@@ -257,7 +259,7 @@ main(int argc, char *argv[])
 #define VNCOPT
 #endif
 
-	while ((c = getopt(argc, argv, VNCOPT "u:d:s:c:p:n:k:g:fbBeEmCDKS:T:NX:a:r:045h?")) != -1)
+	while ((c = getopt(argc, argv, VNCOPT "u:d:s:c:p:n:k:g:fbBeEmCDKS:T:NX:a:x:r:045h?")) != -1)
 	{
 		switch (c)
 		{
@@ -418,6 +420,26 @@ main(int argc, char *argv[])
 				}
 				break;
 
+			case 'x':
+				
+				if (strncmp("modem", optarg, 1) == 0)
+				{
+					g_rdp5_performanceflags = RDP5_NO_WALLPAPER | RDP5_NO_FULLWINDOWDRAG | RDP5_NO_MENUANIMATIONS | RDP5_NO_THEMING;
+				}
+				else if (strncmp("broadband", optarg, 1) == 0)
+				{
+					g_rdp5_performanceflags = RDP5_NO_WALLPAPER;
+				}
+				else if (strncmp("lan", optarg, 1) == 0)
+				{
+					g_rdp5_performanceflags = RDP5_DISABLE_NOTHING;
+				}
+				else
+				{
+					g_rdp5_performanceflags = strtol(optarg, NULL, 16);
+				}
+				break;
+				
 			case 'r':
 
 				if (strncmp("sound", optarg, 5) == 0)

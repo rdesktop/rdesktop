@@ -107,6 +107,15 @@ More than 8 bpp are only supported when connecting to Windows XP
 (up to 16 bpp) or newer.  Note that the colour depth may also be
 limited by the server configuration.
 .TP
+.BR "-x <experience>"
+Alters default bandwith performance behaviour for RDP5. By default only
+theming is enabled, and all other options are disabled (corresponding
+to modem (56 Kbps)). Setting experience to b[roadband] enables menu
+animations and full window dragging. Setting experience to l[an] will
+also enable the desktop wallpaper. Setting experience to m[odem]
+disables all (including theming). Experience can also be a hexidecimal
+number containing the flags.
+.TP
 .BR "-r <device>"
 Enable redirection of the specified device on the client, such
 that it appears on the server. Note that the allowed
