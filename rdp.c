@@ -637,7 +637,8 @@ process_demand_active(STREAM s)
 				{
 					if (p_bpp < g_server_bpp)
 					{
-						warning("Server limited colour depth to %d bits\n", p_bpp);
+						warning("Server limited colour depth to %d bits\n",
+							p_bpp);
 						g_server_bpp = p_bpp;
 					}
 					break;
