@@ -134,9 +134,9 @@ anymore.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/mmihalik_19-7-3-keyfix-4.patch
 Description:
-TDB
+Some kind of new alternative keyboard mapping imlementation. 
 Status:
-Not yet examined. 
+Not needed anymore, with the new keyboard mapping implementation. 
 
 
 URL:
