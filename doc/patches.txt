@@ -286,9 +286,9 @@ Not applied yet. TDB.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/svenni_dis_wmkeybnds.patch
 Description:
-TDB
+Commandline flag to disable keyboard grabbing. 
 Status:
-Not yet examined. 
+Applied. 
 
 
 URL:
