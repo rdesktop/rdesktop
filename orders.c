@@ -475,7 +475,7 @@ process_polyline(STREAM s, POLYLINE_ORDER * os, uint32 present, BOOL delta)
 		rdp_in_coord(s, &os->y, delta);
 
 	if (present & 0x04)
-		in_uint8(s, os->flags);
+		in_uint8(s, os->opcode);
 
 	if (present & 0x10)
 		rdp_in_colour(s, &os->fgcolour);
@@ -488,13 +488,9 @@ process_polyline(STREAM s, POLYLINE_ORDER * os, uint32 present, BOOL delta)
 		in_uint8(s, os->datasize);
 		in_uint8a(s, os->data, os->datasize);
 	}
-	if (os->flags & 1)
-		opcode = ROP2_COPY;
-	else
-		opcode = ROP2_NXOR;
 
-	DEBUG(("POLYLINE(x=%d,y=%d,fl=0x%x,fg=0x%x,n=%d,sz=%d)\n",
-	       os->x, os->y, os->flags, os->fgcolour, os->lines, os->datasize));
+	DEBUG(("POLYLINE(x=%d,y=%d,op=0x%x,fg=0x%x,n=%d,sz=%d)\n",
+	       os->x, os->y, os->opcode, os->fgcolour, os->lines, os->datasize));
 
 	DEBUG(("Data: "));
 
@@ -503,6 +499,13 @@ process_polyline(STREAM s, POLYLINE_ORDER * os, uint32 present, BOOL delta)
 
 	DEBUG(("\n"));
 
+	if (os->opcode < 0x01 || os->opcode > 0x10)
+	{
+		error("bad ROP2 0x%x\n", os->opcode);
+		return;
+	}
+
+	opcode = os->opcode - 1;
 	x = os->x;
 	y = os->y;
 	pen.style = pen.width = 0;

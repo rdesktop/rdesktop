@@ -166,7 +166,7 @@ typedef struct _POLYLINE_ORDER
 {
 	uint16 x;
 	uint16 y;
-	uint8 flags;
+	uint8 opcode;
 	uint8 fgcolour;
 	uint8 lines;
 	uint8 datasize;
