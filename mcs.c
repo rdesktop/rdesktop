@@ -1,7 +1,7 @@
 /*
    rdesktop: A Remote Desktop Protocol client.
    Protocol services - Multipoint Communications Service
-   Copyright (C) Matthew Chapman 1999-2000
+   Copyright (C) Matthew Chapman 1999-2001
    
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -38,7 +38,7 @@ ber_parse_header(STREAM s, int tagval, int *length)
 
 	if (tag != tagval)
 	{
-		ERROR("expected tag %d, got %d\n", tagval, tag);
+		error("expected tag %d, got %d\n", tagval, tag);
 		return False;
 	}
 
@@ -161,7 +161,7 @@ mcs_recv_connect_response(STREAM mcs_data)
 	in_uint8(s, result);
 	if (result != 0)
 	{
-		ERROR("MCS connect: %d\n", result);
+		error("MCS connect: %d\n", result);
 		return False;
 	}
 
@@ -172,7 +172,7 @@ mcs_recv_connect_response(STREAM mcs_data)
 	ber_parse_header(s, BER_TAG_OCTET_STRING, &length);
 	if (length > mcs_data->size)
 	{
-		WARN("MCS data length %d\n", length);
+		error("MCS data length %d\n", length);
 		length = mcs_data->size;
 	}
 
@@ -227,14 +227,14 @@ mcs_recv_aucf(uint16 *mcs_userid)
 	in_uint8(s, opcode);
 	if ((opcode >> 2) != MCS_AUCF)
 	{
-		ERROR("expected AUcf, got %d\n", opcode);
+		error("expected AUcf, got %d\n", opcode);
 		return False;
 	}
 
 	in_uint8(s, result);
 	if (result != 0)
 	{
-		ERROR("AUrq: %d\n", result);
+		error("AUrq: %d\n", result);
 		return False;
 	}
 
@@ -274,14 +274,14 @@ mcs_recv_cjcf()
 	in_uint8(s, opcode);
 	if ((opcode >> 2) != MCS_CJCF)
 	{
-		ERROR("expected CJcf, got %d\n", opcode);
+		error("expected CJcf, got %d\n", opcode);
 		return False;
 	}
 
 	in_uint8(s, result);
 	if (result != 0)
 	{
-		ERROR("CJrq: %d\n", result);
+		error("CJrq: %d\n", result);
 		return False;
 	}
 
@@ -340,7 +340,7 @@ mcs_recv()
 	{
 		if (appid != MCS_DPUM)
 		{
-			ERROR("expected data, got %d\n", opcode);
+			error("expected data, got %d\n", opcode);
 		}
 		return NULL;
 	}

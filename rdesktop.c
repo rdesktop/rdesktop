@@ -1,7 +1,7 @@
 /*
    rdesktop: A Remote Desktop Protocol client.
    Entrypoint and utility functions
-   Copyright (C) Matthew Chapman 1999-2000
+   Copyright (C) Matthew Chapman 1999-2001
    
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
 */
 
 #include <stdlib.h>		/* malloc realloc free */
+#include <stdarg.h>		/* va_list va_start va_end */
 #include <unistd.h>		/* read close getuid getgid getpid getppid gethostname */
 #include <fcntl.h>		/* open */
 #include <pwd.h>		/* getpwuid */
@@ -29,14 +30,14 @@
 
 char username[16];
 char hostname[16];
-int width = 800;
-int height = 600;
+int width;
+int height;
 int keylayout = 0x409;
 BOOL bitmap_compression = True;
 BOOL sendmotion = True;
 BOOL orders = True;
 BOOL licence = True;
-BOOL use_encryption = True;
+BOOL encryption = True;
 BOOL desktop_save = True;
 BOOL fullscreen = False;
 
@@ -44,111 +45,112 @@ BOOL fullscreen = False;
 static void
 usage(char *program)
 {
-	STATUS("Usage: %s [options] server\n", program);
-	STATUS("   -u: user name\n");
-	STATUS("   -d: domain\n");
-	STATUS("   -s: shell\n");
-	STATUS("   -c: working directory\n");
-	STATUS("   -p: password (autologon)\n");
-	STATUS("   -n: client hostname\n");
-	STATUS("   -w: desktop width\n");
-	STATUS("   -h: desktop height\n");
-	STATUS("   -k: keyboard layout (hex)\n");
-	STATUS("   -b: force bitmap updates\n");
-	STATUS("   -m: do not send motion events\n");
-	STATUS("   -l: do not request licence\n\n");
+	printf("Usage: %s [options] server\n", program);
+	printf("   -u: user name\n");
+	printf("   -d: domain\n");
+	printf("   -s: shell\n");
+	printf("   -c: working directory\n");
+	printf("   -p: password (autologon)\n");
+	printf("   -n: client hostname\n");
+	printf("   -k: keyboard layout (hex)\n");
+	printf("   -g: desktop geometry (WxH)\n");
+	printf("   -f: full-screen mode\n");
+	printf("   -b: force bitmap updates\n");
+	printf("   -e: disable encryption (French TS)\n");
+	printf("   -m: do not send motion events\n");
+	printf("   -l: do not request licence\n\n");
 }
 
 /* Client program */
 int
 main(int argc, char *argv[])
 {
-	struct passwd *pw;
-	char *server;
-	uint32 flags;
+	char fullhostname[64];
 	char domain[16];
 	char password[16];
 	char shell[32];
 	char directory[32];
 	char title[32];
+	struct passwd *pw;
+	char *server, *p;
+	uint32 flags;
 	int c;
 
-	STATUS("rdesktop: A Remote Desktop Protocol client.\n");
-	STATUS("Version " VERSION
-	       ". Copyright (C) 1999-2000 Matt Chapman.\n");
-	STATUS("See http://www.rdesktop.org/ for more information.\n\n");
+	printf("rdesktop: A Remote Desktop Protocol client.\n");
+	printf("Version " VERSION ". Copyright (C) 1999-2001 Matt Chapman.\n");
+	printf("See http://www.rdesktop.org/ for more information.\n\n");
 
 	flags = RDP_LOGON_NORMAL;
 	domain[0] = password[0] = shell[0] = directory[0] = 0;
 
-	while ((c = getopt(argc, argv, "u:d:s:c:p:n:g:k:mbleKFVh?")) != -1)
+	while ((c = getopt(argc, argv, "u:d:s:c:p:n:k:g:fbemlh?")) != -1)
 	{
 		switch (c)
 		{
 			case 'u':
-				strncpy(username, optarg, sizeof(username));
+				STRNCPY(username, optarg, sizeof(username));
 				break;
 
 			case 'd':
-				strncpy(domain, optarg, sizeof(domain));
-				break;
-
-			case 'p':
-				flags |= RDP_LOGON_AUTO;
-				strncpy(password, optarg, sizeof(password));
+				STRNCPY(domain, optarg, sizeof(domain));
 				break;
 
 			case 's':
-				strncpy(shell, optarg, sizeof(shell));
+				STRNCPY(shell, optarg, sizeof(shell));
 				break;
 
 			case 'c':
-				strncpy(directory, optarg, sizeof(directory));
+				STRNCPY(directory, optarg, sizeof(directory));
+				break;
+
+			case 'p':
+				STRNCPY(password, optarg, sizeof(password));
+				flags |= RDP_LOGON_AUTO;
 				break;
 
 			case 'n':
-				strncpy(hostname, optarg, sizeof(hostname));
-				break;
-			case 'g':
-				{
-					char *tgem = 0;
-					width = strtol(optarg, NULL, 10);
-					tgem = strchr(optarg, 'x');
-					if ((tgem == 0) || (strlen(tgem) < 2))
-					{
-						ERROR
-							("-g: invalid parameter. Syntax example: -g 1024x768\n");
-						exit(1);
-					}
-					height = strtol(tgem + 1, NULL, 10);
-				}
+				STRNCPY(hostname, optarg, sizeof(hostname));
 				break;
 
 			case 'k':
 				keylayout = strtol(optarg, NULL, 16);
-				/* keylayout = find_keyb_code(optarg); */
 				if (keylayout == 0)
-					return 0;
+				{
+					error("invalid keyboard layout\n");
+					return 1;
+				}
 				break;
 
-			case 'm':
-				sendmotion = False;
+			case 'g':
+				width = strtol(optarg, &p, 10);
+				if (*p == 'x')
+					height = strtol(p+1, NULL, 10);
+
+				if ((width == 0) || (height == 0))
+				{
+					error("invalid geometry\n");
+					return 1;
+				}
+				break;
+
+			case 'f':
+				fullscreen = True;
 				break;
 
 			case 'b':
 				orders = False;
 				break;
 
+			case 'e':
+				encryption = False;
+				break;
+
+			case 'm':
+				sendmotion = False;
+				break;
+
 			case 'l':
 				licence = False;
-				break;
-
-			case 'e':
-				use_encryption = False;
-				break;
-
-			case 'F':
-				fullscreen = True;
 				break;
 
 			case 'h':
@@ -172,24 +174,47 @@ main(int argc, char *argv[])
 		pw = getpwuid(getuid());
 		if ((pw == NULL) || (pw->pw_name == NULL))
 		{
-			STATUS("Could not determine user name.\n");
+			error("could not determine username, use -u\n");
 			return 1;
 		}
 
-		strncpy(username, pw->pw_name, sizeof(username));
+		STRNCPY(username, pw->pw_name, sizeof(username));
 	}
 
 	if (hostname[0] == 0)
 	{
-		if (gethostname(hostname, sizeof(hostname)) == -1)
+		if (gethostname(fullhostname, sizeof(fullhostname)) == -1)
 		{
-			STATUS("Could not determine host name.\n");
+			error("could not determine local hostname, use -n\n");
 			return 1;
 		}
+
+		p = strchr(fullhostname, '.');
+		if (p != NULL)
+			*p = 0;
+
+		STRNCPY(hostname, fullhostname, sizeof(hostname));
+	}
+
+	if (!strcmp(password, "-"))
+	{
+		p = getpass("Password: ");
+		if (p == NULL)
+		{
+			error("failed to read password\n");
+			return 0;
+		}
+		STRNCPY(password, p, sizeof(password));
+	}
+
+	if ((width == 0) || (height == 0))
+	{
+		width = 800;
+		height = 600;
 	}
 
 	strcpy(title, "rdesktop - ");
-	strncat(title, server, sizeof(title));
+	strncat(title, server, sizeof(title) - sizeof("rdesktop - "));
 
 	if (ui_create_window(title))
 	{
@@ -197,7 +222,7 @@ main(int argc, char *argv[])
 				 directory))
 			return 1;
 
-		STATUS("Connection successful.\n");
+		printf("Connection successful.\n");
 		rdp_main_loop();
 		ui_destroy_window();
 	}
@@ -216,7 +241,8 @@ generate_random(uint8 *random)
 	int fd;
 
 	/* If we have a kernel random device, use it. */
-	if ((fd = open("/dev/urandom", O_RDONLY)) != -1)
+	if (((fd = open("/dev/urandom", O_RDONLY)) != -1)
+	    || ((fd = open("/dev/random", O_RDONLY)) != -1))
 	{
 		read(fd, random, 32);
 		close(fd);
@@ -241,7 +267,7 @@ xmalloc(int size)
 	void *mem = malloc(size);
 	if (mem == NULL)
 	{
-		ERROR("xmalloc %d\n", size);
+		error("xmalloc %d\n", size);
 		exit(1);
 	}
 	return mem;
@@ -254,7 +280,7 @@ xrealloc(void *oldmem, int size)
 	void *mem = realloc(oldmem, size);
 	if (mem == NULL)
 	{
-		ERROR("xrealloc %d\n", size);
+		error("xrealloc %d\n", size);
 		exit(1);
 	}
 	return mem;
@@ -267,7 +293,33 @@ xfree(void *mem)
 	free(mem);
 }
 
-/* Produce a hex dump */
+/* report an error */
+void
+error(char *format, ...)
+{
+	va_list ap;
+
+	fprintf(stderr, "ERROR: ");
+
+	va_start(ap, format);
+	vfprintf(stderr, format, ap);
+	va_end(ap);
+}
+
+/* report an unimplemented protocol feature */
+void
+unimpl(char *format, ...)
+{
+	va_list ap;
+
+	fprintf(stderr, "NOT IMPLEMENTED: ");
+
+	va_start(ap, format);
+	vfprintf(stderr, format, ap);
+	va_end(ap);
+}
+
+/* produce a hex dump */
 void
 hexdump(unsigned char *p, unsigned int len)
 {
@@ -277,21 +329,23 @@ hexdump(unsigned char *p, unsigned int len)
 
 	while (offset < len)
 	{
-		STATUS("%04x ", offset);
+		printf("%04x ", offset);
 		thisline = len - offset;
 		if (thisline > 16)
 			thisline = 16;
 
 		for (i = 0; i < thisline; i++)
-			STATUS("%02x ", line[i]) for (; i < 16; i++)
-				STATUS("   ");
+			printf("%02x ", line[i]);
+
+		for (; i < 16; i++)
+				printf("   ");
 
 		for (i = 0; i < thisline; i++)
-			STATUS("%c",
+			printf("%c",
 			       (line[i] >= 0x20
 				&& line[i] < 0x7f) ? line[i] : '.');
 
-		STATUS("\n");
+		printf("\n");
 		offset += thisline;
 		line += thisline;
 	}

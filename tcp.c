@@ -1,7 +1,7 @@
 /*
    rdesktop: A Remote Desktop Protocol client.
    Protocol services - TCP layer
-   Copyright (C) Matthew Chapman 1999-2000
+   Copyright (C) Matthew Chapman 1999-2001
    
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -60,7 +60,7 @@ tcp_send(STREAM s)
 
 		if (sent <= 0)
 		{
-			STATUS("write: %s\n", strerror(errno));
+			error("write: %s\n", strerror(errno));
 			return;
 		}
 
@@ -101,7 +101,7 @@ tcp_recv(int length)
 
 			if (rcvd <= 0)
 			{
-				STATUS("read: %s\n", strerror(errno));
+				error("read: %s\n", strerror(errno));
 				return NULL;
 			}
 
@@ -128,13 +128,13 @@ tcp_connect(char *server)
 	}
 	else if (!(servaddr.sin_addr.s_addr = inet_addr(server)))
 	{
-		STATUS("%s: unable to resolve host\n", server);
+		error("%s: unable to resolve host\n", server);
 		return False;
 	}
 
 	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 	{
-		STATUS("socket: %s\n", strerror(errno));
+		error("socket: %s\n", strerror(errno));
 		return False;
 	}
 
@@ -145,7 +145,7 @@ tcp_connect(char *server)
 	    (sock, (struct sockaddr *) &servaddr,
 	     sizeof(struct sockaddr)) < 0)
 	{
-		STATUS("connect: %s\n", strerror(errno));
+		error("connect: %s\n", strerror(errno));
 		close(sock);
 		return False;
 	}

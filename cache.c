@@ -1,7 +1,7 @@
 /*
    rdesktop: A Remote Desktop Protocol client.
    Cache routines
-   Copyright (C) Matthew Chapman 1999-2000
+   Copyright (C) Matthew Chapman 1999-2001
    
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -40,7 +40,7 @@ cache_get_bitmap(uint8 cache_id, uint16 cache_idx)
 			return bitmap;
 	}
 
-	ERROR("get bitmap %d:%d\n", cache_id, cache_idx);
+	error("get bitmap %d:%d\n", cache_id, cache_idx);
 	return NULL;
 }
 
@@ -61,7 +61,7 @@ cache_put_bitmap(uint8 cache_id, uint16 cache_idx, HBITMAP bitmap)
 	}
 	else
 	{
-		ERROR("put bitmap %d:%d\n", cache_id, cache_idx);
+		error("put bitmap %d:%d\n", cache_id, cache_idx);
 	}
 }
 
@@ -83,7 +83,7 @@ cache_get_font(uint8 font, uint16 character)
 			return glyph;
 	}
 
-	ERROR("get font %d:%d\n", font, character);
+	error("get font %d:%d\n", font, character);
 	return NULL;
 }
 
@@ -109,7 +109,7 @@ cache_put_font(uint8 font, uint16 character, uint16 offset,
 	}
 	else
 	{
-		ERROR("put font %d:%d\n", font, character);
+		error("put font %d:%d\n", font, character);
 	}
 }
 
@@ -130,7 +130,7 @@ cache_get_text(uint8 cache_id)
 			return text;
 	}
 
-	ERROR("get text %d\n", cache_id);
+	error("get text %d\n", cache_id);
 	return NULL;
 }
 
@@ -152,7 +152,7 @@ cache_put_text(uint8 cache_id, void *data, int length)
 	}
 	else
 	{
-		ERROR("put text %d\n", cache_id);
+		error("put text %d\n", cache_id);
 	}
 }
 
@@ -171,7 +171,7 @@ cache_get_desktop(uint32 offset, int cx, int cy, int bytes_per_pixel)
 		return &deskcache[offset];
 	}
 
-	ERROR("get desktop %d:%d\n", offset, length);
+	error("get desktop %d:%d\n", offset, length);
 	return NULL;
 }
 
@@ -194,7 +194,7 @@ cache_put_desktop(uint32 offset, int cx, int cy, int scanline,
 	}
 	else
 	{
-		ERROR("put desktop %d:%d\n", offset, length);
+		error("put desktop %d:%d\n", offset, length);
 	}
 }
 
@@ -214,7 +214,7 @@ HCURSOR cache_get_cursor(uint16 cache_idx)
 			return cursor;
 	}
 
-	ERROR("get cursor %d\n", cache_idx);
+	error("get cursor %d\n", cache_idx);
 	return NULL;
 }
 
@@ -234,6 +234,6 @@ cache_put_cursor(uint16 cache_idx, HCURSOR cursor)
 	}
 	else
 	{
-		ERROR("put cursor %d\n", cache_idx);
+		error("put cursor %d\n", cache_idx);
 	}
 }

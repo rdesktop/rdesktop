@@ -1,7 +1,7 @@
 /*
    rdesktop: A Remote Desktop Protocol client.
    Protocol services - RDP encryption and licensing
-   Copyright (C) Matthew Chapman 1999-2000
+   Copyright (C) Matthew Chapman 1999-2001
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@ extern char hostname[16];
 extern int width;
 extern int height;
 extern int keylayout;
-extern BOOL use_encryption;
+extern BOOL encryption;
 extern BOOL licence_issued;
 
 static int rc4_key_len;
@@ -126,7 +126,7 @@ sec_generate_keys(uint8 *client_key, uint8 *server_key, int rc4_key_size)
 
 	if (rc4_key_size == 1)
 	{
-		DEBUG("40-bit encryption enabled\n");
+		DEBUG(("40-bit encryption enabled\n"));
 		sec_make_40bit(sec_sign_key);
 		sec_make_40bit(sec_decrypt_key);
 		sec_make_40bit(sec_encrypt_key);
@@ -134,7 +134,7 @@ sec_generate_keys(uint8 *client_key, uint8 *server_key, int rc4_key_size)
 	}
 	else
 	{
-		DEBUG("128-bit encryption enabled\n");
+		DEBUG(("128-bit encryption enabled\n"));
 		rc4_key_len = 16;
 	}
 
@@ -339,8 +339,8 @@ sec_send(STREAM s, uint32 flags)
 		flags &= ~SEC_ENCRYPT;
 		datalen = s->end - s->p - 8;
 
-#if RDP_DEBUG
-		DEBUG("Sending encrypted packet:\n");
+#if WITH_DEBUG
+		DEBUG(("Sending encrypted packet:\n"));
 		hexdump(s->p + 8, datalen);
 #endif
 
@@ -418,7 +418,7 @@ sec_out_mcs_data(STREAM s)
 	/* Client encryption settings */
 	out_uint16_le(s, SEC_TAG_CLI_CRYPT);
 	out_uint16(s, 8);	/* length */
-	out_uint32_le(s, use_encryption ? 1 : 0);	/* encryption enabled */
+	out_uint32_le(s, encryption ? 1 : 0);	/* encryption enabled */
 	s_mark_end(s);
 }
 
@@ -431,14 +431,14 @@ sec_parse_public_key(STREAM s, uint8 **modulus, uint8 **exponent)
 	in_uint32_le(s, magic);
 	if (magic != SEC_RSA_MAGIC)
 	{
-		ERROR("RSA magic 0x%x\n", magic);
+		error("RSA magic 0x%x\n", magic);
 		return False;
 	}
 
 	in_uint32_le(s, modulus_len);
 	if (modulus_len != SEC_MODULUS_SIZE + SEC_PADDING_SIZE)
 	{
-		ERROR("modulus len 0x%x\n", modulus_len);
+		error("modulus len 0x%x\n", modulus_len);
 		return False;
 	}
 
@@ -466,7 +466,7 @@ sec_parse_crypt_info(STREAM s, uint32 *rc4_key_size,
 
 	if (random_len != SEC_RANDOM_SIZE)
 	{
-		ERROR("random len %d\n", random_len);
+		error("random len %d\n", random_len);
 		return False;
 	}
 
@@ -501,7 +501,7 @@ sec_parse_crypt_info(STREAM s, uint32 *rc4_key_size,
 				break;
 
 			default:
-				NOTIMP("crypt tag 0x%x\n", tag);
+				unimpl("crypt tag 0x%x\n", tag);
 		}
 
 		s->p = next_tag;
@@ -559,7 +559,7 @@ sec_process_mcs_data(STREAM s)
 				break;
 
 			default:
-				NOTIMP("response tag 0x%x\n", tag);
+				unimpl("response tag 0x%x\n", tag);
 		}
 
 		s->p = next_tag;
@@ -575,7 +575,7 @@ sec_recv()
 
 	while ((s = mcs_recv()) != NULL)
 	{
-		if (use_encryption || !licence_issued)
+		if (encryption || !licence_issued)
 		{
 			in_uint32_le(s, sec_flags);
 
@@ -613,7 +613,7 @@ sec_connect(char *server)
 		return False;
 
 	sec_process_mcs_data(&mcs_data);
-	if (use_encryption)
+	if (encryption)
 		sec_establish_key();
 	return True;
 }

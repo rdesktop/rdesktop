@@ -24,16 +24,13 @@
 
 #define VERSION "1.1.0"
 
-#define STATUS(args...) fprintf(stderr, args);
-#define ERROR(args...)  fprintf(stderr, "ERROR: "args);
-#define WARN(args...)   fprintf(stderr, "WARNING: "args);
-#define NOTIMP(args...) fprintf(stderr, "NOTIMP: "args);
-
-#ifdef RDP_DEBUG
-#define DEBUG(args...)  fprintf(stderr, args);
+#ifdef WITH_DEBUG
+#define DEBUG(args)	printf args;
 #else
-#define DEBUG(args...)
+#define DEBUG(args)
 #endif
+
+#define STRNCPY(dst,src,n) { strncpy(dst,src,n-1); dst[n-1] = 0; }
 
 #include "constants.h"
 #include "types.h"

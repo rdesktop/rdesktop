@@ -1,7 +1,7 @@
 /*
    rdesktop: A Remote Desktop Protocol client.
    RDP licensing negotiation
-   Copyright (C) Matthew Chapman 1999-2000
+   Copyright (C) Matthew Chapman 1999-2001
    
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -142,7 +142,7 @@ licence_parse_authreq(STREAM s, uint8 **token, uint8 **signature)
 	in_uint16_le(s, tokenlen);
 	if (tokenlen != LICENCE_TOKEN_SIZE)
 	{
-		ERROR("token len %d\n", tokenlen);
+		error("token len %d\n", tokenlen);
 		return False;
 	}
 
@@ -216,7 +216,6 @@ licence_process_issue(STREAM s)
 	licence_issued = True;
 
 	/* We should save the licence here */
-	STATUS("Server issued licence.\n");
 }
 
 /* Process a licence packet */
@@ -246,6 +245,6 @@ licence_process(STREAM s)
 			break;
 
 		default:
-			NOTIMP("licence tag 0x%x\n", tag);
+			unimpl("licence tag 0x%x\n", tag);
 	}
 }

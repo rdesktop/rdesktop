@@ -1,7 +1,7 @@
 /*
    rdesktop: A Remote Desktop Protocol client.
    Protocol services - RDP layer
-   Copyright (C) Matthew Chapman 1999-2000
+   Copyright (C) Matthew Chapman 1999-2001
    
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@ extern uint16 mcs_userid;
 extern char username[16];
 extern BOOL bitmap_compression;
 extern BOOL orders;
-extern BOOL use_encryption;
+extern BOOL encryption;
 extern BOOL desktop_save;
 
 uint8 *next_packet;
@@ -36,7 +36,7 @@ rdp_init(int maxlen)
 {
 	STREAM s;
 
-	s = sec_init(use_encryption ? SEC_ENCRYPT : 0, maxlen + 6);
+	s = sec_init(encryption ? SEC_ENCRYPT : 0, maxlen + 6);
 	s_push_layer(s, rdp_hdr, 6);
 
 	return s;
@@ -55,7 +55,7 @@ rdp_send(STREAM s, uint8 pdu_type)
 	out_uint16_le(s, (pdu_type | 0x10));	/* Version 1 */
 	out_uint16_le(s, (mcs_userid + 1001));
 
-	sec_send(s, use_encryption ? SEC_ENCRYPT : 0);
+	sec_send(s, encryption ? SEC_ENCRYPT : 0);
 }
 
 /* Receive an RDP packet */
@@ -83,8 +83,8 @@ rdp_recv(uint8 *type)
 	in_uint8s(rdp_s, 2);	/* userid */
 	*type = pdu_type & 0xf;
 
-#if RDP_DEBUG
-	DEBUG("RDP packet (type %x):\n", *type);
+#if WITH_DEBUG
+	DEBUG(("RDP packet (type %x):\n", *type));
 	hexdump(next_packet, length);
 #endif /*  */
 
@@ -98,7 +98,7 @@ rdp_init_data(int maxlen)
 {
 	STREAM s;
 
-	s = sec_init(use_encryption ? SEC_ENCRYPT : 0, maxlen + 18);
+	s = sec_init(encryption ? SEC_ENCRYPT : 0, maxlen + 18);
 	s_push_layer(s, rdp_hdr, 18);
 
 	return s;
@@ -125,7 +125,7 @@ rdp_send_data(STREAM s, uint8 data_pdu_type)
 	out_uint8(s, 0);	/* compress_type */
 	out_uint16(s, 0);	/* compress_len */
 
-	sec_send(s, use_encryption ? SEC_ENCRYPT : 0);
+	sec_send(s, encryption ? SEC_ENCRYPT : 0);
 }
 
 /* Output a string in Unicode */
@@ -155,7 +155,7 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 	int len_password = 2 * strlen(password);
 	int len_program = 2 * strlen(program);
 	int len_directory = 2 * strlen(directory);
-	uint32 sec_flags = use_encryption ? (SEC_LOGON_INFO | SEC_ENCRYPT)
+	uint32 sec_flags = encryption ? (SEC_LOGON_INFO | SEC_ENCRYPT)
 				: SEC_LOGON_INFO;
 	STREAM s;
 
@@ -479,7 +479,7 @@ process_demand_active(STREAM s)
 
 	in_uint32_le(s, rdp_shareid);
 
-	DEBUG("DEMAND_ACTIVE(id=0x%x)\n", rdp_shareid);
+	DEBUG(("DEMAND_ACTIVE(id=0x%x)\n", rdp_shareid));
 
 	rdp_send_confirm_active();
 	rdp_send_synchronise();
@@ -538,7 +538,7 @@ process_pointer_pdu(STREAM s)
 			break;
 
 		default:
-			DEBUG("Pointer message 0x%x\n", message_type);
+			DEBUG(("Pointer message 0x%x\n", message_type));
 	}
 }
 
@@ -569,8 +569,8 @@ process_bitmap_updates(STREAM s)
 		cx = right - left + 1;
 		cy = bottom - top + 1;
 
-		DEBUG("UPDATE(l=%d,t=%d,r=%d,b=%d,w=%d,h=%d,cmp=%d)\n",
-		      left, top, right, bottom, width, height, compress);
+		DEBUG(("UPDATE(l=%d,t=%d,r=%d,b=%d,w=%d,h=%d,cmp=%d)\n",
+		       left, top, right, bottom, width, height, compress));
 
 		if (!compress)
 		{
@@ -610,11 +610,13 @@ process_palette(STREAM s)
 {
 	HCOLOURMAP hmap;
 	COLOURMAP map;
+	uint8 *colours;
 
 	in_uint8s(s, 2);	/* pad */
 	in_uint16_le(s, map.ncolours);
 	in_uint8s(s, 2);	/* pad */
-	in_uint8p(s, (uint8 *) map.colours, (map.ncolours * 3));
+	in_uint8p(s, colours, (map.ncolours * 3));
+	map.colours = (COLOURENTRY *)colours;
 
 	hmap = ui_create_colourmap(&map);
 	ui_set_colourmap(hmap);
@@ -646,7 +648,7 @@ process_update_pdu(STREAM s)
 			break;
 
 		default:
-			NOTIMP("update %d\n", update_type);
+			unimpl("update %d\n", update_type);
 	}
 
 }
@@ -680,7 +682,7 @@ process_data_pdu(STREAM s)
 			break;
 
 		default:
-			NOTIMP("data PDU %d\n", data_pdu_type);
+			unimpl("data PDU %d\n", data_pdu_type);
 	}
 }
 
@@ -707,7 +709,7 @@ rdp_main_loop()
 				break;
 
 			default:
-				NOTIMP("PDU %d\n", type);
+				unimpl("PDU %d\n", type);
 		}
 	}
 }

@@ -35,6 +35,8 @@ void generate_random(uint8 *random);
 void *xmalloc(int size);
 void *xrealloc(void *oldmem, int size);
 void xfree(void *mem);
+void error(char *format, ...);
+void unimpl(char *format, ...);
 void hexdump(unsigned char *p, unsigned int len);
 /* rdp.c */
 void rdp_out_unistr(STREAM s, char *string, int len);

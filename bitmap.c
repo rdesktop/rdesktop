@@ -1,7 +1,7 @@
 /*
    rdesktop: A Remote Desktop Protocol client.
    Bitmap decompression routines
-   Copyright (C) Matthew Chapman 1999-2000
+   Copyright (C) Matthew Chapman 1999-2001
    
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -244,7 +244,7 @@ bitmap_decompress(unsigned char *output, int width, int height,
 					break;
 
 				default:
-					NOTIMP("bitmap opcode 0x%x\n",
+					unimpl("bitmap opcode 0x%x\n",
 					       opcode);
 					return False;
 			}

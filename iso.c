@@ -1,7 +1,7 @@
 /*
    rdesktop: A Remote Desktop Protocol client.
    Protocol services - ISO layer
-   Copyright (C) Matthew Chapman 1999-2000
+   Copyright (C) Matthew Chapman 1999-2001
    
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -57,7 +57,7 @@ iso_recv_msg(uint8 *code)
 	in_uint8(s, version);
 	if (version != 3)
 	{
-		ERROR("TPKT v%d\n", version);
+		error("TPKT v%d\n", version);
 		return False;
 	}
 
@@ -123,7 +123,7 @@ iso_recv()
 	s = iso_recv_msg(&code);
 	if ((s == NULL) || (code != ISO_PDU_DT))
 	{
-		ERROR("expected DT, got %d\n", code);
+		error("expected DT, got %d\n", code);
 		return False;
 	}
 
@@ -143,7 +143,7 @@ iso_connect(char *server)
 
 	if ((iso_recv_msg(&code) == NULL) || (code != ISO_PDU_CC))
 	{
-		ERROR("expected CC, got %d\n", code);
+		error("expected CC, got %d\n", code);
 		tcp_disconnect();
 		return False;
 	}

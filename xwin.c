@@ -1,7 +1,7 @@
 /*
    rdesktop: A Remote Desktop Protocol client.
    User interface services - X-Windows
-   Copyright (C) Matthew Chapman 1999-2000
+   Copyright (C) Matthew Chapman 1999-2001
    
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -151,7 +151,7 @@ ui_create_window(char *title)
 	display = XOpenDisplay(NULL);
 	if (display == NULL)
 	{
-		ERROR("Failed to open display\n");
+		error("Failed to open display\n");
 		return False;
 	}
 
@@ -177,7 +177,7 @@ ui_create_window(char *title)
 
 	if (bpp < 8)
 	{
-		ERROR("Less than 8 bpp not currently supported.\n");
+		error("Less than 8 bpp not currently supported.\n");
 		XCloseDisplay(display);
 		return False;
 	}
@@ -205,7 +205,7 @@ ui_create_window(char *title)
 		attribs.override_redirect = False;
 	}
 
-	width &= ~3; /* make width a multiple of 32 bits */
+	width = (width + 3) & ~3; /* make width a multiple of 32 bits */
 
 	wnd = XCreateWindow(display, RootWindowOfScreen(screen),
 			    0, 0, width, height, 0, CopyFromParent,
@@ -259,7 +259,7 @@ ui_destroy_window()
 static uint8
 xwin_translate_key(unsigned long key)
 {
-	DEBUG("KEY(code=0x%lx)\n", key);
+	DEBUG(("KEY(code=0x%lx)\n", key));
 
 	if ((key > 8) && (key <= 0x60))
 		return (key - 8);
@@ -707,7 +707,7 @@ ui_patblt(uint8 opcode,
 			break;
 
 		default:
-			NOTIMP("brush %d\n", brush->style);
+			unimpl("brush %d\n", brush->style);
 	}
 
 	RESET_FUNCTION(opcode);
@@ -765,7 +765,7 @@ ui_triblt(uint8 opcode,
 			break;
 
 		default:
-			NOTIMP("triblt 0x%x\n", opcode);
+			unimpl("triblt 0x%x\n", opcode);
 			ui_memblt(ROP2_COPY, x, y, cx, cy, src, srcx, srcy);
 	}
 }
