@@ -1,6 +1,9 @@
-# generated from XKB map se_FI
+# Finnish keyboard layout
+# Originally generated from XKB map se_FI (wrong!), modified afterwards.
+
 include common
 map 0x40b
+
 exclam 0x02 shift
 exclamdown 0x02 altgr
 onesuperior 0x02 shift altgr
@@ -39,7 +42,6 @@ dead_acute 0x0d
 dead_grave 0x0d shift
 plusminus 0x0d altgr
 notsign 0x0d shift altgr
-at 0x10 altgr
 Greek_OMEGA 0x10 shift altgr
 lstroke 0x11 altgr
 Lstroke 0x11 shift altgr
@@ -79,7 +81,6 @@ ENG 0x22 shift altgr
 hstroke 0x23 altgr
 Hstroke 0x23 shift altgr
 kra 0x25 altgr
-ampersand 0x25 shift altgr
 lstroke 0x26 altgr
 Lstroke 0x26 shift altgr
 odiaeresis 0x27
@@ -99,14 +100,11 @@ asterisk 0x2b shift
 acute 0x2b altgr
 multiply 0x2b shift altgr
 guillemotleft 0x2c altgr
-less 0x2c shift altgr
 guillemotright 0x2d altgr
-greater 0x2d shift altgr
 copyright 0x2e altgr
 leftdoublequotemark 0x2f altgr
 grave 0x2f shift altgr
 rightdoublequotemark 0x30 altgr
-apostrophe 0x30 shift altgr
 mu 0x32 altgr
 masculine 0x32 shift altgr
 comma 0x33
