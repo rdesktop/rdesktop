@@ -137,6 +137,7 @@ main(int argc, char *argv[])
 	uint32 flags;
 	char *p;
 	int c;
+	int username_option = 0;
 
 	flags = RDP_LOGON_NORMAL;
 	prompt_password = False;
@@ -149,6 +150,7 @@ main(int argc, char *argv[])
 		{
 			case 'u':
 				STRNCPY(username, optarg, sizeof(username));
+				username_option = 1;
 				break;
 
 			case 'd':
@@ -259,7 +261,7 @@ main(int argc, char *argv[])
 		*p = 0;
 	}
 
-	if (username[0] == 0)
+	if (!username_option)
 	{
 		pw = getpwuid(getuid());
 		if ((pw == NULL) || (pw->pw_name == NULL))
