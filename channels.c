@@ -1,7 +1,8 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
-   Protocol services - Channel register
+   Protocol services - Virtual channels
    Copyright (C) Erik Forsberg <forsberg@cendio.se> 2003
+   Copyright (C) Matthew Chapman 2003
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -20,85 +21,151 @@
 
 #include "rdesktop.h"
 
-static uint16 num_channels;
-static rdp5_channel *channels[MAX_RDP5_CHANNELS];
+#define MAX_CHANNELS			4
+#define CHANNEL_CHUNK_LENGTH		1600
+#define CHANNEL_FLAG_FIRST		0x01
+#define CHANNEL_FLAG_LAST		0x02
+#define CHANNEL_FLAG_SHOW_PROTOCOL	0x10
 
-uint16
-get_num_channels(void)
-{
-	return num_channels;
-}
+extern BOOL use_rdp5;
+extern BOOL encryption;
 
-/* FIXME: We should use the information in TAG_SRV_SRV_3 to map RDP5
+VCHANNEL g_channels[MAX_CHANNELS];
+unsigned int g_num_channels;
+
+/* FIXME: We should use the information in TAG_SRV_CHANNELS to map RDP5
    channels to MCS channels. 
 
-   The format of TAG_SRV_SRV_3 seems to be
+   The format of TAG_SRV_CHANNELS seems to be
 
    global_channel_no (uint16le)
    number_of_other_channels (uint16le)
    ..followed by uint16les for the other channels.
-   Might be a few (two) bytes of padding at the end.
-
 */
 
-void
-register_channel(char *name, uint32 flags, void (*callback) (STREAM, uint16))
+VCHANNEL *
+channel_register(char *name, uint32 flags, void (*callback) (STREAM))
 {
-	if (num_channels > MAX_RDP5_CHANNELS)
-	{
-		error("Maximum number of RDP5 channels reached. Redefine MAX_RDP5_CHANNELS in constants.h and recompile!\n!");
-	}
-	num_channels++;
-	channels[num_channels - 1] = xrealloc(channels[num_channels - 1],
-					      sizeof(rdp5_channel) * num_channels);
-	channels[num_channels - 1]->channelno = MCS_GLOBAL_CHANNEL + num_channels;
-	strcpy(channels[num_channels - 1]->name, name);
-	channels[num_channels - 1]->channelflags = flags;
-	channels[num_channels - 1]->channelcallback = callback;
-}
+	VCHANNEL *channel;
 
-rdp5_channel *
-find_channel_by_channelno(uint16 channelno)
-{
-	if (channelno > MCS_GLOBAL_CHANNEL + num_channels)
+	if (!use_rdp5)
+		return NULL;
+
+	if (g_num_channels >= MAX_CHANNELS)
 	{
-		warning("Channel %d not defined. Highest channel defined is %d\n",
-			channelno, MCS_GLOBAL_CHANNEL + num_channels);
+		error("Channel table full, increase MAX_CHANNELS\n");
 		return NULL;
 	}
-	else
-	{
-		return channels[channelno - MCS_GLOBAL_CHANNEL - 1];
-	}
+
+	channel = &g_channels[g_num_channels];
+	channel->mcs_id = MCS_GLOBAL_CHANNEL + 1 + g_num_channels;
+	strncpy(channel->name, name, 8);
+	channel->flags = flags;
+	channel->process = callback;
+	g_num_channels++;
+	return channel;
 }
 
-rdp5_channel *
-find_channel_by_num(uint16 num)
+STREAM
+channel_init(VCHANNEL *channel, uint32 length)
 {
-	if (num > num_channels)
-	{
-		error("There are only %d channels defined, channel %d doesn't exist\n",
-		      num_channels, num);
-	}
-	else
-	{
-		return channels[num];
-	}
-	return NULL;		// Shut the compiler up
-}
+	STREAM s;
 
-
-
-void
-dummy_callback(STREAM s, uint16 channelno)
-{
-	warning("Server is sending information on our dummy channel (%d). Why?\n", channelno);
+	s = sec_init(encryption ? SEC_ENCRYPT : 0, length + 8);
+	s_push_layer(s, channel_hdr, 8);
+	return s;
 }
 
 void
-channels_init(void)
+channel_send(STREAM s, VCHANNEL *channel)
 {
-	DEBUG_RDP5(("channels_init\n"));
-	register_channel("dummych", 0xc0a0, dummy_callback);
-	register_channel("cliprdr", 0xc0a0, cliprdr_callback);
+	uint32 length, flags;
+	uint32 thislength, remaining;
+	char *data;
+
+	/* first fragment sent in-place */
+	s_pop_layer(s, channel_hdr);
+	length = s->end - s->p - 8;
+
+	thislength = MIN(length, CHANNEL_CHUNK_LENGTH);
+	remaining = length - thislength;
+	flags = (remaining == 0) ? CHANNEL_FLAG_FIRST|CHANNEL_FLAG_LAST : CHANNEL_FLAG_FIRST;
+	if (channel->flags & CHANNEL_OPTION_SHOW_PROTOCOL)
+		flags |= CHANNEL_FLAG_SHOW_PROTOCOL;
+
+	out_uint32_le(s, length);
+	out_uint32_le(s, flags);
+	data = s->end = s->p + thislength;
+	sec_send_to_channel(s, encryption ? SEC_ENCRYPT : 0, channel->mcs_id);
+
+	/* subsequent segments copied (otherwise would have to generate headers backwards) */
+	while (remaining > 0)
+	{
+		thislength = MIN(remaining, CHANNEL_CHUNK_LENGTH);
+		remaining -= thislength;
+		flags = (remaining == 0) ? CHANNEL_FLAG_LAST : 0;
+
+		s = sec_init(encryption ? SEC_ENCRYPT : 0, thislength + 8);
+		out_uint32_le(s, length);
+		out_uint32_le(s, flags);
+		out_uint8p(s, data, thislength);
+		s_mark_end(s);
+		sec_send_to_channel(s, encryption ? SEC_ENCRYPT : 0, channel->mcs_id);
+
+		data += thislength;
+	}
 }
+
+void
+channel_process(STREAM s, uint16 mcs_channel)
+{
+	uint32 length, flags;
+	uint32 thislength;
+	VCHANNEL *channel;
+	unsigned int i;
+	STREAM in;
+
+	for (i = 0; i < g_num_channels; i++)
+	{
+		channel = &g_channels[i];
+		if (channel->mcs_id == mcs_channel)
+			break;
+	}
+
+	if (i >= g_num_channels)
+		return;
+
+	in_uint32_le(s, length);
+	in_uint32_le(s, flags);
+	if ((flags & CHANNEL_FLAG_FIRST) && (flags & CHANNEL_FLAG_LAST))
+	{
+		/* single fragment - pass straight up */
+		channel->process(s);
+	}
+	else
+	{
+		/* add fragment to defragmentation buffer */
+		in = &channel->in;
+		if (flags & CHANNEL_FLAG_FIRST)
+		{
+			if (length > in->size)
+			{
+				in->data = xrealloc(in->data, length);
+				in->size = length;
+			}
+			in->p = in->data;
+		}
+
+		thislength = s->end - s->p;
+		memcpy(in->p, s->p, thislength);
+		s->p += thislength;
+		s->end += thislength;
+
+		if (flags & CHANNEL_FLAG_LAST)
+		{
+			in->p = in->data;
+			channel->process(in);
+		}
+	}
+}
+

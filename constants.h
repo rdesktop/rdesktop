@@ -69,12 +69,12 @@ enum MCS_PDU_TYPE
 
 #define SEC_TAG_SRV_INFO	0x0c01
 #define SEC_TAG_SRV_CRYPT	0x0c02
-#define SEC_TAG_SRV_3		0x0c03
+#define SEC_TAG_SRV_CHANNELS	0x0c03
 
 #define SEC_TAG_CLI_INFO	0xc001
 #define SEC_TAG_CLI_CRYPT	0xc002
-#define SEC_TAG_CLI_4           0xc004
 #define SEC_TAG_CLI_CHANNELS    0xc003
+#define SEC_TAG_CLI_4           0xc004
 
 #define SEC_TAG_PUBKEY		0x0006
 #define SEC_TAG_KEYSIG		0x0008
@@ -262,10 +262,6 @@ enum RDP_INPUT_DEVICE
 #define MASK_HAS_BITS(var, mask) ((var & mask)>0)
 #define MASK_CHANGE_BIT(var, mask, active) (var = ((var & ~mask) | (active ? mask : 0)))
 
-/* RDP5 channel constants */
-#define MAX_RDP5_CHANNELS 10
-#define CHANNEL_TAGDATA_SIZE 12
-
 /* Clipboard constants, "borrowed" from GCC system headers in 
    the w32 cross compiler */
 
@@ -296,10 +292,15 @@ enum RDP_INPUT_DEVICE
 #define CF_GDIOBJFIRST  768
 #define CF_GDIOBJLAST   1023
 
-#define NUM_TARGETS  6
-#define MAX_CLIPRDR_STANDALONE_DATASIZE 1592
-#define MAX_CLIPRDR_CONTINUATION_DATASIZE 1600
+/* Virtual channel options */
+#define CHANNEL_OPTION_INITIALIZED	0x80000000
+#define CHANNEL_OPTION_ENCRYPT_RDP	0x40000000
+#define CHANNEL_OPTION_COMPRESS_RDP	0x00800000
+#define CHANNEL_OPTION_SHOW_PROTOCOL	0x00200000
 
-#define RDESKTOP_IPC_VERSION 1
-#define RDESKTOP_IPC_CLIPRDR_FORMAT_ANNOUNCE 2
-#define RDESKTOP_IPC_CLIPRDR_PRIMARY_LOST 3
+/* NT status codes for RDPDR */
+#define STATUS_SUCCESS			0x00000000
+#define STATUS_INVALID_PARAMETER	0xc000000d
+#define STATUS_INVALID_DEVICE_REQUEST	0xc0000010
+#define STATUS_ACCESS_DENIED		0xc0000022
+

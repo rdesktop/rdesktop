@@ -376,10 +376,8 @@ main(int argc, char *argv[])
 	if (!ui_init())
 		return 1;
 
-	ipc_init();		// Must be run after ui_init, we need X to be setup.
-
-	if (use_rdp5)
-		cliprdr_init();	// FIXME: Should perhaps be integrated into the channel management code?
+	/* rdpsnd_init(); */
+	/* rdpdr_init(); */
 
 	if (!rdp_connect(server, flags, domain, password, shell, directory))
 		return 1;

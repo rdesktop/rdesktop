@@ -109,12 +109,27 @@ typedef struct _key_translation
 }
 key_translation;
 
-struct _cliprdr_dataformat;
-
-typedef struct _cliprdr_dataformat
+typedef struct _VCHANNEL
 {
-	uint32 identifier;
-	uint8 textual_description[32];
-	struct _cliprdr_dataformat *next;
+	uint16 mcs_id;
+	char name[8];
+	uint32 flags;
+	struct stream in;
+	void (*process) (STREAM);
 }
-cliprdr_dataformat;
+VCHANNEL;
+
+/* RDPDR */
+typedef uint32 NTSTATUS;
+typedef uint32 HANDLE;
+
+typedef struct _DEVICE_FNS
+{
+	NTSTATUS (*create)(HANDLE *handle);
+	NTSTATUS (*close)(HANDLE handle);
+	NTSTATUS (*read)(HANDLE handle, uint8 *data, uint32 length, uint32 *result);
+	NTSTATUS (*write)(HANDLE handle, uint8 *data, uint32 length, uint32 *result);
+	NTSTATUS (*device_control)(HANDLE handle, uint32 request, STREAM in, STREAM out);
+}
+DEVICE_FNS;
+

@@ -89,14 +89,3 @@ rdp5_process(STREAM s, BOOL encryption)
 		s->p = next;
 	}
 }
-
-void
-rdp5_process_channel(STREAM s, uint16 channelno)
-{
-	rdp5_channel *channel;
-	channel = find_channel_by_channelno(channelno);
-	if (NULL != channel)
-	{
-		channel->channelcallback(s, channelno);
-	}
-}

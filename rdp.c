@@ -895,9 +895,6 @@ BOOL
 rdp_connect(char *server, uint32 flags, char *domain, char *password,
 	    char *command, char *directory)
 {
-	if (use_rdp5)
-		channels_init();
-
 	if (!sec_connect(server, username))
 		return False;
 

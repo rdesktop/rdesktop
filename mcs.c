@@ -21,7 +21,8 @@
 #include "rdesktop.h"
 
 uint16 g_mcs_userid;
-extern BOOL use_rdp5;
+extern VCHANNEL g_channels[];
+extern unsigned int g_num_channels;
 
 /* Parse an ASN.1 BER header */
 static BOOL
@@ -374,8 +375,8 @@ mcs_recv(uint16 * channel)
 BOOL
 mcs_connect(char *server, STREAM mcs_data, char *username)
 {
-	uint16 num_channels, i;
-	rdp5_channel *channel;
+	unsigned int i;
+
 	if (!iso_connect(server, username))
 		return False;
 
@@ -398,18 +399,12 @@ mcs_connect(char *server, STREAM mcs_data, char *username)
 	if (!mcs_recv_cjcf())
 		goto error;
 
-	if (use_rdp5)
+	for (i = 0; i < g_num_channels; i++)
 	{
-		num_channels = get_num_channels();
-		for (i = 0; i < num_channels; i++)
-		{
-			channel = find_channel_by_num(i);
-			mcs_send_cjrq(channel->channelno);
-			if (!mcs_recv_cjcf())
-				goto error;
-		}
+		mcs_send_cjrq(g_channels[i].mcs_id);
+		if (!mcs_recv_cjcf())
+			goto error;
 	}
-
 	return True;
 
       error:

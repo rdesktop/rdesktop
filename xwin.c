@@ -52,9 +52,6 @@ static XIC IC;
 static XModifierKeymap *mod_map;
 static Cursor current_cursor;
 static Atom protocol_atom, kill_atom;
-static long input_mask;		/* Needs to be global since we access it in 
-				   both ui_create_window and the PropertyNotify
-				   callback functions */
 
 /* endianness */
 static BOOL host_be;
@@ -89,20 +86,6 @@ typedef struct
 	uint32 blue;
 }
 PixelColour;
-
-struct _PropNotifyCb;
-
-typedef struct _PropNotifyCb
-{
-	Window wnd;
-	Atom atom;
-	void (*callback) (XPropertyEvent *);
-	struct _PropNotifyCb *next;
-}
-PropNotifyCb;
-
-
-static PropNotifyCb *propnotify_callbacks = NULL;
 
 
 #define FILL_RECTANGLE(x,y,cx,cy)\
@@ -630,11 +613,10 @@ ui_init(void)
 		IM = XOpenIM(display, NULL, NULL, NULL);
 
 	xkeymap_init();
+	xclip_init();
 
 	/* todo take this out when high colour is done */
 	printf("server bpp %d client bpp %d depth %d\n", server_bpp, bpp, depth);
-
-
 
 	return True;
 }
@@ -662,7 +644,7 @@ ui_create_window(void)
 	XClassHint *classhints;
 	XSizeHints *sizehints;
 	int wndwidth, wndheight;
-	long ic_input_mask;
+	long input_mask, ic_input_mask;
 	XEvent xevent;
 
 	wndwidth = fullscreen ? WidthOfScreen(screen) : width;
@@ -776,21 +758,6 @@ xwin_toggle_fullscreen(void)
 	}
 }
 
-static void
-xwin_process_propertynotify(XPropertyEvent * xev)
-{
-	PropNotifyCb *this = propnotify_callbacks;
-	while (NULL != this)
-	{
-		if (xev->window == this->wnd && xev->atom == this->atom)
-		{
-			this->callback(xev);
-		}
-		this = this->next;
-	}
-}
-
-
 /* Process all events in Xlib queue 
    Returns 0 after user quit, 1 otherwise */
 static int
@@ -830,13 +797,12 @@ xwin_process_events(void)
 				break;
 
 			case KeyPress:
-				last_gesturetime = ((XKeyEvent *) & xevent)->time;
+				last_gesturetime = xevent.xkey.time;
 				if (IC != NULL)
 					/* Multi_key compatible version */
 				{
 					XmbLookupString(IC,
-							(XKeyPressedEvent *) &
-							xevent, str, sizeof(str), &keysym, &status);
+							&xevent.xkey, str, sizeof(str), &keysym, &status);
 					if (!((status == XLookupKeySym) || (status == XLookupBoth)))
 					{
 						error("XmbLookupString failed with status 0x%x\n",
@@ -871,7 +837,7 @@ xwin_process_events(void)
 				break;
 
 			case KeyRelease:
-				last_gesturetime = ((XKeyEvent *) & xevent)->time;
+				last_gesturetime = xevent.xkey.time;
 				XLookupString((XKeyEvent *) & xevent, str,
 					      sizeof(str), &keysym, NULL);
 
@@ -892,12 +858,11 @@ xwin_process_events(void)
 				break;
 
 			case ButtonPress:
-				last_gesturetime = ((XButtonEvent *) & xevent)->time;
 				flags = MOUSE_FLAG_DOWN;
 				/* fall through */
 
 			case ButtonRelease:
-				last_gesturetime = ((XButtonEvent *) & xevent)->time;
+				last_gesturetime = xevent.xbutton.time;
 				button = xkeymap_translate_button(xevent.xbutton.button);
 				if (button == 0)
 					break;
@@ -1033,23 +998,20 @@ xwin_process_events(void)
 					mod_map = XGetModifierMapping(display);
 				}
 				break;
-				/* Clipboard stuff */
-			case SelectionClear:
-				cliprdr_handle_SelectionClear();
-				break;
+
+			/* clipboard stuff */
 			case SelectionNotify:
-				cliprdr_handle_SelectionNotify((XSelectionEvent *) & xevent);
+				xclip_handle_SelectionNotify(&xevent.xselection);
 				break;
 			case SelectionRequest:
-				cliprdr_handle_SelectionRequest((XSelectionRequestEvent *) &
-								xevent);
+				xclip_handle_SelectionRequest(&xevent.xselectionrequest);
 				break;
-
+			case SelectionClear:
+				xclip_handle_SelectionClear();
+				break;
 			case PropertyNotify:
-				xwin_process_propertynotify((XPropertyEvent *) & xevent);
+				xclip_handle_PropertyNotify(&xevent.xproperty);
 				break;
-
-
 		}
 	}
 	/* Keep going */
@@ -1758,98 +1720,3 @@ ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy)
 	XFree(image);
 }
 
-
-void
-xwin_register_propertynotify(Window event_wnd, Atom atom,
-			     void (*propertycallback) (XPropertyEvent *))
-{
-	PropNotifyCb *this;
-	int window_already_registrered = 0;
-	if (NULL != propnotify_callbacks)
-	{
-		this = propnotify_callbacks;
-		if (event_wnd == this->wnd)
-		{
-			window_already_registrered = 1;
-			if (atom == this->atom)
-				return;
-		}
-		while (NULL != this->next)
-		{
-			if (event_wnd == this->wnd)
-			{
-				window_already_registrered = 1;
-				if (atom == this->atom)
-					return;
-				/* Find last entry in list */
-			}
-			this = this->next;
-		}
-		this->next = xmalloc(sizeof(PropNotifyCb));
-		this->next->next = NULL;
-		this = this->next;
-
-	}
-	else
-	{
-		this = xmalloc(sizeof(PropNotifyCb));
-		this->next = NULL;
-		propnotify_callbacks = this;
-	}
-	if (!window_already_registrered)
-	{
-		if (wnd == event_wnd)
-			XSelectInput(display, wnd, input_mask | PropertyChangeMask);
-		else
-			XSelectInput(display, event_wnd, PropertyChangeMask);
-	}
-	this->wnd = event_wnd;
-	this->atom = atom;
-	this->callback = propertycallback;
-}
-
-
-void
-xwin_deregister_propertynotify(Window event_wnd, Atom atom)
-{
-	PropNotifyCb *this = propnotify_callbacks;
-	PropNotifyCb *prev;
-	int window_needed = 0;
-	prev = this;
-	while (NULL != this)
-	{
-		if (event_wnd == this->wnd)
-		{
-			if (atom == this->atom)
-			{
-				if (prev == this)
-				{
-					propnotify_callbacks = this->next;
-				}
-				else
-				{
-					prev->next = this->next;
-				}
-				xfree(this);
-				continue;
-			}
-			else
-			{
-				window_needed = 1;
-			}
-		}
-		prev = this;
-		this = this->next;
-	}
-	if (!window_needed)
-	{
-		if (wnd != event_wnd)
-		{
-			XSelectInput(display, event_wnd, NoEventMask);
-		}
-		else
-		{
-			XSelectInput(display, wnd, input_mask);
-		}
-	}
-}

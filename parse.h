@@ -31,6 +31,7 @@ typedef struct stream
 	unsigned char *mcs_hdr;
 	unsigned char *sec_hdr;
 	unsigned char *rdp_hdr;
+	unsigned char *channel_hdr;
 
 }
  *STREAM;

@@ -42,6 +42,8 @@ extern BOOL g_licence_issued;
 extern BOOL use_rdp5;
 extern int server_bpp;
 extern uint16 mcs_userid;
+extern VCHANNEL g_channels[];
+extern unsigned int g_num_channels;
 
 static int rc4_key_len;
 static RC4_KEY rc4_decrypt_key;
@@ -399,16 +401,12 @@ sec_establish_key(void)
 static void
 sec_out_mcs_data(STREAM s)
 {
-	uint16 num_channels = get_num_channels();
 	int hostlen = 2 * strlen(hostname);
-	int length = 158 + 76 + 12 + 4 + (CHANNEL_TAGDATA_SIZE * num_channels);
-	uint16 i;
-	rdp5_channel *channel;
+	int length = 158 + 76 + 12 + 4;
+	unsigned int i;
 
-	if (0 < num_channels)
-	{
-		length += +4 + 4;
-	}
+	if (g_num_channels > 0)
+		length += g_num_channels*12 + 8;
 
 	if (hostlen > 30)
 		hostlen = 30;
@@ -485,18 +483,17 @@ sec_out_mcs_data(STREAM s)
 	out_uint32_le(s, encryption ? 0x3 : 0);	/* encryption supported, 128-bit supported */
 	out_uint32(s, 0);	/* Unknown */
 
-	DEBUG_RDP5(("num_channels is %d\n", num_channels));
-	if (0 < num_channels)
+	DEBUG_RDP5(("g_num_channels is %d\n", g_num_channels));
+	if (g_num_channels > 0)
 	{
 		out_uint16_le(s, SEC_TAG_CLI_CHANNELS);
-		out_uint16_le(s, num_channels * CHANNEL_TAGDATA_SIZE + 4 + 4);	/* length */
-		out_uint32_le(s, num_channels);	/* number of virtual channels */
-		for (i = 0; i < num_channels; i++)
+		out_uint16_le(s, g_num_channels * 12 + 8);	/* length */
+		out_uint32_le(s, g_num_channels);	/* number of virtual channels */
+		for (i = 0; i < g_num_channels; i++)
 		{
-			channel = find_channel_by_num(i);
-			DEBUG_RDP5(("Requesting channel %s\n", channel->name));
-			out_uint8p(s, channel->name, 8);
-			out_uint32_be(s, channel->channelflags);
+			DEBUG_RDP5(("Requesting channel %s\n", g_channels[i].name));
+			out_uint8a(s, g_channels[i].name, 8);
+			out_uint32_be(s, g_channels[i].flags);
 		}
 	}
 
@@ -775,14 +772,14 @@ sec_process_mcs_data(STREAM s)
 				sec_process_srv_info(s);
 				break;
 
-			case SEC_TAG_SRV_3:
+			case SEC_TAG_SRV_CRYPT:
+				sec_process_crypt_info(s);
+				break;
+
+			case SEC_TAG_SRV_CHANNELS:
 				/* FIXME: We should parse this information and
 				   use it to map RDP5 channels to MCS 
 				   channels */ 
-				break;
-
-			case SEC_TAG_SRV_CRYPT:
-				sec_process_crypt_info(s);
 				break;
 
 			default:
@@ -807,30 +804,26 @@ sec_recv(void)
 		{
 			in_uint32_le(s, sec_flags);
 
-			if (sec_flags & SEC_LICENCE_NEG)
-			{
-				if (sec_flags & SEC_ENCRYPT)
-				{
-					DEBUG_RDP5(("Encrypted license detected\n"));
-				}
-				licence_process(s);
-				continue;
-			}
-
 			if (sec_flags & SEC_ENCRYPT)
 			{
 				in_uint8s(s, 8);	/* signature */
 				sec_decrypt(s->p, s->end - s->p);
 			}
+
+			if (sec_flags & SEC_LICENCE_NEG)
+			{
+				licence_process(s);
+				continue;
+			}
 		}
 
-		if (MCS_GLOBAL_CHANNEL == channel)
+		if (channel != MCS_GLOBAL_CHANNEL)
 		{
-			return s;
+			channel_process(s, channel);
+			continue;
 		}
-		else
-			rdp5_process_channel(s, channel);
 
+		return s;
 	}
 
 	return NULL;
