@@ -87,6 +87,7 @@ void process_cached_pointer_pdu(STREAM s);
 void process_system_pointer_pdu(STREAM s);
 void process_bitmap_updates(STREAM s);
 void process_palette(STREAM s);
+BOOL rdp_loop(BOOL * deactivated, uint32 * ext_disc_reason);
 void rdp_main_loop(BOOL * deactivated, uint32 * ext_disc_reason);
 BOOL rdp_connect(char *server, uint32 flags, char *domain, char *password, char *command,
 		 char *directory);
@@ -155,6 +156,8 @@ uint16 ui_get_numlock_state(unsigned int state);
 void reset_modifier_keys(void);
 void rdp_send_scancode(uint32 time, uint16 flags, uint8 scancode);
 /* xwin.c */
+void ui_begin_update(void);
+void ui_end_update(void);
 BOOL get_key_state(unsigned int state, uint32 keysym);
 BOOL ui_init(void);
 void ui_deinit(void);

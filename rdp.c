@@ -924,6 +924,7 @@ process_update_pdu(STREAM s)
 
 	in_uint16_le(s, update_type);
 
+	ui_begin_update();
 	switch (update_type)
 	{
 		case RDP_UPDATE_ORDERS:
@@ -947,7 +948,7 @@ process_update_pdu(STREAM s)
 		default:
 			unimpl("update %d\n", update_type);
 	}
-
+	ui_end_update();
 }
 
 /* Process a disconnect PDU */
@@ -1076,6 +1077,45 @@ rdp_main_loop(BOOL * deactivated, uint32 * ext_disc_reason)
 		}
 	}
 	return;
+}
+
+/* used in uiports, processes the rdp packets waiting */
+BOOL
+rdp_loop(BOOL * deactivated, uint32 * ext_disc_reason)
+{
+	uint8 type;
+	BOOL disc = False;	/* True when a disconnect PDU was received */
+	BOOL cont = True;
+	STREAM s;
+
+   while (cont)
+	{
+		s = rdp_recv(&type);
+		if (s == NULL)
+			return False;
+		switch (type)
+		{
+			case RDP_PDU_DEMAND_ACTIVE:
+				process_demand_active(s);
+				*deactivated = False;
+				break;
+			case RDP_PDU_DEACTIVATE:
+				DEBUG(("RDP_PDU_DEACTIVATE\n"));
+				*deactivated = True;
+				break;
+			case RDP_PDU_DATA:
+				disc = process_data_pdu(s, ext_disc_reason);
+				break;
+			case 0:
+				break;
+			default:
+				unimpl("PDU %d\n", type);
+		}
+		if (disc)
+			return False;
+		cont = g_next_packet < s->end;
+	}
+	return True;
 }
 
 /* Establish a connection up to the RDP layer */

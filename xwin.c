@@ -2183,3 +2183,14 @@ ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy)
 
 	XFree(image);
 }
+
+/* these do nothing here but are used in uiports */
+void
+ui_begin_update(void)
+{
+}
+
+void
+ui_end_update(void)
+{
+}
