@@ -34,7 +34,16 @@ static GC gc;
 static Visual *visual;
 static int depth;
 static int bpp;
-static BOOL backpixmap;
+
+static BOOL ownbackstore;
+static Pixmap backstore;
+
+#define FILL_RECTANGLE(x,y,cx,cy)\
+{ \
+	XFillRectangle(display, wnd, gc, x, y, cx, cy); \
+	if (ownbackstore) \
+		XFillRectangle(display, backstore, gc, x, y, cx, cy); \
+}
 
 static BOOL owncolmap;
 static Colormap xcolmap;
@@ -192,7 +201,7 @@ ui_create_window(char *title)
 	attribs.backing_store = DoesBackingStore(screen);
 
 	if (attribs.backing_store == NotUseful)
-		backpixmap = True;
+		ownbackstore = True;
 
 	if (fullscreen)
 	{
@@ -240,8 +249,14 @@ ui_create_window(char *title)
 	if (sendmotion)
 		input_mask |= PointerMotionMask;
 
+	if (ownbackstore)
+		input_mask |= ExposureMask;
+
 	XSelectInput(display, wnd, input_mask);
 	gc = XCreateGC(display, wnd, 0, NULL);
+
+	if (ownbackstore)
+		backstore = XCreatePixmap(display, wnd, width, height, depth);
 
 	XMapWindow(display, wnd);
 	return True;
@@ -250,6 +265,9 @@ ui_create_window(char *title)
 void
 ui_destroy_window()
 {
+	if (ownbackstore)
+		XFreePixmap(display, backstore);
+
 	XFreeGC(display, gc);
 	XDestroyWindow(display, wnd);
 	XCloseDisplay(display);
@@ -398,6 +416,13 @@ ui_process_events()
 			case LeaveNotify:
 				XUngrabKeyboard(display, CurrentTime);
 				break;
+
+			case Expose:
+				XCopyArea(display, backstore, wnd, gc,
+					  event.xexpose.x, event.xexpose.y,
+					  event.xexpose.width, event.xexpose.height,
+					  event.xexpose.x, event.xexpose.y);
+				break;
 		}
 	}
 }
@@ -439,7 +464,15 @@ ui_paint_bitmap(int x, int y, int cx, int cy,
 	image = XCreateImage(display, visual, depth, ZPixmap,
 			     0, tdata, width, height, 8, 0);
 
-	XPutImage(display, wnd, gc, image, 0, 0, x, y, cx, cy);
+	if (ownbackstore)
+	{
+		XPutImage(display, backstore, gc, image, 0, 0, x, y, cx, cy);
+		XCopyArea(display, backstore, wnd, gc, x, y, cx, cy, x, y);
+	}
+	else
+	{
+		XPutImage(display, wnd, gc, image, 0, 0, x, y, cx, cy);
+	}
 
 	XFree(image);
 	if (!owncolmap)
@@ -671,7 +704,7 @@ ui_destblt(uint8 opcode,
 	   /* dest */ int x, int y, int cx, int cy)
 {
 	SET_FUNCTION(opcode);
-	XFillRectangle(display, wnd, gc, x, y, cx, cy);
+	FILL_RECTANGLE(x, y, cx, cy);
 	RESET_FUNCTION(opcode);
 }
 
@@ -688,7 +721,7 @@ ui_patblt(uint8 opcode,
 	{
 		case 0:	/* Solid */
 			SET_FOREGROUND(fgcolour);
-			XFillRectangle(display, wnd, gc, x, y, cx, cy);
+			FILL_RECTANGLE(x, y, cx, cy);
 			break;
 
 		case 3:	/* Pattern */
@@ -700,7 +733,7 @@ ui_patblt(uint8 opcode,
 			XSetStipple(display, gc, fill);
 			XSetTSOrigin(display, gc, brush->xorigin, brush->yorigin);
 
-			XFillRectangle(display, wnd, gc, x, y, cx, cy);
+			FILL_RECTANGLE(x, y, cx, cy);
 
 			XSetFillStyle(display, gc, FillSolid);
 			ui_destroy_glyph((HGLYPH)fill);
@@ -720,6 +753,9 @@ ui_screenblt(uint8 opcode,
 {
 	SET_FUNCTION(opcode);
 	XCopyArea(display, wnd, wnd, gc, srcx, srcy, cx, cy, x, y);
+	if (ownbackstore)
+		XCopyArea(display, backstore, backstore, gc, srcx, srcy,
+			  cx, cy, x, y);
 	RESET_FUNCTION(opcode);
 }
 
@@ -730,6 +766,9 @@ ui_memblt(uint8 opcode,
 {
 	SET_FUNCTION(opcode);
 	XCopyArea(display, (Pixmap)src, wnd, gc, srcx, srcy, cx, cy, x, y);
+	if (ownbackstore)
+		XCopyArea(display, (Pixmap)src, backstore, gc, srcx, srcy,
+			  cx, cy, x, y);
 	RESET_FUNCTION(opcode);
 }
 
@@ -778,6 +817,8 @@ ui_line(uint8 opcode,
 	SET_FUNCTION(opcode);
 	SET_FOREGROUND(pen->colour);
 	XDrawLine(display, wnd, gc, startx, starty, endx, endy);
+	if (ownbackstore)
+		XDrawLine(display, backstore, gc, startx, starty, endx, endy);
 	RESET_FUNCTION(opcode);
 }
 
@@ -787,7 +828,7 @@ ui_rect(
 	       /* brush */ int colour)
 {
 	SET_FOREGROUND(colour);
-	XFillRectangle(display, wnd, gc, x, y, cx, cy);
+	FILL_RECTANGLE(x, y, cx, cy);
 }
 
 void
@@ -804,7 +845,7 @@ ui_draw_glyph(int mixmode,
 	XSetStipple(display, gc, (Pixmap)glyph);
 	XSetTSOrigin(display, gc, x, y);
 
-	XFillRectangle(display, wnd, gc, x, y, cx, cy);
+	FILL_RECTANGLE(x, y, cx, cy);
 
 	XSetFillStyle(display, gc, FillSolid);
 }
@@ -821,9 +862,13 @@ ui_draw_text(uint8 font, uint8 flags, int mixmode, int x, int y,
 	SET_FOREGROUND(bgcolour);
 
 	if (boxcx > 1)
-		XFillRectangle(display, wnd, gc, boxx, boxy, boxcx, boxcy);
+	{
+		FILL_RECTANGLE(boxx, boxy, boxcx, boxcy);
+	}
 	else if (mixmode == MIX_OPAQUE)
-		XFillRectangle(display, wnd, gc, clipx, clipy, clipcx, clipcy);
+	{
+		FILL_RECTANGLE(clipx, clipy, clipcx, clipcy);
+	}
 
 	/* Paint text, character by character */
 	for (i = 0; i < length; i++)
@@ -862,17 +907,25 @@ ui_desktop_save(uint32 offset, int x, int y, int cx, int cy)
 	Pixmap pix;
 	XImage *image;
 
-	pix = XCreatePixmap(display, wnd, cx, cy, depth);
-	XCopyArea(display, wnd, pix, gc, x, y, cx, cy, 0, 0);
-
-	image = XGetImage(display, pix, 0, 0, cx, cy, AllPlanes, ZPixmap);
+	if (ownbackstore)
+	{
+		image = XGetImage(display, backstore, x, y, cx, cy, AllPlanes,
+				  ZPixmap);
+	}
+	else
+	{
+		pix = XCreatePixmap(display, wnd, cx, cy, depth);
+		XCopyArea(display, wnd, pix, gc, x, y, cx, cy, 0, 0);
+		image = XGetImage(display, pix, 0, 0, cx, cy, AllPlanes,
+				  ZPixmap);
+		XFreePixmap(display, pix);
+	}
 
 	offset *= bpp/8;
 	cache_put_desktop(offset, cx, cy, image->bytes_per_line,
 			  bpp/8, image->data);
 
 	XDestroyImage(image);
-	XFreePixmap(display, pix);
 }
 
 void
@@ -890,7 +943,15 @@ ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy)
 			     0, data, cx, cy, BitmapPad(display),
 			     cx * bpp/8);
 
-	XPutImage(display, wnd, gc, image, 0, 0, x, y, cx, cy);
+	if (ownbackstore)
+	{
+		XPutImage(display, backstore, gc, image, 0, 0, x, y, cx, cy);
+		XCopyArea(display, backstore, wnd, gc, x, y, cx, cy, x, y);
+	}
+	else
+	{
+		XPutImage(display, wnd, gc, image, 0, 0, x, y, cx, cy);
+	}
+
 	XFree(image);
 }
-
