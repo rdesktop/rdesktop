@@ -20,6 +20,9 @@
 
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include "rdesktop.h"
 
 extern BOOL encryption;
@@ -80,9 +83,8 @@ static void
 cliprdr_send_format_announce(void)
 {
 	STREAM s;
-
-	DEBUG_CLIPBOARD(("Sending (empty) format announce\n"));
 	int number_of_formats = 1;
+	DEBUG_CLIPBOARD(("Sending (empty) format announce\n"));
 	s = sec_init(encryption ? SEC_ENCRYPT : 0, number_of_formats * 36 + 12 + 4 + 4);
 	out_uint32_le(s, number_of_formats * 36 + 12);
 	out_uint32_le(s, 0x13);
