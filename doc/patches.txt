@@ -1,6 +1,6 @@
 This file documents some of all patches for rdesktop, floating around
 the net, and how they are related to the current (CVS) version of
-rdesktop. Things left to do are marked with TDB (To Be Done). 
+rdesktop. Things left to do are marked with TBD (To Be Done). 
 
 
 URL:
@@ -79,7 +79,7 @@ test the speed gain is significative.
 Status:
 1) is not relevant any more, since rdesktop only uses backing store if
 the Xserver does not provide backing store. 
-Need to examine if 2) and 3) are still useful. TDB. 
+Need to examine if 2) and 3) are still useful. TBD. 
 
 
 URL:
@@ -280,7 +280,7 @@ http://bibl4.oru.se/projects/rdesktop/patch19/patches/spark_xinerama-patch2
 Description:
 Adds XINERAMA support to rdesktop. 
 Status:
-Not applied yet. TDB. 
+Not applied yet. TBD. 
 
 
 URL:
@@ -302,7 +302,7 @@ As far as I understand, this patch is not need any longer.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/vincent_19-7-2.license.patch
 Description:
-TDB
+TBD
 Status:
 Not yet examined. 
 
@@ -319,7 +319,7 @@ Applied.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/vincent_19-7-3_excel.patch
 Description:
-TDB
+TBD
 Status:
 Not yet examined. 
 
@@ -327,7 +327,7 @@ Not yet examined.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/vincent_8bpp.patch
 Description:
-TDB
+TBD
 Status:
 Not yet examined. 
 
