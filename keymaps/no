@@ -39,7 +39,6 @@ backslash 0x0d
 dead_grave 0x0d shift
 dead_acute 0x0d altgr
 notsign 0x0d shift altgr
-at 0x10 altgr
 Greek_OMEGA 0x10 shift altgr
 lstroke 0x11 altgr
 Lstroke 0x11 shift altgr
