@@ -150,8 +150,6 @@ less 0x56
 greater 0x56 shift
 
 w 0x2c addupper
-lstroke 0x2c altgr
-Lstroke 0x2c shift altgr
 
 guillemotright 0x2d altgr
 
