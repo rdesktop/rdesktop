@@ -62,7 +62,7 @@ Example: -r clipboard:no
 audio mapping
 -------------
 Multiple mappings possible: no
-Default: local
+Default: off
 Syntax: -r audio:[local|off|remote]
 
 "local" means "Bring to this computer"
