@@ -474,6 +474,8 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 
 	in_uint32_le(s, *rc4_key_size);	/* 1 = 40-bit, 2 = 128-bit */
 	in_uint32_le(s, crypt_level);	/* 1 = low, 2 = medium, 3 = high */
+	if (crypt_level == 0)	/* no encryptation */
+		return False;
 	in_uint32_le(s, random_len);
 	in_uint32_le(s, rsa_info_len);
 
