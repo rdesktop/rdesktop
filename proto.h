@@ -1,6 +1,6 @@
 /* bitmap.c */
-BOOL bitmap_decompress(unsigned char *output, int width, int height, unsigned char *input,
-		       int size, int Bpp);
+BOOL bitmap_decompress(unsigned char *output, int width, int height, unsigned char *input, int size,
+		       int Bpp);
 /* cache.c */
 HBITMAP cache_get_bitmap(uint8 cache_id, uint16 cache_idx);
 void cache_put_bitmap(uint8 cache_id, uint16 cache_idx, HBITMAP bitmap);
@@ -78,7 +78,6 @@ void ensure_remote_modifiers(uint32 ev_time, key_translation tr);
 void reset_modifier_keys(unsigned int state);
 void rdp_send_scancode(uint32 time, uint16 flags, uint8 scancode);
 /* xwin.c */
-void mwm_hide_decorations(void);
 BOOL get_key_state(unsigned int state, uint32 keysym);
 BOOL ui_init(void);
 void ui_deinit(void);
