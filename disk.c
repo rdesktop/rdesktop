@@ -113,12 +113,26 @@
 #ifndef STATFS_T
 struct dummy_statfs_t
 {
-	long f_bfree = 1;
-	long f_bsize = 512;
-	long f_blocks = 1;
+	long f_bfree;
+	long f_bsize;
+	long f_blocks;
+	int f_namelen;
+	int f_namemax;
 };
+
+int dummy_statfs(struct dummy_statfs_t *buf)
+{
+	buf->f_blocks=262144;
+	buf->f_bfree=131072;
+	buf->f_bsize=512;
+	buf->f_namelen=255;
+	buf->f_namemax=255;
+
+	return 0;
+}
+
 #define STATFS_T dummy_statfs_t
-#define STATFS_FN(path,buf) 0
+#define STATFS_FN(path,buf) (dummy_statfs(buf))
 #endif
 
 extern RDPDR_DEVICE g_rdpdr_device[];
