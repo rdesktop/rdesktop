@@ -335,6 +335,6 @@ Not yet examined.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/vpypatch.txt
 Description:
-TDB
+Various changes for one of the old keyboard stuff. 
 Status:
-Not yet examined. 
+Not needed anymore, with the new keyboard mapping implementation. 
