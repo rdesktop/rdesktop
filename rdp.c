@@ -651,11 +651,19 @@ rdp_process_bitmap_caps(STREAM s)
 	 * The server may limit bpp and change the size of the desktop (for
 	 * example when shadowing another session).
 	 */
-	g_server_bpp = bpp;
-	g_width = width;
-	g_height = height;
-
-	ui_resize_window();
+	if (g_server_bpp != bpp)
+	{
+		warning("colour depth changed from %d to %d\n", g_server_bpp, bpp);
+		g_server_bpp = bpp;
+	}
+	if (g_width != width || g_height != height)
+	{
+		warning("screen size changed from %dx%d to %dx%d\n", g_width, g_height,
+				width, height);
+		g_width = width;
+		g_height = height;
+		ui_resize_window();
+	}
 }
 
 /* Respond to a demand active PDU */

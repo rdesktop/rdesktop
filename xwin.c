@@ -1031,6 +1031,7 @@ void
 ui_resize_window()
 {
 	XSizeHints *sizehints;
+	Pixmap bs;
 
 	sizehints = XAllocSizeHints();
 	if (sizehints)
@@ -1045,6 +1046,17 @@ ui_resize_window()
 	if (!(g_fullscreen || g_embed_wnd))
 	{
 		XResizeWindow(g_display, g_wnd, g_width, g_height);
+	}
+
+	/* create new backstore pixmap */
+	if (g_backstore != 0)
+	{
+		bs = XCreatePixmap(g_display, g_wnd, g_width, g_height, g_depth);
+		XSetForeground(g_display, g_gc, BlackPixelOfScreen(g_screen));
+		XFillRectangle(g_display, bs, g_gc, 0, 0, g_width, g_height);
+		XCopyArea(g_display, g_backstore, bs, g_gc, 0, 0, g_width, g_height, 0, 0);
+		XFreePixmap(g_display, g_backstore);
+		g_backstore = bs;
 	}
 }
 
