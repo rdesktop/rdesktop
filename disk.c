@@ -84,18 +84,21 @@
 
 #if defined(SOLARIS)
 #include <sys/statvfs.h>	/* solaris statvfs */
-#define HAVE_STATVFS
+#define STATFS_FN(path, buf) (statvfs(path,buf))
+#define STATFS_T statvfs
 #define F_NAMELEN(buf) ((buf).f_namemax)
 
 #elif defined(__OpenBSD__)
 #include <sys/param.h>
 #include <sys/mount.h>
-#define HAVE_STATFS
+#define STATFS_FN(path, buf) (statfs(path,buf))
+#define STATFS_T statfs
 #define F_NAMELEN(buf) (NAME_MAX)
 
 #else
 #include <sys/vfs.h>		/* linux statfs */
-#define HAVE_STATFS
+#define STATFS_FN(path, buf) (statfs(path,buf))
+#define STATFS_T statfs
 #define F_NAMELEN(buf) ((buf).f_namelen)
 #endif
 
@@ -113,11 +116,6 @@ struct fileinfo
 	BOOL delete_on_close;
 }
 g_fileinfo[MAX_OPEN_FILES];
-
-struct fsinfo
-{
-	uint32 f_blocks, f_bfree, f_bsize, f_namelen;
-};
 
 /* Convert seconds since 1970 to a filetime */
 void
@@ -504,43 +502,18 @@ disk_set_information(HANDLE handle, uint32 info_class, STREAM in, STREAM out)
 	return STATUS_SUCCESS;
 }
 
-int fsstat(const char *path, struct fsinfo *buf)
-{
-	int ret;
-#if defined(HAVE_STATFS)
-	struct statfs statbuf;
-#elif defined(HAVE_STATVFS)
-	struct statvfs statbuf;
-#endif
-
-#if defined(HAVE_STATFS)
-	ret = statfs(path, &statbuf);
-#elif defined(HAVE_STATVFS)
-	ret = statvfs(path, &statbuf);
-#else
-	ret=-1;
-#endif
-
-	buf->f_blocks = statbuf.f_blocks;
-	buf->f_bfree = statbuf.f_bfree;
-	buf->f_bsize = statbuf.f_bsize;
-	buf->f_namelen = F_NAMELEN(statbuf);
-
-	return ret;
-}
-
 NTSTATUS
 disk_query_volume_information(HANDLE handle, uint32 info_class, STREAM out)
 {
 	char *volume, *fs_type;
-	struct fsinfo stat_fs;
+	struct STATFS_T stat_fs;
 	struct fileinfo *pfinfo;
 
 	pfinfo = &(g_fileinfo[handle]);
 	volume = "RDESKTOP";
 	fs_type = "RDPFS";
 
-	if (fsstat(pfinfo->path, &stat_fs) != 0)	/* FIXME: statfs is not portable */
+	if (STATFS_FN(pfinfo->path, &stat_fs) != 0)	/* FIXME: statfs is not portable */
 	{
 		perror("statfs");
 		return STATUS_ACCESS_DENIED;
@@ -571,7 +544,7 @@ disk_query_volume_information(HANDLE handle, uint32 info_class, STREAM out)
 		case 5:	/* FileFsAttributeInformation */
 
 			out_uint32_le(out, FS_CASE_SENSITIVE | FS_CASE_IS_PRESERVED);	/* fs attributes */
-			out_uint32_le(out, stat_fs.f_namelen);	/* max length of filename */
+			out_uint32_le(out, F_NAMELEN(stat_fs));	/* max length of filename */
 			out_uint32_le(out, 2 * strlen(fs_type));	/* length of fs_type */
 			rdp_out_unistr(out, fs_type, 2 * strlen(fs_type) - 2);
 			break;
