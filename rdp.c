@@ -71,7 +71,7 @@ rdp_recv(uint8 * type)
 
 #if WITH_DEBUG
 	DEBUG(("RDP packet #%d, (type %x)\n", ++g_packetno, *type));
-	//      hexdump(g_next_packet, length);
+	hexdump(g_next_packet, length);
 #endif /*  */
 
 	g_next_packet += length;
