@@ -27,6 +27,7 @@
 #include <ao/ao.h>
 
 #define MAX_QUEUE	10
+#define WAVEOUTBUF	32
 
 int g_dsp_fd;
 ao_device *o_device = NULL;
@@ -164,7 +165,7 @@ wave_out_play(void)
 {
 	struct audio_packet *packet;
 	STREAM out;
-	unsigned char expanded[16];
+	unsigned char expanded[WAVEOUTBUF];
 	int offset,len,i;
 
 	if (queue_lo == queue_hi)
@@ -181,7 +182,7 @@ wave_out_play(void)
 	if (g_samplerate == 22050 )
 	{
 		/* Resample to 44100 */
-		for(i=0; (i<(2*(3-g_samplewidth))) && (out->p < out->end); i++)
+		for(i=0; (i<((WAVEOUTBUF/8)*(3-g_samplewidth))) && (out->p < out->end); i++)
 		{
 			offset=i*4*g_samplewidth;
 			memcpy(&expanded[0*g_samplewidth+offset],out->p,g_samplewidth);
@@ -196,7 +197,7 @@ wave_out_play(void)
 	}
 	else
 	{
-		len = (16 > (out->end - out->p)) ? (out->end - out->p) : 16;
+		len = (WAVEOUTBUF > (out->end - out->p)) ? (out->end - out->p) : WAVEOUTBUF;
 		memcpy(expanded,out->p,len);
 		out->p += len;
 	}
