@@ -37,6 +37,12 @@ typedef void *HGLYPH;
 typedef void *HCOLOURMAP;
 typedef void *HCURSOR;
 
+typedef struct _POINT
+{
+	sint16 x, y;
+}
+POINT;
+
 typedef struct _COLOURENTRY
 {
 	uint8 red;

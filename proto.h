@@ -211,6 +211,10 @@ void ui_triblt(uint8 opcode, int x, int y, int cx, int cy, HBITMAP src, int srcx
 	       BRUSH * brush, int bgcolour, int fgcolour);
 void ui_line(uint8 opcode, int startx, int starty, int endx, int endy, PEN * pen);
 void ui_rect(int x, int y, int cx, int cy, int colour);
+void ui_polygon(uint8 opcode, uint8 fillmode, POINT * point, int npoints, BRUSH * brush,
+		int bgcolour, int fgcolour);
+void ui_ellipse(uint8 opcode, uint8 fillmode, int x, int y, int cx, int cy, BRUSH * brush,
+		int bgcolour, int fgcolour);
 void ui_draw_glyph(int mixmode, int x, int y, int cx, int cy, HGLYPH glyph, int srcx, int srcy,
 		   int bgcolour, int fgcolour);
 void ui_draw_text(uint8 font, uint8 flags, int mixmode, int x, int y, int clipx, int clipy,

@@ -119,6 +119,31 @@ PixelColour;
 	XFillRectangle(g_display, g_ownbackstore ? g_backstore : g_wnd, g_gc, x, y, cx, cy); \
 }
 
+#define FILL_POLYGON(p,np)\
+{ \
+	XFillPolygon(g_display, g_wnd, g_gc, p, np, Complex, CoordModePrevious); \
+	if (g_ownbackstore) \
+		XFillPolygon(g_display, g_backstore, g_gc, p, np, Complex, CoordModePrevious); \
+}
+
+#define DRAW_ELLIPSE(x,y,cx,cy,m)\
+{ \
+	switch (m) \
+	{ \
+		case 0:	/* Outline */ \
+			XDrawArc(g_display, g_wnd, g_gc, x, y, cx, cy, 0, 360*64); \
+			if (g_ownbackstore) \
+				XDrawArc(g_display, g_backstore, g_gc, x, y, cx, cy, 0, 360*64); \
+			break; \
+		case 1: /* Filled */ \
+			XFillArc(g_display, g_ownbackstore ? g_backstore : g_wnd, g_gc, x, y, \
+				 cx, cy, 0, 360*64); \
+			if (g_ownbackstore) \
+				XCopyArea(g_display, g_backstore, g_wnd, g_gc, x, y, cx, cy, x, y); \
+			break; \
+	} \
+}
+
 /* colour maps */
 extern BOOL g_owncolmap;
 static Colormap g_xcolmap;
@@ -2164,6 +2189,136 @@ ui_rect(
 {
 	SET_FOREGROUND(colour);
 	FILL_RECTANGLE(x, y, cx, cy);
+}
+
+void
+ui_polygon(uint8 opcode,
+	   /* mode */ uint8 fillmode,
+	   /* dest */ POINT * point, int npoints,
+	   /* brush */ BRUSH * brush, int bgcolour, int fgcolour)
+{
+	uint8 style, i, ipattern[8];
+	Pixmap fill;
+
+	SET_FUNCTION(opcode);
+
+	switch (fillmode)
+	{
+		case ALTERNATE:
+			XSetFillRule(g_display, g_gc, EvenOddRule);
+			break;
+		case WINDING:
+			XSetFillRule(g_display, g_gc, WindingRule);
+			break;
+		default:
+			unimpl("fill mode %d\n", fillmode);
+	}
+
+	if (brush)
+		style = brush->style;
+	else
+		style = 0;
+
+	switch (style)
+	{
+		case 0:	/* Solid */
+			SET_FOREGROUND(fgcolour);
+			FILL_POLYGON((XPoint *) point, npoints);
+			break;
+
+		case 2:	/* Hatch */
+			fill = (Pixmap) ui_create_glyph(8, 8,
+							hatch_patterns + brush->pattern[0] * 8);
+			SET_FOREGROUND(fgcolour);
+			SET_BACKGROUND(bgcolour);
+			XSetFillStyle(g_display, g_gc, FillOpaqueStippled);
+			XSetStipple(g_display, g_gc, fill);
+			XSetTSOrigin(g_display, g_gc, brush->xorigin, brush->yorigin);
+			FILL_POLYGON((XPoint *) point, npoints);
+			XSetFillStyle(g_display, g_gc, FillSolid);
+			XSetTSOrigin(g_display, g_gc, 0, 0);
+			ui_destroy_glyph((HGLYPH) fill);
+			break;
+
+		case 3:	/* Pattern */
+			for (i = 0; i != 8; i++)
+				ipattern[7 - i] = brush->pattern[i];
+			fill = (Pixmap) ui_create_glyph(8, 8, ipattern);
+			SET_FOREGROUND(bgcolour);
+			SET_BACKGROUND(fgcolour);
+			XSetFillStyle(g_display, g_gc, FillOpaqueStippled);
+			XSetStipple(g_display, g_gc, fill);
+			XSetTSOrigin(g_display, g_gc, brush->xorigin, brush->yorigin);
+			FILL_POLYGON((XPoint *) point, npoints);
+			XSetFillStyle(g_display, g_gc, FillSolid);
+			XSetTSOrigin(g_display, g_gc, 0, 0);
+			ui_destroy_glyph((HGLYPH) fill);
+			break;
+
+		default:
+			unimpl("brush %d\n", brush->style);
+	}
+
+	RESET_FUNCTION(opcode);
+}
+
+void
+ui_ellipse(uint8 opcode,
+	   /* mode */ uint8 fillmode,
+	   /* dest */ int x, int y, int cx, int cy,
+	   /* brush */ BRUSH * brush, int bgcolour, int fgcolour)
+{
+	uint8 style, i, ipattern[8];
+	Pixmap fill;
+
+	SET_FUNCTION(opcode);
+
+	if (brush)
+		style = brush->style;
+	else
+		style = 0;
+
+	switch (style)
+	{
+		case 0:	/* Solid */
+			SET_FOREGROUND(fgcolour);
+			DRAW_ELLIPSE(x, y, cx, cy, fillmode);
+			break;
+
+		case 2:	/* Hatch */
+			fill = (Pixmap) ui_create_glyph(8, 8,
+							hatch_patterns + brush->pattern[0] * 8);
+			SET_FOREGROUND(fgcolour);
+			SET_BACKGROUND(bgcolour);
+			XSetFillStyle(g_display, g_gc, FillOpaqueStippled);
+			XSetStipple(g_display, g_gc, fill);
+			XSetTSOrigin(g_display, g_gc, brush->xorigin, brush->yorigin);
+			DRAW_ELLIPSE(x, y, cx, cy, fillmode);
+			XSetFillStyle(g_display, g_gc, FillSolid);
+			XSetTSOrigin(g_display, g_gc, 0, 0);
+			ui_destroy_glyph((HGLYPH) fill);
+			break;
+
+		case 3:	/* Pattern */
+			for (i = 0; i != 8; i++)
+				ipattern[7 - i] = brush->pattern[i];
+			fill = (Pixmap) ui_create_glyph(8, 8, ipattern);
+			SET_FOREGROUND(bgcolour);
+			SET_BACKGROUND(fgcolour);
+			XSetFillStyle(g_display, g_gc, FillOpaqueStippled);
+			XSetStipple(g_display, g_gc, fill);
+			XSetTSOrigin(g_display, g_gc, brush->xorigin, brush->yorigin);
+			DRAW_ELLIPSE(x, y, cx, cy, fillmode);
+			XSetFillStyle(g_display, g_gc, FillSolid);
+			XSetTSOrigin(g_display, g_gc, 0, 0);
+			ui_destroy_glyph((HGLYPH) fill);
+			break;
+
+		default:
+			unimpl("brush %d\n", brush->style);
+	}
+
+	RESET_FUNCTION(opcode);
 }
 
 /* warning, this function only draws on wnd or backstore, not both */

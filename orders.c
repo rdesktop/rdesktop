@@ -70,6 +70,24 @@ rdp_in_coord(STREAM s, sint16 * coord, BOOL delta)
 	}
 }
 
+/* Parse a delta co-ordinate in polyline/polygon order form */
+static int
+parse_delta(uint8 * buffer, int *offset)
+{
+	int value = buffer[(*offset)++];
+	int two_byte = value & 0x80;
+
+	if (value & 0x40)	/* sign bit */
+		value |= ~0x3f;
+	else
+		value &= 0x3f;
+
+	if (two_byte)
+		value = (value << 8) | buffer[(*offset)++];
+
+	return value;
+}
+
 /* Read a colour entry */
 static void
 rdp_in_colour(STREAM s, uint32 * colour)
@@ -462,22 +480,168 @@ process_triblt(STREAM s, TRIBLT_ORDER * os, uint32 present, BOOL delta)
 		  bitmap, os->srcx, os->srcy, &os->brush, os->bgcolour, os->fgcolour);
 }
 
-/* Parse a delta co-ordinate in polyline order form */
-static int
-parse_delta(uint8 * buffer, int *offset)
+/* Process a polygon order */
+static void
+process_polygon(STREAM s, POLYGON_ORDER * os, uint32 present, BOOL delta)
 {
-	int value = buffer[(*offset)++];
-	int two_byte = value & 0x80;
+	int index, data, next;
+	uint8 flags = 0;
+	POINT *points;
 
-	if (value & 0x40)	/* sign bit */
-		value |= ~0x3f;
+	if (present & 0x01)
+		rdp_in_coord(s, &os->x, delta);
+
+	if (present & 0x02)
+		rdp_in_coord(s, &os->y, delta);
+
+	if (present & 0x04)
+		in_uint8(s, os->opcode);
+
+	if (present & 0x08)
+		in_uint8(s, os->fillmode);
+
+	if (present & 0x10)
+		rdp_in_colour(s, &os->fgcolour);
+
+	if (present & 0x20)
+		in_uint8(s, os->npoints);
+
+	if (present & 0x40)
+	{
+		in_uint8(s, os->datasize);
+		in_uint8a(s, os->data, os->datasize);
+	}
+
+	DEBUG(("POLYGON(x=%d,y=%d,op=0x%x,fm=%d,fg=0x%x,n=%d,sz=%d)\n",
+	       os->x, os->y, os->opcode, os->fillmode, os->fgcolour, os->npoints, os->datasize));
+
+	DEBUG(("Data: "));
+
+	for (index = 0; index < os->datasize; index++)
+		DEBUG(("%02x ", os->data[index]));
+
+	DEBUG(("\n"));
+
+	if (os->opcode < 0x01 || os->opcode > 0x10)
+	{
+		error("bad ROP2 0x%x\n", os->opcode);
+		return;
+	}
+
+	points = (POINT *) xmalloc((os->npoints + 1) * sizeof(POINT));
+	memset(points, 0, (os->npoints + 1) * sizeof(POINT));
+
+	points[0].x = os->x;
+	points[0].y = os->y;
+
+	index = 0;
+	data = ((os->npoints - 1) / 4) + 1;
+	for (next = 1; (next <= os->npoints) && (next < 256) && (data < os->datasize); next++)
+	{
+		if ((next - 1) % 4 == 0)
+			flags = os->data[index++];
+
+		if (~flags & 0x80)
+			points[next].x = parse_delta(os->data, &data);
+
+		if (~flags & 0x40)
+			points[next].y = parse_delta(os->data, &data);
+
+		flags <<= 2;
+	}
+
+	if (next - 1 == os->npoints)
+		ui_polygon(os->opcode - 1, os->fillmode, points, os->npoints + 1, NULL, 0,
+			   os->fgcolour);
 	else
-		value &= 0x3f;
+		error("polygon parse error\n");
 
-	if (two_byte)
-		value = (value << 8) | buffer[(*offset)++];
+	xfree(points);
+}
 
-	return value;
+/* Process a polygon2 order */
+static void
+process_polygon2(STREAM s, POLYGON2_ORDER * os, uint32 present, BOOL delta)
+{
+	int index, data, next;
+	uint8 flags = 0;
+	POINT *points;
+
+	if (present & 0x0001)
+		rdp_in_coord(s, &os->x, delta);
+
+	if (present & 0x0002)
+		rdp_in_coord(s, &os->y, delta);
+
+	if (present & 0x0004)
+		in_uint8(s, os->opcode);
+
+	if (present & 0x0008)
+		in_uint8(s, os->fillmode);
+
+	if (present & 0x0010)
+		rdp_in_colour(s, &os->bgcolour);
+
+	if (present & 0x0020)
+		rdp_in_colour(s, &os->fgcolour);
+
+	rdp_parse_brush(s, &os->brush, present >> 6);
+
+	if (present & 0x0800)
+		in_uint8(s, os->npoints);
+
+	if (present & 0x1000)
+	{
+		in_uint8(s, os->datasize);
+		in_uint8a(s, os->data, os->datasize);
+	}
+
+	DEBUG(("POLYGON2(x=%d,y=%d,op=0x%x,fm=%d,bs=%d,bg=0x%x,fg=0x%x,n=%d,sz=%d)\n",
+	       os->x, os->y, os->opcode, os->fillmode, os->brush.style, os->bgcolour, os->fgcolour,
+	       os->npoints, os->datasize));
+
+	DEBUG(("Data: "));
+
+	for (index = 0; index < os->datasize; index++)
+		DEBUG(("%02x ", os->data[index]));
+
+	DEBUG(("\n"));
+
+	if (os->opcode < 0x01 || os->opcode > 0x10)
+	{
+		error("bad ROP2 0x%x\n", os->opcode);
+		return;
+	}
+
+	points = (POINT *) xmalloc((os->npoints + 1) * sizeof(POINT));
+	memset(points, 0, (os->npoints + 1) * sizeof(POINT));
+
+	points[0].x = os->x;
+	points[0].y = os->y;
+
+	index = 0;
+	data = ((os->npoints - 1) / 4) + 1;
+	for (next = 1; (next <= os->npoints) && (next < 256) && (data < os->datasize); next++)
+	{
+		if ((next - 1) % 4 == 0)
+			flags = os->data[index++];
+
+		if (~flags & 0x80)
+			points[next].x = parse_delta(os->data, &data);
+
+		if (~flags & 0x40)
+			points[next].y = parse_delta(os->data, &data);
+
+		flags <<= 2;
+	}
+
+	if (next - 1 == os->npoints)
+		ui_polygon(os->opcode - 1, os->fillmode, points, os->npoints + 1,
+			   &os->brush, os->bgcolour, os->fgcolour);
+	else
+		error("polygon2 parse error\n");
+
+	xfree(points);
 }
 
 /* Process a polyline order */
@@ -556,6 +720,76 @@ process_polyline(STREAM s, POLYLINE_ORDER * os, uint32 present, BOOL delta)
 
 		flags <<= 2;
 	}
+}
+
+/* Process an ellipse order */
+static void
+process_ellipse(STREAM s, ELLIPSE_ORDER * os, uint32 present, BOOL delta)
+{
+	if (present & 0x01)
+		rdp_in_coord(s, &os->left, delta);
+
+	if (present & 0x02)
+		rdp_in_coord(s, &os->top, delta);
+
+	if (present & 0x04)
+		rdp_in_coord(s, &os->right, delta);
+
+	if (present & 0x08)
+		rdp_in_coord(s, &os->bottom, delta);
+
+	if (present & 0x10)
+		in_uint8(s, os->opcode);
+
+	if (present & 0x20)
+		in_uint8(s, os->fillmode);
+
+	if (present & 0x40)
+		rdp_in_colour(s, &os->fgcolour);
+
+	DEBUG(("ELLIPSE(l=%d,t=%d,r=%d,b=%d,op=0x%x,fm=%d,fg=0x%x)\n", os->left, os->top,
+	       os->right, os->bottom, os->opcode, os->fillmode, os->fgcolour));
+
+	ui_ellipse(os->opcode - 1, os->fillmode, os->left, os->top, os->right - os->left,
+		   os->bottom - os->top, NULL, 0, os->fgcolour);
+}
+
+/* Process an ellipse2 order */
+static void
+process_ellipse2(STREAM s, ELLIPSE2_ORDER * os, uint32 present, BOOL delta)
+{
+	if (present & 0x0001)
+		rdp_in_coord(s, &os->left, delta);
+
+	if (present & 0x0002)
+		rdp_in_coord(s, &os->top, delta);
+
+	if (present & 0x0004)
+		rdp_in_coord(s, &os->right, delta);
+
+	if (present & 0x0008)
+		rdp_in_coord(s, &os->bottom, delta);
+
+	if (present & 0x0010)
+		in_uint8(s, os->opcode);
+
+	if (present & 0x0020)
+		in_uint8(s, os->fillmode);
+
+	if (present & 0x0040)
+		rdp_in_colour(s, &os->bgcolour);
+
+	if (present & 0x0080)
+		rdp_in_colour(s, &os->fgcolour);
+
+	rdp_parse_brush(s, &os->brush, present >> 8);
+
+	DEBUG(("ELLIPSE2(l=%d,t=%d,r=%d,b=%d,op=0x%x,fm=%d,bs=%d,bg=0x%x,fg=0x%x)\n",
+	       os->left, os->top, os->right, os->bottom, os->opcode, os->fillmode, os->brush.style,
+	       os->bgcolour, os->fgcolour));
+
+	ui_ellipse(os->opcode - 1, os->fillmode, os->left, os->top, os->right - os->left,
+		   os->bottom - os->top, &os->brush, os->bgcolour, os->fgcolour);
 }
 
 /* Process a text order */
@@ -982,6 +1216,8 @@ process_orders(STREAM s, uint16 num_orders)
 				case RDP_ORDER_PATBLT:
 				case RDP_ORDER_MEMBLT:
 				case RDP_ORDER_LINE:
+				case RDP_ORDER_POLYGON2:
+				case RDP_ORDER_ELLIPSE2:
 					size = 2;
 					break;
 
@@ -1039,8 +1275,24 @@ process_orders(STREAM s, uint16 num_orders)
 					process_triblt(s, &os->triblt, present, delta);
 					break;
 
+				case RDP_ORDER_POLYGON:
+					process_polygon(s, &os->polygon, present, delta);
+					break;
+
+				case RDP_ORDER_POLYGON2:
+					process_polygon2(s, &os->polygon2, present, delta);
+					break;
+
 				case RDP_ORDER_POLYLINE:
 					process_polyline(s, &os->polyline, present, delta);
+					break;
+
+				case RDP_ORDER_ELLIPSE:
+					process_ellipse(s, &os->ellipse, present, delta);
+					break;
+
+				case RDP_ORDER_ELLIPSE2:
+					process_ellipse2(s, &os->ellipse2, present, delta);
 					break;
 
 				case RDP_ORDER_TEXT2:

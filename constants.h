@@ -200,6 +200,9 @@ enum RDP_INPUT_DEVICE
 #define TEXT2_VERTICAL		0x04
 #define TEXT2_IMPLICIT_X	0x20
 
+#define ALTERNATE	1
+#define WINDING		2
+
 /* RDP bitmap cache (version 2) constants */
 #define BMPCACHE2_C0_CELLS	0x78
 #define BMPCACHE2_C1_CELLS	0x78

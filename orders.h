@@ -37,7 +37,11 @@ enum RDP_ORDER_TYPE
 	RDP_ORDER_DESKSAVE = 11,
 	RDP_ORDER_MEMBLT = 13,
 	RDP_ORDER_TRIBLT = 14,
+	RDP_ORDER_POLYGON = 20,
+	RDP_ORDER_POLYGON2 = 21,
 	RDP_ORDER_POLYLINE = 22,
+	RDP_ORDER_ELLIPSE = 25,
+	RDP_ORDER_ELLIPSE2 = 26,
 	RDP_ORDER_TEXT2 = 27
 };
 
@@ -48,7 +52,8 @@ enum RDP_SECONDARY_ORDER_TYPE
 	RDP_ORDER_BMPCACHE = 2,
 	RDP_ORDER_FONTCACHE = 3,
 	RDP_ORDER_RAW_BMPCACHE2 = 4,
-	RDP_ORDER_BMPCACHE2 = 5
+	RDP_ORDER_BMPCACHE2 = 5,
+	RDP_ORDER_BRUSHCACHE = 7
 };
 
 typedef struct _DESTBLT_ORDER
@@ -164,6 +169,36 @@ MEMBLT_ORDER;
 
 #define MAX_DATA 256
 
+typedef struct _POLYGON_ORDER
+{
+	sint16 x;
+	sint16 y;
+	uint8 opcode;
+	uint8 fillmode;
+	uint32 fgcolour;
+	uint8 npoints;
+	uint8 datasize;
+	uint8 data[MAX_DATA];
+
+}
+POLYGON_ORDER;
+
+typedef struct _POLYGON2_ORDER
+{
+	sint16 x;
+	sint16 y;
+	uint8 opcode;
+	uint8 fillmode;
+	uint32 bgcolour;
+	uint32 fgcolour;
+	BRUSH brush;
+	uint8 npoints;
+	uint8 datasize;
+	uint8 data[MAX_DATA];
+
+}
+POLYGON2_ORDER;
+
 typedef struct _POLYLINE_ORDER
 {
 	sint16 x;
@@ -176,6 +211,34 @@ typedef struct _POLYLINE_ORDER
 
 }
 POLYLINE_ORDER;
+
+typedef struct _ELLIPSE_ORDER
+{
+	sint16 left;
+	sint16 top;
+	sint16 right;
+	sint16 bottom;
+	uint8 opcode;
+	uint8 fillmode;
+	uint32 fgcolour;
+
+}
+ELLIPSE_ORDER;
+
+typedef struct _ELLIPSE2_ORDER
+{
+	sint16 left;
+	sint16 top;
+	sint16 right;
+	sint16 bottom;
+	uint8 opcode;
+	uint8 fillmode;
+	BRUSH brush;
+	uint32 bgcolour;
+	uint32 fgcolour;
+
+}
+ELLIPSE2_ORDER;
 
 #define MAX_TEXT 256
 
@@ -216,7 +279,11 @@ typedef struct _RDP_ORDER_STATE
 	DESKSAVE_ORDER desksave;
 	MEMBLT_ORDER memblt;
 	TRIBLT_ORDER triblt;
+	POLYGON_ORDER polygon;
+	POLYGON2_ORDER polygon2;
 	POLYLINE_ORDER polyline;
+	ELLIPSE_ORDER ellipse;
+	ELLIPSE2_ORDER ellipse2;
 	TEXT2_ORDER text2;
 
 }
