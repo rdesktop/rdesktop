@@ -351,6 +351,9 @@ ui_init()
 		height = HeightOfScreen(screen);
 	}
 
+	/* make sure width is a multiple of 4 */
+	width = (width + 3) & ~3;
+
 	xkeymap_init();
 	return True;
 }

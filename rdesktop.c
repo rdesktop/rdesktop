@@ -34,8 +34,8 @@ char username[16];
 char hostname[16];
 char keymapname[16];
 int keylayout = 0x409;		/* Defaults to US keyboard layout */
-int width;
-int height;
+int width = 800;
+int height = 600;
 int tcp_port_rdp = TCP_PORT_RDP;
 BOOL bitmap_compression = True;
 BOOL sendmotion = True;
@@ -232,17 +232,6 @@ main(int argc, char *argv[])
 			return 0;
 		}
 		STRNCPY(password, p, sizeof(password));
-	}
-
-	if ((width == 0) || (height == 0))
-	{
-		width = 800;
-		height = 600;
-	}
-	else
-	{
-		/* make sure width is a multiple of 4 */
-		width = (width + 3) & ~3;
 	}
 
 	if (!strlen(title))
