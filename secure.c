@@ -640,6 +640,7 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 		 */
 
 		in_uint32_le(s, cacert_len);
+		DEBUG_RDP5(("CA Certificate length is %d\n", cacert_len));
 		cacert = d2i_X509(NULL, &(s->p), cacert_len);
 		/* Note: We don't need to move s->p here - d2i_X509 is
 		   "kind" enough to do it for us */
@@ -660,6 +661,7 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 		 */
 
 		in_uint32_le(s, cert_len);
+		DEBUG_RDP5(("Certificate length is %d\n", cert_len));
 		server_cert = d2i_X509(NULL, &(s->p), cert_len);
 		if (NULL == server_cert)
 		{
@@ -772,6 +774,9 @@ sec_process_mcs_data(STREAM s)
 				break;
 
 			case SEC_TAG_SRV_3:
+				/* FIXME: We should parse this information and
+				   use it to map RDP5 channels to MCS 
+				   channels */ 
 				break;
 
 			case SEC_TAG_SRV_CRYPT:

@@ -29,6 +29,18 @@ get_num_channels(void)
 	return num_channels;
 }
 
+/* FIXME: We should use the information in TAG_SRV_SRV_3 to map RDP5
+   channels to MCS channels. 
+
+   The format of TAG_SRV_SRV_3 seems to be
+
+   global_channel_no (uint16le)
+   number_of_other_channels (uint16le)
+   ..followed by uint16les for the other channels.
+   Might be a few (two) bytes of padding at the end.
+
+*/
+
 void
 register_channel(char *name, uint32 flags, void (*callback) (STREAM, uint16))
 {
