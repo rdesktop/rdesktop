@@ -351,6 +351,8 @@ ui_create_window(void)
 		input_mask |= PointerMotionMask;
 	if (ownbackstore)
 		input_mask |= ExposureMask;
+	if (fullscreen)
+		input_mask |= EnterWindowMask;
 
 	if (IM != NULL)
 	{
@@ -371,9 +373,6 @@ ui_create_window(void)
 		XMaskEvent(display, VisibilityChangeMask, &xevent);
 	}
 	while (xevent.type != VisibilityNotify);
-
-	if (fullscreen)
-		XSetInputFocus(display, wnd, RevertToPointerRoot, CurrentTime);
 
 	return True;
 }
@@ -529,6 +528,11 @@ xwin_process_events(void)
 			case FocusOut:
 				if (xevent.xfocus.mode == NotifyWhileGrabbed)
 					XUngrabKeyboard(display, CurrentTime);
+				break;
+
+			case EnterNotify:
+				/* we only register for this event when in fullscreen mode */
+				XSetInputFocus(display, wnd, RevertToPointerRoot, CurrentTime);
 				break;
 
 			case Expose:
