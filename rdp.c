@@ -170,37 +170,33 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 	{
 		flags |= RDP_LOGON_BLOB;
 		DEBUG_RDP5(("Sending RDP5-style Logon packet\n"));
-		packetlen = 4 + // Unknown uint32
-			4 + // flags
-			2 + // len_domain
-			2 + // len_user
-			(flags & RDP_LOGON_AUTO ? 2 : 0) + // len_password
-			(flags & RDP_LOGON_BLOB ? 2 : 0) + // Length of BLOB
-			2 + // len_program
-			2 + // len_directory
-			(0 < len_domain ? len_domain : 2) + // domain 
-			len_user +
-			(flags & RDP_LOGON_AUTO ? len_password : 0) +
-			0 + // We have no 512 byte BLOB. Perhaps we must?
-			(flags & RDP_LOGON_BLOB && !(flags & RDP_LOGON_AUTO) ? 2 : 0) + // After the BLOB is a unknown int16. If there is a BLOB, that is.
-			(0 < len_program ? len_program : 2) +
-			(0 < len_directory ? len_directory : 2) +
-			2 + // Unknown (2)
-			2 + // Client ip length
-			len_ip + // Client ip
-			2 +  // DLL string length
-			len_dll + // DLL string
-			2 +  // Unknown
-			2 +  // Unknown
-			64 +  // Time zone #0
-			2 +  // Unknown
-			64 +  // Time zone #1
-			32; // Unknown
-			
-		s = sec_init(sec_flags, packetlen);	
+		packetlen = 4 +	// Unknown uint32
+			4 +	// flags
+			2 +	// len_domain
+			2 +	// len_user
+			(flags & RDP_LOGON_AUTO ? 2 : 0) +	// len_password
+			(flags & RDP_LOGON_BLOB ? 2 : 0) +	// Length of BLOB
+			2 +	// len_program
+			2 +	// len_directory
+			(0 < len_domain ? len_domain : 2) +	// domain 
+			len_user + (flags & RDP_LOGON_AUTO ? len_password : 0) + 0 +	// We have no 512 byte BLOB. Perhaps we must?
+			(flags & RDP_LOGON_BLOB && !(flags & RDP_LOGON_AUTO) ? 2 : 0) +	// After the BLOB is a unknown int16. If there is a BLOB, that is.
+			(0 < len_program ? len_program : 2) + (0 < len_directory ? len_directory : 2) + 2 +	// Unknown (2)
+			2 +	// Client ip length
+			len_ip +	// Client ip
+			2 +	// DLL string length
+			len_dll +	// DLL string
+			2 +	// Unknown
+			2 +	// Unknown
+			64 +	// Time zone #0
+			2 +	// Unknown
+			64 +	// Time zone #1
+			32;	// Unknown
+
+		s = sec_init(sec_flags, packetlen);
 		DEBUG_RDP5(("Called sec_init with packetlen %d\n", packetlen));
 
-		out_uint32(s, 0); // Unknown
+		out_uint32(s, 0);	// Unknown
 		out_uint32_le(s, flags);
 		out_uint16_le(s, len_domain);
 		out_uint16_le(s, len_user);
@@ -209,55 +205,61 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 			out_uint16_le(s, len_password);
 
 		}
-		if (flags & RDP_LOGON_BLOB && !(flags & RDP_LOGON_AUTO)) {
+		if (flags & RDP_LOGON_BLOB && !(flags & RDP_LOGON_AUTO))
+		{
 			out_uint16_le(s, 0);
 		}
 		out_uint16_le(s, len_program);
 		out_uint16_le(s, len_directory);
 		if (0 < len_domain)
 			rdp_out_unistr(s, domain, len_domain);
-		else 
+		else
 			out_uint16_le(s, 0);
 		rdp_out_unistr(s, user, len_user);
 		if (flags & RDP_LOGON_AUTO)
 		{
 			rdp_out_unistr(s, password, len_password);
 		}
-		if (flags & RDP_LOGON_BLOB && !(flags & RDP_LOGON_AUTO))  {
+		if (flags & RDP_LOGON_BLOB && !(flags & RDP_LOGON_AUTO))
+		{
 			out_uint16_le(s, 0);
 		}
-		if (0 < len_program) {
+		if (0 < len_program)
+		{
 			rdp_out_unistr(s, program, len_program);
-			
-		} else {
+
+		}
+		else
+		{
 			out_uint16_le(s, 0);
 		}
-		if (0 < len_directory) {
+		if (0 < len_directory)
+		{
 			rdp_out_unistr(s, directory, len_directory);
-		} else {
+		}
+		else
+		{
 			out_uint16_le(s, 0);
 		}
 		out_uint16_le(s, 2);
-		out_uint16_le(s, len_ip+2); // Length of client ip
+		out_uint16_le(s, len_ip + 2);	// Length of client ip
 		rdp_out_unistr(s, "127.0.0.1", len_ip);
-		out_uint16_le(s, len_dll+2);
+		out_uint16_le(s, len_dll + 2);
 		rdp_out_unistr(s, "C:\\WINNT\\System32\\mstscax.dll", len_dll);
 		out_uint16_le(s, 0xffc4);
 		out_uint16_le(s, 0xffff);
-		rdp_out_unistr(s, "GTB, normaltid", 
-			       2*strlen("GTB, normaltid"));
-		out_uint8s(s, 62-2*strlen("GTB, normaltid"));
-			       
+		rdp_out_unistr(s, "GTB, normaltid", 2 * strlen("GTB, normaltid"));
+		out_uint8s(s, 62 - 2 * strlen("GTB, normaltid"));
+
 
 		out_uint32_le(s, 0x0a0000);
 		out_uint32_le(s, 0x050000);
 		out_uint32_le(s, 3);
 		out_uint32_le(s, 0);
 		out_uint32_le(s, 0);
-		
-		rdp_out_unistr(s, "GTB, sommartid", 
-			       2*strlen("GTB, sommartid"));
-		out_uint8s(s, 62-2*strlen("GTB, sommartid"));
+
+		rdp_out_unistr(s, "GTB, sommartid", 2 * strlen("GTB, sommartid"));
+		out_uint8s(s, 62 - 2 * strlen("GTB, sommartid"));
 
 		out_uint32_le(s, 0x30000);
 		out_uint32_le(s, 0x050000);
@@ -710,7 +712,7 @@ process_bitmap_updates(STREAM s)
 		if (!compress)
 		{
 			int y;
-			bmpdata = (uint8*)xmalloc(width * height * Bpp);
+			bmpdata = (uint8 *) xmalloc(width * height * Bpp);
 			for (y = 0; y < height; y++)
 			{
 				in_uint8a(s, &bmpdata[(height - y - 1) * (width * Bpp)],
@@ -733,7 +735,7 @@ process_bitmap_updates(STREAM s)
 			in_uint8s(s, 4);	/* line_size, final_size */
 		}
 		in_uint8p(s, data, size);
-		bmpdata = (uint8*)xmalloc(width * height * Bpp);
+		bmpdata = (uint8 *) xmalloc(width * height * Bpp);
 		if (bitmap_decompress(bmpdata, width, height, data, size, Bpp))
 		{
 			ui_paint_bitmap(left, top, cx, cy, width, height, bmpdata);
@@ -760,7 +762,7 @@ process_palette(STREAM s)
 	in_uint16_le(s, map.ncolours);
 	in_uint8s(s, 2);	/* pad */
 
-	map.colours = (COLOURENTRY*)xmalloc(3 * map.ncolours);
+	map.colours = (COLOURENTRY *) xmalloc(3 * map.ncolours);
 
 	DEBUG(("PALETTE(c=%d)\n", map.ncolours));
 
@@ -882,6 +884,9 @@ BOOL
 rdp_connect(char *server, uint32 flags, char *domain, char *password,
 	    char *command, char *directory)
 {
+	if (use_rdp5)
+		channels_init();
+
 	if (!sec_connect(server, username))
 		return False;
 
