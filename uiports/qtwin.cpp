@@ -48,6 +48,7 @@ int g_width = 800;
 int g_server_bpp = 8;
 int g_encryption = 1;
 int g_desktop_save = 1;
+int g_polygon_ellipse_orders = 0;
 int g_bitmap_cache = 1;
 int g_bitmap_cache_persist_enable = False;
 int g_bitmap_cache_precache = True;
@@ -764,11 +765,11 @@ void bitBltClip(QPaintDevice* dst1, QPaintDevice* dst2, int dx, int dy,
 }
 
 //*****************************************************************************
-void ui_draw_text(uint8 font, uint8 flags, int mixmode,
+void ui_draw_text(uint8 font, uint8 flags, uint8 opcode, int mixmode,
                   int x, int y, int clipx, int clipy,
                   int clipcx, int clipcy, int boxx,
-                  int boxy, int boxcx, int boxcy, int bgcolour,
-                  int fgcolour, uint8 * text, uint8 length)
+                  int boxy, int boxcx, int boxcy, BRUSH * brush,
+                  int bgcolour, int fgcolour, uint8 * text, uint8 length)
 {
   FONTGLYPH *glyph;
   int i, j, xyoffset;
@@ -1171,6 +1172,39 @@ unsigned int read_keyboard_state(void)
 
 /*****************************************************************************/
 void ui_resize_window(void)
+{
+}
+
+/*****************************************************************************/
+void ui_polygon(uint8 opcode, uint8 fillmode, POINT * point, int npoints,
+                BRUSH * brush, int bgcolour, int fgcolour)
+{
+}
+
+/*****************************************************************************/
+/* todo, use qt function for this (QPainter::drawPolyline) */
+void ui_polyline(uint8 opcode, POINT * points, int npoints, PEN * pen)
+{
+  int i, x, y, dx, dy;
+  if (npoints > 0)
+  {
+    x = points[0].x;
+    y = points[0].y;
+    for (i = 1; i < npoints; i++)
+    {
+      dx = points[i].x;
+      dy = points[i].y;
+      ui_line(opcode, x, y, x + dx, y + dy, pen);
+      x = x + dx;
+      y = y + dy;
+    }
+  }
+}
+
+/*****************************************************************************/
+void ui_ellipse(uint8 opcode, uint8 fillmode,
+                int x, int y, int cx, int cy,
+                BRUSH * brush, int bgcolour, int fgcolour)
 {
 }
 

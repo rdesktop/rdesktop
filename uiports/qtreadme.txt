@@ -3,10 +3,10 @@ qt should be installed in /usr/local/qt
 you may need to have LD_LIBRARY_PATH defined to run qtrdesktop
 tested with versions 2.3.2, 3.1.2
 
-qtrdesktopbuild.sh can be edited to change file localtions or endianness
-run ./qtrdesktopbuild.sh in this directory to compile it
+makefile_qt can be edited to change file localtions
+run make -f makefile_qt in this directory to compile it
 
 qtreadme.txt - notes, this file
-qtrdesktopbuild.sh - script to build
+makefile_qt - makefile
 qtwin.cpp - ui lib
 qtwin.h - header
