@@ -384,6 +384,9 @@ static void
 sec_out_mcs_data(STREAM s)
 {
 	int hostlen = 2 * strlen(hostname);
+	
+	if (hostlen > 30)
+		hostlen = 30;
 
 	out_uint16_be(s, 5);	/* unknown */
 	out_uint16_be(s, 0x14);
