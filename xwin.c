@@ -356,7 +356,7 @@ ui_create_window(char *title)
 	xkeymap_init2();
 
 	input_mask = KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask |
-			VisibilityChangeMask;
+			VisibilityChangeMask | FocusChangeMask;
 	if (grab_keyboard)
 		input_mask |= EnterWindowMask | LeaveWindowMask;
 	if (sendmotion)
@@ -531,10 +531,12 @@ xwin_process_events()
 
 			case FocusOut:
 				/* reset keys */
-				rdp_send_input(ev_time, RDP_INPUT_SCANCODE,
-					       KBD_FLAG_DOWN | KBD_FLAG_UP, SCANCODE_CHAR_LCTRL, 0);
-				rdp_send_input(ev_time, RDP_INPUT_SCANCODE,
-					       KBD_FLAG_DOWN | KBD_FLAG_UP, SCANCODE_CHAR_LALT, 0);
+				rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_LCTRL);
+				rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_LALT);
+				rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_LSHIFT);
+				rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_RCTRL);
+				rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_RALT);
+				rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_RSHIFT);
 				/* fall through */
 			case LeaveNotify:
 				if (grab_keyboard)
