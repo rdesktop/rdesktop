@@ -50,15 +50,21 @@ static BOOL ownbackstore;
 static Pixmap backstore;
 
 /* needed to keep track of the modifiers */
-static unsigned int key_modifier_state = 0;
+static unsigned int numlock_modifier_mask = 0;
 static unsigned int key_down_state = 0;
 
+
 #define DShift1Mask   (1<<0)
-#define DShift2Mask   (1<<1)
+#define DLockMask     (1<<1)
 #define DControl1Mask (1<<2)
-#define DControl2Mask (1<<3)
-#define DMod1Mask     (1<<4)
-#define DMod2Mask     (1<<5)
+#define DMod1Mask     (1<<3)
+#define DMod2Mask     (1<<4)
+#define DMod3Mask     (1<<5)
+#define DMod4Mask     (1<<6)
+#define DMod5Mask     (1<<7)
+#define DShift2Mask   (1<<8)
+#define DControl2Mask (1<<9)
+#define DNumLockMask  (1<<10)
 
 #define FILL_RECTANGLE(x,y,cx,cy)\
 { \
@@ -99,8 +105,10 @@ static int rop2_map[] = {
 #define SET_FUNCTION(rop2)	{ if (rop2 != ROP2_COPY) XSetFunction(display, gc, rop2_map[rop2]); }
 #define RESET_FUNCTION(rop2)	{ if (rop2 != ROP2_COPY) XSetFunction(display, gc, GXcopy); }
 
-void xwin_release_modifiers(XKeyEvent* ev, uint32 ev_time, uint32 scancode);
-void xwin_press_modifiers(XKeyEvent* ev, uint32 ev_time, uint32 scancode);
+void xwin_get_numlock_mask();
+void xwin_mod_update(uint32 state, uint32 ev_time );
+void xwin_mod_release(uint32 state, uint32 ev_time, uint32 scancode);
+void xwin_mod_press(uint32 state, uint32 ev_time, uint32 scancode);
 
 static void
 translate8(uint8 *data, uint8 *out, uint8 *end)
@@ -221,10 +229,6 @@ ui_create_window(char *title)
 	}
 
 
-	/* XKB is the 'new' keyboard handler in x.. ( the xkb code in Xfree86 originates from SGI, years 1993 and 1995 from what I could tell. )
-	 * it makes it possible for people with disabilities to use rdesktop, stickykeys, bouncekeys etc. VERY MUCH useful.
-	 * XFree86 has had support for it since it's earliest incarnation. I believe it is a reasonable dependency.
-	 */
 	display = XkbOpenDisplay( NULL, &xkb_event, &xkb_error, &xkb_major, &xkb_minor, &xkb_reason );
 	switch(xkb_reason)
 	{
@@ -338,7 +342,7 @@ ui_create_window(char *title)
 
 	input_mask = KeyPressMask | KeyReleaseMask |
 			 ButtonPressMask | ButtonReleaseMask |
-			 EnterWindowMask | LeaveWindowMask | KeymapStateMask;
+			 EnterWindowMask | LeaveWindowMask;
 	if (sendmotion)
 		input_mask |= PointerMotionMask;
 
@@ -367,8 +371,49 @@ ui_create_window(char *title)
 			error( "XkbSelectEvents failed.\n");
 			exit(0);
 	}
+	
+	xwin_get_numlock_mask();
 
 	return True;
+}
+
+void
+xwin_get_numlock_mask()
+{
+	KeyCode numlockcode;
+	KeyCode* keycode;
+	XModifierKeymap *modmap;
+	int i,j;
+
+	/* Find out if numlock is already defined as a modifier key, and if so where */
+	numlockcode = XKeysymToKeycode(display, 0xFF7F);	/* XF_Num_Lock = 0xFF7F */
+	if (numlockcode) {
+		modmap = XGetModifierMapping(display);
+		if (modmap) {
+			keycode = modmap->modifiermap;
+			for (i = 0; i < 8; i++)
+				for (j = modmap->max_keypermod; j--;) {
+					if (*keycode == numlockcode) {
+						numlock_modifier_mask = (1 << i);
+						i = 8;
+						break;
+					}
+					keycode++;
+				}
+		if (!numlock_modifier_mask) {
+				modmap->modifiermap[7 * modmap->max_keypermod] = numlockcode;
+				if (XSetModifierMapping(display, modmap) == MappingSuccess)
+					numlock_modifier_mask = (1 << 7);
+				else
+					printf("XSetModifierMapping failed!\n");
+			}
+			XFreeModifiermap(modmap);
+		}
+	}
+
+	if (!numlock_modifier_mask)
+		printf("WARNING: Failed to get a numlock modifier mapping.\n");
+		
 }
 
 void
@@ -389,50 +434,40 @@ ui_destroy_window()
 static void
 xwin_process_events()
 {
-	XkbEvent xkbevent;
-	
+	XEvent xevent;
+
 	KeySym keysym;
 	uint8 scancode;
 	uint16 button, flags;
 	uint32 ev_time;
 	uint32 tmpmods;
 
-	while (XCheckMaskEvent(display, ~0, &xkbevent.core))
+	while (XCheckMaskEvent(display, ~0, &xevent))
 	{
 		ev_time = time(NULL);
 		flags = 0;
 
-		switch (xkbevent.type)
+		switch (xevent.type)
 		{
-			case KeymapNotify:
-				/* TODO:
-				 * read modifier status at focus in, and update the local masks, and the other end as well..
-				 * if not, we may get out of sync.
-				 * xkbevent.core.xkeymap.key_vector
-				 * char key_vector[32]; 
-				 */
-				break;
-
 			case KeyRelease:
 				flags = KBD_FLAG_DOWN | KBD_FLAG_UP;
 				/* fall through */
-
 			case KeyPress:
-				if( XkbTranslateKeyCode(xkb, xkbevent.core.xkey.keycode, xkbevent.core.xkey.state, &tmpmods, &keysym) == False )
+				if( XkbTranslateKeyCode(xkb, xevent.xkey.keycode, xevent.xkey.state, &tmpmods, &keysym) == False )
 					break;
-				scancode = xkeymap_translate_key(keysym, xkbevent.core.xkey.keycode, &flags);
+				scancode = xkeymap_translate_key(keysym, xevent.xkey.keycode, &flags);
 
 				if (scancode == 0 )
 					break;
 
 				/* keep track of the modifiers -- needed for stickykeys... */
-				if( xkbevent.type == KeyPress )
-					xwin_press_modifiers( &xkbevent.core.xkey, ev_time, scancode );
+				if( xevent.type == KeyPress )
+					xwin_mod_press( xevent.xkey.state, ev_time, scancode );
 
 				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, flags, scancode, 0);
 
-				if( xkbevent.type == KeyRelease )
-					xwin_release_modifiers( &xkbevent.core.xkey, ev_time, scancode );
+				if( xevent.type == KeyRelease )
+					xwin_mod_release( xevent.xkey.state, ev_time, scancode );
 
 				break;
 
@@ -441,26 +476,28 @@ xwin_process_events()
 				/* fall through */
 
 			case ButtonRelease:
-				button = xkeymap_translate_button(xkbevent.core.xbutton.button);
+				button = xkeymap_translate_button(xevent.xbutton.button);
 				if (button == 0)
 					break;
 
 				rdp_send_input(ev_time, RDP_INPUT_MOUSE,
 					       flags | button,
-					       xkbevent.core.xbutton.x,
-					       xkbevent.core.xbutton.y);
+					       xevent.xbutton.x,
+					       xevent.xbutton.y);
 				break;
 
 			case MotionNotify:
 				rdp_send_input(ev_time, RDP_INPUT_MOUSE,
 					       MOUSE_FLAG_MOVE,
-					       xkbevent.core.xmotion.x,
-					       xkbevent.core.xmotion.y);
+					       xevent.xmotion.x,
+					       xevent.xmotion.y);
 				break;
 
 			case EnterNotify:
 				XGrabKeyboard(display, wnd, True, GrabModeAsync,
 					      GrabModeAsync, CurrentTime);
+
+				 xwin_mod_update( xevent.xcrossing.state, ev_time );
 				break;
 
 			case LeaveNotify:
@@ -469,16 +506,23 @@ xwin_process_events()
 
 			case Expose:
 				XCopyArea(display, backstore, wnd, gc,
-					  xkbevent.core.xexpose.x, xkbevent.core.xexpose.y,
-					  xkbevent.core.xexpose.width, xkbevent.core.xexpose.height,
-					  xkbevent.core.xexpose.x, xkbevent.core.xexpose.y);
+					  xevent.xexpose.x, xevent.xexpose.y,
+					  xevent.xexpose.width, xevent.xexpose.height,
+					  xevent.xexpose.x, xevent.xexpose.y);
 				break;
 		}
 	}
 }
 
 void
-xwin_release_modifiers(XKeyEvent* ev, uint32 ev_time, uint32 scancode)
+xwin_mod_update(uint32 state, uint32 ev_time )
+{
+	xwin_mod_press(state, ev_time, 0);
+	xwin_mod_release(state, ev_time, 0);
+}
+
+void
+xwin_mod_release(uint32 state, uint32 ev_time, uint32 scancode)
 {
 	switch (scancode) {
 	case 0x2a:
@@ -501,28 +545,44 @@ xwin_release_modifiers(XKeyEvent* ev, uint32 ev_time, uint32 scancode)
 		break;
 	}
 
-	if( !(ShiftMask & ev->state) && (key_down_state & DShift1Mask))
+	if( !(numlock_modifier_mask & state) && (key_down_state & DNumLockMask) )
+	{
+		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, 0, 0x45, 0);
+		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, KBD_FLAG_DOWN | KBD_FLAG_UP, 0x45, 0);
+		key_down_state &= ~DNumLockMask;
+	}
+
+	if( !(LockMask & state) && (key_down_state & DLockMask))
+	{
+		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, 0, 0x3a, 0);
+		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, KBD_FLAG_DOWN | KBD_FLAG_UP, 0x3a, 0);
+		key_down_state &= ~DLockMask;
+
+	}
+
+
+	if( !(ShiftMask & state) && (key_down_state & DShift1Mask))
 	{
 		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, KBD_FLAG_UP, 0x2a, 0);
 		key_down_state &= ~DShift1Mask;
 
 	}
 
-	if( !(ControlMask & ev->state) && (key_down_state & DControl1Mask))
+	if( !(ControlMask & state) && (key_down_state & DControl1Mask))
 	{
 		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, KBD_FLAG_UP, 0x1d, 0);
 		key_down_state &= ~DControl1Mask;
 
 	}
-	
-	if( !(Mod1Mask & ev->state) && (key_down_state & DMod1Mask))
+
+	if( !(Mod1Mask & state) && (key_down_state & DMod1Mask))
 	{
 		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, KBD_FLAG_UP, 0x38, 0);
 		key_down_state &= ~DMod1Mask;
 
 	}
-	
-	if( !(Mod2Mask & ev->state) && (key_down_state & DMod2Mask))
+
+	if( !(Mod2Mask & state) && (key_down_state & DMod2Mask))
 	{
 		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, KBD_FLAG_UP, 0xb8, 0);
 		key_down_state &= ~DMod2Mask;
@@ -531,9 +591,8 @@ xwin_release_modifiers(XKeyEvent* ev, uint32 ev_time, uint32 scancode)
 
 
 void
-xwin_press_modifiers(XKeyEvent* ev, uint32 ev_time, uint32 scancode)
+xwin_mod_press(uint32 state, uint32 ev_time, uint32 scancode)
 {
-	key_modifier_state = ev->state;
 
 	switch (scancode) {
 	case 0x2a:
@@ -548,6 +607,12 @@ xwin_press_modifiers(XKeyEvent* ev, uint32 ev_time, uint32 scancode)
 	case 0x9d:
 		key_down_state |= DControl2Mask;
 		break;
+	case 0x3a:
+		key_down_state ^= DLockMask;
+		break;
+	case 0x45:
+		key_down_state ^= DNumLockMask;
+		break;
 	case 0x38:
 		key_down_state |= DMod1Mask;
 		break;
@@ -556,28 +621,44 @@ xwin_press_modifiers(XKeyEvent* ev, uint32 ev_time, uint32 scancode)
 		break;
 	}
 
-	if( (ShiftMask & ev->state) && !((key_down_state & DShift1Mask) || (key_down_state & DShift2Mask)))
+	if( (numlock_modifier_mask && state) && !(key_down_state & DNumLockMask) )
+	{
+		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, 0, 0x45, 0);
+		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, KBD_FLAG_DOWN | KBD_FLAG_UP, 0x45, 0);
+		key_down_state |= DNumLockMask;
+	}
+
+	if( (LockMask & state) && !(key_down_state & DLockMask))
+	{
+		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, 0, 0x3a, 0);
+		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, KBD_FLAG_DOWN | KBD_FLAG_UP, 0x3a, 0);
+		key_down_state |= DLockMask;
+
+	}
+
+
+	if( (ShiftMask & state) && !((key_down_state & DShift1Mask) || (key_down_state & DShift2Mask)))
 	{
 		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, KBD_FLAG_DOWN, 0x2a, 0);
 		key_down_state |= DShift1Mask;
 
 	}
 
-	if( (ControlMask & ev->state) && !((key_down_state & DControl1Mask) || (key_down_state & DControl2Mask)))
+	if( (ControlMask & state) && !((key_down_state & DControl1Mask) || (key_down_state & DControl2Mask)))
 	{
 		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, KBD_FLAG_DOWN, 0x1d, 0);
 		key_down_state |= DControl1Mask;
 
 	}
 
-	if( (Mod1Mask & ev->state) && !(key_down_state & DMod1Mask))
+	if( (Mod1Mask & state) && !(key_down_state & DMod1Mask))
 	{
 		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, KBD_FLAG_DOWN, 0x38, 0);
 		key_down_state |= DMod1Mask;
 
 	}
 
-	if( (Mod2Mask & ev->state) && !(key_down_state & DMod2Mask))
+	if( (Mod2Mask & state) && !(key_down_state & DMod2Mask))
 	{
 		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, KBD_FLAG_DOWN, 0xb8, 0);
 		key_down_state |= DMod2Mask;
