@@ -169,9 +169,9 @@ static PixelColour
 split_colour15(uint32 colour)
 {
 	PixelColour rv;
-	rv.red =   (colour & 0x7c00) >> 7;
+	rv.red = (colour & 0x7c00) >> 7;
 	rv.green = (colour & 0x03e0) >> 2;
-	rv.blue =  (colour & 0x001f) << 3;
+	rv.blue = (colour & 0x001f) << 3;
 	return rv;
 }
 
@@ -179,9 +179,9 @@ static PixelColour
 split_colour16(uint32 colour)
 {
 	PixelColour rv;
-	rv.red =   (colour & 0xf800) >> 8;
+	rv.red = (colour & 0xf800) >> 8;
 	rv.green = (colour & 0x07e0) >> 3;
-	rv.blue =  (colour & 0x001f) << 3;
+	rv.blue = (colour & 0x001f) << 3;
 	return rv;
 }
 
@@ -189,9 +189,9 @@ static PixelColour
 split_colour24(uint32 colour)
 {
 	PixelColour rv;
-	rv.blue =  (colour & 0xff0000) >> 16;
+	rv.blue = (colour & 0xff0000) >> 16;
 	rv.green = (colour & 0x00ff00) >> 8;
-	rv.red =   (colour & 0x0000ff);
+	rv.red = (colour & 0x0000ff);
 	return rv;
 }
 
