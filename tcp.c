@@ -148,7 +148,7 @@ tcp_connect(char *server)
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 
-	if (getaddrinfo(server, tcp_port_rdp_s, &hints, &res))
+	if ((n = getaddrinfo(server, tcp_port_rdp_s, &hints, &res)))
 	{
 		error("getaddrinfo: %s\n", gai_strerror(n));
 		return False;
