@@ -89,8 +89,7 @@ ber_out_integer(STREAM s, int value)
 
 /* Output a DOMAIN_PARAMS structure (ASN.1 BER) */
 static void
-mcs_out_domain_params(STREAM s, int max_channels, int max_users,
-		      int max_tokens, int max_pdusize)
+mcs_out_domain_params(STREAM s, int max_channels, int max_users, int max_tokens, int max_pdusize)
 {
 	ber_out_header(s, MCS_TAG_DOMAIN_PARAMS, 32);
 	ber_out_integer(s, max_channels);

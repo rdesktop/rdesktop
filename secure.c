@@ -127,10 +127,8 @@ sec_generate_keys(uint8 * client_key, uint8 * server_key, int rc4_key_size)
 	memcpy(sec_sign_key, session_key, 16);
 
 	/* Generate RC4 keys */
-	sec_hash_16(sec_decrypt_key, &session_key[16], client_key,
-		    server_key);
-	sec_hash_16(sec_encrypt_key, &session_key[32], client_key,
-		    server_key);
+	sec_hash_16(sec_decrypt_key, &session_key[16], client_key, server_key);
+	sec_hash_16(sec_encrypt_key, &session_key[32], client_key, server_key);
 
 	if (rc4_key_size == 1)
 	{
@@ -181,8 +179,7 @@ buf_out_uint32(uint8 * buffer, uint32 value)
 
 /* Generate a signature hash, using a combination of SHA1 and MD5 */
 void
-sec_sign(uint8 * signature, int siglen, uint8 * session_key, int keylen,
-	 uint8 * data, int datalen)
+sec_sign(uint8 * signature, int siglen, uint8 * session_key, int keylen, uint8 * data, int datalen)
 {
 	uint8 shasig[20];
 	uint8 md5sig[16];
@@ -286,8 +283,7 @@ reverse(uint8 * p, int len)
 
 /* Perform an RSA public key encryption operation */
 static void
-sec_rsa_encrypt(uint8 * out, uint8 * in, int len,
-		uint8 * modulus, uint8 * exponent)
+sec_rsa_encrypt(uint8 * out, uint8 * in, int len, uint8 * modulus, uint8 * exponent)
 {
 	BN_CTX ctx;
 	BIGNUM mod, exp, x, y;
@@ -358,8 +354,7 @@ sec_send(STREAM s, uint32 flags)
 		hexdump(s->p + 8, datalen);
 #endif
 
-		sec_sign(s->p, 8, sec_sign_key, rc4_key_len, s->p + 8,
-			 datalen);
+		sec_sign(s->p, 8, sec_sign_key, rc4_key_len, s->p + 8, datalen);
 		sec_encrypt(s->p + 8, datalen);
 	}
 
@@ -468,8 +463,7 @@ sec_parse_public_key(STREAM s, uint8 ** modulus, uint8 ** exponent)
 /* Parse a crypto information structure */
 static BOOL
 sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
-		     uint8 ** server_random, uint8 ** modulus,
-		     uint8 ** exponent)
+		     uint8 ** server_random, uint8 ** modulus, uint8 ** exponent)
 {
 	uint32 crypt_level, random_len, rsa_info_len;
 	uint16 tag, length;
@@ -505,8 +499,7 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 		switch (tag)
 		{
 			case SEC_TAG_PUBKEY:
-				if (!sec_parse_public_key
-				    (s, modulus, exponent))
+				if (!sec_parse_public_key(s, modulus, exponent))
 					return False;
 
 				break;
@@ -534,14 +527,12 @@ sec_process_crypt_info(STREAM s)
 	uint8 client_random[SEC_RANDOM_SIZE];
 	uint32 rc4_key_size;
 
-	if (!sec_parse_crypt_info(s, &rc4_key_size, &server_random,
-				  &modulus, &exponent))
+	if (!sec_parse_crypt_info(s, &rc4_key_size, &server_random, &modulus, &exponent))
 		return;
 
 	/* Generate a client random, and hence determine encryption keys */
 	generate_random(client_random);
-	sec_rsa_encrypt(sec_crypted_random, client_random,
-			SEC_RANDOM_SIZE, modulus, exponent);
+	sec_rsa_encrypt(sec_crypted_random, client_random, SEC_RANDOM_SIZE, modulus, exponent);
 	sec_generate_keys(client_random, server_random, rc4_key_size);
 }
 

@@ -1,3 +1,2 @@
 #!/bin/sh
-indent -bli0 -i8 -cli8 -npcs *.h *.c
-
+indent -bli0 -i8 -cli8 -npcs -l100 *.h *.c

@@ -217,8 +217,7 @@ init_inputmethod(void)
 	   It seems to work alright anyway, though. */
 	if (IC != NULL)
 	{
-		if (XGetICValues(IC, XNFilterEvents, &filtered_events, NULL)
-		    != NULL)
+		if (XGetICValues(IC, XNFilterEvents, &filtered_events, NULL) != NULL)
 		{
 			error("Failed to obtain XNFilterEvents value from IC\n");
 			filtered_events = 0;
@@ -251,7 +250,7 @@ ui_init()
 		error("Failed to open display\n");
 		return False;
 	}
-	if(fullscreen)
+	if (fullscreen)
 	{
 		screen = DefaultScreenOfDisplay(display);
 		width = WidthOfScreen(screen);
@@ -284,8 +283,7 @@ ui_create_window(char *title)
 		   desirable, e.g. 24 bits->32 bits. */
 		while (i--)
 		{
-			if ((pfm[i].depth == depth)
-			    && (pfm[i].bits_per_pixel > bpp))
+			if ((pfm[i].depth == depth) && (pfm[i].bits_per_pixel > bpp))
 			{
 				bpp = pfm[i].bits_per_pixel;
 			}
@@ -332,8 +330,7 @@ ui_create_window(char *title)
 	wnd = XCreateWindow(display, RootWindowOfScreen(screen),
 			    0, 0, width, height, 0, CopyFromParent,
 			    InputOutput, CopyFromParent,
-			    CWBackingStore | CWBackPixel | CWOverrideRedirect,
-			    &attribs);
+			    CWBackingStore | CWBackPixel | CWOverrideRedirect, &attribs);
 
 	XStoreName(display, wnd, title);
 
@@ -357,9 +354,7 @@ ui_create_window(char *title)
 
 	xkeymap_init2();
 
-	input_mask =
-		KeyPressMask | KeyReleaseMask | ButtonPressMask |
-		ButtonReleaseMask;
+	input_mask = KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask;
 	if (grab_keyboard)
 		input_mask |= EnterWindowMask | LeaveWindowMask;
 	if (sendmotion)
@@ -439,31 +434,24 @@ xwin_process_events()
 				{
 					XmbLookupString(IC,
 							(XKeyPressedEvent *) &
-							xevent, str,
-							sizeof(str), &keysym,
-							&status);
-					if (!
-					    ((status == XLookupKeySym)
-					     || (status == XLookupBoth)))
+							xevent, str, sizeof(str), &keysym, &status);
+					if (!((status == XLookupKeySym) || (status == XLookupBoth)))
 					{
-						error("XmbLookupString failed with status 0x%x\n", status);
+						error("XmbLookupString failed with status 0x%x\n",
+						      status);
 						break;
 					}
 				}
 				else
 				{
 					/* Plain old XLookupString */
-					DEBUG_KBD
-						("No input context, using XLookupString\n");
+					DEBUG_KBD("No input context, using XLookupString\n");
 					XLookupString((XKeyEvent *) & xevent,
-						      str, sizeof(str),
-						      &keysym, NULL);
+						      str, sizeof(str), &keysym, NULL);
 				}
 
 				ksname = get_ksname(keysym);
-				DEBUG_KBD
-					("\nKeyPress for (keysym 0x%lx, %s)\n",
-					 keysym, ksname);
+				DEBUG_KBD("\nKeyPress for (keysym 0x%lx, %s)\n", keysym, ksname);
 
 				if (inhibit_key(keysym))
 				{
@@ -472,40 +460,32 @@ xwin_process_events()
 				}
 
 				tr = xkeymap_translate_key(keysym,
-							   xevent.xkey.
-							   keycode,
-							   xevent.xkey.state);
+							   xevent.xkey.keycode, xevent.xkey.state);
 
 				ensure_remote_modifiers(ev_time, tr);
 
 				if (tr.scancode == 0)
 					break;
 
-				rdp_send_scancode(ev_time, RDP_KEYPRESS,
-						  tr.scancode);
+				rdp_send_scancode(ev_time, RDP_KEYPRESS, tr.scancode);
 				break;
 			case KeyRelease:
 				XLookupString((XKeyEvent *) & xevent, str,
 					      sizeof(str), &keysym, NULL);
 
 				ksname = get_ksname(keysym);
-				DEBUG_KBD
-					("\nKeyRelease for (keysym 0x%lx, %s)\n",
-					 keysym, ksname);
+				DEBUG_KBD("\nKeyRelease for (keysym 0x%lx, %s)\n", keysym, ksname);
 
 				if (inhibit_key(keysym))
 					break;
 
 				tr = xkeymap_translate_key(keysym,
-							   xevent.xkey.
-							   keycode,
-							   xevent.xkey.state);
+							   xevent.xkey.keycode, xevent.xkey.state);
 
 				if (tr.scancode == 0)
 					break;
 
-				rdp_send_scancode(ev_time, RDP_KEYRELEASE,
-						  tr.scancode);
+				rdp_send_scancode(ev_time, RDP_KEYRELEASE, tr.scancode);
 				break;
 
 			case ButtonPress:
@@ -513,23 +493,17 @@ xwin_process_events()
 				/* fall through */
 
 			case ButtonRelease:
-				button = xkeymap_translate_button(xevent.
-								  xbutton.
-								  button);
+				button = xkeymap_translate_button(xevent.xbutton.button);
 				if (button == 0)
 					break;
 
 				rdp_send_input(ev_time, RDP_INPUT_MOUSE,
-					       flags | button,
-					       xevent.xbutton.x,
-					       xevent.xbutton.y);
+					       flags | button, xevent.xbutton.x, xevent.xbutton.y);
 				break;
 
 			case MotionNotify:
 				rdp_send_input(ev_time, RDP_INPUT_MOUSE,
-					       MOUSE_FLAG_MOVE,
-					       xevent.xmotion.x,
-					       xevent.xmotion.y);
+					       MOUSE_FLAG_MOVE, xevent.xmotion.x, xevent.xmotion.y);
 				break;
 
 			case FocusIn:
@@ -537,19 +511,15 @@ xwin_process_events()
 			case EnterNotify:
 				if (grab_keyboard)
 					XGrabKeyboard(display, wnd, True,
-						      GrabModeAsync,
-						      GrabModeAsync,
-						      CurrentTime);
+						      GrabModeAsync, GrabModeAsync, CurrentTime);
 				break;
 
 			case FocusOut:
 				/* reset keys */
 				rdp_send_input(ev_time, RDP_INPUT_SCANCODE,
-					       KBD_FLAG_DOWN | KBD_FLAG_UP,
-					       SCANCODE_CHAR_LCTRL, 0);
+					       KBD_FLAG_DOWN | KBD_FLAG_UP, SCANCODE_CHAR_LCTRL, 0);
 				rdp_send_input(ev_time, RDP_INPUT_SCANCODE,
-					       KBD_FLAG_DOWN | KBD_FLAG_UP,
-					       SCANCODE_CHAR_LALT, 0);
+					       KBD_FLAG_DOWN | KBD_FLAG_UP, SCANCODE_CHAR_LALT, 0);
 				/* fall through */
 			case LeaveNotify:
 				if (grab_keyboard)
@@ -629,8 +599,7 @@ ui_create_bitmap(int width, int height, uint8 * data)
 }
 
 void
-ui_paint_bitmap(int x, int y, int cx, int cy, int width, int height,
-		uint8 * data)
+ui_paint_bitmap(int x, int y, int cx, int cy, int width, int height, uint8 * data)
 {
 	XImage *image;
 	uint8 *tdata;
@@ -914,8 +883,7 @@ ui_patblt(uint8 opcode,
 			SET_BACKGROUND(fgcolour);
 			XSetFillStyle(display, gc, FillOpaqueStippled);
 			XSetStipple(display, gc, fill);
-			XSetTSOrigin(display, gc, brush->xorigin,
-				     brush->yorigin);
+			XSetTSOrigin(display, gc, brush->xorigin, brush->yorigin);
 
 			FILL_RECTANGLE(x, y, cx, cy);
 
@@ -939,8 +907,7 @@ ui_screenblt(uint8 opcode,
 	SET_FUNCTION(opcode);
 	XCopyArea(display, wnd, wnd, gc, srcx, srcy, cx, cy, x, y);
 	if (ownbackstore)
-		XCopyArea(display, backstore, backstore, gc, srcx, srcy, cx,
-			  cy, x, y);
+		XCopyArea(display, backstore, backstore, gc, srcx, srcy, cx, cy, x, y);
 	RESET_FUNCTION(opcode);
 }
 
@@ -952,8 +919,7 @@ ui_memblt(uint8 opcode,
 	SET_FUNCTION(opcode);
 	XCopyArea(display, (Pixmap) src, wnd, gc, srcx, srcy, cx, cy, x, y);
 	if (ownbackstore)
-		XCopyArea(display, (Pixmap) src, backstore, gc, srcx, srcy,
-			  cx, cy, x, y);
+		XCopyArea(display, (Pixmap) src, backstore, gc, srcx, srcy, cx, cy, x, y);
 	RESET_FUNCTION(opcode);
 }
 
@@ -970,22 +936,18 @@ ui_triblt(uint8 opcode,
 	{
 		case 0x69:	/* PDSxxn */
 			ui_memblt(ROP2_XOR, x, y, cx, cy, src, srcx, srcy);
-			ui_patblt(ROP2_NXOR, x, y, cx, cy, brush, bgcolour,
-				  fgcolour);
+			ui_patblt(ROP2_NXOR, x, y, cx, cy, brush, bgcolour, fgcolour);
 			break;
 
 		case 0xb8:	/* PSDPxax */
-			ui_patblt(ROP2_XOR, x, y, cx, cy, brush, bgcolour,
-				  fgcolour);
+			ui_patblt(ROP2_XOR, x, y, cx, cy, brush, bgcolour, fgcolour);
 			ui_memblt(ROP2_AND, x, y, cx, cy, src, srcx, srcy);
-			ui_patblt(ROP2_XOR, x, y, cx, cy, brush, bgcolour,
-				  fgcolour);
+			ui_patblt(ROP2_XOR, x, y, cx, cy, brush, bgcolour, fgcolour);
 			break;
 
 		case 0xc0:	/* PSa */
 			ui_memblt(ROP2_COPY, x, y, cx, cy, src, srcx, srcy);
-			ui_patblt(ROP2_AND, x, y, cx, cy, brush, bgcolour,
-				  fgcolour);
+			ui_patblt(ROP2_AND, x, y, cx, cy, brush, bgcolour, fgcolour);
 			break;
 
 		default:
@@ -1026,8 +988,7 @@ ui_draw_glyph(int mixmode,
 	SET_BACKGROUND(bgcolour);
 
 	XSetFillStyle(display, gc,
-		      (mixmode ==
-		       MIX_TRANSPARENT) ? FillStippled : FillOpaqueStippled);
+		      (mixmode == MIX_TRANSPARENT) ? FillStippled : FillOpaqueStippled);
 	XSetStipple(display, gc, (Pixmap) glyph);
 	XSetTSOrigin(display, gc, x, y);
 
@@ -1097,8 +1058,7 @@ ui_draw_text(uint8 font, uint8 flags, int mixmode, int x, int y,
 		{
 			case 0xff:
 				if (i + 2 < length)
-					cache_put_text(text[i + 1], text,
-						       text[i + 2]);
+					cache_put_text(text[i + 1], text, text[i + 2]);
 				else
 				{
 					error("this shouldn't be happening\n");
@@ -1115,8 +1075,7 @@ ui_draw_text(uint8 font, uint8 flags, int mixmode, int x, int y,
 				if (entry != NULL)
 				{
 					if ((((uint8 *) (entry->data))[1] ==
-					     0)
-					    && (!(flags & TEXT2_IMPLICIT_X)))
+					     0) && (!(flags & TEXT2_IMPLICIT_X)))
 					{
 						if (flags & TEXT2_VERTICAL)
 							y += text[i + 2];
@@ -1132,9 +1091,7 @@ ui_draw_text(uint8 font, uint8 flags, int mixmode, int x, int y,
 					text = &(text[i]);
 					i = 0;
 					for (j = 0; j < entry->size; j++)
-						DO_GLYPH(((uint8 *) (entry->
-								     data)),
-							 j);
+						DO_GLYPH(((uint8 *) (entry->data)), j);
 				}
 				break;
 
@@ -1156,21 +1113,18 @@ ui_desktop_save(uint32 offset, int x, int y, int cx, int cy)
 
 	if (ownbackstore)
 	{
-		image = XGetImage(display, backstore, x, y, cx, cy, AllPlanes,
-				  ZPixmap);
+		image = XGetImage(display, backstore, x, y, cx, cy, AllPlanes, ZPixmap);
 	}
 	else
 	{
 		pix = XCreatePixmap(display, wnd, cx, cy, depth);
 		XCopyArea(display, wnd, pix, gc, x, y, cx, cy, 0, 0);
-		image = XGetImage(display, pix, 0, 0, cx, cy, AllPlanes,
-				  ZPixmap);
+		image = XGetImage(display, pix, 0, 0, cx, cy, AllPlanes, ZPixmap);
 		XFreePixmap(display, pix);
 	}
 
 	offset *= bpp / 8;
-	cache_put_desktop(offset, cx, cy, image->bytes_per_line, bpp / 8,
-			  (uint8 *) image->data);
+	cache_put_desktop(offset, cx, cy, image->bytes_per_line, bpp / 8, (uint8 *) image->data);
 
 	XDestroyImage(image);
 }
@@ -1187,8 +1141,7 @@ ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy)
 		return;
 
 	image = XCreateImage(display, visual, depth, ZPixmap, 0,
-			     (char *) data, cx, cy, BitmapPad(display),
-			     cx * bpp / 8);
+			     (char *) data, cx, cy, BitmapPad(display), cx * bpp / 8);
 
 	if (ownbackstore)
 	{

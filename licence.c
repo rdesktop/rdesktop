@@ -32,8 +32,7 @@ BOOL licence_issued = False;
 
 /* Generate a session key and RC4 keys, given client and server randoms */
 static void
-licence_generate_keys(uint8 * client_key, uint8 * server_key,
-		      uint8 * client_rsa)
+licence_generate_keys(uint8 * client_key, uint8 * server_key, uint8 * client_rsa)
 {
 	uint8 session_key[48];
 	uint8 temp_hash[48];
@@ -59,8 +58,7 @@ licence_generate_hwid(uint8 * hwid)
 /* Present an existing licence to the server */
 static void
 licence_present(uint8 * client_random, uint8 * rsa_data,
-		uint8 * licence_data, int licence_size,
-		uint8 * hwid, uint8 * signature)
+		uint8 * licence_data, int licence_size, uint8 * hwid, uint8 * signature)
 {
 	uint32 sec_flags = SEC_LICENCE_NEG;
 	uint16 length =
@@ -99,8 +97,7 @@ licence_present(uint8 * client_random, uint8 * rsa_data,
 
 /* Send a licence request packet */
 static void
-licence_send_request(uint8 * client_random, uint8 * rsa_data,
-		     char *user, char *host)
+licence_send_request(uint8 * client_random, uint8 * rsa_data, char *user, char *host)
 {
 	uint32 sec_flags = SEC_LICENCE_NEG;
 	uint16 userlen = strlen(user) + 1;
@@ -158,8 +155,7 @@ licence_process_demand(STREAM s)
 	licence_size = load_licence(&licence_data);
 	if (licence_size == -1)
 	{
-		licence_send_request(null_data, null_data, username,
-				     hostname);
+		licence_send_request(null_data, null_data, username, hostname);
 		return;
 	}
 
@@ -171,8 +167,7 @@ licence_process_demand(STREAM s)
 	RC4_set_key(&crypt_key, 16, licence_key);
 	RC4(&crypt_key, sizeof(hwid), hwid, hwid);
 
-	licence_present(null_data, null_data, licence_data, licence_size,
-			hwid, signature);
+	licence_present(null_data, null_data, licence_data, licence_size, hwid, signature);
 	xfree(licence_data);
 }
 
@@ -229,8 +224,7 @@ static void
 licence_process_authreq(STREAM s)
 {
 	uint8 *in_token, *in_sig;
-	uint8 out_token[LICENCE_TOKEN_SIZE],
-		decrypt_token[LICENCE_TOKEN_SIZE];
+	uint8 out_token[LICENCE_TOKEN_SIZE], decrypt_token[LICENCE_TOKEN_SIZE];
 	uint8 hwid[LICENCE_HWID_SIZE], crypt_hwid[LICENCE_HWID_SIZE];
 	uint8 sealed_buffer[LICENCE_TOKEN_SIZE + LICENCE_HWID_SIZE];
 	uint8 out_sig[LICENCE_SIGNATURE_SIZE];
@@ -248,8 +242,7 @@ licence_process_authreq(STREAM s)
 	licence_generate_hwid(hwid);
 	memcpy(sealed_buffer, decrypt_token, LICENCE_TOKEN_SIZE);
 	memcpy(sealed_buffer + LICENCE_TOKEN_SIZE, hwid, LICENCE_HWID_SIZE);
-	sec_sign(out_sig, 16, licence_sign_key, 16,
-		 sealed_buffer, sizeof(sealed_buffer));
+	sec_sign(out_sig, 16, licence_sign_key, 16, sealed_buffer, sizeof(sealed_buffer));
 
 	/* Deliberately break signature if licencing disabled */
 	if (!licence)

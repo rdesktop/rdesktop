@@ -83,8 +83,7 @@ main(int argc, char *argv[])
 	int c;
 
 	printf("rdesktop: A Remote Desktop Protocol client.\n");
-	printf("Version " VERSION
-	       ". Copyright (C) 1999-2001 Matt Chapman.\n");
+	printf("Version " VERSION ". Copyright (C) 1999-2001 Matt Chapman.\n");
 	printf("See http://www.rdesktop.org/ for more information.\n\n");
 
 	flags = RDP_LOGON_NORMAL;
@@ -121,8 +120,7 @@ main(int argc, char *argv[])
 				break;
 
 			case 'k':
-				STRNCPY(keymapname, optarg,
-					sizeof(keymapname));
+				STRNCPY(keymapname, optarg, sizeof(keymapname));
 				break;
 
 			case 'g':
@@ -229,8 +227,8 @@ main(int argc, char *argv[])
 	strncat(title, server, sizeof(title) - sizeof("rdesktop - "));
 
 	xkeymap_init1();
-	if(!ui_init())
-	  return 1;
+	if (!ui_init())
+		return 1;
 
 	if (!rdp_connect(server, flags, domain, password, shell, directory))
 		return 1;
@@ -358,9 +356,7 @@ hexdump(unsigned char *p, unsigned int len)
 			printf("   ");
 
 		for (i = 0; i < thisline; i++)
-			printf("%c",
-			       (line[i] >= 0x20
-				&& line[i] < 0x7f) ? line[i] : '.');
+			printf("%c", (line[i] >= 0x20 && line[i] < 0x7f) ? line[i] : '.');
 
 		printf("\n");
 		offset += thisline;

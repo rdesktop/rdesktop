@@ -155,8 +155,7 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 	int len_password = 2 * strlen(password);
 	int len_program = 2 * strlen(program);
 	int len_directory = 2 * strlen(directory);
-	uint32 sec_flags = encryption ? (SEC_LOGON_INFO | SEC_ENCRYPT)
-		: SEC_LOGON_INFO;
+	uint32 sec_flags = encryption ? (SEC_LOGON_INFO | SEC_ENCRYPT) : SEC_LOGON_INFO;
 	STREAM s;
 
 	s = sec_init(sec_flags, 18 + len_domain + len_user + len_password
@@ -212,8 +211,7 @@ rdp_send_synchronise()
 
 /* Send a single input event */
 void
-rdp_send_input(uint32 time, uint16 message_type, uint16 device_flags,
-	       uint16 param1, uint16 param2)
+rdp_send_input(uint32 time, uint16 message_type, uint16 device_flags, uint16 param1, uint16 param2)
 {
 	STREAM s;
 
@@ -442,8 +440,7 @@ rdp_send_confirm_active()
 		RDP_CAPLEN_GENERAL + RDP_CAPLEN_BITMAP + RDP_CAPLEN_ORDER +
 		RDP_CAPLEN_BMPCACHE + RDP_CAPLEN_COLCACHE +
 		RDP_CAPLEN_ACTIVATE + RDP_CAPLEN_CONTROL +
-		RDP_CAPLEN_POINTER + RDP_CAPLEN_SHARE + RDP_CAPLEN_UNKNOWN
-		+ 4 /* w2k fix, why? */ ;
+		RDP_CAPLEN_POINTER + RDP_CAPLEN_SHARE + RDP_CAPLEN_UNKNOWN + 4 /* w2k fix, why? */ ;
 
 	s = rdp_init(14 + caplen + sizeof(RDP_SOURCE));
 
@@ -526,8 +523,7 @@ process_pointer_pdu(STREAM s)
 			in_uint16_le(s, datalen);
 			in_uint8p(s, data, datalen);
 			in_uint8p(s, mask, masklen);
-			cursor = ui_create_cursor(x, y, width, height, mask,
-						  data);
+			cursor = ui_create_cursor(x, y, width, height, mask, data);
 			ui_set_cursor(cursor);
 			cache_put_cursor(cache_idx, cursor);
 			break;
@@ -578,12 +574,9 @@ process_bitmap_updates(STREAM s)
 			bmpdata = xmalloc(width * height);
 			for (y = 0; y < height; y++)
 			{
-				in_uint8a(s,
-					  &bmpdata[(height - y - 1) * width],
-					  width);
+				in_uint8a(s, &bmpdata[(height - y - 1) * width], width);
 			}
-			ui_paint_bitmap(left, top, cx, cy, width, height,
-					bmpdata);
+			ui_paint_bitmap(left, top, cx, cy, width, height, bmpdata);
 			xfree(bmpdata);
 			continue;
 		}
@@ -596,8 +589,7 @@ process_bitmap_updates(STREAM s)
 		bmpdata = xmalloc(width * height);
 		if (bitmap_decompress(bmpdata, width, height, data, size))
 		{
-			ui_paint_bitmap(left, top, cx, cy, width, height,
-					bmpdata);
+			ui_paint_bitmap(left, top, cx, cy, width, height, bmpdata);
 		}
 
 		xfree(bmpdata);
@@ -722,8 +714,7 @@ rdp_connect(char *server, uint32 flags, char *domain, char *password,
 	if (!sec_connect(server))
 		return False;
 
-	rdp_send_logon_info(flags, domain, username, password,
-			    command, directory);
+	rdp_send_logon_info(flags, domain, username, password, command, directory);
 	return True;
 }
 

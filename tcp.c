@@ -110,8 +110,7 @@ tcp_connect(char *server)
 
 	if ((nslookup = gethostbyname(server)) != NULL)
 	{
-		memcpy(&servaddr.sin_addr, nslookup->h_addr,
-		       sizeof(servaddr.sin_addr));
+		memcpy(&servaddr.sin_addr, nslookup->h_addr, sizeof(servaddr.sin_addr));
 	}
 	else if (!(servaddr.sin_addr.s_addr = inet_addr(server)))
 	{
@@ -128,17 +127,14 @@ tcp_connect(char *server)
 	servaddr.sin_family = AF_INET;
 	servaddr.sin_port = htons(tcp_port_rdp);
 
-	if (connect
-	    (sock, (struct sockaddr *) &servaddr,
-	     sizeof(struct sockaddr)) < 0)
+	if (connect(sock, (struct sockaddr *) &servaddr, sizeof(struct sockaddr)) < 0)
 	{
 		error("connect: %s\n", strerror(errno));
 		close(sock);
 		return False;
 	}
 
-	setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (void *) &true,
-		   sizeof(true));
+	setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (void *) &true, sizeof(true));
 
 	in.size = 4096;
 	in.data = xmalloc(in.size);

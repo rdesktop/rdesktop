@@ -54,8 +54,7 @@ add_to_keymap(char *keyname, uint8 scancode, uint16 modifiers, char *mapname)
 	}
 
 	DEBUG_KBD("Adding translation, keysym=0x%x, scancode=0x%x, "
-		  "modifiers=0x%x\n", (unsigned int) keysym, scancode,
-		  modifiers);
+		  "modifiers=0x%x\n", (unsigned int) keysym, scancode, modifiers);
 
 	keymap[keysym & KEYMAP_MASK].scancode = scancode;
 	keymap[keysym & KEYMAP_MASK].modifiers = modifiers;
@@ -140,8 +139,7 @@ xkeymap_read(char *mapname)
 		p = strchr(line, ' ');
 		if (p == NULL)
 		{
-			error("Bad line %d in keymap %s\n", line_num,
-			      mapname);
+			error("Bad line %d in keymap %s\n", line_num, mapname);
 			continue;
 		}
 		else
@@ -249,8 +247,7 @@ xkeymap_translate_key(KeySym keysym, unsigned int keycode, unsigned int state)
 		return tr;
 	}
 
-	printf("No translation for (keysym 0x%lx, %s)\n", keysym,
-	       get_ksname(keysym));
+	printf("No translation for (keysym 0x%lx, %s)\n", keysym, get_ksname(keysym));
 
 	/* not in keymap, try to interpret the raw scancode */
 	if ((keycode >= min_keycode) && (keycode <= 0x60))
@@ -344,14 +341,12 @@ ensure_remote_modifiers(uint32 ev_time, key_translation tr)
 		if (MASK_HAS_BITS(tr.modifiers, MapShiftMask))
 		{
 			/* Needs this modifier. Send down. */
-			rdp_send_scancode(ev_time, RDP_KEYPRESS,
-					  SCANCODE_CHAR_LSHIFT);
+			rdp_send_scancode(ev_time, RDP_KEYPRESS, SCANCODE_CHAR_LSHIFT);
 		}
 		else
 		{
 			/* Should not use this modifier. Send up. */
-			rdp_send_scancode(ev_time, RDP_KEYRELEASE,
-					  SCANCODE_CHAR_LSHIFT);
+			rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_LSHIFT);
 		}
 	}
 
@@ -363,14 +358,12 @@ ensure_remote_modifiers(uint32 ev_time, key_translation tr)
 		if (MASK_HAS_BITS(tr.modifiers, MapAltGrMask))
 		{
 			/* Needs this modifier. Send down. */
-			rdp_send_scancode(ev_time, RDP_KEYPRESS,
-					  SCANCODE_CHAR_RALT);
+			rdp_send_scancode(ev_time, RDP_KEYPRESS, SCANCODE_CHAR_RALT);
 		}
 		else
 		{
 			/* Should not use this modifier. Send up. */
-			rdp_send_scancode(ev_time, RDP_KEYRELEASE,
-					  SCANCODE_CHAR_RALT);
+			rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_RALT);
 		}
 	}
 
@@ -383,18 +376,14 @@ ensure_remote_modifiers(uint32 ev_time, key_translation tr)
 		if (MASK_HAS_BITS(tr.modifiers, MapNumLockMask))
 		{
 			/* Needs this modifier. Toggle */
-			rdp_send_scancode(ev_time, RDP_KEYPRESS,
-					  SCANCODE_CHAR_NUMLOCK);
-			rdp_send_scancode(ev_time, RDP_KEYRELEASE,
-					  SCANCODE_CHAR_NUMLOCK);
+			rdp_send_scancode(ev_time, RDP_KEYPRESS, SCANCODE_CHAR_NUMLOCK);
+			rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_NUMLOCK);
 		}
 		else
 		{
 			/* Should not use this modifier. Toggle */
-			rdp_send_scancode(ev_time, RDP_KEYPRESS,
-					  SCANCODE_CHAR_NUMLOCK);
-			rdp_send_scancode(ev_time, RDP_KEYRELEASE,
-					  SCANCODE_CHAR_NUMLOCK);
+			rdp_send_scancode(ev_time, RDP_KEYPRESS, SCANCODE_CHAR_NUMLOCK);
+			rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_NUMLOCK);
 		}
 	}
 
@@ -410,36 +399,28 @@ update_modifier_state(uint16 modifiers, BOOL pressed)
 	switch (modifiers)
 	{
 		case SCANCODE_CHAR_LSHIFT:
-			MASK_CHANGE_BIT(remote_modifier_state,
-					MapLeftShiftMask, pressed);
+			MASK_CHANGE_BIT(remote_modifier_state, MapLeftShiftMask, pressed);
 			break;
 		case SCANCODE_CHAR_RSHIFT:
-			MASK_CHANGE_BIT(remote_modifier_state,
-					MapRightShiftMask, pressed);
+			MASK_CHANGE_BIT(remote_modifier_state, MapRightShiftMask, pressed);
 			break;
 		case SCANCODE_CHAR_LCTRL:
-			MASK_CHANGE_BIT(remote_modifier_state,
-					MapLeftCtrlMask, pressed);
+			MASK_CHANGE_BIT(remote_modifier_state, MapLeftCtrlMask, pressed);
 			break;
 		case SCANCODE_CHAR_RCTRL:
-			MASK_CHANGE_BIT(remote_modifier_state,
-					MapRightCtrlMask, pressed);
+			MASK_CHANGE_BIT(remote_modifier_state, MapRightCtrlMask, pressed);
 			break;
 		case SCANCODE_CHAR_LALT:
-			MASK_CHANGE_BIT(remote_modifier_state, MapLeftAltMask,
-					pressed);
+			MASK_CHANGE_BIT(remote_modifier_state, MapLeftAltMask, pressed);
 			break;
 		case SCANCODE_CHAR_RALT:
-			MASK_CHANGE_BIT(remote_modifier_state,
-					MapRightAltMask, pressed);
+			MASK_CHANGE_BIT(remote_modifier_state, MapRightAltMask, pressed);
 			break;
 		case SCANCODE_CHAR_LWIN:
-			MASK_CHANGE_BIT(remote_modifier_state, MapLeftWinMask,
-					pressed);
+			MASK_CHANGE_BIT(remote_modifier_state, MapLeftWinMask, pressed);
 			break;
 		case SCANCODE_CHAR_RWIN:
-			MASK_CHANGE_BIT(remote_modifier_state,
-					MapRightWinMask, pressed);
+			MASK_CHANGE_BIT(remote_modifier_state, MapRightWinMask, pressed);
 			break;
 		case SCANCODE_CHAR_NUMLOCK:
 			/* KeyReleases for NumLocks are sent immediately. Toggle the
@@ -449,16 +430,13 @@ update_modifier_state(uint16 modifiers, BOOL pressed)
 				BOOL newNumLockState;
 				newNumLockState =
 					(MASK_HAS_BITS
-					 (remote_modifier_state,
-					  MapNumLockMask) == False);
+					 (remote_modifier_state, MapNumLockMask) == False);
 				MASK_CHANGE_BIT(remote_modifier_state,
-						MapNumLockMask,
-						newNumLockState);
+						MapNumLockMask, newNumLockState);
 			}
 			break;
 	}
-	DEBUG_KBD("After updating modifier_state:0x%x\n",
-		  remote_modifier_state);
+	DEBUG_KBD("After updating modifier_state:0x%x\n", remote_modifier_state);
 
 }
 
@@ -477,8 +455,7 @@ rdp_send_scancode(uint32 time, uint16 flags, uint16 scancode)
 	}
 	else
 	{
-		DEBUG_KBD("Sending scancode=0x%x, flags=0x%x\n", scancode,
-			  flags);
+		DEBUG_KBD("Sending scancode=0x%x, flags=0x%x\n", scancode, flags);
 		rdp_send_input(time, RDP_INPUT_SCANCODE, flags, scancode, 0);
 	}
 }

@@ -6,8 +6,7 @@ HBITMAP cache_get_bitmap(uint8 cache_id, uint16 cache_idx);
 void cache_put_bitmap(uint8 cache_id, uint16 cache_idx, HBITMAP bitmap);
 FONTGLYPH *cache_get_font(uint8 font, uint16 character);
 void cache_put_font(uint8 font, uint16 character, uint16 offset,
-		    uint16 baseline, uint16 width, uint16 height,
-		    HGLYPH pixmap);
+		    uint16 baseline, uint16 width, uint16 height, HGLYPH pixmap);
 DATABLOB *cache_get_text(uint8 cache_id);
 void cache_put_text(uint8 cache_id, void *data, int length);
 uint8 *cache_get_desktop(uint32 offset, int cx, int cy, int bytes_per_pixel);
@@ -52,8 +51,7 @@ BOOL rdp_connect(char *server, uint32 flags, char *domain, char *password,
 		 char *command, char *directory);
 void rdp_disconnect(void);
 /* secure.c */
-void sec_hash_48(uint8 * out, uint8 * in, uint8 * salt1, uint8 * salt2,
-		 uint8 salt);
+void sec_hash_48(uint8 * out, uint8 * in, uint8 * salt1, uint8 * salt2, uint8 salt);
 void sec_hash_16(uint8 * out, uint8 * in, uint8 * salt1, uint8 * salt2);
 void buf_out_uint32(uint8 * buffer, uint32 value);
 void sec_sign(uint8 * signature, int siglen, uint8 * session_key, int keylen,
@@ -72,8 +70,7 @@ void tcp_disconnect(void);
 /* xkeymap.c */
 void xkeymap_init1(void);
 void xkeymap_init2(void);
-key_translation xkeymap_translate_key(KeySym keysym, unsigned int keycode,
-				      unsigned int state);
+key_translation xkeymap_translate_key(KeySym keysym, unsigned int keycode, unsigned int state);
 uint16 xkeymap_translate_button(unsigned int button);
 char *get_ksname(KeySym keysym);
 BOOL inhibit_key(KeySym keysym);
@@ -85,8 +82,7 @@ void ui_destroy_window(void);
 void ui_select(int rdp_socket);
 void ui_move_pointer(int x, int y);
 HBITMAP ui_create_bitmap(int width, int height, uint8 * data);
-void ui_paint_bitmap(int x, int y, int cx, int cy, int width, int height,
-		     uint8 * data);
+void ui_paint_bitmap(int x, int y, int cx, int cy, int width, int height, uint8 * data);
 void ui_destroy_bitmap(HBITMAP bmp);
 HGLYPH ui_create_glyph(int width, int height, uint8 * data);
 void ui_destroy_glyph(HGLYPH glyph);
@@ -103,14 +99,11 @@ void ui_bell(void);
 void ui_destblt(uint8 opcode, int x, int y, int cx, int cy);
 void ui_patblt(uint8 opcode, int x, int y, int cx, int cy, BRUSH * brush,
 	       int bgcolour, int fgcolour);
-void ui_screenblt(uint8 opcode, int x, int y, int cx, int cy, int srcx,
-		  int srcy);
-void ui_memblt(uint8 opcode, int x, int y, int cx, int cy, HBITMAP src,
-	       int srcx, int srcy);
+void ui_screenblt(uint8 opcode, int x, int y, int cx, int cy, int srcx, int srcy);
+void ui_memblt(uint8 opcode, int x, int y, int cx, int cy, HBITMAP src, int srcx, int srcy);
 void ui_triblt(uint8 opcode, int x, int y, int cx, int cy, HBITMAP src,
 	       int srcx, int srcy, BRUSH * brush, int bgcolour, int fgcolour);
-void ui_line(uint8 opcode, int startx, int starty, int endx, int endy,
-	     PEN * pen);
+void ui_line(uint8 opcode, int startx, int starty, int endx, int endy, PEN * pen);
 void ui_rect(int x, int y, int cx, int cy, int colour);
 void ui_draw_glyph(int mixmode, int x, int y, int cx, int cy, HGLYPH glyph,
 		   int srcx, int srcy, int bgcolour, int fgcolour);

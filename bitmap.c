@@ -43,8 +43,7 @@
 }
 
 BOOL
-bitmap_decompress(unsigned char *output, int width, int height,
-		  unsigned char *input, int size)
+bitmap_decompress(unsigned char *output, int width, int height, unsigned char *input, int size)
 {
 	unsigned char *end = input + size;
 	unsigned char *prevline = NULL, *line = NULL;
@@ -114,8 +113,7 @@ bitmap_decompress(unsigned char *output, int width, int height,
 		switch (opcode)
 		{
 			case 0:	/* Fill */
-				if ((lastopcode == opcode)
-				    && !((x == width) && (prevline == NULL)))
+				if ((lastopcode == opcode) && !((x == width) && (prevline == NULL)))
 					insertmix = True;
 				break;
 			case 8:	/* Bicolour */
@@ -167,9 +165,7 @@ bitmap_decompress(unsigned char *output, int width, int height,
 						if (prevline == NULL)
 							line[x] = mix;
 						else
-							line[x] =
-								prevline[x] ^
-								mix;
+							line[x] = prevline[x] ^ mix;
 
 						insertmix = False;
 						count--;
@@ -193,8 +189,7 @@ bitmap_decompress(unsigned char *output, int width, int height,
 					}
 					else
 					{
-						REPEAT(line[x] =
-						       prevline[x] ^ mix);
+						REPEAT(line[x] = prevline[x] ^ mix);
 					}
 					break;
 
@@ -202,8 +197,7 @@ bitmap_decompress(unsigned char *output, int width, int height,
 					if (prevline == NULL)
 					{
 						REPEAT(MASK_UPDATE();
-						       if (mask & mixmask)
-						       line[x] = mix;
+						       if (mask & mixmask) line[x] = mix;
 						       else
 						       line[x] = 0;);
 					}
@@ -211,11 +205,9 @@ bitmap_decompress(unsigned char *output, int width, int height,
 					{
 						REPEAT(MASK_UPDATE();
 						       if (mask & mixmask)
-						       line[x] =
-						       prevline[x] ^ mix;
+						       line[x] = prevline[x] ^ mix;
 						       else
-						       line[x] =
-						       prevline[x];);
+						       line[x] = prevline[x];);
 					}
 					break;
 
@@ -230,12 +222,10 @@ bitmap_decompress(unsigned char *output, int width, int height,
 				case 8:	/* Bicolour */
 					REPEAT(if (bicolour)
 					       {
-					       line[x] = colour2;
-					       bicolour = False;}
+					       line[x] = colour2; bicolour = False;}
 					       else
 					       {
-					       line[x] = colour1;
-					       bicolour = True; count++;}
+					       line[x] = colour1; bicolour = True; count++;}
 					);
 					break;
 
@@ -248,8 +238,7 @@ bitmap_decompress(unsigned char *output, int width, int height,
 					break;
 
 				default:
-					unimpl("bitmap opcode 0x%x\n",
-					       opcode);
+					unimpl("bitmap opcode 0x%x\n", opcode);
 					return False;
 			}
 		}
