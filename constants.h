@@ -189,7 +189,7 @@ enum RDP_INPUT_DEVICE
 #define TEXT2_IMPLICIT_X	0x20
 
 /* RDP capabilities */
-#define RDP_CAPSET_GENERAL	1
+#define RDP_CAPSET_GENERAL	1 /* Maps to generalCapabilitySet in T.128 page 138 */
 #define RDP_CAPLEN_GENERAL	0x18
 #define OS_MAJOR_TYPE_UNIX	4
 #define OS_MINOR_TYPE_XSERVER	7
