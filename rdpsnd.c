@@ -104,6 +104,18 @@ rdpsnd_process_negotiate(STREAM in)
 			in_uint16_le(in, format->wBitsPerSample);
 			in_uint16_le(in, format->cbSize);
 
+			/* read in the buffer of unknown use */
+			int readcnt = format->cbSize;
+			int discardcnt = 0;
+			if (format->cbSize > MAX_CBSIZE)
+			{
+				fprintf(stderr, "cbSize too large for buffer: %d\n", format->cbSize);
+				readcnt = MAX_CBSIZE;
+				discardcnt = format->cbSize - MAX_CBSIZE;
+			}
+			in_uint8a(in, format->cb, readcnt);
+			in_uint8s(in, discardcnt);
+
 			if (device_available && wave_out_format_supported(format))
 			{
 				format_count++;

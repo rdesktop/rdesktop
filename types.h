@@ -119,6 +119,8 @@ typedef struct _VCHANNEL
 }
 VCHANNEL;
 
+#define MAX_CBSIZE 256
+
 /* RDPSND */
 typedef struct {
     uint16 wFormatTag;
@@ -128,6 +130,7 @@ typedef struct {
     uint16 nBlockAlign;
     uint16 wBitsPerSample;
     uint16 cbSize;
+    uint8  cb[MAX_CBSIZE];
 } WAVEFORMATEX;
 
 /* RDPDR */
