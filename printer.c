@@ -16,7 +16,7 @@ get_printer_data(HANDLE handle)
 }
 
 int
-printer_enum_devices(int *id, char *optarg)
+printer_enum_devices(uint32 *id, char *optarg)
 {
 	PRINTER *pprinter_data;
 

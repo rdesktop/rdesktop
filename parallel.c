@@ -29,7 +29,7 @@ get_parallel_data(HANDLE handle)
 /* optarg looks like ':LPT1=/dev/lp0'            */
 /* when it arrives to this function.             */
 int
-parallel_enum_devices(int *id, char *optarg)
+parallel_enum_devices(uint32 *id, char *optarg)
 {
 	PARALLEL_DEVICE *ppar_info;
 

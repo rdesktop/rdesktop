@@ -31,7 +31,7 @@ NTSTATUS disk_query_information(HANDLE handle, uint32 info_class, STREAM out);
 NTSTATUS disk_set_information(HANDLE handle, uint32 info_class, STREAM in, STREAM out);
 NTSTATUS disk_query_volume_information(HANDLE handle, uint32 info_class, STREAM out);
 NTSTATUS disk_query_directory(HANDLE handle, uint32 info_class, char *pattern, STREAM out);
-int disk_enum_devices(int *id, char *optarg);
+int disk_enum_devices(uint32 *id, char *optarg);
 /* ewmhints.c */
 int get_current_workarea(uint32 * x, uint32 * y, uint32 * width, uint32 * height);
 /* iso.c */
@@ -53,9 +53,9 @@ void mcs_disconnect(void);
 void process_orders(STREAM s, uint16 num_orders);
 void reset_order_state(void);
 /* parallel.c */
-int parallel_enum_devices(int *id, char *optarg);
+int parallel_enum_devices(uint32 *id, char *optarg);
 /* printer.c */
-int printer_enum_devices(int *id, char *optarg);
+int printer_enum_devices(uint32 *id, char *optarg);
 /* printercache.c */
 int printercache_load_blob(char *printer_name, uint8 ** data);
 void printercache_process(STREAM s);
@@ -132,7 +132,7 @@ BOOL sec_connect(char *server, char *username);
 void sec_disconnect(void);
 /* serial.c */
 BOOL serial_get_timeout(uint32 handle, uint32 length, uint32 * timeout, uint32 * itv_timeout);
-int serial_enum_devices(int *id, char *optarg);
+int serial_enum_devices(uint32 *id, char *optarg);
 /* tcp.c */
 STREAM tcp_init(uint32 maxlen);
 void tcp_send(STREAM s);
