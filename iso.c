@@ -27,15 +27,15 @@ static void iso_send_msg(uint8 code)
 
 	s = tcp_init(11);
 
-	out_uint8(s, 3); /* version */
-	out_uint8(s, 0); /* reserved */
-	out_uint16_be(s, 11); /* length */
+	out_uint8(s, 3);	/* version */
+	out_uint8(s, 0);	/* reserved */
+	out_uint16_be(s, 11);	/* length */
 
-	out_uint8(s, 6);  /* hdrlen */
+	out_uint8(s, 6);	/* hdrlen */
 	out_uint8(s, code);
-	out_uint16(s, 0); /* dst_ref */
-	out_uint16(s, 0); /* src_ref */
-	out_uint8(s, 0);  /* class */
+	out_uint16(s, 0);	/* dst_ref */
+	out_uint16(s, 0);	/* src_ref */
+	out_uint8(s, 0);	/* class */
 
 	s_mark_end(s);
 	tcp_send(s);
@@ -59,23 +59,23 @@ static STREAM iso_recv_msg(uint8 *code)
 		return False;
 	}
 
-	in_uint8s(s, 1); /* pad */
+	in_uint8s(s, 1);	/* pad */
 	in_uint16_be(s, length);
 
 	s = tcp_recv(length - 4);
 	if (s == NULL)
 		return False;
 
-	in_uint8s(s, 1); /* hdrlen */
+	in_uint8s(s, 1);	/* hdrlen */
 	in_uint8(s, *code);
 
 	if (*code == ISO_PDU_DT)
 	{
-		in_uint8s(s, 1); /* eot */
-		return s; 
+		in_uint8s(s, 1);	/* eot */
+		return s;
 	}
 
-	in_uint8s(s, 5); /* dst_ref, src_ref, class */
+	in_uint8s(s, 5);	/* dst_ref, src_ref, class */
 	return s;
 }
 
@@ -98,13 +98,13 @@ void iso_send(STREAM s)
 	s_pop_layer(s, iso_hdr);
 	length = s->end - s->p;
 
-	out_uint8(s, 3); /* version */
-	out_uint8(s, 0); /* reserved */
+	out_uint8(s, 3);	/* version */
+	out_uint8(s, 0);	/* reserved */
 	out_uint16_be(s, length);
 
-	out_uint8(s, 2);  /* hdrlen */
-	out_uint8(s, ISO_PDU_DT); /* code */
-	out_uint8(s, 0x80); /* eot */
+	out_uint8(s, 2);	/* hdrlen */
+	out_uint8(s, ISO_PDU_DT);	/* code */
+	out_uint8(s, 0x80);	/* eot */
 
 	tcp_send(s);
 }

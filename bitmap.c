@@ -87,18 +87,18 @@ BOOL bitmap_decompress(unsigned char *output, int width, int height,
 		mixmask = 0;
 		switch (opcode)
 		{
-			case 0: /* Fill */
+			case 0:	/* Fill */
 				if ((lastopcode == opcode)
 				    && !((x == width) && (prevline == NULL)))
 					insertmix = True;
 				break;
-			case 8: /* Bicolour */
+			case 8:	/* Bicolour */
 				colour1 = CVAL(input);
-			case 3: /* Colour */
+			case 3:	/* Colour */
 				colour2 = CVAL(input);
 				break;
-			case 6: /* SetMix/Mix */
-			case 7: /* SetMix/FillOrMix */
+			case 6:	/* SetMix/Mix */
+			case 7:	/* SetMix/FillOrMix */
 				mix = CVAL(input);
 				opcode -= 5;
 				break;
@@ -122,13 +122,15 @@ BOOL bitmap_decompress(unsigned char *output, int width, int height,
 
 			switch (opcode)
 			{
-				case 0: /* Fill */
+				case 0:	/* Fill */
 					if (insertmix)
 					{
 						if (prevline == NULL)
 							line[x] = mix;
 						else
-							line[x] = prevline[x] ^ mix;
+							line[x] =
+								prevline[x] ^
+								mix;
 
 						insertmix = False;
 						count--;
@@ -136,73 +138,79 @@ BOOL bitmap_decompress(unsigned char *output, int width, int height,
 					}
 
 					if (prevline == NULL)
-						REPEAT(line[x] = 0)
+					{
+						REPEAT(line[x] = 0);
+					}
 					else
-						REPEAT(line[x] = prevline[x])
+					{
+						REPEAT(line[x] = prevline[x]);
+					}
 					break;
 
-				case 1: /* Mix */
+				case 1:	/* Mix */
 					if (prevline == NULL)
-						REPEAT(line[x] = mix)
+					{
+						REPEAT(line[x] = mix);
+					}
 					else
-						REPEAT(line[x] = prevline[x] ^ mix)
+					{
+						REPEAT(line[x] =
+						       prevline[x] ^ mix);
+					}
 					break;
 
-				case 2: /* Fill or Mix */
+				case 2:	/* Fill or Mix */
 					if (prevline == NULL)
-					    REPEAT( 
-						   MASK_UPDATE();
-
-						   if (mask & mixmask)
-							line[x] = mix;
-						   else
-							line[x] = 0;
-					    )
+					{
+						REPEAT(MASK_UPDATE();
+						       if (mask & mixmask)
+						       line[x] = mix;
+						       else
+						       line[x] = 0;);
+					}
 					else
-					    REPEAT(
-						   MASK_UPDATE();
-
-						   if (mask & mixmask)
-							line[x] = prevline[x] ^ mix;
-						   else
-							line[x] = prevline[x];
-					    )
+					{
+						REPEAT(MASK_UPDATE();
+						       if (mask & mixmask)
+						       line[x] =
+						       prevline[x] ^ mix;
+						       else
+						       line[x] =
+						       prevline[x];);
+					}
 					break;
 
-				case 3: /* Colour */
-					REPEAT(line[x] = colour2)
+				case 3:	/* Colour */
+					REPEAT(line[x] = colour2);
 					break;
 
-				case 4: /* Copy */
-					REPEAT(line[x] = CVAL(input))
+				case 4:	/* Copy */
+					REPEAT(line[x] = CVAL(input));
 					break;
 
-				case 8: /* Bicolour */
-					REPEAT(
-						if (bicolour)
-						{
-							line[x] = colour2;
-							bicolour = False;
-						}
-						else
-						{
-							line[x] = colour1;
-							bicolour = True;
-							count++;
-						}
-					)
+				case 8:	/* Bicolour */
+					REPEAT(if (bicolour)
+					       {
+					       line[x] = colour2;
+					       bicolour = False;}
+					       else
+					       {
+					       line[x] = colour1;
+					       bicolour = True; count++;}
+					);
 					break;
 
-				case 13: /* White */
-					REPEAT(line[x] = 0xff)
+				case 13:	/* White */
+					REPEAT(line[x] = 0xff);
 					break;
 
-				case 14: /* Black */
-					REPEAT(line[x] = 0x00)
+				case 14:	/* Black */
+					REPEAT(line[x] = 0x00);
 					break;
 
 				default:
-					NOTIMP("bitmap opcode 0x%x\n", opcode);
+					NOTIMP("bitmap opcode 0x%x\n",
+					       opcode);
 					return False;
 			}
 		}

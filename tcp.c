@@ -18,14 +18,14 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include <unistd.h>	/* select read write close */
-#include <sys/socket.h>	/* socket connect setsockopt */
-#include <sys/time.h>	/* timeval */
-#include <netdb.h>	/* gethostbyname */
-#include <netinet/in.h>	/* sockaddr_in */
-#include <netinet/tcp.h> /* TCP_NODELAY */
-#include <arpa/inet.h>	/* inet_addr */
-#include <errno.h>	/* errno */
+#include <unistd.h>		/* select read write close */
+#include <sys/socket.h>		/* socket connect setsockopt */
+#include <sys/time.h>		/* timeval */
+#include <netdb.h>		/* gethostbyname */
+#include <netinet/in.h>		/* sockaddr_in */
+#include <netinet/tcp.h>	/* TCP_NODELAY */
+#include <arpa/inet.h>		/* inet_addr */
+#include <errno.h>		/* errno */
 #include "rdesktop.h"
 
 static int sock;
@@ -49,7 +49,7 @@ STREAM tcp_init(int maxlen)
 /* Send TCP transport data packet */
 void tcp_send(STREAM s)
 {
-	int length = s->end - s->data; 
+	int length = s->end - s->data;
 	int sent, total = 0;
 
 	while (total < length)
@@ -90,7 +90,7 @@ STREAM tcp_recv(int length)
 		tv.tv_sec = 0;
 		tv.tv_usec = 100;
 
-		ret = select(sock+1, &rfds, NULL, NULL, &tv);
+		ret = select(sock + 1, &rfds, NULL, NULL, &tv);
 
 		if (ret)
 		{
@@ -119,7 +119,8 @@ BOOL tcp_connect(char *server)
 
 	if ((nslookup = gethostbyname(server)) != NULL)
 	{
-		memcpy(&servaddr.sin_addr, nslookup->h_addr, sizeof(servaddr.sin_addr));
+		memcpy(&servaddr.sin_addr, nslookup->h_addr,
+		       sizeof(servaddr.sin_addr));
 	}
 	else if (!(servaddr.sin_addr.s_addr = inet_addr(server)))
 	{
@@ -136,14 +137,17 @@ BOOL tcp_connect(char *server)
 	servaddr.sin_family = AF_INET;
 	servaddr.sin_port = htons(TCP_PORT_RDP);
 
-	if (connect(sock, (struct sockaddr *)&servaddr, sizeof(struct sockaddr)) < 0)
+	if (connect
+	    (sock, (struct sockaddr *) &servaddr,
+	     sizeof(struct sockaddr)) < 0)
 	{
 		STATUS("connect: %s\n", strerror(errno));
 		close(sock);
 		return False;
 	}
 
-	setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (void *)&true, sizeof(true));
+	setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (void *) &true,
+		   sizeof(true));
 
 	in.size = 4096;
 	in.data = xmalloc(in.size);

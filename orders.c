@@ -59,7 +59,7 @@ static void rdp_in_coord(STREAM s, uint16 *coord, BOOL delta)
 	if (delta)
 	{
 		in_uint8(s, change);
-		*coord += (char)change;
+		*coord += (char) change;
 	}
 	else
 	{
@@ -142,7 +142,7 @@ static BOOL rdp_parse_brush(STREAM s, BRUSH *brush, uint32 present)
 
 /* Process a destination blt order */
 static void process_destblt(STREAM s, DESTBLT_ORDER *os,
-				uint32 present, BOOL delta)
+			    uint32 present, BOOL delta)
 {
 	if (present & 0x01)
 		rdp_in_coord(s, &os->x, delta);
@@ -167,7 +167,7 @@ static void process_destblt(STREAM s, DESTBLT_ORDER *os,
 
 /* Process a pattern blt order */
 static void process_patblt(STREAM s, PATBLT_ORDER *os,
-				uint32 present, BOOL delta)
+			   uint32 present, BOOL delta)
 {
 	if (present & 0x0001)
 		rdp_in_coord(s, &os->x, delta);
@@ -197,12 +197,12 @@ static void process_patblt(STREAM s, PATBLT_ORDER *os,
 	      os->brush.style, os->bgcolour, os->fgcolour);
 
 	ui_patblt(ROP2_P(os->opcode), os->x, os->y, os->cx, os->cy,
-				&os->brush, os->bgcolour, os->fgcolour);
+		  &os->brush, os->bgcolour, os->fgcolour);
 }
 
 /* Process a screen blt order */
 static void process_screenblt(STREAM s, SCREENBLT_ORDER *os,
-					uint32 present, BOOL delta)
+			      uint32 present, BOOL delta)
 {
 	if (present & 0x0001)
 		rdp_in_coord(s, &os->x, delta);
@@ -229,7 +229,7 @@ static void process_screenblt(STREAM s, SCREENBLT_ORDER *os,
 	      os->opcode, os->x, os->y, os->cx, os->cy, os->srcx, os->srcy);
 
 	ui_screenblt(ROP2_S(os->opcode), os->x, os->y, os->cx, os->cy,
-				os->srcx, os->srcy);
+		     os->srcx, os->srcy);
 }
 
 /* Process a line order */
@@ -268,8 +268,8 @@ static void process_line(STREAM s, LINE_ORDER *os, uint32 present, BOOL delta)
 		return;
 	}
 
-	ui_line(os->opcode-1, os->startx, os->starty,
-			os->endx, os->endy, &os->pen);
+	ui_line(os->opcode - 1, os->startx, os->starty,
+		os->endx, os->endy, &os->pen);
 }
 
 /* Process an opaque rectangle order */
@@ -298,7 +298,7 @@ static void process_rect(STREAM s, RECT_ORDER *os, uint32 present, BOOL delta)
 
 /* Process a desktop save order */
 static void process_desksave(STREAM s, DESKSAVE_ORDER *os,
-				uint32 present, BOOL delta)
+			     uint32 present, BOOL delta)
 {
 	int width, height;
 
@@ -330,12 +330,13 @@ static void process_desksave(STREAM s, DESKSAVE_ORDER *os,
 	if (os->action == 0)
 		ui_desktop_save(os->offset, os->left, os->top, width, height);
 	else
-		ui_desktop_restore(os->offset, os->left, os->top, width, height);
+		ui_desktop_restore(os->offset, os->left, os->top, width,
+				   height);
 }
 
 /* Process a memory blt order */
 static void process_memblt(STREAM s, MEMBLT_ORDER *os,
-				uint32 present, BOOL delta)
+			   uint32 present, BOOL delta)
 {
 	HBITMAP bitmap;
 
@@ -378,12 +379,12 @@ static void process_memblt(STREAM s, MEMBLT_ORDER *os,
 		return;
 
 	ui_memblt(ROP2_S(os->opcode), os->x, os->y, os->cx, os->cy,
-			bitmap, os->srcx, os->srcy);
+		  bitmap, os->srcx, os->srcy);
 }
 
 /* Process a 3-way blt order */
 static void process_triblt(STREAM s, TRIBLT_ORDER *os,
-				uint32 present, BOOL delta)
+			   uint32 present, BOOL delta)
 {
 	HBITMAP bitmap;
 
@@ -428,17 +429,18 @@ static void process_triblt(STREAM s, TRIBLT_ORDER *os,
 	if (present & 0x010000)
 		in_uint16_le(s, os->unknown);
 
-	DEBUG("TRIBLT(op=0x%x,x=%d,y=%d,cx=%d,cy=%d,id=%d,idx=%d,bs=%d,bg=0x%x,fg=0x%x)\n",
-	      os->opcode, os->x, os->y, os->cx, os->cy, os->cache_id,
-	      os->cache_idx, os->brush.style, os->bgcolour, os->fgcolour);
+	DEBUG
+		("TRIBLT(op=0x%x,x=%d,y=%d,cx=%d,cy=%d,id=%d,idx=%d,bs=%d,bg=0x%x,fg=0x%x)\n",
+		 os->opcode, os->x, os->y, os->cx, os->cy, os->cache_id,
+		 os->cache_idx, os->brush.style, os->bgcolour, os->fgcolour);
 
 	bitmap = cache_get_bitmap(os->cache_id, os->cache_idx);
 	if (bitmap == NULL)
 		return;
 
 	ui_triblt(os->opcode, os->x, os->y, os->cx, os->cy,
-			bitmap, os->srcx, os->srcy,
-			&os->brush, os->bgcolour, os->fgcolour);
+		  bitmap, os->srcx, os->srcy,
+		  &os->brush, os->bgcolour, os->fgcolour);
 }
 
 /* Parse a delta co-ordinate in polyline order form */
@@ -447,7 +449,7 @@ static int parse_delta(uint8 *buffer, int *offset)
 	int value = buffer[(*offset)++];
 	int two_byte = value & 0x80;
 
-	if (value & 0x40) /* sign bit */
+	if (value & 0x40)	/* sign bit */
 		value |= ~0x3f;
 	else
 		value &= 0x3f;
@@ -460,7 +462,7 @@ static int parse_delta(uint8 *buffer, int *offset)
 
 /* Process a polyline order */
 static void process_polyline(STREAM s, POLYLINE_ORDER *os,
-				uint32 present, BOOL delta)
+			     uint32 present, BOOL delta)
 {
 	int index, line, data;
 	int x, y, xfrom, yfrom;
@@ -489,7 +491,7 @@ static void process_polyline(STREAM s, POLYLINE_ORDER *os,
 	}
 
 	DEBUG("POLYLINE(x=%d,y=%d,fl=0x%x,fg=0x%x,n=%d,sz=%d)\n",
-		os->x, os->y, os->flags, os->fgcolour, os->lines, os->datasize);
+	      os->x, os->y, os->flags, os->fgcolour, os->lines, os->datasize);
 
 	DEBUG("Data: ");
 
@@ -514,7 +516,7 @@ static void process_polyline(STREAM s, POLYLINE_ORDER *os,
 			flags = os->data[index++];
 
 		if ((flags & 0xc0) == 0)
-			flags |= 0xc0;   /* none = both */
+			flags |= 0xc0;	/* none = both */
 
 		if (flags & 0x40)
 			x += parse_delta(os->data, &data);
@@ -529,7 +531,8 @@ static void process_polyline(STREAM s, POLYLINE_ORDER *os,
 }
 
 /* Process a text order */
-static void process_text2(STREAM s, TEXT2_ORDER *os, uint32 present, BOOL delta)
+static void process_text2(STREAM s, TEXT2_ORDER *os, uint32 present,
+			  BOOL delta)
 {
 	DATABLOB *entry;
 	int i;
@@ -588,11 +591,12 @@ static void process_text2(STREAM s, TEXT2_ORDER *os, uint32 present, BOOL delta)
 		in_uint8a(s, os->text, os->length);
 	}
 
-	DEBUG("TEXT2(x=%d,y=%d,cl=%d,ct=%d,cr=%d,cb=%d,bl=%d,bt=%d,bb=%d,br=%d,fg=0x%x,bg=0x%x,font=%d,fl=0x%x,mix=%d,unk=0x%x,n=%d)\n",
-		os->x, os->y, os->clipleft, os->cliptop, os->clipright,
-		os->clipbottom, os->boxleft, os->boxtop, os->boxright,
-		os->boxbottom, os->fgcolour, os->bgcolour, os->font,
-		os->flags, os->mixmode, os->unknown, os->length);
+	DEBUG
+		("TEXT2(x=%d,y=%d,cl=%d,ct=%d,cr=%d,cb=%d,bl=%d,bt=%d,bb=%d,br=%d,fg=0x%x,bg=0x%x,font=%d,fl=0x%x,mix=%d,unk=0x%x,n=%d)\n",
+		 os->x, os->y, os->clipleft, os->cliptop, os->clipright,
+		 os->clipbottom, os->boxleft, os->boxtop, os->boxright,
+		 os->boxbottom, os->fgcolour, os->bgcolour, os->font,
+		 os->flags, os->mixmode, os->unknown, os->length);
 
 	DEBUG("Text: ");
 
@@ -608,24 +612,25 @@ static void process_text2(STREAM s, TEXT2_ORDER *os, uint32 present, BOOL delta)
 
 		if (entry == NULL)
 			return;
-		
+
 		memcpy(os->text, entry->data, entry->size);
 		os->length = entry->size;
 	}
-	else if ((os->length >= 3) && (os->text[os->length-3] == 0xff))
+	else if ((os->length >= 3) && (os->text[os->length - 3] == 0xff))
 	{
 		os->length -= 3;
-		cache_put_text(os->text[os->length+1], os->text, os->length);
+		cache_put_text(os->text[os->length + 1], os->text,
+			       os->length);
 	}
 
 	ui_draw_text(os->font, os->flags, os->mixmode, os->x, os->y,
-			os->clipleft, os->cliptop,
-			os->clipright - os->clipleft,
-			os->clipbottom - os->cliptop,
-			os->boxleft, os->boxtop,
-			os->boxright - os->boxleft,
-			os->boxbottom - os->boxtop,
-			os->bgcolour, os->fgcolour, os->text, os->length);
+		     os->clipleft, os->cliptop,
+		     os->clipright - os->clipleft,
+		     os->clipbottom - os->cliptop,
+		     os->boxleft, os->boxtop,
+		     os->boxright - os->boxleft,
+		     os->boxbottom - os->boxtop,
+		     os->bgcolour, os->fgcolour, os->text, os->length);
 }
 
 /* Process a raw bitmap cache order */
@@ -637,7 +642,7 @@ static void process_raw_bmpcache(STREAM s)
 	uint8 *data;
 
 	in_uint8(s, cache_id);
-	in_uint8s(s, 1); /* pad */
+	in_uint8s(s, 1);	/* pad */
 	in_uint8(s, width);
 	in_uint8(s, height);
 	in_uint8(s, bpp);
@@ -661,15 +666,15 @@ static void process_bmpcache(STREAM s)
 	uint8 *data, *bmpdata;
 
 	in_uint8(s, cache_id);
-	in_uint8s(s, 1); /* pad */
+	in_uint8s(s, 1);	/* pad */
 	in_uint8(s, width);
 	in_uint8(s, height);
 	in_uint8(s, bpp);
-	in_uint8s(s, 2); /* bufsize */
+	in_uint8s(s, 2);	/* bufsize */
 	in_uint16_le(s, cache_idx);
-	in_uint8s(s, 2); /* pad */
+	in_uint8s(s, 2);	/* pad */
 	in_uint16_le(s, size);
-	in_uint8s(s, 4); /* row_size, final_size */
+	in_uint8s(s, 4);	/* row_size, final_size */
 	in_uint8p(s, data, size);
 
 	DEBUG("BMPCACHE(cx=%d,cy=%d,id=%d,idx=%d)\n",
@@ -706,7 +711,7 @@ static void process_colcache(STREAM s)
 		in_uint8(s, entry->blue);
 		in_uint8(s, entry->green);
 		in_uint8(s, entry->red);
-		in_uint8s(s, 1); /* pad */
+		in_uint8s(s, 1);	/* pad */
 	}
 
 	DEBUG("COLCACHE(id=%d,n=%d)\n", cache_id, map.ncolours);
@@ -723,8 +728,8 @@ static void process_fontcache(STREAM s)
 	HGLYPH bitmap;
 	uint8 font, nglyphs;
 	uint16 character, offset, baseline, width, height;
-	uint8 *data, *rev_data, in, out;
-	int i, j, datasize;
+	int i, datasize;
+	uint8 *data;
 
 	in_uint8(s, font);
 	in_uint8(s, nglyphs);
@@ -744,7 +749,7 @@ static void process_fontcache(STREAM s)
 
 		bitmap = ui_create_glyph(width, height, data);
 		cache_put_font(font, character, offset, baseline,
-				width, height, bitmap);
+			       width, height, bitmap);
 	}
 }
 
@@ -756,7 +761,7 @@ static void process_secondary_order(STREAM s)
 	uint8 *next_order;
 
 	in_uint16_le(s, length);
-	in_uint8s(s, 2); /* flags */
+	in_uint8s(s, 2);	/* flags */
 	in_uint8(s, type);
 
 	next_order = s->p + length + 7;
@@ -796,9 +801,9 @@ void process_orders(STREAM s)
 	int size, processed = 0;
 	BOOL delta;
 
-	in_uint8s(s, 2); /* pad */
+	in_uint8s(s, 2);	/* pad */
 	in_uint16_le(s, num_orders);
-	in_uint8s(s, 2); /* pad */
+	in_uint8s(s, 2);	/* pad */
 
 	while (processed < num_orders)
 	{
@@ -846,9 +851,11 @@ void process_orders(STREAM s)
 					rdp_parse_bounds(s, &os->bounds);
 
 				ui_set_clip(os->bounds.left,
-					os->bounds.top,
-					os->bounds.right - os->bounds.left + 1,
-					os->bounds.bottom - os->bounds.top + 1);
+					    os->bounds.top,
+					    os->bounds.right -
+					    os->bounds.left + 1,
+					    os->bounds.bottom -
+					    os->bounds.top + 1);
 			}
 
 			delta = order_flags & RDP_ORDER_DELTA;
@@ -872,7 +879,7 @@ void process_orders(STREAM s)
 
 				case RDP_ORDER_LINE:
 					process_line(s, &os->line,
-							present, delta);
+						     present, delta);
 					break;
 
 				case RDP_ORDER_RECT:
@@ -918,7 +925,7 @@ void process_orders(STREAM s)
 	}
 
 	if (s->p != next_packet)
-		WARN("%d bytes remaining\n", (int)(next_packet - s->p));
+		WARN("%d bytes remaining\n", (int) (next_packet - s->p));
 }
 
 /* Reset order state */
@@ -926,4 +933,3 @@ void reset_order_state()
 {
 	memset(&order_state, 0, sizeof(order_state));
 }
-

@@ -61,16 +61,17 @@ BOOL ui_create_window(char *title)
 
 	visual = DefaultVisual(display, DefaultScreen(display));
 
-	attribs.background_pixel = BlackPixel(display, DefaultScreen(display));
+	attribs.background_pixel =
+		BlackPixel(display, DefaultScreen(display));
 	attribs.backing_store = Always;
 	wnd = XCreateWindow(display, DefaultRootWindow(display),
-			0, 0, width, height, 0, 8, InputOutput, visual,
-			CWBackingStore | CWBackPixel, &attribs);
+			    0, 0, width, height, 0, 8, InputOutput, visual,
+			    CWBackingStore | CWBackPixel, &attribs);
 
 	XStoreName(display, wnd, title);
 	XMapWindow(display, wnd);
 
-	input_mask  = KeyPressMask | KeyReleaseMask;
+	input_mask = KeyPressMask | KeyReleaseMask;
 	input_mask |= ButtonPressMask | ButtonReleaseMask;
 	if (motion)
 		input_mask |= PointerMotionMask;
@@ -99,15 +100,15 @@ static uint8 xwin_translate_key(unsigned long key)
 
 	switch (key)
 	{
-		case 0x62: /* left arrow */
+		case 0x62:	/* left arrow */
 			return 0x48;
-		case 0x64: /* up arrow */
+		case 0x64:	/* up arrow */
 			return 0x4b;
-		case 0x66: /* down arrow */
+		case 0x66:	/* down arrow */
 			return 0x4d;
-		case 0x68: /* right arrow */
+		case 0x68:	/* right arrow */
 			return 0x50;
-		case 0x73: /* Windows key */
+		case 0x73:	/* Windows key */
 			DEBUG("CHECKPOINT\n");
 	}
 
@@ -118,11 +119,11 @@ static uint16 xwin_translate_mouse(unsigned long button)
 {
 	switch (button)
 	{
-		case Button1: /* left */
+		case Button1:	/* left */
 			return MOUSE_FLAG_BUTTON1;
-		case Button2: /* middle */
+		case Button2:	/* middle */
 			return MOUSE_FLAG_BUTTON3;
-		case Button3: /* right */
+		case Button3:	/* right */
 			return MOUSE_FLAG_BUTTON2;
 	}
 
@@ -146,52 +147,60 @@ void ui_process_events()
 		switch (event.type)
 		{
 			case KeyPress:
-				scancode = xwin_translate_key(event.xkey.keycode);
+				scancode =
+					xwin_translate_key(event.xkey.
+							   keycode);
 				if (scancode == 0)
 					break;
 
 				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, 0,
-						scancode, 0);
+					       scancode, 0);
 				break;
 
 			case KeyRelease:
-				scancode = xwin_translate_key(event.xkey.keycode);
+				scancode =
+					xwin_translate_key(event.xkey.
+							   keycode);
 				if (scancode == 0)
 					break;
 
 				rdp_send_input(ev_time, RDP_INPUT_SCANCODE,
-						KBD_FLAG_DOWN | KBD_FLAG_UP,
-						scancode, 0);
+					       KBD_FLAG_DOWN | KBD_FLAG_UP,
+					       scancode, 0);
 				break;
 
 			case ButtonPress:
-				button = xwin_translate_mouse(event.xbutton.button);
+				button =
+					xwin_translate_mouse(event.xbutton.
+							     button);
 
 				if (button == 0)
 					break;
 
 				rdp_send_input(ev_time, RDP_INPUT_MOUSE,
-						button | MOUSE_FLAG_DOWN,
-						event.xbutton.x,
-						event.xbutton.y);
+					       button | MOUSE_FLAG_DOWN,
+					       event.xbutton.x,
+					       event.xbutton.y);
 				break;
 
 			case ButtonRelease:
-				button = xwin_translate_mouse(event.xbutton.button);
+				button =
+					xwin_translate_mouse(event.xbutton.
+							     button);
 				if (button == 0)
 					break;
 
 				rdp_send_input(ev_time, RDP_INPUT_MOUSE,
-						button,
-						event.xbutton.x,
-						event.xbutton.y);
+					       button,
+					       event.xbutton.x,
+					       event.xbutton.y);
 				break;
 
 			case MotionNotify:
 				rdp_send_input(ev_time, RDP_INPUT_MOUSE,
-						MOUSE_FLAG_MOVE,
-						event.xmotion.x,
-						event.xmotion.y);
+					       MOUSE_FLAG_MOVE,
+					       event.xmotion.x,
+					       event.xmotion.y);
 		}
 	}
 }
@@ -209,29 +218,29 @@ HBITMAP ui_create_bitmap(int width, int height, uint8 *data)
 	bitmap = XCreatePixmap(display, wnd, width, height, 8);
 
 	image = XCreateImage(display, visual, 8, ZPixmap, 0,
-				data, width, height, 8, width);
+			     data, width, height, 8, width);
 	XSetFunction(display, gc, GXcopy);
 	XPutImage(display, bitmap, gc, image, 0, 0, 0, 0, width, height);
 	XFree(image);
-	
-	return (HBITMAP)bitmap;
+
+	return (HBITMAP) bitmap;
 }
 
 void ui_paint_bitmap(int x, int y, int cx, int cy,
-			int width, int height, uint8 *data)
+		     int width, int height, uint8 *data)
 {
 	XImage *image;
 
 	image = XCreateImage(display, visual, 8, ZPixmap, 0,
-				data, width, height, 8, width);
+			     data, width, height, 8, width);
 	XSetFunction(display, gc, GXcopy);
 	XPutImage(display, wnd, gc, image, 0, 0, x, y, cx, cy);
-	XFree(image); 
+	XFree(image);
 }
 
 void ui_destroy_bitmap(HBITMAP bmp)
 {
-	XFreePixmap(display, (Pixmap)bmp);
+	XFreePixmap(display, (Pixmap) bmp);
 }
 
 HGLYPH ui_create_glyph(int width, int height, uint8 *data)
@@ -247,7 +256,7 @@ HGLYPH ui_create_glyph(int width, int height, uint8 *data)
 	gc = XCreateGC(display, bitmap, 0, NULL);
 
 	image = XCreateImage(display, visual, 1, ZPixmap, 0,
-				data, width, height, 8, scanline);
+			     data, width, height, 8, scanline);
 	image->byte_order = MSBFirst;
 	image->bitmap_bit_order = MSBFirst;
 	XInitImage(image);
@@ -256,13 +265,13 @@ HGLYPH ui_create_glyph(int width, int height, uint8 *data)
 	XPutImage(display, bitmap, gc, image, 0, 0, 0, 0, width, height);
 	XFree(image);
 	XFreeGC(display, gc);
-	
-	return (HGLYPH)bitmap;
+
+	return (HGLYPH) bitmap;
 }
 
 void ui_destroy_glyph(HGLYPH glyph)
 {
-	XFreePixmap(display, (Pixmap)glyph);
+	XFreePixmap(display, (Pixmap) glyph);
 }
 
 HCOLOURMAP ui_create_colourmap(COLOURMAP *colours)
@@ -289,17 +298,17 @@ HCOLOURMAP ui_create_colourmap(COLOURMAP *colours)
 	XStoreColors(display, map, xcolours, ncolours);
 
 	xfree(xcolours);
-	return (HCOLOURMAP)map;
+	return (HCOLOURMAP) map;
 }
 
 void ui_destroy_colourmap(HCOLOURMAP map)
 {
-	XFreeColormap(display, (Colormap)map);
+	XFreeColormap(display, (Colormap) map);
 }
 
 void ui_set_colourmap(HCOLOURMAP map)
 {
-	XSetWindowColormap(display, wnd, (Colormap)map);
+	XSetWindowColormap(display, wnd, (Colormap) map);
 }
 
 void ui_set_clip(int x, int y, int cx, int cy)
@@ -330,22 +339,22 @@ void ui_bell()
 }
 
 static int rop2_map[] = {
-	GXclear,	/* 0 */
-	GXnor,		/* DPon */
-	GXandInverted,	/* DPna */
-	GXcopyInverted,	/* Pn */
-	GXandReverse,	/* PDna */
-	GXinvert,	/* Dn */
-	GXxor,		/* DPx */
-	GXnand,		/* DPan */
-	GXand,		/* DPa */
-	GXequiv,	/* DPxn */
-	GXnoop,		/* D */
-	GXorInverted,	/* DPno */
-	GXcopy,		/* P */
-	GXorReverse,	/* PDno */
-	GXor,		/* DPo */
-	GXset		/* 1 */
+	GXclear,		/* 0 */
+	GXnor,			/* DPon */
+	GXandInverted,		/* DPna */
+	GXcopyInverted,		/* Pn */
+	GXandReverse,		/* PDna */
+	GXinvert,		/* Dn */
+	GXxor,			/* DPx */
+	GXnand,			/* DPan */
+	GXand,			/* DPa */
+	GXequiv,		/* DPxn */
+	GXnoop,			/* D */
+	GXorInverted,		/* DPno */
+	GXcopy,			/* P */
+	GXorReverse,		/* PDno */
+	GXor,			/* DPo */
+	GXset			/* 1 */
 };
 
 static void xwin_set_function(uint8 rop2)
@@ -354,7 +363,7 @@ static void xwin_set_function(uint8 rop2)
 }
 
 void ui_destblt(uint8 opcode,
-	/* dest */  int x, int y, int cx, int cy)
+		/* dest */ int x, int y, int cx, int cy)
 {
 	xwin_set_function(opcode);
 
@@ -362,8 +371,8 @@ void ui_destblt(uint8 opcode,
 }
 
 void ui_patblt(uint8 opcode,
-	/* dest */  int x, int y, int cx, int cy,
-	/* brush */ BRUSH *brush, int bgcolour, int fgcolour)
+	       /* dest */ int x, int y, int cx, int cy,
+	       /* brush */ BRUSH *brush, int bgcolour, int fgcolour)
 {
 	Display *dpy = display;
 	Pixmap fill;
@@ -372,13 +381,13 @@ void ui_patblt(uint8 opcode,
 
 	switch (brush->style)
 	{
-		case 0: /* Solid */
+		case 0:	/* Solid */
 			XSetForeground(dpy, gc, fgcolour);
 			XFillRectangle(dpy, wnd, gc, x, y, cx, cy);
 			break;
 
-		case 3: /* Pattern */
-			fill = (Pixmap)ui_create_glyph(8, 8, brush->pattern);
+		case 3:	/* Pattern */
+			fill = (Pixmap) ui_create_glyph(8, 8, brush->pattern);
 
 			XSetForeground(dpy, gc, fgcolour);
 			XSetBackground(dpy, gc, bgcolour);
@@ -388,7 +397,7 @@ void ui_patblt(uint8 opcode,
 			XFillRectangle(dpy, wnd, gc, x, y, cx, cy);
 
 			XSetFillStyle(dpy, gc, FillSolid);
-			ui_destroy_glyph((HGLYPH)fill);
+			ui_destroy_glyph((HGLYPH) fill);
 			break;
 
 		default:
@@ -397,47 +406,45 @@ void ui_patblt(uint8 opcode,
 }
 
 void ui_screenblt(uint8 opcode,
-		/* dest */ int x, int y, int cx, int cy,
-		/* src */  int srcx, int srcy)
+		  /* dest */ int x, int y, int cx, int cy,
+		  /* src */ int srcx, int srcy)
 {
 	xwin_set_function(opcode);
 
-	XCopyArea(display, wnd, wnd, gc, srcx, srcy,
-			cx, cy, x, y);
+	XCopyArea(display, wnd, wnd, gc, srcx, srcy, cx, cy, x, y);
 }
 
 void ui_memblt(uint8 opcode,
-	/* dest */  int x, int y, int cx, int cy,
-	/* src */   HBITMAP src, int srcx, int srcy)
+	       /* dest */ int x, int y, int cx, int cy,
+	       /* src */ HBITMAP src, int srcx, int srcy)
 {
 	xwin_set_function(opcode);
 
-	XCopyArea(display, (Pixmap)src, wnd, gc, srcx, srcy,
-			cx, cy, x, y);
+	XCopyArea(display, (Pixmap) src, wnd, gc, srcx, srcy, cx, cy, x, y);
 }
 
 void ui_triblt(uint8 opcode,
-	/* dest */  int x, int y, int cx, int cy,
-	/* src */   HBITMAP src, int srcx, int srcy,
-	/* brush */ BRUSH *brush, int bgcolour, int fgcolour)
+	       /* dest */ int x, int y, int cx, int cy,
+	       /* src */ HBITMAP src, int srcx, int srcy,
+	       /* brush */ BRUSH *brush, int bgcolour, int fgcolour)
 {
 	/* This is potentially difficult to do in general. Until someone
 	   comes up with a more efficient way of doing it I am using cases. */
 
 	switch (opcode)
 	{
-		case 0x69: /* PDSxxn */
+		case 0x69:	/* PDSxxn */
 			ui_memblt(ROP2_XOR, x, y, cx, cy, src, srcx, srcy);
 			ui_patblt(ROP2_NXOR, x, y, cx, cy,
-					brush, bgcolour, fgcolour);
+				  brush, bgcolour, fgcolour);
 			break;
 
-		case 0xb8: /* PSDPxax */
+		case 0xb8:	/* PSDPxax */
 			ui_patblt(ROP2_XOR, x, y, cx, cy,
-					brush, bgcolour, fgcolour);
+				  brush, bgcolour, fgcolour);
 			ui_memblt(ROP2_AND, x, y, cx, cy, src, srcx, srcy);
 			ui_patblt(ROP2_XOR, x, y, cx, cy,
-					brush, bgcolour, fgcolour);
+				  brush, bgcolour, fgcolour);
 			break;
 
 		default:
@@ -447,8 +454,8 @@ void ui_triblt(uint8 opcode,
 }
 
 void ui_line(uint8 opcode,
-	/* dest */  int startx, int starty, int endx, int endy,
-	/* pen */   PEN *pen)
+	     /* dest */ int startx, int starty, int endx, int endy,
+	     /* pen */ PEN *pen)
 {
 	xwin_set_function(opcode);
 
@@ -457,8 +464,8 @@ void ui_line(uint8 opcode,
 }
 
 void ui_rect(
-	/* dest */  int x, int y, int cx, int cy,
-	/* brush */ int colour)
+		    /* dest */ int x, int y, int cx, int cy,
+		    /* brush */ int colour)
 {
 	xwin_set_function(ROP2_COPY);
 
@@ -467,10 +474,11 @@ void ui_rect(
 }
 
 void ui_draw_glyph(int mixmode,
-	/* dest */ int x, int y, int cx, int cy,
-	/* src */  HGLYPH glyph, int srcx, int srcy, int bgcolour, int fgcolour)
+		   /* dest */ int x, int y, int cx, int cy,
+		   /* src */ HGLYPH glyph, int srcx, int srcy, int bgcolour,
+		   int fgcolour)
 {
-	Pixmap pixmap = (Pixmap)glyph;
+	Pixmap pixmap = (Pixmap) glyph;
 
 	xwin_set_function(ROP2_COPY);
 
@@ -482,15 +490,14 @@ void ui_draw_glyph(int mixmode,
 			XSetStipple(display, gc, pixmap);
 			XSetFillStyle(display, gc, FillStippled);
 			XSetTSOrigin(display, gc, x, y);
-			XFillRectangle(display, wnd, gc,
-					x, y, cx, cy);
+			XFillRectangle(display, wnd, gc, x, y, cx, cy);
 			XSetFillStyle(display, gc, FillSolid);
 			break;
 
 		case MIX_OPAQUE:
 			XSetBackground(display, gc, bgcolour);
 			XCopyPlane(display, pixmap, wnd, gc,
-					srcx, srcy, cx, cy, x, y, 1);
+				   srcx, srcy, cx, cy, x, y, 1);
 			break;
 
 		default:
@@ -499,9 +506,9 @@ void ui_draw_glyph(int mixmode,
 }
 
 void ui_draw_text(uint8 font, uint8 flags, int mixmode, int x, int y,
-			int clipx, int clipy, int clipcx, int clipcy,
-			int boxx, int boxy, int boxcx, int boxcy,
-			int bgcolour, int fgcolour, uint8 *text, uint8 length)
+		  int clipx, int clipy, int clipcx, int clipcy,
+		  int boxx, int boxy, int boxcx, int boxcy,
+		  int bgcolour, int fgcolour, uint8 *text, uint8 length)
 {
 	FONTGLYPH *glyph;
 	int i;
@@ -525,11 +532,11 @@ void ui_draw_text(uint8 font, uint8 flags, int mixmode, int x, int y,
 
 		if (glyph != NULL)
 		{
-			ui_draw_glyph(mixmode, x + (short)glyph->offset,
-					y + (short)glyph->baseline,
-					glyph->width, glyph->height,
-					glyph->pixmap, 0, 0,
-					bgcolour, fgcolour);
+			ui_draw_glyph(mixmode, x + (short) glyph->offset,
+				      y + (short) glyph->baseline,
+				      glyph->width, glyph->height,
+				      glyph->pixmap, 0, 0,
+				      bgcolour, fgcolour);
 
 			if (flags & TEXT2_IMPLICIT_X)
 				x += glyph->width;
@@ -557,7 +564,7 @@ void ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy)
 		return;
 
 	image = XCreateImage(display, visual, 8, ZPixmap, 0,
-				data, cx, cy, 32, cx);
+			     data, cx, cy, 32, cx);
 	XSetFunction(display, gc, GXcopy);
 	XPutImage(display, wnd, gc, image, 0, 0, x, y, cx, cy);
 	XFree(image);

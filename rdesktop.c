@@ -18,13 +18,13 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include <stdlib.h>	/* malloc realloc free */
-#include <unistd.h>	/* read close getuid getgid getpid getppid gethostname */
-#include <fcntl.h>	/* open */
-#include <pwd.h>	/* getpwuid */
-#include <sys/stat.h>	/* stat */
-#include <sys/time.h>	/* gettimeofday */
-#include <sys/times.h>	/* times */
+#include <stdlib.h>		/* malloc realloc free */
+#include <unistd.h>		/* read close getuid getgid getpid getppid gethostname */
+#include <fcntl.h>		/* open */
+#include <pwd.h>		/* getpwuid */
+#include <sys/stat.h>		/* stat */
+#include <sys/time.h>		/* gettimeofday */
+#include <sys/times.h>		/* times */
 #include "rdesktop.h"
 
 char username[16];
@@ -68,7 +68,8 @@ int main(int argc, char *argv[])
 	int c;
 
 	STATUS("rdesktop: A Remote Desktop Protocol client.\n");
-	STATUS("Version "VERSION". Copyright (C) 1999-2000 Matt Chapman.\n");
+	STATUS("Version " VERSION
+	       ". Copyright (C) 1999-2000 Matt Chapman.\n");
 	STATUS("See http://www.rdesktop.org/ for more information.\n\n");
 
 	flags = RDP_LOGON_NORMAL;
@@ -186,7 +187,7 @@ void generate_random(uint8 *random)
 {
 	struct stat st;
 	struct tms tmsbuf;
-	uint32 *r = (uint32 *)random;
+	uint32 *r = (uint32 *) random;
 	int fd;
 
 	/* If we have a kernel random device, use it. */
@@ -200,8 +201,8 @@ void generate_random(uint8 *random)
 	/* Otherwise use whatever entropy we can gather - ideas welcome. */
 	r[0] = (getpid()) | (getppid() << 16);
 	r[1] = (getuid()) | (getgid() << 16);
-	r[2] = times(&tmsbuf); /* system uptime (clocks) */
-	gettimeofday((struct timeval *)&r[3], NULL); /* sec and usec */
+	r[2] = times(&tmsbuf);	/* system uptime (clocks) */
+	gettimeofday((struct timeval *) &r[3], NULL);	/* sec and usec */
 	stat("/tmp", &st);
 	r[5] = st.st_atime;
 	r[6] = st.st_mtime;
@@ -253,13 +254,13 @@ void hexdump(unsigned char *p, unsigned int len)
 			thisline = 16;
 
 		for (i = 0; i < thisline; i++)
-			STATUS("%02x ", line[i])
-
-		for (; i < 16; i++)
-			STATUS("   ");
+			STATUS("%02x ", line[i]) for (; i < 16; i++)
+				STATUS("   ");
 
 		for (i = 0; i < thisline; i++)
-			STATUS("%c", (line[i] >= 0x20 && line[i] < 0x7f) ? line[i] : '.');
+			STATUS("%c",
+			       (line[i] >= 0x20
+				&& line[i] < 0x7f) ? line[i] : '.');
 
 		STATUS("\n");
 		offset += thisline;

@@ -32,7 +32,7 @@ HBITMAP cache_get_bitmap(uint8 cache_id, uint16 cache_idx)
 	HBITMAP bitmap;
 
 	if ((cache_id < NUM_ELEMENTS(bmpcache))
-			&& (cache_idx < NUM_ELEMENTS(bmpcache[0])))
+	    && (cache_idx < NUM_ELEMENTS(bmpcache[0])))
 	{
 		bitmap = bmpcache[cache_id][cache_idx];
 		if (bitmap != NULL)
@@ -49,7 +49,7 @@ void cache_put_bitmap(uint8 cache_id, uint16 cache_idx, HBITMAP bitmap)
 	HBITMAP old;
 
 	if ((cache_id < NUM_ELEMENTS(bmpcache))
-			&& (cache_idx < NUM_ELEMENTS(bmpcache[0])))
+	    && (cache_idx < NUM_ELEMENTS(bmpcache[0])))
 	{
 		old = bmpcache[cache_id][cache_idx];
 		if (old != NULL)
@@ -73,7 +73,7 @@ FONTGLYPH *cache_get_font(uint8 font, uint16 character)
 	FONTGLYPH *glyph;
 
 	if ((font < NUM_ELEMENTS(fontcache))
-			&& (character < NUM_ELEMENTS(fontcache[0])))
+	    && (character < NUM_ELEMENTS(fontcache[0])))
 	{
 		glyph = &fontcache[font][character];
 		if (glyph->pixmap != NULL)
@@ -86,12 +86,13 @@ FONTGLYPH *cache_get_font(uint8 font, uint16 character)
 
 /* Store a glyph in the font cache */
 void cache_put_font(uint8 font, uint16 character, uint16 offset,
-		uint16 baseline, uint16 width, uint16 height, HGLYPH pixmap)
+		    uint16 baseline, uint16 width, uint16 height,
+		    HGLYPH pixmap)
 {
 	FONTGLYPH *glyph;
 
 	if ((font < NUM_ELEMENTS(fontcache))
-			&& (character < NUM_ELEMENTS(fontcache[0])))
+	    && (character < NUM_ELEMENTS(fontcache[0])))
 	{
 		glyph = &fontcache[font][character];
 		if (glyph->pixmap != NULL)
@@ -169,7 +170,8 @@ uint8 *cache_get_desktop(uint32 offset, int cx, int cy)
 }
 
 /* Store desktop data in the cache */
-void cache_put_desktop(uint32 offset, int cx, int cy, int scanline, uint8 *data)
+void cache_put_desktop(uint32 offset, int cx, int cy, int scanline,
+		       uint8 *data)
 {
 	int length = cx * cy;
 
@@ -187,4 +189,3 @@ void cache_put_desktop(uint32 offset, int cx, int cy, int scanline, uint8 *data)
 		ERROR("put desktop %d:%d\n", offset, length);
 	}
 }
-

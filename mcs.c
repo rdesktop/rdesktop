@@ -33,8 +33,7 @@ static BOOL ber_parse_header(STREAM s, int tagval, int *length)
 	}
 	else
 	{
-		in_uint8(s, tag)
-	}
+	in_uint8(s, tag)}
 
 	if (tag != tagval)
 	{
@@ -51,7 +50,8 @@ static BOOL ber_parse_header(STREAM s, int tagval, int *length)
 		while (len--)
 			next_be(s, *length);
 	}
-	else *length = len;
+	else
+		*length = len;
 
 	return s_check(s);
 }
@@ -73,7 +73,8 @@ static void ber_out_header(STREAM s, int tagval, int length)
 		out_uint8(s, 0x82);
 		out_uint16_be(s, length);
 	}
-	else out_uint8(s, length);
+	else
+		out_uint8(s, length);
 }
 
 /* Output an ASN.1 BER integer */
@@ -85,17 +86,17 @@ static void ber_out_integer(STREAM s, int value)
 
 /* Output a DOMAIN_PARAMS structure (ASN.1 BER) */
 static void mcs_out_domain_params(STREAM s, int max_channels, int max_users,
-			   int max_tokens, int max_pdusize)
+				  int max_tokens, int max_pdusize)
 {
 	ber_out_header(s, MCS_TAG_DOMAIN_PARAMS, 32);
 	ber_out_integer(s, max_channels);
 	ber_out_integer(s, max_users);
 	ber_out_integer(s, max_tokens);
-	ber_out_integer(s, 1); /* num_priorities */
-	ber_out_integer(s, 0); /* min_throughput */
-	ber_out_integer(s, 1); /* max_height */
+	ber_out_integer(s, 1);	/* num_priorities */
+	ber_out_integer(s, 0);	/* min_throughput */
+	ber_out_integer(s, 1);	/* max_height */
 	ber_out_integer(s, max_pdusize);
-	ber_out_integer(s, 2); /* ver_protocol */
+	ber_out_integer(s, 2);	/* ver_protocol */
 }
 
 /* Parse a DOMAIN_PARAMS structure (ASN.1 BER) */
@@ -113,21 +114,21 @@ static BOOL mcs_parse_domain_params(STREAM s)
 static void mcs_send_connect_initial(STREAM mcs_data)
 {
 	int datalen = mcs_data->end - mcs_data->data;
-	int length = 7 + 3*34 + 4 + datalen;
+	int length = 7 + 3 * 34 + 4 + datalen;
 	STREAM s;
 
 	s = iso_init(length + 5);
 
 	ber_out_header(s, MCS_CONNECT_INITIAL, length);
-	ber_out_header(s, BER_TAG_OCTET_STRING, 0); /* calling domain */
-	ber_out_header(s, BER_TAG_OCTET_STRING, 0); /* called domain */
+	ber_out_header(s, BER_TAG_OCTET_STRING, 0);	/* calling domain */
+	ber_out_header(s, BER_TAG_OCTET_STRING, 0);	/* called domain */
 
 	ber_out_header(s, BER_TAG_BOOLEAN, 1);
-	out_uint8(s, 0xff); /* upward flag */
+	out_uint8(s, 0xff);	/* upward flag */
 
-	mcs_out_domain_params(s, 2, 2, 0, 0xffff); /* target params */
-	mcs_out_domain_params(s, 1, 1, 1, 0x420); /* min params */
-	mcs_out_domain_params(s, 0xffff, 0xfc17, 0xffff, 0xffff); /* max params */
+	mcs_out_domain_params(s, 2, 2, 0, 0xffff);	/* target params */
+	mcs_out_domain_params(s, 1, 1, 1, 0x420);	/* min params */
+	mcs_out_domain_params(s, 0xffff, 0xfc17, 0xffff, 0xffff);	/* max params */
 
 	ber_out_header(s, BER_TAG_OCTET_STRING, datalen);
 	out_uint8p(s, mcs_data->data, datalen);
@@ -158,7 +159,7 @@ static BOOL mcs_recv_connect_response(STREAM mcs_data)
 	}
 
 	ber_parse_header(s, BER_TAG_INTEGER, &length);
-	in_uint8s(s, length); /* connect id */
+	in_uint8s(s, length);	/* connect id */
 	mcs_parse_domain_params(s);
 
 	ber_parse_header(s, BER_TAG_OCTET_STRING, &length);
@@ -183,8 +184,8 @@ static void mcs_send_edrq()
 	s = iso_init(5);
 
 	out_uint8(s, (MCS_EDRQ << 2));
-	out_uint16_be(s, 1); /* height */
-	out_uint16_be(s, 1); /* interval */
+	out_uint16_be(s, 1);	/* height */
+	out_uint16_be(s, 1);	/* interval */
 
 	s_mark_end(s);
 	iso_send(s);
@@ -272,9 +273,9 @@ static BOOL mcs_recv_cjcf()
 		return False;
 	}
 
-	in_uint8s(s, 4); /* mcs_userid, req_chanid */
+	in_uint8s(s, 4);	/* mcs_userid, req_chanid */
 	if (opcode & 2)
-		in_uint8s(s, 2); /* join_chanid */
+		in_uint8s(s, 2);	/* join_chanid */
 
 	return s_check_end(s);
 }
@@ -302,7 +303,7 @@ void mcs_send(STREAM s)
 	out_uint8(s, (MCS_SDRQ << 2));
 	out_uint16_be(s, mcs_userid);
 	out_uint16_be(s, MCS_GLOBAL_CHANNEL);
-	out_uint8(s, 0x70); /* flags */
+	out_uint8(s, 0x70);	/* flags */
 	out_uint16_be(s, length);
 
 	iso_send(s);
@@ -329,10 +330,10 @@ STREAM mcs_recv()
 		return NULL;
 	}
 
-	in_uint8s(s, 5); /* userid, chanid, flags */
+	in_uint8s(s, 5);	/* userid, chanid, flags */
 	in_uint8(s, length);
 	if (length & 0x80)
-		in_uint8s(s, 1); /* second byte of length */
+		in_uint8s(s, 1);	/* second byte of length */
 
 	return s;
 }
@@ -363,7 +364,7 @@ BOOL mcs_connect(char *server, STREAM mcs_data)
 
 	return True;
 
- error:
+      error:
 	iso_disconnect();
 	return False;
 }
