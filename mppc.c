@@ -59,7 +59,7 @@ int
 mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen)
 {
 	int k, walker_len = 0, walker;
-	int i = 0;
+	uint32 i = 0;
 	int next_offset, match_off;
 	int match_len;
 	int old_offset, match_bits;
