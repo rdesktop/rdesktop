@@ -426,13 +426,20 @@ sec_out_mcs_data(STREAM s)
 	out_uint32_le(s, 12);
 	out_uint8s(s, 64);	/* reserved? 4 + 12 doublewords */
 
-	if (server_bpp == 16)
+	switch (server_bpp)
 	{
-		out_uint16_le(s, 0xca03); /* 16 bit */
-	}
-	else
-	{
-		out_uint16_le(s, 0xca01); /* 8 bit */
+		case 8:
+			out_uint16_le(s, 0xca01);
+			break;
+		case 15:
+			out_uint16_le(s, 0xca02);
+			break;
+		case 16:
+			out_uint16_le(s, 0xca03);
+			break;
+		case 24:
+			out_uint16_le(s, 0xca04);
+			break;
 	}
 	out_uint16(s, 0);
 

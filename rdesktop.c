@@ -243,7 +243,7 @@ main(int argc, char *argv[])
 
 			case 'a':
 				server_bpp = strtol(optarg, NULL, 10);
-				if (server_bpp != 8 && server_bpp != 16)
+				if (server_bpp != 8 && server_bpp != 16 && server_bpp != 15 && server_bpp != 24)
 				{
 					error("invalid server bpp\n");
 					return 1;
