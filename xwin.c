@@ -419,19 +419,23 @@ void ui_triblt(uint8 opcode,
 
 	switch (opcode)
 	{
+		case 0x69: /* PDSxxn */
+			ui_memblt(ROP2_XOR, x, y, cx, cy, src, srcx, srcy);
+			ui_patblt(ROP2_NXOR, x, y, cx, cy,
+					brush, bgcolour, fgcolour);
+			break;
+
 		case 0xb8: /* PSDPxax */
 			ui_patblt(ROP2_XOR, x, y, cx, cy,
 					brush, bgcolour, fgcolour);
-			ui_memblt(ROP2_AND, x, y, cx, cy,
-					src, srcx, srcy);
+			ui_memblt(ROP2_AND, x, y, cx, cy, src, srcx, srcy);
 			ui_patblt(ROP2_XOR, x, y, cx, cy,
 					brush, bgcolour, fgcolour);
 			break;
 
 		default:
 			NOTIMP("triblt 0x%x\n", opcode);
-			ui_memblt(ROP2_COPY, x, y, cx, cy,
-					brush, bgcolour, fgcolour);
+			ui_memblt(ROP2_COPY, x, y, cx, cy, src, srcx, srcy);
 	}
 }
 
@@ -523,13 +527,9 @@ void ui_draw_text(uint8 font, uint8 flags, int mixmode, int x,
 void ui_desktop_save(uint32 offset, int x, int y, int cx, int cy)
 {
 	XImage *image;
-	int scanline;
 
-	scanline = (cx + 3) & ~3;
-	DEBUG("XGetImage(%p,%x,%d,%d,%d,%d,%x,%d)\n", display, wnd, x, y,
-		cx, cy, 0xffffffff, ZPixmap);
 	image = XGetImage(display, wnd, x, y, cx, cy, 0xffffffff, ZPixmap);
-	cache_put_desktop(offset, scanline*cy, image->data);
+	cache_put_desktop(offset, cx, cy, image->bytes_per_line, image->data);
 	XFree(image->data);
 	XFree(image);
 }
@@ -537,16 +537,14 @@ void ui_desktop_save(uint32 offset, int x, int y, int cx, int cy)
 void ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy)
 {
 	XImage *image;
-	int scanline;
 	uint8 *data;
 
-	scanline = (cx + 3) & ~3;
-	data = cache_get_desktop(offset, scanline*cy);
+	data = cache_get_desktop(offset, cx, cy);
 	if (data == NULL)
 		return;
 
 	image = XCreateImage(display, visual, 8, ZPixmap, 0,
-				data, cx, cy, 32, scanline);
+				data, cx, cy, 32, cx);
 	XSetFunction(display, gc, GXcopy);
 	XPutImage(display, wnd, gc, image, 0, 0, x, y, cx, cy);
 	XFree(image);

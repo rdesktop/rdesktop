@@ -163,6 +163,7 @@ enum RDP_INPUT_DEVICE
 #define ROP2_COPY	0xc
 #define ROP2_XOR	0x6
 #define ROP2_AND	0x8
+#define ROP2_NXOR	0x9
 #define ROP2_OR		0xe
 
 #define MIX_TRANSPARENT	0

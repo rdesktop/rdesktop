@@ -154,8 +154,10 @@ void cache_put_text(uint8 cache_id, void *data, int length)
 static uint8 deskcache[0x38400];
 
 /* Retrieve desktop data from the cache */
-uint8 *cache_get_desktop(uint32 offset, uint32 length)
+uint8 *cache_get_desktop(uint32 offset, int cx, int cy)
 {
+	int length = cx * cy;
+
 	if ((offset + length) <= sizeof(deskcache))
 	{
 		return &deskcache[offset];
@@ -166,11 +168,18 @@ uint8 *cache_get_desktop(uint32 offset, uint32 length)
 }
 
 /* Store desktop data in the cache */
-void cache_put_desktop(uint32 offset, uint32 length, uint8 *data)
+void cache_put_desktop(uint32 offset, int cx, int cy, int scanline, uint8 *data)
 {
+	int length = cx * cy;
+
 	if ((offset + length) <= sizeof(deskcache))
 	{
-		memcpy(&deskcache[offset], data, length);
+		while (cy--)
+		{
+			memcpy(&deskcache[offset], data, cx);
+			data += scanline;
+			offset += cx;
+		}
 	}
 	else
 	{

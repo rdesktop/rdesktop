@@ -63,8 +63,8 @@ FONTGLYPH *cache_get_font(uint8 font, uint16 character);
 void cache_put_font(uint8 font, uint32 character, uint16 baseline, uint16 width, uint16 height, HGLYPH pixmap);
 DATABLOB *cache_get_text(uint8 cache_id);
 void cache_put_text(uint8 cache_id, void *data, int length);
-uint8 *cache_get_desktop(uint32 offset, uint32 length);
-void cache_put_desktop(uint32 offset, uint32 length, uint8 *data);
+uint8 *cache_get_desktop(uint32 offset, int cx, int cy);
+void cache_put_desktop(uint32 offset, int cx, int cy, int scanline, uint8 *data);
 
 /* xwin.c */
 BOOL ui_create_window(char *title);
