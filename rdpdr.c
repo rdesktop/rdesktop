@@ -940,7 +940,8 @@ rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
 						/* only delete link if all data has been transfered */
 						/* or if result was 0 and status success - EOF      */
 						if ((iorq->partial_len == iorq->length) ||
-						    (result == 0))
+						    (g_rdpdr_device[iorq->device].device_type ==
+						     DEVICE_TYPE_SERIAL) || (result == 0))
 						{
 #if WITH_DEBUG_RDP5
 							DEBUG(("RDPDR: AIO total %u bytes read of %u\n", iorq->partial_len, iorq->length));

@@ -374,7 +374,9 @@ serial_enum_devices(uint32 * id, char *optarg)
 		// Init data structures for device
 		pser_inf = (SERIAL_DEVICE *) xmalloc(sizeof(SERIAL_DEVICE));
 		pser_inf->ptermios = (struct termios *) xmalloc(sizeof(struct termios));
+		memset(pser_inf->ptermios, 0, sizeof(struct termios));
 		pser_inf->pold_termios = (struct termios *) xmalloc(sizeof(struct termios));
+		memset(pser_inf->pold_termios, 0, sizeof(struct termios));
 
 		pos2 = next_arg(optarg, '=');
 		strcpy(g_rdpdr_device[*id].name, optarg);
@@ -406,7 +408,7 @@ serial_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 disposi
 
 	pser_inf = (SERIAL_DEVICE *) g_rdpdr_device[device_id].pdevice_data;
 	ptermios = pser_inf->ptermios;
-	serial_fd = open(g_rdpdr_device[device_id].local_path, O_RDWR | O_NOCTTY);
+	serial_fd = open(g_rdpdr_device[device_id].local_path, O_RDWR | O_NOCTTY | O_NONBLOCK);
 
 	if (serial_fd == -1)
 	{
@@ -437,6 +439,7 @@ serial_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 disposi
 	tcsetattr(serial_fd, TCSANOW, ptermios);
 */
 
+	cfmakeraw(pser_inf->ptermios);
 	*handle = serial_fd;
 
 	/* all read and writes should be non blocking */
