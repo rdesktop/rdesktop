@@ -713,7 +713,7 @@ main(int argc, char *argv[])
 		}
 	}
 #endif
- 
+
 	if (g_hostname[0] == 0)
 	{
 		if (gethostname(fullhostname, sizeof(fullhostname)) == -1)
