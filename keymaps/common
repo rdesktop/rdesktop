@@ -108,7 +108,9 @@ KP_Multiply 0x37
 KP_Subtract 0x4a
 KP_Add 0x4e
 KP_Enter 0x9c
-KP_Decimal 0x33
+
+KP_Decimal 0x53 numlock
+KP_Delete 0x53
 
 KP_0 0x52 numlock
 KP_Insert 0x52
