@@ -149,10 +149,10 @@ translate_image(int width, int height, uint8 *data)
 	return out;
 }
 
-#define BSWAP16(x) x = (((x & 0xff) << 8) | (x >> 8));
-#define BSWAP24(x) x = (((x & 0xff) << 16) | (x >> 16) | ((x >> 8) & 0xff00));
-#define BSWAP32(x) x = (((x & 0xff00ff) << 8) | ((x >> 8) & 0xff00ff)); \
-		   x = (x << 16) | (x >> 16);
+#define BSWAP16(x) { x = (((x & 0xff) << 8) | (x >> 8)); }
+#define BSWAP24(x) { x = (((x & 0xff) << 16) | (x >> 16) | ((x >> 8) & 0xff00)); }
+#define BSWAP32(x) { x = (((x & 0xff00ff) << 8) | ((x >> 8) & 0xff00ff)); \
+			x = (x << 16) | (x >> 16); }
 
 static uint32
 translate_colour(uint32 colour)
