@@ -14,7 +14,7 @@ LDLIBS   = -L/usr/X11R6/lib -lX11 -lXext
 PREFIX   = /usr/local
 EPREFIX  = $(PREFIX)
 BINDIR   = $(EPREFIX)/bin
-# MANDIR   = $(PREFIX)/man
+MANDIR   = $(PREFIX)/man
 SHAREDIR = $(PREFIX)/share/rdesktop
 
 KEYMAP_PATH = $(SHAREDIR)/keymaps/
@@ -31,7 +31,7 @@ rdesktop: $(RDPOBJ) $(CRYPTOBJ)
 Makeconf:
 	./configure
 
-install: installbin installkeymaps
+install: installbin installkeymaps installman
 
 installbin: rdesktop
 	mkdir -p $(DESTDIR)/$(BINDIR)
@@ -39,10 +39,10 @@ installbin: rdesktop
 	strip $(DESTDIR)/$(BINDIR)/rdesktop
 	chmod 755 $(DESTDIR)/$(BINDIR)/rdesktop
 
-# installman: rdesktop.1
-#	mkdir -p $(MANDIR)/man1
-#	cp rdesktop.1 $(MANDIR)/man1
-#	chmod 755 $(MANDIR)/man1/rdesktop.1
+installman: doc/rdesktop.1
+	mkdir -p $(DESTDIR)/$(MANDIR)/man1
+	cp doc/rdesktop.1 $(DESTDIR)/$(MANDIR)/man1
+	chmod 644 $(DESTDIR)/$(MANDIR)/man1/rdesktop.1
 
 installkeymaps:
 	mkdir -p $(DESTDIR)/$(KEYMAP_PATH)
@@ -50,7 +50,6 @@ installkeymaps:
 	cp keymaps/?? $(DESTDIR)/$(KEYMAP_PATH)
 	cp keymaps/common $(DESTDIR)/$(KEYMAP_PATH)
 	cp keymaps/modifiers $(DESTDIR)/$(KEYMAP_PATH)
-	cp keymaps/README $(DESTDIR)/$(KEYMAP_PATH)
 	chmod 644 $(DESTDIR)/$(KEYMAP_PATH)/*
 
 proto:
@@ -74,12 +73,13 @@ dist:
 	rdesktop/keymaps/?? \
 	rdesktop/keymaps/modifiers \
 	rdesktop/keymaps/convert-map \
-	rdesktop/keymaps/README \
 	rdesktop/doc/HACKING \
 	rdesktop/doc/TODO \
+	rdesktop/doc/keymapping.txt \
+	rdesktop/doc/rdesktop.1 \
 	rdesktop/Makefile \
 	rdesktop/configure \
-	rdesktop/rdesktop.spec)	
+	rdesktop/rdesktop.spec)
 	rm -rf /tmp/rdesktop-make-dist-dir
 
 .SUFFIXES:

@@ -1,0 +1,108 @@
+.TH RDESKTOP 1 "September 2002" "Manual page for rdesktop"
+.\"
+.\" Man page author:
+.\"    Hugo Trippaers <spark@ision.nl>
+.\"    Peter Åstrand <peter@cendio.se>
+.SH NAME
+.I rdesktop
+\- Remote Desktop Protocol client
+.SH SYNOPSIS
+.B rdesktop [options] server
+.br
+.SH DESCRIPTION
+.I rdesktop
+is a client for Windows NT4 Terminal Server and Windows 2000 Terminal
+Services.  rdesktop implements the RDP version 4 protocol, which used
+by Windows NT4 Terminal Server, and parts of RDP version 5, which is
+used by Windows 2000 Terminal Services.
+
+.SH OPTIONS
+.TP
+.BR "-u <username>"
+The username for authentication on the terminal server, together with -p 
+this can be used for autologon. 
+.TP
+.BR "-d <domain>"
+The domain to to which the user belongs. 
+.TP
+.BR "-s <shell>"
+The startup shell for the user.  Use this to start a specific application, 
+instead of a regular desktop. 
+.TP
+.BR "-c <directory>"
+The current working directory for the user.  Often used in combination with -s 
+to setup a fixed environment for the user after logon.
+.TP
+.BR "-p <password>"
+The password to authenticate with, used in combination with -u for
+autologon.   Use -p - to make rdesktop request a password at startup.
+WARNING: the -p <password> option will be visible to all users when
+they use tools like ps.  The -P option is safer. 
+.TP
+.BR "-P <program>"
+The program to fetch the password from.  The program will be executed,
+and the output will be used as the password.  This is a safe way to
+transfer the password to rdesktop. 
+.TP
+.BR "-n <name>"
+Client name.  The default is the hostname. 
+.TP
+.BR "-k <layout>"
+keyboard layout on terminal server (us,sv,gr etc.)
+.TP
+.BR "-g <geometry>"
+Desktop geometry (WxH). 
+.TP
+.BR "-f"
+Enable fullscreen mode.  The -g option will be ignored when using -f,
+rdesktop will get the current height and width from the current
+desktop.
+.TP
+.BR "-b"
+Force bitmap updates. 
+.TP
+.BR "-e"
+Do not use encryption, this is only for people who are not allowed to
+use encryption in Windows products.  If you live in France you
+probably need this switch.
+.TP
+.BR "-m"
+Do not send motion events.
+.TP
+.BR "-l"
+Do not request licence. 
+.TP
+.BR "-t <port>"
+Connect to this TCP port. The default is 3389. 
+.TP
+.BR "-K"
+Keep window manager key bindings. 
+
+.PP
+.SH "RETURN VALUES"
+None are defined (yet). 
+.SH LINKS
+Main website of rdesktop
+.br
+\fIhttp://www.rdesktop.org
+.LP
+.SH BUGS
+We suggest you visit the website at http://www.rdesktop.org and follow
+the links to the Bug Tracker.
+.SH VERSION
+This manual page documents version 1.2. 
+.SH AUTHOR
+rdesktop is written by Matt Chapman <matthewc@cse.unsw.edu.au>
+.LP
+The following persons have contributed to the project:
+.LP
+Peter Bystrom <peter.bystrom@ub.oru.se>
+.br
+Hugo Trippaers <spark@ision.nl>
+.br
+Jay Sorg 
+.br
+Peter Åstrand
+.SH THANKS
+Thanks to all the mailinglist members for their contributions to rdesktop.
+.PP
