@@ -68,7 +68,7 @@ rdp5_process(STREAM s, BOOL encryption)
 			case 3:	/* probably an palette with offset 3. Weird */
 				break;
 			case 5:
-				process_null_system_pointer_pdu(s);
+				ui_set_null_cursor();
 				break;
 			case 8:
 				in_uint16_le(s, x);

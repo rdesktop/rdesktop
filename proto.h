@@ -152,6 +152,7 @@ HCURSOR ui_create_cursor(unsigned int x, unsigned int y, int width, int height, 
 			 uint8 * xormask);
 void ui_set_cursor(HCURSOR cursor);
 void ui_destroy_cursor(HCURSOR cursor);
+void ui_set_null_cursor(void);
 HCOLOURMAP ui_create_colourmap(COLOURMAP * colours);
 void ui_destroy_colourmap(HCOLOURMAP map);
 void ui_set_colourmap(HCOLOURMAP map);

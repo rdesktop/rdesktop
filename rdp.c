@@ -607,15 +607,6 @@ process_demand_active(STREAM s)
 	reset_order_state();
 }
 
-/* Process a null system pointer PDU */
-void
-process_null_system_pointer_pdu(STREAM s)
-{
-	// FIXME: We should probably set another cursor here, 
-	// like the X window system base cursor or something.
-	ui_set_cursor(cache_get_cursor(0));
-}
-
 /* Process a colour pointer PDU */
 void
 process_colour_pointer_pdu(STREAM s)
@@ -648,6 +639,23 @@ process_cached_pointer_pdu(STREAM s)
 	ui_set_cursor(cache_get_cursor(cache_idx));
 }
 
+/* Process a system pointer PDU */
+void
+process_system_pointer_pdu(STREAM s)
+{
+	uint16 system_pointer_type;
+
+	in_uint16(s, system_pointer_type);
+	switch (system_pointer_type)
+	{
+		case RDP_NULL_POINTER:
+			ui_set_null_cursor();
+			break;
+
+		default:
+			unimpl("System pointer message 0x%x\n", system_pointer_type);
+	}
+}
 
 /* Process a pointer PDU */
 static void
@@ -676,8 +684,12 @@ process_pointer_pdu(STREAM s)
 			process_cached_pointer_pdu(s);
 			break;
 
+		case RDP_POINTER_SYSTEM:
+			process_system_pointer_pdu(s);
+			break;
+
 		default:
-			DEBUG(("Pointer message 0x%x\n", message_type));
+			unimpl("Pointer message 0x%x\n", message_type);
 	}
 }
 

@@ -49,6 +49,7 @@ static XIM g_IM;
 static XIC g_IC;
 static XModifierKeymap *g_mod_map;
 static Cursor g_current_cursor;
+static HCURSOR g_null_cursor;
 static Atom g_protocol_atom, g_kill_atom;
 static BOOL g_focused;
 static BOOL g_mouse_in_wnd;
@@ -797,6 +798,9 @@ ui_deinit(void)
 	g_display = NULL;
 }
 
+#define NULL_POINTER_MASK	"\x80"
+#define NULL_POINTER_DATA	"\x0\x0\x0"
+	
 BOOL
 ui_create_window(void)
 {
@@ -881,12 +885,17 @@ ui_create_window(void)
 	g_kill_atom = XInternAtom(g_display, "WM_DELETE_WINDOW", True);
 	XSetWMProtocols(g_display, g_wnd, &g_kill_atom, 1);
 
+	/* create invisible 1x1 cursor to be used as null cursor */
+	g_null_cursor = ui_create_cursor(0, 0, 1, 1, NULL_POINTER_MASK, NULL_POINTER_DATA);
+
 	return True;
 }
 
 void
 ui_destroy_window(void)
 {
+	ui_destroy_cursor(g_null_cursor);
+	
 	if (g_IC != NULL)
 		XDestroyIC(g_IC);
 
@@ -1400,6 +1409,12 @@ void
 ui_destroy_cursor(HCURSOR cursor)
 {
 	XFreeCursor(g_display, (Cursor) cursor);
+}
+
+void
+ui_set_null_cursor(void)
+{
+	ui_set_cursor(g_null_cursor);
 }
 
 #define MAKE_XCOLOR(xc,c) \
