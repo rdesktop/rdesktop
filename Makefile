@@ -45,7 +45,7 @@ proto:
 	cproto -DMAKE_PROTO -o proto.h *.c
 
 clean:
-	rm -f *.o crypto/*.o *~
+	rm -f *.o crypto/*.o *~ rdesktop
 
 .SUFFIXES:
 .SUFFIXES: .c .o

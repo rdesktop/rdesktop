@@ -379,8 +379,8 @@ int	BN_mod_exp_mont_word(BIGNUM *r, BN_ULONG a, const BIGNUM *p,
 			const BIGNUM *m, BN_CTX *ctx, BN_MONT_CTX *m_ctx);
 int	BN_mod_exp2_mont(BIGNUM *r, BIGNUM *a1, BIGNUM *p1,BIGNUM *a2,
 		BIGNUM *p2,BIGNUM *m,BN_CTX *ctx,BN_MONT_CTX *m_ctx);
-int	BN_mod_exp_simple(BIGNUM *r, BIGNUM *a, BIGNUM *p,
-	BIGNUM *m,BN_CTX *ctx);
+int	BN_mod_exp_simple(BIGNUM *r, BIGNUM *a, const BIGNUM *p,
+	const BIGNUM *m,BN_CTX *ctx);
 int	BN_mask_bits(BIGNUM *a,int n);
 int	BN_mod_mul(BIGNUM *ret, BIGNUM *a, BIGNUM *b, const BIGNUM *m, BN_CTX *ctx);
 #ifndef NO_FP_API

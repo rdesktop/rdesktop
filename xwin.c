@@ -21,6 +21,7 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <time.h>
+#include <errno.h>
 #include "rdesktop.h"
 
 extern int width;
@@ -29,12 +30,18 @@ extern BOOL sendmotion;
 extern BOOL fullscreen;
 
 static Display *display;
+static int x_socket;
 static Window wnd;
 static GC gc;
 static Visual *visual;
 static int depth;
 static int bpp;
 
+/* endianness */
+static BOOL host_be;
+static BOOL xserver_be;
+
+/* software backing store */
 static BOOL ownbackstore;
 static Pixmap backstore;
 
@@ -45,12 +52,13 @@ static Pixmap backstore;
 		XFillRectangle(display, backstore, gc, x, y, cx, cy); \
 }
 
+/* colour maps */
 static BOOL owncolmap;
 static Colormap xcolmap;
 static uint32 white;
 static uint32 *colmap;
 
-#define TRANSLATE(col)		( owncolmap ? col : colmap[col] )
+#define TRANSLATE(col)		( owncolmap ? col : translate_colour(colmap[col]) )
 #define SET_FOREGROUND(col)	XSetForeground(display, gc, TRANSLATE(col));
 #define SET_BACKGROUND(col)	XSetBackground(display, gc, TRANSLATE(col));
 
@@ -90,7 +98,7 @@ translate16(uint8 *data, uint16 *out, uint16 *end)
 		*(out++) = (uint16)colmap[*(data++)];
 }
 
-/* XXX endianness */
+/* little endian - conversion happens when colourmap is built */
 static void
 translate24(uint8 *data, uint8 *out, uint8 *end)
 {
@@ -113,7 +121,7 @@ translate32(uint8 *data, uint32 *out, uint32 *end)
 }
 
 static uint8 *
-translate(int width, int height, uint8 *data)
+translate_image(int width, int height, uint8 *data)
 {
 	int size = width * height * bpp/8;
 	uint8 *out = xmalloc(size);
@@ -141,9 +149,34 @@ translate(int width, int height, uint8 *data)
 	return out;
 }
 
-#define L_ENDIAN
-int screen_msbfirst = 0;
+#define BSWAP16(x) x = (((x & 0xff) << 8) | (x >> 8));
+#define BSWAP24(x) x = (((x & 0xff) << 16) | (x >> 16) | ((x >> 8) & 0xff00));
+#define BSWAP32(x) x = (((x & 0xff00ff) << 8) | ((x >> 8) & 0xff00ff)); \
+		   x = (x << 16) | (x >> 16);
 
+static uint32
+translate_colour(uint32 colour)
+{
+	switch (bpp)
+	{
+		case 16:
+			if (host_be != xserver_be)
+				BSWAP16(colour);
+			break;
+
+		case 24:
+			if (xserver_be)
+				BSWAP24(colour);
+			break;
+
+		case 32:
+			if (host_be != xserver_be)
+				BSWAP32(colour);
+			break;
+	}
+
+	return colour;
+}
 
 BOOL
 ui_create_window(char *title)
@@ -154,8 +187,8 @@ ui_create_window(char *title)
 	unsigned long input_mask;
 	XPixmapFormatValues *pfm;
 	Screen *screen;
+	uint16 test;
 	int i;
-
 
 	display = XOpenDisplay(NULL);
 	if (display == NULL)
@@ -164,6 +197,7 @@ ui_create_window(char *title)
 		return False;
 	}
 
+	x_socket = ConnectionNumber(display);
 	screen = DefaultScreenOfDisplay(display);
 	visual = DefaultVisualOfScreen(screen);
 	depth = DefaultDepthOfScreen(screen);
@@ -195,6 +229,10 @@ ui_create_window(char *title)
 		owncolmap = True;
 	else
 		xcolmap = DefaultColormapOfScreen(screen);
+
+	test = 1;
+	host_be = !(BOOL)(*(uint8 *)(&test));
+	xserver_be = (ImageByteOrder(display) == MSBFirst);
 
 	white = WhitePixelOfScreen(screen);
 	attribs.background_pixel = BlackPixelOfScreen(screen);
@@ -343,8 +381,8 @@ xwin_translate_mouse(unsigned long button)
 	return 0;
 }
 
-void
-ui_process_events()
+static void
+xwin_process_events()
 {
 	XEvent event;
 	uint8 scancode;
@@ -428,6 +466,39 @@ ui_process_events()
 }
 
 void
+ui_select(int rdp_socket)
+{
+	int n = (rdp_socket > x_socket) ? rdp_socket+1 : x_socket+1;
+	fd_set rfds;
+
+	XFlush(display);
+
+	FD_ZERO(&rfds);
+
+	while (True)
+	{
+		FD_ZERO(&rfds);
+		FD_SET(rdp_socket, &rfds);
+		FD_SET(x_socket, &rfds);
+
+		switch (select(n, &rfds, NULL, NULL, NULL))
+		{
+			case -1:
+				error("select: %s\n", strerror(errno));
+
+			case 0:
+				continue;
+		}
+
+		if (FD_ISSET(x_socket, &rfds))
+			xwin_process_events();
+
+		if (FD_ISSET(rdp_socket, &rfds))
+			return;
+	}
+}
+
+void
 ui_move_pointer(int x, int y)
 {
 	XWarpPointer(display, wnd, wnd, 0, 0, 0, 0, x, y);
@@ -440,7 +511,7 @@ ui_create_bitmap(int width, int height, uint8 *data)
 	Pixmap bitmap;
 	uint8 *tdata;
 
-	tdata = (owncolmap ? data : translate(width, height, data));
+	tdata = (owncolmap ? data : translate_image(width, height, data));
 	bitmap = XCreatePixmap(display, wnd, width, height, depth);
 	image = XCreateImage(display, visual, depth, ZPixmap,
 			     0, tdata, width, height, 8, 0);
@@ -460,7 +531,7 @@ ui_paint_bitmap(int x, int y, int cx, int cy,
 	XImage *image;
 	uint8 *tdata;
 
-	tdata = (owncolmap ? data : translate(width, height, data));
+	tdata = (owncolmap ? data : translate_image(width, height, data));
 	image = XCreateImage(display, visual, depth, ZPixmap,
 			     0, tdata, width, height, 8, 0);
 
@@ -635,6 +706,7 @@ ui_create_colourmap(COLOURMAP *colours)
 	{
 		uint32 *map = xmalloc(sizeof(*colmap) * ncolours);
 		XColor xentry;
+		uint32 colour;
 
 		for (i = 0; i < ncolours; i++)
 		{
@@ -642,9 +714,12 @@ ui_create_colourmap(COLOURMAP *colours)
 			MAKE_XCOLOR(&xentry, entry);
 
 			if (XAllocColor(display, xcolmap, &xentry) != 0)
-				map[i] = xentry.pixel;
+				colour = translate_colour(xentry.pixel);
 			else
-				map[i] = white;
+				colour = translate_colour(white);
+
+			/* byte swap here to make translate_image faster */
+			map[i] = translate_colour(colour);
 		}
 
 		return map;

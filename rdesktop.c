@@ -224,6 +224,7 @@ main(int argc, char *argv[])
 
 		printf("Connection successful.\n");
 		rdp_main_loop();
+		printf("Disconnecting...\n");
 		ui_destroy_window();
 	}
 

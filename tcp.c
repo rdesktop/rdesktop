@@ -56,11 +56,10 @@ tcp_send(STREAM s)
 
 	while (total < length)
 	{
-		sent = write(sock, s->data + total, length - total);
-
+		sent = send(sock, s->data + total, length - total, 0);
 		if (sent <= 0)
 		{
-			error("write: %s\n", strerror(errno));
+			error("send: %s\n", strerror(errno));
 			return;
 		}
 
@@ -72,9 +71,7 @@ tcp_send(STREAM s)
 STREAM
 tcp_recv(int length)
 {
-	int ret, rcvd = 0;
-	struct timeval tv;
-	fd_set rfds;
+	int rcvd = 0;
 
 	if (length > in.size)
 	{
@@ -86,28 +83,17 @@ tcp_recv(int length)
 
 	while (length > 0)
 	{
-		ui_process_events();
+		ui_select(sock);
 
-		FD_ZERO(&rfds);
-		FD_SET(sock, &rfds);
-		tv.tv_sec = 0;
-		tv.tv_usec = 100;
-
-		ret = select(sock + 1, &rfds, NULL, NULL, &tv);
-
-		if (ret)
+		rcvd = recv(sock, in.end, length, 0);
+		if (rcvd == -1)
 		{
-			rcvd = read(sock, in.end, length);
-
-			if (rcvd <= 0)
-			{
-				error("read: %s\n", strerror(errno));
-				return NULL;
-			}
-
-			in.end += rcvd;
-			length -= rcvd;
+			error("recv: %s\n", strerror(errno));
+			return NULL;
 		}
+
+		in.end += rcvd;
+		length -= rcvd;
 	}
 
 	return &in;

@@ -795,7 +795,7 @@ err:
 #endif
 
 /* The old fallback, simple version :-) */
-int BN_mod_exp_simple(BIGNUM *r, BIGNUM *a, BIGNUM *p, BIGNUM *m,
+int BN_mod_exp_simple(BIGNUM *r, BIGNUM *a, const BIGNUM *p, const BIGNUM *m,
 	     BN_CTX *ctx)
 	{
 	int i,j,bits,ret=0,wstart,wend,window,wvalue,ts=0;

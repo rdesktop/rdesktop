@@ -52,13 +52,13 @@ iso_recv_msg(uint8 *code)
 
 	s = tcp_recv(4);
 	if (s == NULL)
-		return False;
+		return NULL;
 
 	in_uint8(s, version);
 	if (version != 3)
 	{
 		error("TPKT v%d\n", version);
-		return False;
+		return NULL;
 	}
 
 	in_uint8s(s, 1);	/* pad */
@@ -66,7 +66,7 @@ iso_recv_msg(uint8 *code)
 
 	s = tcp_recv(length - 4);
 	if (s == NULL)
-		return False;
+		return NULL;
 
 	in_uint8s(s, 1);	/* hdrlen */
 	in_uint8(s, *code);
@@ -121,10 +121,13 @@ iso_recv()
 	uint8 code;
 
 	s = iso_recv_msg(&code);
-	if ((s == NULL) || (code != ISO_PDU_DT))
+	if (s == NULL)
+		return NULL;
+
+	if (code != ISO_PDU_DT)
 	{
-		error("expected DT, got %d\n", code);
-		return False;
+		error("expected DT, got 0x%x\n", code);
+		return NULL;
 	}
 
 	return s;
@@ -141,9 +144,12 @@ iso_connect(char *server)
 
 	iso_send_msg(ISO_PDU_CR);
 
-	if ((iso_recv_msg(&code) == NULL) || (code != ISO_PDU_CC))
+	if (iso_recv_msg(&code) == NULL)
+		return False;
+
+	if (code != ISO_PDU_CC)
 	{
-		error("expected CC, got %d\n", code);
+		error("expected CC, got 0x%x\n", code);
 		tcp_disconnect();
 		return False;
 	}
