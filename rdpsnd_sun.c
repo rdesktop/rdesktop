@@ -167,11 +167,7 @@ wave_out_volume(uint16 left, uint16 right)
 	uint balance;
 	uint volume;
 
-	if (ioctl(g_dsp_fd, AUDIO_GETINFO, &info) == -1)
-	{
-		perror("AUDIO_GETINFO");
-		return;
-	}
+	AUDIO_INITINFO(&info);
 
 	volume = (left > right) ? left : right;
 
