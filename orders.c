@@ -441,6 +441,93 @@ static void process_triblt(STREAM s, TRIBLT_ORDER *os,
 			&os->brush, os->bgcolour, os->fgcolour);
 }
 
+/* Parse a delta co-ordinate in polyline order form */
+static int parse_delta(uint8 *buffer, int *offset)
+{
+	int value = buffer[(*offset)++];
+	int two_byte = value & 0x80;
+
+	if (value & 0x40) /* sign bit */
+		value |= ~0x3f;
+	else
+		value &= 0x3f;
+
+	if (two_byte)
+		value = (value << 8) | buffer[(*offset)++];
+
+	return value;
+}
+
+/* Process a polyline order */
+static void process_polyline(STREAM s, POLYLINE_ORDER *os,
+				uint32 present, BOOL delta)
+{
+	int index, line, data;
+	int x, y, xfrom, yfrom;
+	uint8 flags = 0;
+	PEN pen;
+
+	if (present & 0x01)
+		rdp_in_coord(s, &os->x, delta);
+
+	if (present & 0x02)
+		rdp_in_coord(s, &os->y, delta);
+
+	if (present & 0x04)
+		in_uint8(s, os->flags);
+
+	if (present & 0x10)
+		rdp_in_colour(s, &os->fgcolour);
+
+	if (present & 0x20)
+		in_uint8(s, os->lines);
+
+	if (present & 0x40)
+	{
+		in_uint8(s, os->datasize);
+		in_uint8a(s, os->data, os->datasize);
+	}
+
+	DEBUG("POLYLINE(x=%d,y=%d,fl=0x%x,fg=0x%x,n=%d,sz=%d)\n",
+		os->x, os->y, os->flags, os->fgcolour, os->lines, os->datasize);
+
+	DEBUG("Data: ");
+
+	for (index = 0; index < os->datasize; index++)
+		DEBUG("%02x ", os->data[index]);
+
+	DEBUG("\n");
+
+	x = os->x;
+	y = os->y;
+	pen.style = pen.width = 0;
+	pen.colour = os->fgcolour;
+
+	index = 0;
+	data = ((os->lines - 1) / 4) + 1;
+	for (line = 0; (line < os->lines) && (data < os->datasize); line++)
+	{
+		xfrom = x;
+		yfrom = y;
+
+		if (line % 4 == 0)
+			flags = os->data[index++];
+
+		if ((flags & 0xc0) == 0)
+			flags |= 0xc0;   /* none = both */
+
+		if (flags & 0x40)
+			x += parse_delta(os->data, &data);
+
+		if (flags & 0x80)
+			y += parse_delta(os->data, &data);
+
+		ui_line(ROP2_COPY, xfrom, yfrom, x, y, &pen);
+
+		flags <<= 2;
+	}
+}
+
 /* Process a text order */
 static void process_text2(STREAM s, TEXT2_ORDER *os, uint32 present, BOOL delta)
 {
@@ -515,7 +602,7 @@ static void process_text2(STREAM s, TEXT2_ORDER *os, uint32 present, BOOL delta)
 	DEBUG("\n");
 
 	/* Process special cache strings */
-	if ((os->length == 2) && (os->text[0] == 0xfe))
+	if ((os->length >= 2) && (os->text[0] == 0xfe))
 	{
 		entry = cache_get_text(os->text[1]);
 
@@ -822,6 +909,11 @@ void process_orders(STREAM s)
 				case RDP_ORDER_TRIBLT:
 					process_triblt(s, &os->triblt,
 						       present, delta);
+					break;
+
+				case RDP_ORDER_POLYLINE:
+					process_polyline(s, &os->polyline,
+							 present, delta);
 					break;
 
 				case RDP_ORDER_TEXT2:

@@ -37,6 +37,7 @@ enum RDP_ORDER_TYPE
 	RDP_ORDER_DESKSAVE = 11,
 	RDP_ORDER_MEMBLT = 13,
 	RDP_ORDER_TRIBLT = 14,
+	RDP_ORDER_POLYLINE = 22,
 	RDP_ORDER_TEXT2 = 27
 };
 
@@ -151,6 +152,20 @@ typedef struct _MEMBLT_ORDER
 
 } MEMBLT_ORDER;
 
+#define MAX_DATA 256
+
+typedef struct _POLYLINE_ORDER
+{
+	uint16 x;
+	uint16 y;
+	uint8 flags;
+	uint8 fgcolour;
+	uint8 lines;
+	uint8 datasize;
+	uint8 data[MAX_DATA];
+
+} POLYLINE_ORDER;
+
 #define MAX_TEXT 256
 
 typedef struct _TEXT2_ORDER
@@ -189,6 +204,7 @@ typedef struct _RDP_ORDER_STATE
 	DESKSAVE_ORDER desksave;
 	MEMBLT_ORDER memblt;
 	TRIBLT_ORDER triblt;
+	POLYLINE_ORDER polyline;
 	TEXT2_ORDER text2;
 
 } RDP_ORDER_STATE;
