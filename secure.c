@@ -285,7 +285,7 @@ reverse(uint8 * p, int len)
 static void
 sec_rsa_encrypt(uint8 * out, uint8 * in, int len, uint8 * modulus, uint8 * exponent)
 {
-	BN_CTX ctx;
+	BN_CTX *ctx;
 	BIGNUM mod, exp, x, y;
 	uint8 inr[SEC_MODULUS_SIZE];
 	int outlen;
@@ -295,7 +295,7 @@ sec_rsa_encrypt(uint8 * out, uint8 * in, int len, uint8 * modulus, uint8 * expon
 	memcpy(inr, in, len);
 	reverse(inr, len);
 
-	BN_CTX_init(&ctx);
+	ctx = BN_CTX_new();
 	BN_init(&mod);
 	BN_init(&exp);
 	BN_init(&x);
@@ -304,7 +304,7 @@ sec_rsa_encrypt(uint8 * out, uint8 * in, int len, uint8 * modulus, uint8 * expon
 	BN_bin2bn(modulus, SEC_MODULUS_SIZE, &mod);
 	BN_bin2bn(exponent, SEC_EXPONENT_SIZE, &exp);
 	BN_bin2bn(inr, len, &x);
-	BN_mod_exp(&y, &x, &exp, &mod, &ctx);
+	BN_mod_exp(&y, &x, &exp, &mod, ctx);
 	outlen = BN_bn2bin(&y, out);
 	reverse(out, outlen);
 	if (outlen < SEC_MODULUS_SIZE)
@@ -314,7 +314,7 @@ sec_rsa_encrypt(uint8 * out, uint8 * in, int len, uint8 * modulus, uint8 * expon
 	BN_clear_free(&x);
 	BN_free(&exp);
 	BN_free(&mod);
-	BN_CTX_free(&ctx);
+	BN_CTX_free(ctx);
 }
 
 /* Initialise secure transport packet */
