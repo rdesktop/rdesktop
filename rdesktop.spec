@@ -30,7 +30,7 @@ make install DESTDIR=$RPM_BUILD_ROOT
 %defattr(-,root,root)
 %doc COPYING 
 %{_bindir}/rdesktop
-%{_mandir}/man1/rdesktop.1.gz
+%{_mandir}/man1/rdesktop.1*
 %{_datadir}/rdesktop/keymaps
 
 %post
