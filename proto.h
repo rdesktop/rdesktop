@@ -157,6 +157,7 @@ BOOL get_key_state(unsigned int state, uint32 keysym);
 BOOL ui_init(void);
 void ui_deinit(void);
 BOOL ui_create_window(void);
+void ui_resize_window(void);
 void ui_destroy_window(void);
 void xwin_toggle_fullscreen(void);
 int ui_select(int rdp_socket);

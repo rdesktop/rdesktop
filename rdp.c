@@ -31,6 +31,8 @@ extern BOOL g_use_rdp5;
 extern uint16 g_server_rdp_version;
 extern uint32 g_rdp5_performanceflags;
 extern int g_server_bpp;
+extern int g_width;
+extern int g_height;
 
 uint8 *g_next_packet;
 uint32 g_rdp_shareid;
@@ -368,7 +370,7 @@ rdp_send_fonts(uint16 seq)
 	s = rdp_init_data(8);
 
 	out_uint16(s, 0);	/* number of fonts */
-	out_uint16_le(s, 0x3e);	/* unknown */
+	out_uint16_le(s, 0);	/* pad? */
 	out_uint16_le(s, seq);	/* unknown */
 	out_uint16_le(s, 0x32);	/* entry size */
 
@@ -416,7 +418,7 @@ rdp_out_bitmap_caps(STREAM s)
 	out_uint16_le(s, 800);	/* Desktop width */
 	out_uint16_le(s, 600);	/* Desktop height */
 	out_uint16(s, 0);	/* Pad */
-	out_uint16(s, 0);	/* Allow resize */
+	out_uint16(s, 1);	/* Allow resize */
 	out_uint16_le(s, g_bitmap_compression ? 1 : 0);	/* Support compression */
 	out_uint16(s, 0);	/* Unknown */
 	out_uint16_le(s, 1);	/* Unknown */
@@ -613,42 +615,82 @@ rdp_send_confirm_active(void)
 	sec_send(s, sec_flags);
 }
 
+/* Process a general capability set */
+static void
+rdp_process_general_caps(STREAM s)
+{
+	uint16 pad2octetsB;	/* rdp5 flags? */
+
+	in_uint8s(s, 10);
+	in_uint16_le(s, pad2octetsB);
+
+	if (!pad2octetsB)
+		g_use_rdp5 = False;
+}
+
+/* Process a bitmap capability set */
+static void
+rdp_process_bitmap_caps(STREAM s)
+{
+	uint16 width, height, bpp;
+
+	in_uint16_le(s, bpp);
+	in_uint8s(s, 6);
+
+	in_uint16_le(s, width);
+	in_uint16_le(s, height);
+
+	DEBUG(("setting desktop size and bpp to: %dx%dx%d\n", width, height, bpp));
+
+	/*
+	 * The server may limit bpp and change the size of the desktop (for
+	 * example when shadowing another session).
+	 */
+	g_server_bpp = bpp;
+	g_width = width;
+	g_height = height;
+
+	ui_resize_window();
+}
+
 /* Respond to a demand active PDU */
 static void
 process_demand_active(STREAM s)
 {
-	uint8 type;
-	uint16 i;
-	uint16 p_bpp;
+	int n;
+	uint8 type, *next;
+	uint16 len_src_descriptor, len_combined_caps, num_capsets, capset_type, capset_length;
 
 	in_uint32_le(s, g_rdp_shareid);
+	in_uint16_le(s, len_src_descriptor);
+	in_uint16_le(s, len_combined_caps);
+	in_uint8s(s, len_src_descriptor);
 
-	/* scan for prefered bpp */
-	while (s_check_rem(s, 6))
+	in_uint16_le(s, num_capsets);
+	in_uint8s(s, 2);	/* pad */
+
+	DEBUG(("DEMAND_ACTIVE(id=0x%x,num_caps=%d)\n", g_rdp_shareid, num_capsets));
+
+	for (n = 0; n < num_capsets; n++)
 	{
-		in_uint16_le(s, i);
-		if (i == RDP_CAPSET_BITMAP)
+		in_uint16_le(s, capset_type);
+		in_uint16_le(s, capset_length);
+
+		next = s->p + capset_length - 4;
+
+		switch (capset_type)
 		{
-			in_uint16_le(s, i);
-			if (i == RDP_CAPLEN_BITMAP)
-			{
-				in_uint16_le(s, p_bpp);
-				if (p_bpp == 8 || p_bpp == 15 || p_bpp == 16 || p_bpp == 24)
-				{
-					if (p_bpp < g_server_bpp)
-					{
-						warning("Server limited colour depth to %d bits\n",
-							p_bpp);
-						g_server_bpp = p_bpp;
-					}
-					break;
-				}
-			}
+			case RDP_CAPSET_GENERAL:
+				rdp_process_general_caps(s);
+				break;
+
+			case RDP_CAPSET_BITMAP:
+				rdp_process_bitmap_caps(s);
+				break;
 		}
+
+		s->p = next;
 	}
-
-
-	DEBUG(("DEMAND_ACTIVE(id=0x%x)\n", g_rdp_shareid));
 
 	rdp_send_confirm_active();
 	rdp_send_synchronise();
@@ -658,9 +700,18 @@ process_demand_active(STREAM s)
 	rdp_recv(&type);	/* RDP_CTL_COOPERATE */
 	rdp_recv(&type);	/* RDP_CTL_GRANT_CONTROL */
 	rdp_send_input(0, RDP_INPUT_SYNCHRONIZE, 0, ui_get_numlock_state(read_keyboard_state()), 0);
-	rdp_send_fonts(1);
-	rdp_send_fonts(2);
-	rdp_recv(&type);	/* RDP_PDU_UNKNOWN 0x28 */
+
+	if (g_use_rdp5)
+	{
+		rdp_send_fonts(3);
+	}
+	else
+	{
+		rdp_send_fonts(1);
+		rdp_send_fonts(2);
+	}
+
+	rdp_recv(&type);	/* RDP_PDU_UNKNOWN 0x28 (Fonts?) */
 	reset_order_state();
 }
 
@@ -997,6 +1048,7 @@ rdp_main_loop(BOOL * deactivated, uint32 * ext_disc_reason)
 				break;
 
 			case RDP_PDU_DEACTIVATE:
+				DEBUG(("RDP_PDU_DEACTIVATE\n"));
 				*deactivated = True;
 				break;
 

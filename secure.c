@@ -449,22 +449,7 @@ sec_out_mcs_data(STREAM s)
 	out_uint32(s, 0);
 	out_uint32_le(s, 12);
 	out_uint8s(s, 64);	/* reserved? 4 + 12 doublewords */
-
-	switch (g_server_bpp)
-	{
-		case 8:
-			out_uint16_le(s, 0xca01);
-			break;
-		case 15:
-			out_uint16_le(s, 0xca02);
-			break;
-		case 16:
-			out_uint16_le(s, 0xca03);
-			break;
-		case 24:
-			out_uint16_le(s, 0xca04);
-			break;
-	}
+	out_uint16_le(s, 0xca01);	/* colour depth? */
 	out_uint16_le(s, 1);
 
 	out_uint32(s, 0);
@@ -771,7 +756,10 @@ sec_process_srv_info(STREAM s)
 	in_uint16_le(s, g_server_rdp_version);
 	DEBUG_RDP5(("Server RDP version is %d\n", g_server_rdp_version));
 	if (1 == g_server_rdp_version)
+	{
 		g_use_rdp5 = 0;
+		g_server_bpp = 8;
+	}
 }
 
 

@@ -1009,6 +1009,27 @@ ui_create_window(void)
 }
 
 void
+ui_resize_window()
+{
+	XSizeHints *sizehints;
+
+	sizehints = XAllocSizeHints();
+	if (sizehints)
+	{
+		sizehints->flags = PMinSize | PMaxSize;
+		sizehints->min_width = sizehints->max_width = g_width;
+		sizehints->min_height = sizehints->max_height = g_height;
+		XSetWMNormalHints(g_display, g_wnd, sizehints);
+		XFree(sizehints);
+	}
+
+	if (!(g_fullscreen || g_embed_wnd))
+	{
+		XResizeWindow(g_display, g_wnd, g_width, g_height);
+	}
+}
+
+void
 ui_destroy_window(void)
 {
 	if (g_IC != NULL)
