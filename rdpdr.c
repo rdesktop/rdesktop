@@ -34,7 +34,7 @@ uint32 g_num_devices;
 
 /* Table with information about rdpdr devices */
 RDPDR_DEVICE g_rdpdr_device[RDPDR_MAX_DEVICES];
-char * g_rdpdr_clientname = NULL;
+char *g_rdpdr_clientname = NULL;
 
 /* Used to store incoming io request, until they are ready to be completed */
 /* using a linked list ensures that they are processed in the right order, */
@@ -167,8 +167,9 @@ rdpdr_send_name(void)
 	STREAM s;
 	uint32 hostlen;
 
-	if (NULL == g_rdpdr_clientname) {
-	  g_rdpdr_clientname = hostname;
+	if (NULL == g_rdpdr_clientname)
+	{
+		g_rdpdr_clientname = hostname;
 	}
 	hostlen = (strlen(g_rdpdr_clientname) + 1) * 2;
 

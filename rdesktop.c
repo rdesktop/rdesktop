@@ -69,9 +69,10 @@ BOOL g_use_rdp5 = True;
 BOOL g_console_session = False;
 BOOL g_numlock_sync = False;
 BOOL g_owncolmap = False;
-BOOL g_ownbackstore  = True;	/* We can't rely on external BackingStore */
+BOOL g_ownbackstore = True;	/* We can't rely on external BackingStore */
 uint32 g_embed_wnd;
-uint32 g_rdp5_performanceflags = RDP5_NO_WALLPAPER | RDP5_NO_FULLWINDOWDRAG | RDP5_NO_MENUANIMATIONS;
+uint32 g_rdp5_performanceflags =
+	RDP5_NO_WALLPAPER | RDP5_NO_FULLWINDOWDRAG | RDP5_NO_MENUANIMATIONS;
 
 #ifdef WITH_RDPSND
 BOOL g_rdpsnd = False;
@@ -79,7 +80,7 @@ BOOL g_rdpsnd = False;
 
 extern RDPDR_DEVICE g_rdpdr_device[];
 extern uint32 g_num_devices;
-extern char * g_rdpdr_clientname;
+extern char *g_rdpdr_clientname;
 
 #ifdef RDP2VNC
 extern int rfb_port;
@@ -123,7 +124,8 @@ usage(char *program)
 	fprintf(stderr, "   -N: enable numlock syncronization\n");
 	fprintf(stderr, "   -X: embed into another window with a given id.\n");
 	fprintf(stderr, "   -a: connection colour depth\n");
-	fprintf(stderr, "   -x: RDP5 experience (m[odem 28.8], b[roadband], l[an] or hex number)\n");
+	fprintf(stderr,
+		"   -x: RDP5 experience (m[odem 28.8], b[roadband], l[an] or hex number)\n");
 	fprintf(stderr, "   -r: enable specified device redirection (this flag can be repeated)\n");
 	fprintf(stderr,
 		"         '-r comport:COM1=/dev/ttyS0': enable serial redirection of /dev/ttyS0 to COM1\n");
@@ -412,7 +414,7 @@ main(int argc, char *argv[])
 			case 'X':
 				g_embed_wnd = strtol(optarg, NULL, 10);
 				break;
-				
+
 			case 'a':
 				g_server_bpp = strtol(optarg, NULL, 10);
 				if (g_server_bpp != 8 && g_server_bpp != 16 && g_server_bpp != 15
@@ -424,10 +426,12 @@ main(int argc, char *argv[])
 				break;
 
 			case 'x':
-				
+
 				if (strncmp("modem", optarg, 1) == 0)
 				{
-					g_rdp5_performanceflags = RDP5_NO_WALLPAPER | RDP5_NO_FULLWINDOWDRAG | RDP5_NO_MENUANIMATIONS | RDP5_NO_THEMING;
+					g_rdp5_performanceflags =
+						RDP5_NO_WALLPAPER | RDP5_NO_FULLWINDOWDRAG |
+						RDP5_NO_MENUANIMATIONS | RDP5_NO_THEMING;
 				}
 				else if (strncmp("broadband", optarg, 1) == 0)
 				{
@@ -442,7 +446,7 @@ main(int argc, char *argv[])
 					g_rdp5_performanceflags = strtol(optarg, NULL, 16);
 				}
 				break;
-				
+
 			case 'r':
 
 				if (strncmp("sound", optarg, 5) == 0)
@@ -498,7 +502,7 @@ main(int argc, char *argv[])
 				}
 				else if (strncmp("clientname", optarg, 7) == 0)
 				{
-					g_rdpdr_clientname = xmalloc(strlen(optarg+11)+1);
+					g_rdpdr_clientname = xmalloc(strlen(optarg + 11) + 1);
 					strcpy(g_rdpdr_clientname, optarg + 11);
 				}
 				else

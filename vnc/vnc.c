@@ -75,7 +75,7 @@ static rfbScreenInfoPtr server = NULL;
 static vncBuffer *frameBuffer = NULL;
 static uint8_t reverseByte[0x100];
 BOOL g_enable_compose = False;
-int g_display=0;
+int g_display = 0;
 
 /* ignored */
 BOOL owncolmap = False;
@@ -486,7 +486,8 @@ ui_destroy_cursor(HCURSOR cursor)
 		rfbFreeCursor((rfbCursorPtr) cursor);
 }
 
-void ui_set_null_cursor(void)
+void
+ui_set_null_cursor(void)
 {
 	rfbSetCursor(server, 0, FALSE);
 }

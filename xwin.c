@@ -57,7 +57,7 @@ static HCURSOR g_null_cursor = NULL;
 static Atom g_protocol_atom, g_kill_atom;
 static BOOL g_focused;
 static BOOL g_mouse_in_wnd;
-static BOOL g_arch_match = False; /* set to True if RGB XServer and little endian */
+static BOOL g_arch_match = False;	/* set to True if RGB XServer and little endian */
 
 /* endianness */
 static BOOL g_host_be;
@@ -956,10 +956,10 @@ ui_create_window(void)
 		XFree(sizehints);
 	}
 
-        if ( g_embed_wnd )
-        {
-                XReparentWindow(g_display, g_wnd, (Window)g_embed_wnd, 0, 0);
-        }
+	if (g_embed_wnd)
+	{
+		XReparentWindow(g_display, g_wnd, (Window) g_embed_wnd, 0, 0);
+	}
 
 	input_mask = KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask |
 		VisibilityChangeMask | FocusChangeMask;

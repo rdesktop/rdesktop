@@ -249,7 +249,7 @@ enum RDP_INPUT_DEVICE
 #define RDP5_NO_MENUANIMATIONS	0x04
 #define RDP5_NO_THEMING		0x08
 #define RDP5_NO_CURSOR_SHADOW	0x20
-#define RDP5_NO_CURSORSETTINGS	0x40 /* disables cursor blinking */
+#define RDP5_NO_CURSORSETTINGS	0x40	/* disables cursor blinking */
 
 /* Keymap flags */
 #define MapRightShiftMask   (1<<0)
