@@ -2,17 +2,17 @@
    rdesktop: A Remote Desktop Protocol client.
    Protocol services - RDP layer
    Copyright (C) Matthew Chapman 1999-2002
-   
+
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation; either version 2 of the License, or
    (at your option) any later version.
-   
+
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
-   
+
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -28,6 +28,7 @@ extern BOOL encryption;
 extern BOOL desktop_save;
 extern BOOL use_rdp5;
 extern uint16 server_rdp_version;
+extern int server_bpp;
 
 uint8 *next_packet;
 uint32 rdp_shareid;
@@ -178,7 +179,7 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 			(flags & RDP_LOGON_BLOB ? 2 : 0) +	// Length of BLOB
 			2 +	// len_program
 			2 +	// len_directory
-			(0 < len_domain ? len_domain : 2) +	// domain 
+			(0 < len_domain ? len_domain : 2) +	// domain
 			len_user + (flags & RDP_LOGON_AUTO ? len_password : 0) + 0 +	// We have no 512 byte BLOB. Perhaps we must?
 			(flags & RDP_LOGON_BLOB && !(flags & RDP_LOGON_AUTO) ? 2 : 0) +	// After the BLOB is a unknown int16. If there is a BLOB, that is.
 			(0 < len_program ? len_program : 2) + (0 < len_directory ? len_directory : 2) + 2 +	// Unknown (2)
@@ -434,16 +435,18 @@ rdp_out_order_caps(STREAM s)
 static void
 rdp_out_bmpcache_caps(STREAM s)
 {
+	int Bpp;
 	out_uint16_le(s, RDP_CAPSET_BMPCACHE);
 	out_uint16_le(s, RDP_CAPLEN_BMPCACHE);
 
+	Bpp = (server_bpp + 7) / 8;
 	out_uint8s(s, 24);	/* unused */
 	out_uint16_le(s, 0x258);	/* entries */
-	out_uint16_le(s, 0x100);	/* max cell size */
+	out_uint16_le(s, 0x100 * Bpp);	/* max cell size */
 	out_uint16_le(s, 0x12c);	/* entries */
-	out_uint16_le(s, 0x400);	/* max cell size */
+	out_uint16_le(s, 0x400 * Bpp);	/* max cell size */
 	out_uint16_le(s, 0x106);	/* entries */
-	out_uint16_le(s, 0x1000);	/* max cell size */
+	out_uint16_le(s, 0x1000 * Bpp);	/* max cell size */
 }
 
 /* Output control capability set */
