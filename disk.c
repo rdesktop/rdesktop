@@ -132,6 +132,65 @@ convert_1970_to_filetime(uint32 high, uint32 low)
 
 }
 
+/* A wrapper for ftruncate which supports growing files, even if the
+   native ftruncate doesn't. This is needed on Linux FAT filesystems,
+   for example. */
+static int
+ftruncate_growable(int fd, off_t length)
+{
+	int ret;
+	off_t pos;
+	static const char zero;
+
+	/* Try the simple method first */
+	if ((ret = ftruncate(fd, length)) != -1)
+	{
+		return ret;
+	}
+
+	/* 
+	 * Some kind of error. Perhaps we were trying to grow. Retry
+	 * in a safe way.
+	 */
+
+	/* Get current position */
+	if ((pos = lseek(fd, 0, SEEK_CUR)) == -1)
+	{
+		perror("lseek");
+		return -1;
+	}
+
+	/* Seek to new size */
+	if (lseek(fd, length, SEEK_SET) == -1)
+	{
+		perror("lseek");
+		return -1;
+	}
+
+	/* Write a zero */
+	if (write(fd, &zero, 1) == -1)
+	{
+		perror("write");
+		return -1;
+	}
+
+	/* Truncate. This shouldn't fail. */
+	if (ftruncate(fd, length) == -1)
+	{
+		perror("ftruncate");
+		return -1;
+	}
+
+	/* Restore position */
+	if (lseek(fd, pos, SEEK_SET) == -1)
+	{
+		perror("lseek");
+		return -1;
+	}
+
+	return 0;
+}
+
 
 /* Enumeration of devices from rdesktop.c        */
 /* returns numer of units found and initialized. */
@@ -658,11 +717,8 @@ disk_set_information(NTHANDLE handle, uint32 info_class, STREAM in, STREAM out)
 				if (stat_fs.f_bsize * stat_fs.f_bfree < length)
 					return STATUS_DISK_FULL;
 
-			/* FIXME: Growing file with ftruncate doesn't
-			   work with Linux FAT fs */
-			if (ftruncate(handle, length) != 0)
+			if (ftruncate_growable(handle, length) != 0)
 			{
-				perror("ftruncate");
 				return STATUS_DISK_FULL;
 			}
 
