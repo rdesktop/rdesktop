@@ -266,7 +266,7 @@ handle_special_keys(uint32 keysym, unsigned int state, uint32 ev_time, BOOL pres
 			}
 			else
 			{
-				// Release Left Ctrl
+				/* Release Left Ctrl */
 				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYRELEASE, 0x1d,
 					       0);
 			}
