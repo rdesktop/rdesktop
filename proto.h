@@ -217,8 +217,9 @@ void ui_ellipse(uint8 opcode, uint8 fillmode, int x, int y, int cx, int cy, BRUS
 		int bgcolour, int fgcolour);
 void ui_draw_glyph(int mixmode, int x, int y, int cx, int cy, HGLYPH glyph, int srcx, int srcy,
 		   int bgcolour, int fgcolour);
-void ui_draw_text(uint8 font, uint8 flags, int mixmode, int x, int y, int clipx, int clipy,
-		  int clipcx, int clipcy, int boxx, int boxy, int boxcx, int boxcy, int bgcolour,
-		  int fgcolour, uint8 * text, uint8 length);
+void ui_draw_text(uint8 font, uint8 flags, uint8 opcode, int mixmode, int x, int y,
+		  int clipx, int clipy, int clipcx, int clipcy, int boxx, int boxy,
+		  int boxcx, int boxcy, BRUSH * brush, int bgcolour, int fgcolour,
+		  uint8 * text, uint8 length);
 void ui_desktop_save(uint32 offset, int x, int y, int cx, int cy);
 void ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy);

@@ -246,10 +246,10 @@ typedef struct _TEXT2_ORDER
 {
 	uint8 font;
 	uint8 flags;
+	uint8 opcode;
 	uint8 mixmode;
-	uint8 unknown;
-	uint32 fgcolour;
 	uint32 bgcolour;
+	uint32 fgcolour;
 	sint16 clipleft;
 	sint16 cliptop;
 	sint16 clipright;
@@ -258,6 +258,7 @@ typedef struct _TEXT2_ORDER
 	sint16 boxtop;
 	sint16 boxright;
 	sint16 boxbottom;
+	BRUSH brush;
 	sint16 x;
 	sint16 y;
 	uint8 length;

@@ -805,7 +805,7 @@ process_text2(STREAM s, TEXT2_ORDER * os, uint32 present, BOOL delta)
 		in_uint8(s, os->flags);
 
 	if (present & 0x000004)
-		in_uint8(s, os->unknown);
+		in_uint8(s, os->opcode);
 
 	if (present & 0x000008)
 		in_uint8(s, os->mixmode);
@@ -840,27 +840,7 @@ process_text2(STREAM s, TEXT2_ORDER * os, uint32 present, BOOL delta)
 	if (present & 0x002000)
 		in_uint16_le(s, os->boxbottom);
 
-	/*
-	 * Unknown members, seen when connecting to a session that was disconnected with
-	 * mstsc and with wintach's spreadsheet test.
-	 */
-	if (present & 0x004000)
-		in_uint8s(s, 1);
-
-	if (present & 0x008000)
-		in_uint8s(s, 1);
-
-	if (present & 0x010000)
-	{
-		in_uint8s(s, 1);	/* guessing the length here */
-		warning("Unknown order state member (0x010000) in text2 order.\n");
-	}
-
-	if (present & 0x020000)
-		in_uint8s(s, 4);
-
-	if (present & 0x040000)
-		in_uint8s(s, 4);
+	rdp_parse_brush(s, &os->brush, present >> 14);
 
 	if (present & 0x080000)
 		in_uint16_le(s, os->x);
@@ -874,7 +854,7 @@ process_text2(STREAM s, TEXT2_ORDER * os, uint32 present, BOOL delta)
 		in_uint8a(s, os->text, os->length);
 	}
 
-	DEBUG(("TEXT2(x=%d,y=%d,cl=%d,ct=%d,cr=%d,cb=%d,bl=%d,bt=%d,bb=%d,br=%d,fg=0x%x,bg=0x%x,font=%d,fl=0x%x,mix=%d,unk=0x%x,n=%d)\n", os->x, os->y, os->clipleft, os->cliptop, os->clipright, os->clipbottom, os->boxleft, os->boxtop, os->boxright, os->boxbottom, os->fgcolour, os->bgcolour, os->font, os->flags, os->mixmode, os->unknown, os->length));
+	DEBUG(("TEXT2(x=%d,y=%d,cl=%d,ct=%d,cr=%d,cb=%d,bl=%d,bt=%d,br=%d,bb=%d,bs=%d,bg=0x%x,fg=0x%x,font=%d,fl=0x%x,op=0x%x,mix=%d,n=%d)\n", os->x, os->y, os->clipleft, os->cliptop, os->clipright, os->clipbottom, os->boxleft, os->boxtop, os->boxright, os->boxbottom, os->brush.style, os->bgcolour, os->fgcolour, os->font, os->flags, os->opcode, os->mixmode, os->length));
 
 	DEBUG(("Text: "));
 
@@ -883,13 +863,11 @@ process_text2(STREAM s, TEXT2_ORDER * os, uint32 present, BOOL delta)
 
 	DEBUG(("\n"));
 
-	ui_draw_text(os->font, os->flags, os->mixmode, os->x, os->y,
-		     os->clipleft, os->cliptop,
-		     os->clipright - os->clipleft,
-		     os->clipbottom - os->cliptop,
-		     os->boxleft, os->boxtop,
-		     os->boxright - os->boxleft,
-		     os->boxbottom - os->boxtop, os->bgcolour, os->fgcolour, os->text, os->length);
+	ui_draw_text(os->font, os->flags, os->opcode - 1, os->mixmode, os->x, os->y,
+		     os->clipleft, os->cliptop, os->clipright - os->clipleft,
+		     os->clipbottom - os->cliptop, os->boxleft, os->boxtop,
+		     os->boxright - os->boxleft, os->boxbottom - os->boxtop,
+		     &os->brush, os->bgcolour, os->fgcolour, os->text, os->length);
 }
 
 /* Process a raw bitmap cache order */

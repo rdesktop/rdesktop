@@ -2376,11 +2376,13 @@ ui_draw_glyph(int mixmode,
 }
 
 void
-ui_draw_text(uint8 font, uint8 flags, int mixmode, int x, int y,
+ui_draw_text(uint8 font, uint8 flags, uint8 opcode, int mixmode, int x, int y,
 	     int clipx, int clipy, int clipcx, int clipcy,
-	     int boxx, int boxy, int boxcx, int boxcy, int bgcolour,
-	     int fgcolour, uint8 * text, uint8 length)
+	     int boxx, int boxy, int boxcx, int boxcy, BRUSH * brush,
+	     int bgcolour, int fgcolour, uint8 * text, uint8 length)
 {
+	/* TODO: use brush appropriately */
+
 	FONTGLYPH *glyph;
 	int i, j, xyoffset, x1, y1;
 	DATABLOB *entry;
