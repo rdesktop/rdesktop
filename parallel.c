@@ -4,8 +4,6 @@
 
 #define IOCTL_PAR_QUERY_RAW_DEVICE_ID	0x0c
 
-#define PARALLELDEV0			"/dev/lp0"
-
 #include "rdesktop.h"
 #include <unistd.h>
 #include <fcntl.h>
@@ -33,7 +31,6 @@ get_parallel_data(HANDLE handle)
 int
 parallel_enum_devices(int *id, char *optarg)
 {
-	//TODO: Read from configuration file? CUPS?
 	PARALLEL_DEVICE *ppar_info;
 
 	char *pos = optarg;
@@ -67,13 +64,16 @@ parallel_enum_devices(int *id, char *optarg)
 }
 
 static NTSTATUS
-parallel_create(uint32 device_id, HANDLE * handle)
+parallel_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 disposition, uint32 flags,
+	       char *filename, HANDLE * handle)
 {
 	int parallel_fd;
 
-	parallel_fd = open(PARALLELDEV0, O_WRONLY);
+	parallel_fd = open(g_rdpdr_device[device_id].local_path, O_WRONLY);
 	if (parallel_fd == -1)
 		return STATUS_ACCESS_DENIED;
+
+	g_rdpdr_device[device_id].handle = parallel_fd;
 
 	*handle = parallel_fd;
 	return STATUS_SUCCESS;
@@ -82,6 +82,7 @@ parallel_create(uint32 device_id, HANDLE * handle)
 static NTSTATUS
 parallel_close(HANDLE handle)
 {
+	g_rdpdr_device[get_device_index(handle)].handle = 0;
 	close(handle);
 	return STATUS_SUCCESS;
 }
