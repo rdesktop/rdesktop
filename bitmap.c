@@ -330,13 +330,13 @@ bitmap_decompress2(uint8 * output, int width, int height, uint8 * input, int siz
 					insertmix = True;
 				break;
 			case 8:	/* Bicolour */
-				colour1 = CVAL2(input);
+				memcpy(&colour1,&CVAL2(input),2);
 			case 3:	/* Colour */
-				colour2 = CVAL2(input);
+				memcpy(&colour2,&CVAL2(input),2);
 				break;
 			case 6:	/* SetMix/Mix */
 			case 7:	/* SetMix/FillOrMix */
-				mix = CVAL2(input);
+				memcpy(&mix,&CVAL2(input),2);
 				opcode -= 5;
 				break;
 			case 9:	/* FillOrMix_1 */
@@ -424,7 +424,7 @@ bitmap_decompress2(uint8 * output, int width, int height, uint8 * input, int siz
 					REPEAT(line[x] = colour2)
 					break;
 				case 4:	/* Copy */
-					REPEAT(line[x] = CVAL2(input))
+					REPEAT(memcpy(&line[x],&CVAL2(input),2))
 					break;
 				case 8:	/* Bicolour */
 					REPEAT
