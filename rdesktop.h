@@ -36,6 +36,12 @@
 #define DEBUG_KBD(args)
 #endif
 
+#ifdef WITH_DEBUG_RDP5
+#define DEBUG_RDP5(args) printf args;
+#else
+#define DEBUG_RDP5(args)
+#endif
+
 #define STRNCPY(dst,src,n) { strncpy(dst,src,n-1); dst[n-1] = 0; }
 
 #include "constants.h"

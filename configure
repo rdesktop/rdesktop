@@ -59,6 +59,9 @@ case $arg in
   --with-debug-kbd)
     cflags="$cflags -g -DWITH_DEBUG_KBD"
     ;;
+  --with-debug-rdp5)
+    cflags="$cflags -g -DWITH_DEBUG_RDP5"
+    ;;
   --without-debug*)
     ;;
   *)
