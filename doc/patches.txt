@@ -204,9 +204,9 @@ Not needed anymore, with the new keyboard mapping implementation.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/rdesktop-gmp.patch
 Description:
-Seems to make the crypto stuff link with GNU MP. 
+Use GMP for RSA crypto. 
 Status:
-Not applied. 
+Not needed since rdesktop now use OpenSSL for all of the crypto.
 
 
 URL:
