@@ -628,16 +628,16 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 		uint32 certcount;
 
 		DEBUG_RDP5(("We're going for the RDP5-style encryption\n"));
-		in_uint32_le(s, certcount); /* Number of certificates */
+		in_uint32_le(s, certcount);	/* Number of certificates */
 
-		if(certcount < 2) 
+		if (certcount < 2)
 		{
 			error("Server didn't send enough X509 certificates\n");
 			return False;
 		}
 
-		for(; certcount > 2; certcount--)
-		{ /* ignore all the certificates between the root and the signing CA */
+		for (; certcount > 2; certcount--)
+		{		/* ignore all the certificates between the root and the signing CA */
 			uint32 ignorelen;
 			X509 *ignorecert;
 
@@ -647,13 +647,13 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 			DEBUG_RDP5(("Ignored Certificate length is %d\n", ignorelen));
 			ignorecert = d2i_X509(NULL, &(s->p), ignorelen);
 
-			if(ignorecert == NULL)
-			{ /* XXX: error out? */
+			if (ignorecert == NULL)
+			{	/* XXX: error out? */
 				DEBUG_RDP5(("got a bad cert: this will probably screw up the rest of the communication\n"));
 			}
 
 #ifdef WITH_DEBUG_RDP5
-			DEBUG_RDP5(("cert #%d (ignored):\n",certcount));
+			DEBUG_RDP5(("cert #%d (ignored):\n", certcount));
 			X509_print_fp(stdout, ignorecert);
 #endif
 		}

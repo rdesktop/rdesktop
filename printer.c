@@ -4,7 +4,8 @@
 
 extern RDPDR_DEVICE g_rdpdr_device[];
 
-PRINTER * get_printer_data(HANDLE handle)
+PRINTER *
+get_printer_data(HANDLE handle)
 {
 	int index;
 

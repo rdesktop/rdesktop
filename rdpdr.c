@@ -661,7 +661,10 @@ rdpdr_init()
 {
 	if (g_num_devices > 0)
 	{
-		rdpdr_channel =	channel_register("rdpdr", CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_COMPRESS_RDP, rdpdr_process);
+		rdpdr_channel =
+			channel_register("rdpdr",
+					 CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_COMPRESS_RDP,
+					 rdpdr_process);
 	}
 
 	return (rdpdr_channel != NULL);

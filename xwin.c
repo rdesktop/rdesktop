@@ -731,7 +731,7 @@ ui_init(void)
 		TrueColorVisual = True;
 	}
 
-	if ((g_server_bpp == 8) && ((! TrueColorVisual) || (g_depth <= 8)))
+	if ((g_server_bpp == 8) && ((!TrueColorVisual) || (g_depth <= 8)))
 	{
 		/* we use a colourmap, so the default visual should do */
 		g_visual = DefaultVisualOfScreen(g_screen);
@@ -783,7 +783,9 @@ ui_init(void)
 
 	if (!g_owncolmap)
 	{
-		g_xcolmap = XCreateColormap(g_display,RootWindowOfScreen(g_screen),g_visual,AllocNone);
+		g_xcolmap =
+			XCreateColormap(g_display, RootWindowOfScreen(g_screen), g_visual,
+					AllocNone);
 		if (g_depth <= 8)
 			warning("Screen depth is 8 bits or lower: you may want to use -C for a private colourmap\n");
 	}
@@ -849,7 +851,7 @@ ui_deinit(void)
 {
 	if (g_IM != NULL)
 		XCloseIM(g_IM);
-	
+
 	if (g_null_cursor != NULL)
 		ui_destroy_cursor(g_null_cursor);
 
@@ -894,9 +896,7 @@ ui_create_window(void)
 
 	if ((g_ownbackstore) && (g_backstore == NULL))
 	{
-		g_backstore =
-			XCreatePixmap(g_display, g_wnd, g_width, g_height,
-				      g_depth);
+		g_backstore = XCreatePixmap(g_display, g_wnd, g_width, g_height, g_depth);
 
 		/* clear to prevent rubbish being exposed at startup */
 		XSetForeground(g_display, g_gc, BlackPixelOfScreen(g_screen));

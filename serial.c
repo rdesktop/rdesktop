@@ -53,7 +53,7 @@
 #define ODD_PARITY			1
 #define EVEN_PARITY			2
 
-extern RDPDR_DEVICE    g_rdpdr_device[];
+extern RDPDR_DEVICE g_rdpdr_device[];
 
 int serial_fd;
 struct termios termios;
@@ -64,95 +64,137 @@ uint32 queue_in_size, queue_out_size;
 uint32 wait_mask;
 uint8 stop_bits, parity, word_length;
 
-SERIAL_DEVICE
-*get_serial_info(HANDLE handle)
+SERIAL_DEVICE * get_serial_info(HANDLE handle)
 {
-        int     index;
+	int index;
 
-        for (index = 0; index < RDPDR_MAX_DEVICES; index++)
-        {
-                if (handle == g_rdpdr_device[index].handle)
-                        return (SERIAL_DEVICE *) g_rdpdr_device[index].pdevice_data;
-        }
-        return NULL;
+	for (index = 0; index < RDPDR_MAX_DEVICES; index++)
+	{
+		if (handle == g_rdpdr_device[index].handle)
+			return (SERIAL_DEVICE *) g_rdpdr_device[index].pdevice_data;
+	}
+	return NULL;
 }
 
 BOOL
-get_termios(SERIAL_DEVICE *pser_inf, HANDLE serial_fd)
+get_termios(SERIAL_DEVICE * pser_inf, HANDLE serial_fd)
 {
-        speed_t         speed;
-        struct termios  *ptermios;
+	speed_t speed;
+	struct termios *ptermios;
 
-	ptermios	= pser_inf->ptermios;
+	ptermios = pser_inf->ptermios;
 
-        if (tcgetattr(serial_fd, ptermios) == -1)
-                return False;
+	if (tcgetattr(serial_fd, ptermios) == -1)
+		return False;
 
-        speed = cfgetispeed(ptermios);
-        switch (speed)
-        {
+	speed = cfgetispeed(ptermios);
+	switch (speed)
+	{
 #ifdef B75
-                case B75:       pser_inf->baud_rate = 75; break;
+		case B75:
+			pser_inf->baud_rate = 75;
+			break;
 #endif
 #ifdef B110
-                case B110:      pser_inf->baud_rate = 110; break;
+		case B110:
+			pser_inf->baud_rate = 110;
+			break;
 #endif
 #ifdef B134
-                case B134:      pser_inf->baud_rate = 134; break;
+		case B134:
+			pser_inf->baud_rate = 134;
+			break;
 #endif
 #ifdef B150
-                case B150:      pser_inf->baud_rate = 150; break;
+		case B150:
+			pser_inf->baud_rate = 150;
+			break;
 #endif
 #ifdef B300
-                case B300:      pser_inf->baud_rate = 300; break;
+		case B300:
+			pser_inf->baud_rate = 300;
+			break;
 #endif
 #ifdef B600
-                case B600:      pser_inf->baud_rate = 600; break;
+		case B600:
+			pser_inf->baud_rate = 600;
+			break;
 #endif
 #ifdef B1200
-                case B1200:     pser_inf->baud_rate = 1200; break;
+		case B1200:
+			pser_inf->baud_rate = 1200;
+			break;
 #endif
 #ifdef B1800
-                case B1800:     pser_inf->baud_rate = 1800; break;
+		case B1800:
+			pser_inf->baud_rate = 1800;
+			break;
 #endif
 #ifdef B2400
-                case B2400:     pser_inf->baud_rate = 2400; break;
+		case B2400:
+			pser_inf->baud_rate = 2400;
+			break;
 #endif
 #ifdef B4800
-                case B4800:     pser_inf->baud_rate = 4800; break;
+		case B4800:
+			pser_inf->baud_rate = 4800;
+			break;
 #endif
 #ifdef B9600
-                case B9600:     pser_inf->baud_rate = 9600; break;
+		case B9600:
+			pser_inf->baud_rate = 9600;
+			break;
 #endif
 #ifdef B19200
-                case B19200:    pser_inf->baud_rate = 19200; break;
+		case B19200:
+			pser_inf->baud_rate = 19200;
+			break;
 #endif
 #ifdef B38400
-                case B38400:    pser_inf->baud_rate = 38400; break;
+		case B38400:
+			pser_inf->baud_rate = 38400;
+			break;
 #endif
 #ifdef B57600
-                case B57600:    pser_inf->baud_rate = 57600; break;
+		case B57600:
+			pser_inf->baud_rate = 57600;
+			break;
 #endif
 #ifdef B115200
-                case B115200:   pser_inf->baud_rate = 115200; break;
+		case B115200:
+			pser_inf->baud_rate = 115200;
+			break;
 #endif
-                default:        pser_inf->baud_rate = 0; break;
-        }
+		default:
+			pser_inf->baud_rate = 0;
+			break;
+	}
 
-        speed = cfgetospeed(ptermios);
-        pser_inf->dtr = (speed == B0) ? 0 : 1;
+	speed = cfgetospeed(ptermios);
+	pser_inf->dtr = (speed == B0) ? 0 : 1;
 
-        pser_inf->stop_bits = (ptermios->c_cflag & CSTOPB) ? STOP_BITS_2 : STOP_BITS_1;
-        pser_inf->parity = (ptermios->c_cflag & PARENB) ? ((ptermios->c_cflag & PARODD) ? ODD_PARITY : EVEN_PARITY) : NO_PARITY;
-        switch (ptermios->c_cflag & CSIZE)
-        {
-                case CS5: pser_inf->word_length = 5; break;
-                case CS6: pser_inf->word_length = 6; break;
-                case CS7: pser_inf->word_length = 7; break;
-                default:  pser_inf->word_length = 8; break;
-        }
+	pser_inf->stop_bits = (ptermios->c_cflag & CSTOPB) ? STOP_BITS_2 : STOP_BITS_1;
+	pser_inf->parity =
+		(ptermios->
+		 c_cflag & PARENB) ? ((ptermios->
+				       c_cflag & PARODD) ? ODD_PARITY : EVEN_PARITY) : NO_PARITY;
+	switch (ptermios->c_cflag & CSIZE)
+	{
+		case CS5:
+			pser_inf->word_length = 5;
+			break;
+		case CS6:
+			pser_inf->word_length = 6;
+			break;
+		case CS7:
+			pser_inf->word_length = 7;
+			break;
+		default:
+			pser_inf->word_length = 8;
+			break;
+	}
 
-        return True;
+	return True;
 }
 
 static void
@@ -163,51 +205,83 @@ set_termios(void)
 	switch (baud_rate)
 	{
 #ifdef B75
-		case 75:	speed = B75;break;
+		case 75:
+			speed = B75;
+			break;
 #endif
 #ifdef B110
-		case 110:	speed = B110;break;
+		case 110:
+			speed = B110;
+			break;
 #endif
 #ifdef B134
-		case 134:	speed = B134;break;
+		case 134:
+			speed = B134;
+			break;
 #endif
 #ifdef B150
-		case 150:	speed = B150;break;
+		case 150:
+			speed = B150;
+			break;
 #endif
 #ifdef B300
-		case 300:	speed = B300;break;
+		case 300:
+			speed = B300;
+			break;
 #endif
 #ifdef B600
-		case 600:	speed = B600;break;
+		case 600:
+			speed = B600;
+			break;
 #endif
 #ifdef B1200
-		case 1200:	speed = B1200;break;
+		case 1200:
+			speed = B1200;
+			break;
 #endif
 #ifdef B1800
-		case 1800:	speed = B1800;break;
+		case 1800:
+			speed = B1800;
+			break;
 #endif
 #ifdef B2400
-		case 2400:	speed = B2400;break;
+		case 2400:
+			speed = B2400;
+			break;
 #endif
 #ifdef B4800
-		case 4800:	speed = B4800;break;
+		case 4800:
+			speed = B4800;
+			break;
 #endif
 #ifdef B9600
-		case 9600:	speed = B9600;break;
+		case 9600:
+			speed = B9600;
+			break;
 #endif
 #ifdef B19200
-		case 19200:	speed = B19200;break;
+		case 19200:
+			speed = B19200;
+			break;
 #endif
 #ifdef B38400
-		case 38400:	speed = B38400;break;
+		case 38400:
+			speed = B38400;
+			break;
 #endif
 #ifdef B57600
-		case 57600:	speed = B57600;break;
+		case 57600:
+			speed = B57600;
+			break;
 #endif
 #ifdef B115200
-		case 115200:	speed = B115200;break;
+		case 115200:
+			speed = B115200;
+			break;
 #endif
-		default:	speed = B0;break;
+		default:
+			speed = B0;
+			break;
 	}
 
 	/* on systems with separate ispeed and ospeed, we can remember the speed
@@ -256,9 +330,9 @@ set_termios(void)
 /* when it arrives to this function.              */
 /* :com1=/dev/ttyS0,com2=/dev/ttyS1 */
 int
-serial_enum_devices(int *id, char* optarg)
+serial_enum_devices(int *id, char *optarg)
 {
-	SERIAL_DEVICE* pser_inf;
+	SERIAL_DEVICE *pser_inf;
 
 	char *pos = optarg;
 	char *pos2;
@@ -280,7 +354,8 @@ serial_enum_devices(int *id, char* optarg)
 
 		g_rdpdr_device[*id].local_path = xmalloc(strlen(pos2) + 1);
 		strcpy(g_rdpdr_device[*id].local_path, pos2);
-		printf("SERIAL %s to %s\n", g_rdpdr_device[*id].name, g_rdpdr_device[*id].local_path);
+		printf("SERIAL %s to %s\n", g_rdpdr_device[*id].name,
+		       g_rdpdr_device[*id].local_path);
 		// set device type
 		g_rdpdr_device[*id].device_type = DEVICE_TYPE_SERIAL;
 		g_rdpdr_device[*id].pdevice_data = (void *) pser_inf;
@@ -293,35 +368,34 @@ serial_enum_devices(int *id, char* optarg)
 }
 
 NTSTATUS
-serial_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 disposition, uint32 flags_and_attributes, char *filename, HANDLE *handle)
+serial_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 disposition,
+	      uint32 flags_and_attributes, char *filename, HANDLE * handle)
 {
-        HANDLE          serial_fd;
-        SERIAL_DEVICE   *pser_inf;
-        struct termios  *ptermios;
+	HANDLE serial_fd;
+	SERIAL_DEVICE *pser_inf;
+	struct termios *ptermios;
 
-        pser_inf        = (SERIAL_DEVICE *) g_rdpdr_device[device_id].pdevice_data;
-        ptermios        = pser_inf->ptermios;
-        serial_fd       = open(g_rdpdr_device[device_id].local_path, O_RDWR | O_NOCTTY);
+	pser_inf = (SERIAL_DEVICE *) g_rdpdr_device[device_id].pdevice_data;
+	ptermios = pser_inf->ptermios;
+	serial_fd = open(g_rdpdr_device[device_id].local_path, O_RDWR | O_NOCTTY);
 
-        if (serial_fd == -1)
-                return STATUS_ACCESS_DENIED;
+	if (serial_fd == -1)
+		return STATUS_ACCESS_DENIED;
 
-        if (!get_termios(pser_inf, serial_fd ))
-                return STATUS_ACCESS_DENIED;
+	if (!get_termios(pser_inf, serial_fd))
+		return STATUS_ACCESS_DENIED;
 
 	// Store handle for later use
-        g_rdpdr_device[device_id].handle = serial_fd;
+	g_rdpdr_device[device_id].handle = serial_fd;
 
 	/* some sane information */
-	printf("INFO: SERIAL %s to %s\nINFO: speed %u baud, stop bits %u, parity %u, word length %u bits, dtr %u\n",
-		g_rdpdr_device[device_id].name, g_rdpdr_device[device_id].local_path,
-		pser_inf->baud_rate, pser_inf->stop_bits, pser_inf->parity, pser_inf->word_length, pser_inf->dtr );
-	printf("INFO: use stty to change settings\n" );
+	printf("INFO: SERIAL %s to %s\nINFO: speed %u baud, stop bits %u, parity %u, word length %u bits, dtr %u\n", g_rdpdr_device[device_id].name, g_rdpdr_device[device_id].local_path, pser_inf->baud_rate, pser_inf->stop_bits, pser_inf->parity, pser_inf->word_length, pser_inf->dtr);
+	printf("INFO: use stty to change settings\n");
 
 	//tcgetattr(serial_fd, pser_inf->ptermios);
 
-	 *handle = serial_fd;
-        return STATUS_SUCCESS;
+	*handle = serial_fd;
+	return STATUS_SUCCESS;
 }
 
 static NTSTATUS
@@ -332,51 +406,53 @@ serial_close(HANDLE handle)
 }
 
 NTSTATUS
-serial_read(HANDLE handle, uint8 *data, uint32 length, uint32 offset, uint32 *result)
+serial_read(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
 {
-        long            timeout;
-        SERIAL_DEVICE   *pser_inf;
-        struct termios  *ptermios;
+	long timeout;
+	SERIAL_DEVICE *pser_inf;
+	struct termios *ptermios;
 
-        timeout         = 0;
-        pser_inf        = get_serial_info(handle);
-        ptermios        = pser_inf->ptermios;
+	timeout = 0;
+	pser_inf = get_serial_info(handle);
+	ptermios = pser_inf->ptermios;
 
-        // Set timeouts kind of like the windows serial timeout parameters. Multiply timeout
-        // with requested read size
-        if (pser_inf->read_total_timeout_multiplier | pser_inf->read_total_timeout_constant)
-        {
-                timeout = (pser_inf->read_total_timeout_multiplier * length + pser_inf->read_total_timeout_constant + 99) / 100;
-        }
-        else if (pser_inf->read_interval_timeout)
-        {
-                timeout = (pser_inf->read_interval_timeout * length + 99) / 100;
-        }
+	// Set timeouts kind of like the windows serial timeout parameters. Multiply timeout
+	// with requested read size
+	if (pser_inf->read_total_timeout_multiplier | pser_inf->read_total_timeout_constant)
+	{
+		timeout =
+			(pser_inf->read_total_timeout_multiplier * length +
+			 pser_inf->read_total_timeout_constant + 99) / 100;
+	}
+	else if (pser_inf->read_interval_timeout)
+	{
+		timeout = (pser_inf->read_interval_timeout * length + 99) / 100;
+	}
 
-        // If a timeout is set, do a blocking read, which times out after some time.
-        // It will make rdesktop less responsive, but it will improve serial performance, by not
-        // reading one character at a time.
-        if (timeout == 0)
-        {
-                ptermios->c_cc[VTIME] = 0;
-                ptermios->c_cc[VMIN] = 0;
-        }
-        else
-        {
-                ptermios->c_cc[VTIME] = timeout;
-                ptermios->c_cc[VMIN] = 1;
-        }
-        tcsetattr(handle, TCSANOW, ptermios);
+	// If a timeout is set, do a blocking read, which times out after some time.
+	// It will make rdesktop less responsive, but it will improve serial performance, by not
+	// reading one character at a time.
+	if (timeout == 0)
+	{
+		ptermios->c_cc[VTIME] = 0;
+		ptermios->c_cc[VMIN] = 0;
+	}
+	else
+	{
+		ptermios->c_cc[VTIME] = timeout;
+		ptermios->c_cc[VMIN] = 1;
+	}
+	tcsetattr(handle, TCSANOW, ptermios);
 
-        *result = read(handle, data, length);
-        return STATUS_SUCCESS;
+	*result = read(handle, data, length);
+	return STATUS_SUCCESS;
 }
 
 NTSTATUS
-serial_write(HANDLE handle, uint8 *data, uint32 length, uint32 offset, uint32 *result)
+serial_write(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
 {
-        *result = write(handle, data, length);
-        return STATUS_SUCCESS;
+	*result = write(handle, data, length);
+	return STATUS_SUCCESS;
 }
 
 static NTSTATUS
@@ -469,14 +545,19 @@ serial_device_control(HANDLE handle, uint32 request, STREAM in, STREAM out)
 			break;
 		case SERIAL_PURGE:
 
-                        printf("SERIAL_PURGE\n");
-                        in_uint32(in, purge_mask);
-                        if (purge_mask & 0x04) flush_mask |= TCOFLUSH;
-                        if (purge_mask & 0x08) flush_mask |= TCIFLUSH;
-                        if (flush_mask != 0) tcflush(handle, flush_mask);
-                        if (purge_mask & 0x01) rdpdr_abort_io(handle, 4, STATUS_CANCELLED);
-                        if (purge_mask & 0x02) rdpdr_abort_io(handle, 3, STATUS_CANCELLED);
-                        break;
+			printf("SERIAL_PURGE\n");
+			in_uint32(in, purge_mask);
+			if (purge_mask & 0x04)
+				flush_mask |= TCOFLUSH;
+			if (purge_mask & 0x08)
+				flush_mask |= TCIFLUSH;
+			if (flush_mask != 0)
+				tcflush(handle, flush_mask);
+			if (purge_mask & 0x01)
+				rdpdr_abort_io(handle, 4, STATUS_CANCELLED);
+			if (purge_mask & 0x02)
+				rdpdr_abort_io(handle, 3, STATUS_CANCELLED);
+			break;
 
 		case SERIAL_RESET_DEVICE:
 		case SERIAL_SET_BREAK_OFF:
@@ -498,23 +579,25 @@ serial_device_control(HANDLE handle, uint32 request, STREAM in, STREAM out)
 
 /* Read timeout for a given file descripter (device) when adding fd's to select() */
 BOOL
-serial_get_timeout(uint32 handle, uint32 length, uint32 *timeout, uint32 *itv_timeout)
+serial_get_timeout(uint32 handle, uint32 length, uint32 * timeout, uint32 * itv_timeout)
 {
-        int             index;
-        SERIAL_DEVICE   *pser_inf;
+	int index;
+	SERIAL_DEVICE *pser_inf;
 
-        index = get_device_index(handle);
+	index = get_device_index(handle);
 
-        if (g_rdpdr_device[index].device_type != DEVICE_TYPE_SERIAL)
-        {
-                return False;
-        }
+	if (g_rdpdr_device[index].device_type != DEVICE_TYPE_SERIAL)
+	{
+		return False;
+	}
 
-        pser_inf = (SERIAL_DEVICE *) g_rdpdr_device[index].pdevice_data;
+	pser_inf = (SERIAL_DEVICE *) g_rdpdr_device[index].pdevice_data;
 
-        *timeout = pser_inf->read_total_timeout_multiplier * length + pser_inf->read_total_timeout_constant;
-        *itv_timeout = pser_inf->read_interval_timeout;
-        return True;
+	*timeout =
+		pser_inf->read_total_timeout_multiplier * length +
+		pser_inf->read_total_timeout_constant;
+	*itv_timeout = pser_inf->read_interval_timeout;
+	return True;
 }
 
 DEVICE_FNS serial_fns = {

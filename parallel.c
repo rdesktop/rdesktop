@@ -12,7 +12,8 @@
 
 extern RDPDR_DEVICE g_rdpdr_device[];
 
-PARALLEL_DEVICE * get_parallel_data(HANDLE handle)
+PARALLEL_DEVICE *
+get_parallel_data(HANDLE handle)
 {
 	int index;
 
