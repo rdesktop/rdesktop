@@ -20,7 +20,7 @@
 
 #include <X11/Xlib.h>
 #define XK_MISCELLANY
-#include <X11/keysymdef.h>
+#include <X11/keysym.h>
 #include <ctype.h>
 #include <limits.h>
 #include <time.h>
@@ -34,6 +34,7 @@
 extern Display *display;
 extern char keymapname[16];
 extern int keylayout;
+extern int win_button_size;
 extern BOOL enable_compose;
 
 static BOOL keymap_loaded;
@@ -307,6 +308,13 @@ handle_special_keys(uint32 keysym, unsigned int state, uint32 ev_time, BOOL pres
 				rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_LCTRL);
 			}
 			return True;
+
+		case XK_space:
+			/* Prevent access to the Windows system menu in single app mode */
+			if (win_button_size
+			    && (get_key_state(state, XK_Alt_L) || get_key_state(state, XK_Alt_R)))
+				return True;
+
 	}
 	return False;
 }

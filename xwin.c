@@ -858,9 +858,14 @@ xwin_process_events(void)
 				/* If win_button_size is nonzero, enable single app mode */
 				if (xevent.xbutton.y < win_button_size)
 				{
-					if (xevent.xbutton.x >= width - win_button_size)
+					if (xevent.xbutton.x < win_button_size)
 					{
-						/* The close button, do nothing */
+						/* The system menu, do not send to server */
+						break;
+					}
+					else if (xevent.xbutton.x >= width - win_button_size)
+					{
+						/* The close button, continue */
 						;
 					}
 					else if (xevent.xbutton.x >= width - win_button_size * 2)
