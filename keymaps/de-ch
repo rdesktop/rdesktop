@@ -1,5 +1,5 @@
-# rdesktop Swiss-German (de-sg)  keymap file 
-# 3.6.2003 by noldi@tristar.ch 
+# rdesktop Swiss-German (de-ch) keymap file 
+# 2003-06-03 by noldi@tristar.ch 
 #
 include common
 map 0x00000807
