@@ -29,7 +29,7 @@
 #include <sys/times.h>		/* times */
 #include "rdesktop.h"
 
-char title[32];
+char title[32] = "";
 char username[16];
 char hostname[16];
 char keymapname[16];
@@ -67,6 +67,7 @@ usage(char *program)
 	printf("   -l: do not request licence\n");
 	printf("   -t: rdp tcp port\n");
 	printf("   -K: keep window manager key bindings\n");
+	printf("   -w: window title\n");
 }
 
 /* Client program */
@@ -92,7 +93,7 @@ main(int argc, char *argv[])
 	domain[0] = password[0] = shell[0] = directory[0] = 0;
 	strcpy(keymapname, "us");
 
-	while ((c = getopt(argc, argv, "u:d:s:c:p:P:n:k:g:t:fbemlKh?")) != -1)
+	while ((c = getopt(argc, argv, "u:d:s:c:p:P:n:k:g:t:fbemlKw:h?")) != -1)
 	{
 		switch (c)
 		{
@@ -175,6 +176,10 @@ main(int argc, char *argv[])
 				grab_keyboard = False;
 				break;
 
+			case 'w':
+				strncpy(title, optarg, sizeof(title));
+				break;
+
 			case 'h':
 			case '?':
 			default:
@@ -240,8 +245,11 @@ main(int argc, char *argv[])
 		width = (width + 3) & ~3;
 	}
 
-	strcpy(title, "rdesktop - ");
-	strncat(title, server, sizeof(title) - sizeof("rdesktop - "));
+	if (!strlen(title)) 
+	{
+		strcpy(title, "rdesktop - ");
+		strncat(title, server, sizeof(title) - sizeof("rdesktop - "));
+	}
 
 	xkeymap_init1();
 	if (!ui_init())
