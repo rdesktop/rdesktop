@@ -2,6 +2,7 @@ This file documents some of all patches for rdesktop, floating around
 the net, and how they are related to the current (CVS) version of
 rdesktop. 
 
+
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/Makefile.diff
 Description:
@@ -10,12 +11,14 @@ and OSF1.
 Status:
 Applied (slightly modified)
 
+
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/assar_19-7-2.hostlen.patch
 Description:
 Fix for hostnames longer than 30 chars. 
 Status:
 Applied (revision 1.11 of secure.c) 
+
 
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/backingstore+privatecolormap-for-19-3-9.patch
@@ -28,12 +31,14 @@ map in 8 bpp mode. 2) is, as far as I understand, also not
 need. rdesktop automatically uses a software backing store if the
 Xserver does not provide one. 
 
+
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/ben_xwin.c.diff
 Description:
 Fixes for CapsLock and NumLock. 
 Status:
 Not needed anymore, with the new keyboard mapping implementation. 
+
 
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/ctrl1nohang.diff
@@ -42,6 +47,7 @@ Fixes problem with ctrl1 hangs.
 Status:
 Not needed anymore, with the new keyboard mapping implementation. 
 
+
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/downkeypatch.diff
 Description:
@@ -49,12 +55,30 @@ Seems to keep track of the remote modifier status.
 Status:
 Not needed anymore, with the new keyboard mapping implementation. 
 
+
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/fasttext2+nobackpixmap.patch
 Description:
-TDB
+(From http://mail.rdesktop.org/archive/2001/msg00218.html):
+
+* Added --no-backpixmap option to disable the ugly double drawing in
+xwin.c (I have a very robust backing storage in my X, so I don't need
+it ;)
+
+* More optimizations to text draw (previous fast-text patch was
+included in 192-3-6-2). In text drawing with solid background the
+glyphs are drawn with stippled fill instead of XCopyPlane (runs faster
+on my S3Trio64 with XFree 3.3.6, please test it on other
+configurations to validate this). The WinTach not show any improvement
+with this change, it seems to use all transparent background text
+draws, but with a old PC Magazine Winbench (3.1) doing the scroll text
+test the speed gain is significative.
+
+* My Previous patch to disable backing storage in fullscreen
+
 Status:
 Not yet examined. 
+
 
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/francisco_fix_patblt.html
@@ -63,12 +87,14 @@ TDB
 Status:
 Not yet examined. 
 
+
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/frank_1linerfix.html
 Description:
 TDB
 Status:
 Not yet examined. 
+
 
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/frank_fasttext.patch.txt
@@ -77,12 +103,14 @@ TDB
 Status:
 Not yet examined. 
 
+
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/hostname-patch
 Description:
 TDB
 Status:
 Not yet examined. 
+
 
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/hove-19-7-2endian.diff
@@ -91,12 +119,14 @@ TDB
 Status:
 Not yet examined. 
 
+
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/mmihalik_19-7-3-keyfix-4.patch
 Description:
 TDB
 Status:
 Not yet examined. 
+
 
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/norbert_fullscreen.patch
@@ -105,12 +135,14 @@ TDB
 Status:
 Not yet examined. 
 
+
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/norbert_percent.txt
 Description:
 TDB
 Status:
 Not yet examined. 
+
 
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/norbert_rdp_tcp_port.diff
@@ -119,12 +151,14 @@ TDB
 Status:
 Not yet examined. 
 
+
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/patch19-7-2.xyPos.emptyPassword.patch
 Description:
 TDB
 Status:
 Not yet examined. 
+
 
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/rdesktop-1.0.0-19-7-1-mmihalik-3.diff
@@ -133,12 +167,14 @@ TDB
 Status:
 Not yet examined. 
 
+
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/rdesktop-1.0.0-mmihalik-1.diff
 Description:
 TDB
 Status:
 Not yet examined. 
+
 
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/rdesktop-1.0.0-pl19-7-2-mmihalik-1.diff
@@ -147,12 +183,14 @@ TDB
 Status:
 Not yet examined. 
 
+
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/rdesktop-gmp.patch
 Description:
 TDB
 Status:
 Not yet examined. 
+
 
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/rdesktop-new_kb.patch
@@ -161,12 +199,14 @@ TDB
 Status:
 Not yet examined. 
 
+
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/rdesktop-openssl.patch
 Description:
 TDB
 Status:
 Not yet examined. 
+
 
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/rdesktop.vncviewer_patch
@@ -175,12 +215,14 @@ TDB
 Status:
 Not yet examined. 
 
+
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/rdesktop_keymap.patch
 Description:
 TDB
 Status:
 Not yet examined. 
+
 
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/rdp-srvr-19-6-6.diff
@@ -189,12 +231,14 @@ TDB
 Status:
 Not yet examined. 
 
+
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/scroll-to-death-patch.txt
 Description:
 TDB
 Status:
 Not yet examined. 
+
 
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/spark-manpage-patch-19.4
@@ -203,12 +247,14 @@ TDB
 Status:
 Not yet examined. 
 
+
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/spark-manpage-patch-19.4-1
 Description:
 TDB
 Status:
 Not yet examined. 
+
 
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/spark_xinerama-patch2
@@ -217,12 +263,14 @@ TDB
 Status:
 Not yet examined. 
 
+
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/svenni_dis_wmkeybnds.patch
 Description:
 TDB
 Status:
 Not yet examined. 
+
 
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/svenni_disable_bs_in_x-tiny-patch
@@ -231,12 +279,14 @@ TDB
 Status:
 Not yet examined. 
 
+
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/vincent_19-7-2.license.patch
 Description:
 TDB
 Status:
 Not yet examined. 
+
 
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/vincent_19-7-2.secure.patch
@@ -245,6 +295,7 @@ TDB
 Status:
 Not yet examined. 
 
+
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/vincent_19-7-3_excel.patch
 Description:
@@ -252,12 +303,14 @@ TDB
 Status:
 Not yet examined. 
 
+
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/vincent_8bpp.patch
 Description:
 TDB
 Status:
 Not yet examined. 
+
 
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/vpypatch.txt
