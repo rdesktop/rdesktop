@@ -47,6 +47,12 @@ case $arg in
   --with-egd-socket=*)
     extraegdpath=$optarg
     ;;
+  --with-libvncserver)
+    withvncserver=yes
+    ;;
+  --with-libvncserver-config=*)
+    vncserverconfig=$optarg
+    ;;
   --with-debug)
     cflags="$cflags -g -DWITH_DEBUG"
     ;;
@@ -68,6 +74,9 @@ case $arg in
     echo " --with-openssl=DIR      look for OpenSSL at DIR/include, DIR/lib"
     echo " --without-openssl       use in-tree crypto, even if OpenSSL is available"
     echo " --with-egd-socket=PATH  look for Entropy Gathering Daemon socket at PATH"
+    echo " --with-libvncserver     make rdp2vnc"
+    echo " --with-libvncserver-config=CMD"
+    echo "                         use CMD as libvncserver-config"
     echo " --with-debug            enable protocol debugging output"
     echo " --with-debug-kbd        enable debugging of keyboard handling"
     echo
@@ -139,8 +148,8 @@ if [ $xdir != "/usr" ]; then
     rpath="$rpath:$xdir/lib"
 fi
 
-ldflags="$ldflags -lX11"
-
+ldflags="$ldflags"
+targets="$targets rdesktop"
 
 if [ -z "$withoutopenssl" ]; then
     # Find OpenSSL installation if available
@@ -177,6 +186,20 @@ if [ -z "$withoutopenssl" ]; then
     fi
 fi
     
+if [ ! -z "$withvncserver" ]; then
+    if [ -z "$vncserverconfig" ]; then
+	vncserverconfig=libvncserver-config
+    fi
+
+    echo "VNCINC=`$vncserverconfig --cflags`" >> Makeconf
+    echo "LDVNC=`$vncserverconfig --libs`" >> Makeconf
+    echo "CCLD=`$vncserverconfig --link`" >> Makeconf
+    echo >> Makeconf
+    targets="$targets rdp2vnc"
+
+    echo "Found libvncserver: Building rdp2vnc"
+fi
+
 
 # Find EGD socket if we don't have /dev/urandom or /dev/random
 
@@ -222,6 +245,7 @@ esac
 
 echo "CFLAGS      = $cflags" >>Makeconf
 echo "LDFLAGS     = $ldflags" >>Makeconf
+echo "TARGETS     = $targets" >>Makeconf
 
 echo "configure complete - now run make"
 

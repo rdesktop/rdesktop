@@ -18,9 +18,13 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+#ifdef RDP2VNC
+#include "vnc/x11stubs.h"
+#else
 #include <X11/Xlib.h>
-#define XK_MISCELLANY
 #include <X11/keysym.h>
+#endif
+
 #include <ctype.h>
 #include <limits.h>
 #include <time.h>

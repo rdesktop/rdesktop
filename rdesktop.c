@@ -61,6 +61,13 @@ BOOL grab_keyboard = True;
 BOOL hide_decorations = False;
 extern BOOL owncolmap;
 
+#ifdef RDP2VNC
+extern int rfb_port;
+extern int defer_time;
+void
+rdp2vnc_connect(char *server, uint32 flags, char *domain, char *password,
+		char *shell, char *directory);
+#endif
 /* Display usage information */
 static void
 usage(char *program)
@@ -70,6 +77,10 @@ usage(char *program)
 	fprintf(stderr, "See http://www.rdesktop.org/ for more information.\n\n");
 
 	fprintf(stderr, "Usage: %s [options] server[:port]\n", program);
+#ifdef RDP2VNC
+	fprintf(stderr, "   -V: vnc port\n");
+	fprintf(stderr, "   -E: defer time (ms)\n");
+#endif
 	fprintf(stderr, "   -u: user name\n");
 	fprintf(stderr, "   -d: domain\n");
 	fprintf(stderr, "   -s: shell\n");
@@ -148,10 +159,30 @@ main(int argc, char *argv[])
 	domain[0] = password[0] = shell[0] = directory[0] = 0;
 	strcpy(keymapname, "en-us");
 
-	while ((c = getopt(argc, argv, "u:d:s:S:c:p:n:k:g:a:fbemCKT:Dh?")) != -1)
+#ifdef RDP2VNC
+#define VNCOPT "V:E:"
+#else
+#define VNCOPT
+#endif
+
+	while ((c = getopt(argc, argv, VNCOPT "u:d:s:S:c:p:n:k:g:a:fbemCKT:Dh?")) != -1)
 	{
 		switch (c)
 		{
+#ifdef RDP2VNC
+			case 'V':
+				rfb_port = strtol(optarg, NULL, 10);
+				if (rfb_port < 100)
+					rfb_port += 5900;
+				break;
+
+			case 'E':
+				defer_time = strtol(optarg, NULL, 10);
+				if (defer_time < 0)
+					defer_time = 0;
+				break;
+#endif
+
 			case 'u':
 				STRNCPY(username, optarg, sizeof(username));
 				username_option = 1;
@@ -328,6 +359,10 @@ main(int argc, char *argv[])
 		strncat(title, server, sizeof(title) - sizeof("rdesktop - "));
 	}
 
+#ifdef RDP2VNC
+	rdp2vnc_connect(server, flags, domain, password, shell, directory);
+#else
+
 	if (!ui_init())
 		return 1;
 
@@ -346,6 +381,9 @@ main(int argc, char *argv[])
 	DEBUG(("Disconnecting...\n"));
 	rdp_disconnect();
 	ui_deinit();
+
+#endif
+
 	return 0;
 }
 

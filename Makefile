@@ -14,14 +14,31 @@ datadir     = $(prefix)/share/rdesktop
 
 KEYMAP_PATH = $(datadir)/keymaps/
 
-RDPOBJ   = rdesktop.o tcp.o iso.o mcs.o secure.o licence.o rdp.o orders.o bitmap.o cache.o xwin.o xkeymap.o ewmhints.c
+RDPOBJ   = rdesktop.o tcp.o iso.o mcs.o secure.o licence.o rdp.o orders.o bitmap.o cache.o xwin.o xkeymap.o ewmhints.o
+RDP2VNCOBJ   = vnc/rdp2vnc.o tcp.o iso.o mcs.o secure.o licence.o rdp.o orders.o bitmap.o cache.o vnc/vnc.o vnc/xkeymap.o vnc/x11stubs.o
 CRYPTOBJ = crypto/rc4_enc.o crypto/rc4_skey.o crypto/md5_dgst.o crypto/sha1dgst.o crypto/bn_exp.o crypto/bn_mul.o crypto/bn_div.o crypto/bn_sqr.o crypto/bn_add.o crypto/bn_shift.o crypto/bn_asm.o crypto/bn_ctx.o crypto/bn_lib.o
 
 include Makeconf  # configure-generated
 
+all: $(TARGETS)
 
 rdesktop: $(RDPOBJ) $(CRYPTOBJ)
-	$(CC) $(CFLAGS) -o rdesktop $(RDPOBJ) $(CRYPTOBJ) $(LDFLAGS)
+	$(CC) $(CFLAGS) -o rdesktop $(RDPOBJ) $(CRYPTOBJ) $(LDFLAGS) -lX11
+
+rdp2vnc: $(RDP2VNCOBJ) $(CRYPTOBJ)
+	$(CCLD) $(CFLAGS) -o rdp2vnc $(RDP2VNCOBJ) $(CRYPTOBJ) $(LDFLAGS) $(LDVNC)
+
+vnc/rdp2vnc.o: rdesktop.c
+	$(CC) $(CFLAGS) $(VNCINC) -DRDP2VNC -o vnc/rdp2vnc.o -c rdesktop.c
+
+vnc/vnc.o: vnc/vnc.c
+	$(CC) $(CFLAGS) $(VNCINC) -DRDP2VNC -o vnc/vnc.o -c vnc/vnc.c
+
+vnc/xkeymap.o: xkeymap.c
+	$(CC) $(CFLAGS) $(VNCINC) -DRDP2VNC -o vnc/xkeymap.o -c xkeymap.c
+
+vnc/x11stubs.o: vnc/x11stubs.c
+	$(CC) $(CFLAGS) $(VNCINC) -o vnc/x11stubs.o -c vnc/x11stubs.c
 
 Makeconf:
 	./configure
@@ -51,7 +68,7 @@ proto:
 	cproto -DMAKE_PROTO -o proto.h *.c
 
 clean:
-	rm -f *.o crypto/*.o *~ rdesktop
+	rm -f *.o crypto/*.o *~ vnc/*.o vnc/*~ rdesktop rdp2vnc
 
 dist:
 	mkdir -p /tmp/rdesktop-make-dist-dir
