@@ -247,6 +247,41 @@ close_inputmethod(void)
 	}
 }
 
+static BOOL
+get_key_state(int keysym)
+{
+	int keysymMask = 0, modifierpos, key;
+	Window wDummy1, wDummy2;
+	int iDummy3, iDummy4, iDummy5, iDummy6;
+	unsigned int current_state;
+	int offset;
+
+	XModifierKeymap *map = XGetModifierMapping(display);
+	KeyCode keycode = XKeysymToKeycode(display, keysym);
+
+	if (keycode == NoSymbol)
+		return False;
+
+	for (modifierpos = 0; modifierpos < 8; modifierpos++)
+	{
+		offset = map->max_keypermod * modifierpos;
+
+		for (key = 0; key < map->max_keypermod; key++)
+		{
+			if (map->modifiermap[offset + key] == keycode)
+				keysymMask = 1 << modifierpos;
+		}
+	}
+
+	XQueryPointer(display, DefaultRootWindow(display), &wDummy1,
+		      &wDummy2, &iDummy3, &iDummy4, &iDummy5, &iDummy6, &current_state);
+
+	XFreeModifiermap(map);
+
+	return (current_state & keysymMask) ? True : False;
+}
+
+
 BOOL
 ui_init()
 {
@@ -266,7 +301,7 @@ ui_init()
 	return True;
 }
 
-BOOL
+void
 ui_create_window_obj(int xpos, int ypos, int width, int height, int valuemask)
 {
 	XClassHint *classhints;
@@ -542,12 +577,15 @@ xwin_process_events()
 						      str, sizeof(str), &keysym, NULL);
 				}
 
-				/* FIXME needs alt modifier */
 				if (keysym == XK_Break)	/* toggle full screen */
 				{
-					toggle_fullscreen();
-					break;
+					if (get_key_state(XK_Alt_L) || get_key_state(XK_Alt_R))
+					{
+						toggle_fullscreen();
+						break;
+					}
 				}
+
 				ksname = get_ksname(keysym);
 				DEBUG_KBD(("\nKeyPress for (keysym 0x%lx, %s)\n", keysym, ksname));
 

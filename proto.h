@@ -80,8 +80,11 @@ void ensure_remote_modifiers(uint32 ev_time, key_translation tr);
 void rdp_send_scancode(uint32 time, uint16 flags, uint16 scancode);
 /* xwin.c */
 BOOL ui_init(void);
-BOOL ui_create_window();
+void ui_create_window_obj(int xpos, int ypos, int width, int height, int valuemask);
+BOOL ui_create_window(void);
 void ui_destroy_window(void);
+void reset_keys(void);
+void toggle_fullscreen(void);
 void ui_select(int rdp_socket);
 void ui_move_pointer(int x, int y);
 HBITMAP ui_create_bitmap(int width, int height, uint8 * data);
