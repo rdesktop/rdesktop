@@ -11,7 +11,7 @@ is:
 -r <module>:<string>
 
 <module> is the name of the redirection module. The following names
-are valid: drive, printer, lptport, comport, clipboard, audio. 
+are valid: drive, printer, lptport, comport, clipboard, sound. 
 
 <string> is interpreted by each redirection module. 
 
@@ -59,16 +59,17 @@ Syntax: -r clipboard:[yes|no]
 Example: -r clipboard:no
 
 
-audio mapping
+sound mapping
 -------------
 Multiple mappings possible: no
 Default: off
-Syntax: -r audio:[local|off|remote]
+Planned syntax: -r sound:[local|off|remote]
+Current syntax: -r sound
 
 "local" means "Bring to this computer"
 "off" means "Do not play"
 "remote" means "Leave at remote computer"
 
-Example: -r audio:remote
+Example: -r sound:remote
 
 
