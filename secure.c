@@ -1,4 +1,4 @@
-/*
+/* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    Protocol services - RDP encryption and licensing
    Copyright (C) Matthew Chapman 1999-2002
@@ -25,6 +25,7 @@
 #include <openssl/md5.h>
 #include <openssl/sha.h>
 #include <openssl/bn.h>
+#include <openssl/x509v3.h>
 #else
 #include "crypto/rc4.h"
 #include "crypto/md5.h"
@@ -38,11 +39,13 @@ extern int height;
 extern int keylayout;
 extern BOOL encryption;
 extern BOOL licence_issued;
+extern BOOL use_rdp5;
 extern int server_bpp;
 
 static int rc4_key_len;
 static RC4_KEY rc4_decrypt_key;
 static RC4_KEY rc4_encrypt_key;
+static RSA *server_public_key;
 
 static uint8 sec_sign_key[16];
 static uint8 sec_decrypt_key[16];
@@ -50,6 +53,8 @@ static uint8 sec_encrypt_key[16];
 static uint8 sec_decrypt_update_key[16];
 static uint8 sec_encrypt_update_key[16];
 static uint8 sec_crypted_random[SEC_MODULUS_SIZE];
+
+uint16 server_rdp_version = 0;
 
 /*
  * General purpose 48-byte transformation, using two 32-byte salts (generally,
@@ -141,7 +146,7 @@ sec_generate_keys(uint8 * client_key, uint8 * server_key, int rc4_key_size)
 	}
 	else
 	{
-		DEBUG(("128-bit encryption enabled\n"));
+		DEBUG(("rc_4_key_size == %d, 128-bit encryption enabled\n", rc4_key_size));
 		rc4_key_len = 16;
 	}
 
@@ -252,7 +257,7 @@ sec_encrypt(uint8 * data, int length)
 }
 
 /* Decrypt data using RC4 */
-static void
+void
 sec_decrypt(uint8 * data, int length)
 {
 	static int use_count;
@@ -385,6 +390,7 @@ static void
 sec_out_mcs_data(STREAM s)
 {
 	int hostlen = 2 * strlen(hostname);
+	int length = 158 + 76 + 12 + 4 + 20;
 
 	if (hostlen > 30)
 		hostlen = 30;
@@ -394,7 +400,7 @@ sec_out_mcs_data(STREAM s)
 	out_uint8(s, 0x7c);
 	out_uint16_be(s, 1);
 
-	out_uint16_be(s, (158 | 0x8000));	/* remaining length */
+	out_uint16_be(s, (length | 0x8000));	/* remaining length */
 
 	out_uint16_be(s, 8);	/* length? */
 	out_uint16_be(s, 16);
@@ -403,19 +409,19 @@ sec_out_mcs_data(STREAM s)
 	out_uint8(s, 0);
 
 	out_uint32_le(s, 0x61637544);	/* "Duca" ?! */
-	out_uint16_be(s, (144 | 0x8000));	/* remaining length */
+	out_uint16_be(s, ((length - 14) | 0x8000));	/* remaining length */
 
 	/* Client information */
 	out_uint16_le(s, SEC_TAG_CLI_INFO);
-	out_uint16_le(s, 136);	/* length */
-	out_uint16_le(s, 1);
+	out_uint16_le(s, 212);	/* length */
+	out_uint16_le(s, use_rdp5 ? 4 : 1);	/* RDP version. 1 == RDP4, 4 == RDP5. */
 	out_uint16_le(s, 8);
 	out_uint16_le(s, width);
 	out_uint16_le(s, height);
 	out_uint16_le(s, 0xca01);
 	out_uint16_le(s, 0xaa03);
 	out_uint32_le(s, keylayout);
-	out_uint32_le(s, 419);	/* client build? we are 419 compatible :-) */
+	out_uint32_le(s, 2600);	/* Client build. We are now 2600 compatible :-) */
 
 	/* Unicode name of client, padded to 32 bytes */
 	rdp_out_unistr(s, hostname, hostlen);
@@ -441,12 +447,31 @@ sec_out_mcs_data(STREAM s)
 			out_uint16_le(s, 0xca04);
 			break;
 	}
-	out_uint16(s, 0);
+	out_uint16(s, 1);
+
+	out_uint32(s, 0);
+	out_uint32_le(s, 0x070008);
+	out_uint32_le(s, 1);
+	out_uint8s(s, 64);	/* End of client info */
+
+	out_uint16_le(s, SEC_TAG_CLI_4);
+	out_uint16_le(s, 12);
+	out_uint32_le(s, 9);
+	out_uint32_le(s, 0);
 
 	/* Client encryption settings */
 	out_uint16_le(s, SEC_TAG_CLI_CRYPT);
-	out_uint16_le(s, 8);	/* length */
+	out_uint16_le(s, 12);	/* length */
 	out_uint32_le(s, encryption ? 0x3 : 0);	/* encryption supported, 128-bit supported */
+	out_uint32_le(s, 0);	/* Unknown */
+
+	out_uint16_le(s, SEC_TAG_CLI_CHANNELS);
+	out_uint16_le(s, 20);	/* length */
+	out_uint32_le(s, 1);	/* number of virtual channels */
+	out_uint8p(s, "cliprdr", 8);	/* name padded to 8(?) */
+	out_uint16(s, 0);
+	out_uint16_le(s, 0xc0a0);	/* Flags. Rumours tell this is documented in MSDN. */
+
 	s_mark_end(s);
 }
 
@@ -478,25 +503,54 @@ sec_parse_public_key(STREAM s, uint8 ** modulus, uint8 ** exponent)
 	return s_check(s);
 }
 
+static BOOL
+sec_parse_x509_key(X509 * cert)
+{
+	EVP_PKEY *epk = NULL;
+	/* By some reason, Microsoft sets the OID of the Public RSA key to
+	   the oid for "MD5 with RSA Encryption" instead of "RSA Encryption"
+
+	   Kudos to Richard Levitte for the following (. intiutive .) 
+	   lines of code that resets the OID and let's us extract the key. */
+	if (OBJ_obj2nid(cert->cert_info->key->algor->algorithm) == NID_md5WithRSAEncryption)
+	{
+		DEBUG_RDP5(("Re-setting algorithm type to RSA in server certificate\n"));
+		cert->cert_info->key->algor->algorithm = OBJ_nid2obj(NID_rsaEncryption);
+	}
+	epk = X509_get_pubkey(cert);
+	if (NULL == epk)
+	{
+		error("Failed to extract public key from certificate\n");
+		return False;
+	}
+
+	server_public_key = (RSA *) epk->pkey.ptr;
+
+	return True;
+}
+
+
 /* Parse a crypto information structure */
 static BOOL
 sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 		     uint8 ** server_random, uint8 ** modulus, uint8 ** exponent)
 {
 	uint32 crypt_level, random_len, rsa_info_len;
+	uint32 cacert_len, cert_len;
+	X509 *cacert, *server_cert;
 	uint16 tag, length;
 	uint8 *next_tag, *end;
 
 	in_uint32_le(s, *rc4_key_size);	/* 1 = 40-bit, 2 = 128-bit */
 	in_uint32_le(s, crypt_level);	/* 1 = low, 2 = medium, 3 = high */
-	if (crypt_level == 0)	/* no encryptation */
+	if (crypt_level == 0)	/* no encryption */
 		return False;
 	in_uint32_le(s, random_len);
 	in_uint32_le(s, rsa_info_len);
 
 	if (random_len != SEC_RANDOM_SIZE)
 	{
-		error("random len %d\n", random_len);
+		error("random len %d, expected %d\n", random_len, SEC_RANDOM_SIZE);
 		return False;
 	}
 
@@ -507,35 +561,101 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 	if (end > s->end)
 		return False;
 
-	in_uint8s(s, 12);	/* unknown */
-
-	while (s->p < end)
+	if (!use_rdp5 || 1 == server_rdp_version)
 	{
-		in_uint16_le(s, tag);
-		in_uint16_le(s, length);
+		DEBUG_RDP5(("We're going for the RDP4-style encryption\n"));
+		in_uint8s(s, 12);	/* unknown */
 
-		next_tag = s->p + length;
-
-		switch (tag)
+		while (s->p < end)
 		{
-			case SEC_TAG_PUBKEY:
-				if (!sec_parse_public_key(s, modulus, exponent))
-					return False;
+			in_uint16_le(s, tag);
+			in_uint16_le(s, length);
 
-				break;
+			next_tag = s->p + length;
 
-			case SEC_TAG_KEYSIG:
-				/* Is this a Microsoft key that we just got? */
-				/* Care factor: zero! */
-				break;
+			switch (tag)
+			{
+				case SEC_TAG_PUBKEY:
+					if (!sec_parse_public_key(s, modulus, exponent))
+						return False;
+					DEBUG_RDP5(("Got Public key, RDP4-style\n"));
 
-			default:
-				unimpl("crypt tag 0x%x\n", tag);
+					break;
+
+				case SEC_TAG_KEYSIG:
+					/* Is this a Microsoft key that we just got? */
+					/* Care factor: zero! */
+					/* Actually, it would probably be a good idea to check if the public key is signed with this key, and then store this 
+					   key as a known key of the hostname. This would prevent some MITM-attacks. */
+					break;
+
+				default:
+					unimpl("crypt tag 0x%x\n", tag);
+			}
+
+			s->p = next_tag;
+		}
+	}
+	else if (4 == server_rdp_version)
+	{
+		DEBUG_RDP5(("We're going for the RDP5-style encryption\n"));
+		in_uint8s(s, 8);	/* Unknown */
+
+		/* Do da funky X.509 stuffy 
+
+		   "How did I find out about this?  I looked up and saw a
+		   bright light and when I came to I had a scar on my forehead
+		   and knew about X.500"
+		   - Peter Gutman in a early version of 
+		   http://www.cs.auckland.ac.nz/~pgut001/pubs/x509guide.txt
+		 */
+
+		in_uint32_le(s, cacert_len);
+		cacert = d2i_X509(NULL, &(s->p), cacert_len);
+		/* Note: We don't need to move s->p here - d2i_X509 is
+		   "kind" enough to do it for us */
+		if (NULL == cacert)
+		{
+			error("Couldn't load CA Certificate from server\n");
+			return False;
 		}
 
-		s->p = next_tag;
-	}
+		/* Currently, we don't use the CA Certificate. 
+		   FIXME: 
+		   *) Verify the server certificate (server_cert) with the 
+		   CA certificate.
+		   *) Store the CA Certificate with the hostname of the 
+		   server we are connecting to as key, and compare it
+		   when we connect the next time, in order to prevent
+		   MITM-attacks.
+		 */
 
+		in_uint32_le(s, cert_len);
+		server_cert = d2i_X509(NULL, &(s->p), cert_len);
+		if (NULL == server_cert)
+		{
+			error("Couldn't load Certificate from server\n");
+			return False;
+		}
+
+		in_uint8s(s, 16);	/* Padding */
+
+		/* Note: Verifying the server certificate must be done here, 
+		   before sec_parse_public_key since we'll have to apply
+		   serious violence to the key after this */
+
+		if (!sec_parse_x509_key(server_cert))
+		{
+			DEBUG_RDP5(("Didn't parse X509 correctly\n"));
+			return False;
+		}
+		return True;	/* There's some garbage here we don't care about */
+	}
+	else
+	{
+		error("Unknown Server RDP version %d", server_rdp_version);
+		return False;
+	}
 	return s_check_end(s);
 }
 
@@ -546,25 +666,61 @@ sec_process_crypt_info(STREAM s)
 	uint8 *server_random, *modulus, *exponent;
 	uint8 client_random[SEC_RANDOM_SIZE];
 	uint32 rc4_key_size;
+	uint8 inr[SEC_MODULUS_SIZE];
 
 	if (!sec_parse_crypt_info(s, &rc4_key_size, &server_random, &modulus, &exponent))
+	{
+		DEBUG(("Failed to parse crypt info\n"));
 		return;
+	}
 
+	DEBUG(("Generating client random\n"));
 	/* Generate a client random, and hence determine encryption keys */
+	generate_random(inr);
+	// This is what the MS client do:
+	//      memset(inr, 0, SEC_RANDOM_SIZE);
+	// *ARIGL!*
 	generate_random(client_random);
-	sec_rsa_encrypt(sec_crypted_random, client_random, SEC_RANDOM_SIZE, modulus, exponent);
+	if (NULL != server_public_key)
+	{			/* Which means we should use 
+				   RDP5-style encryption */
+
+		memcpy(inr + SEC_RANDOM_SIZE, client_random, SEC_RANDOM_SIZE);
+		reverse(inr + SEC_RANDOM_SIZE, SEC_RANDOM_SIZE);
+
+		RSA_public_encrypt(SEC_MODULUS_SIZE,
+				   inr, sec_crypted_random, server_public_key, RSA_NO_PADDING);
+
+		reverse(sec_crypted_random, SEC_MODULUS_SIZE);
+
+	}
+	else
+	{			/* RDP4-style encryption */
+		sec_rsa_encrypt(sec_crypted_random,
+				client_random, SEC_RANDOM_SIZE, modulus, exponent);
+	}
 	sec_generate_keys(client_random, server_random, rc4_key_size);
 }
 
-/* Process connect response data blob */
+
+/* Process SRV_INFO, find RDP version supported by server */
 static void
+sec_process_srv_info(STREAM s)
+{
+	in_uint16_le(s, server_rdp_version);
+	DEBUG_RDP5(("Server RDP version is %d\n", server_rdp_version));
+}
+
+
+/* Process connect response data blob */
+void
 sec_process_mcs_data(STREAM s)
 {
 	uint16 tag, length;
 	uint8 *next_tag;
 	uint8 len;
 
-	in_uint8s(s, 21);	/* header */
+	in_uint8s(s, 21);	/* header (T.124 stuff, probably) */
 	in_uint8(s, len);
 	if (len & 0x80)
 		in_uint8(s, len);
@@ -582,6 +738,9 @@ sec_process_mcs_data(STREAM s)
 		switch (tag)
 		{
 			case SEC_TAG_SRV_INFO:
+				sec_process_srv_info(s);
+				break;
+
 			case SEC_TAG_SRV_3:
 				break;
 
@@ -602,9 +761,10 @@ STREAM
 sec_recv(void)
 {
 	uint32 sec_flags;
+	uint16 channel;
 	STREAM s;
 
-	while ((s = mcs_recv()) != NULL)
+	while ((s = mcs_recv(&channel)) != NULL)
 	{
 		if (encryption || !licence_issued)
 		{
@@ -623,7 +783,13 @@ sec_recv(void)
 			}
 		}
 
-		return s;
+		if (MCS_GLOBAL_CHANNEL == channel)
+		{
+			return s;
+		}
+		else
+			rdp5_process_channel(s, channel);
+
 	}
 
 	return NULL;
@@ -631,7 +797,7 @@ sec_recv(void)
 
 /* Establish a secure connection */
 BOOL
-sec_connect(char *server)
+sec_connect(char *server, char *username)
 {
 	struct stream mcs_data;
 
@@ -640,10 +806,10 @@ sec_connect(char *server)
 	mcs_data.p = mcs_data.data = xmalloc(mcs_data.size);
 	sec_out_mcs_data(&mcs_data);
 
-	if (!mcs_connect(server, &mcs_data))
+	if (!mcs_connect(server, &mcs_data, username))
 		return False;
 
-	sec_process_mcs_data(&mcs_data);
+	//      sec_process_mcs_data(&mcs_data);
 	if (encryption)
 		sec_establish_key();
 	xfree(mcs_data.data);
