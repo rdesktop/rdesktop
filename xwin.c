@@ -763,10 +763,11 @@ ui_init(void)
 
 	g_mod_map = XGetModifierMapping(g_display);
 
+	xkeymap_init();
+
 	if (g_enable_compose)
 		g_IM = XOpenIM(g_display, NULL, NULL, NULL);
 
-	xkeymap_init();
 	xclip_init();
 
 	/* todo take this out when high colour is done */
