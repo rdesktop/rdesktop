@@ -185,7 +185,7 @@ convert_1970_to_filetime(uint32 high, uint32 low)
 /* optarg looks like ':h:=/mnt/floppy,b:=/mnt/usbdevice1' */
 /* when it arrives to this function.             */
 int
-disk_enum_devices(uint32 *id, char *optarg)
+disk_enum_devices(uint32 * id, char *optarg)
 {
 	char *pos = optarg;
 	char *pos2;

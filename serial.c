@@ -327,7 +327,7 @@ set_termios(SERIAL_DEVICE * pser_inf, HANDLE serial_fd)
 /* when it arrives to this function.              */
 /* :com1=/dev/ttyS0,com2=/dev/ttyS1 */
 int
-serial_enum_devices(uint32 *id, char *optarg)
+serial_enum_devices(uint32 * id, char *optarg)
 {
 	SERIAL_DEVICE *pser_inf;
 

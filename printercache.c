@@ -149,8 +149,8 @@ printercache_process(STREAM s)
 	in_uint32_le(s, type);
 	switch (type)
 	{
-		/*case 4: renaming of item old name and then new name */
-		/*case 3: delete item name */
+			/*case 4: renaming of item old name and then new name */
+			/*case 3: delete item name */
 		case 2:
 			in_uint32_le(s, printer_unicode_length);
 			in_uint32_le(s, blob_length);
@@ -162,7 +162,7 @@ printercache_process(STREAM s)
 			}
 			break;
 
-		/*case 1: */
+			/*case 1: */
 			// TODO: I think this one just tells us what printer is on LPT? but why?
 
 			//

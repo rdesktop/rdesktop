@@ -310,7 +310,7 @@ ui_clip_handle_data(uint8 * data, uint32 length)
 		crlf2lf(data, &length);
 
 		/* Only send data up to null byte, if any */
-		firstnull = (uint8 *)strchr((char*)data, '\0');
+		firstnull = (uint8 *) strchr((char *) data, '\0');
 		if (firstnull)
 		{
 			length = firstnull - data + 1;

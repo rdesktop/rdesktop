@@ -836,8 +836,8 @@ rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
 							status = STATUS_SUCCESS;
 							rdpdr_send_completion(iorq->device,
 									      iorq->id, status,
-									      iorq->partial_len, (uint8*)"",
-									      1);
+									      iorq->partial_len,
+									      (uint8 *) "", 1);
 
 							xfree(iorq->buffer);
 							iorq->fd = 0;
@@ -881,7 +881,8 @@ rdpdr_abort_io(uint32 fd, uint32 major, NTSTATUS status)
 		if ((iorq->fd == fd) && (major == 0 || iorq->major == major))
 		{
 			result = 0;
-			rdpdr_send_completion(iorq->device, iorq->id, status, result, (uint8*)"", 1);
+			rdpdr_send_completion(iorq->device, iorq->id, status, result, (uint8 *) "",
+					      1);
 			xfree(iorq->buffer);
 			iorq->fd = 0;
 			if (prev != NULL)

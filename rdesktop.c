@@ -118,14 +118,18 @@ usage(char *program)
 	fprintf(stderr, "   -N: enable numlock syncronization\n");
 	fprintf(stderr, "   -a: connection colour depth\n");
 	fprintf(stderr, "   -r: enable specified device redirection (this flag can be repeated)\n");
-	fprintf(stderr,	"         '-r comport:COM1=/dev/ttyS0': enable serial redirection of /dev/ttyS0 to COM1\n");
+	fprintf(stderr,
+		"         '-r comport:COM1=/dev/ttyS0': enable serial redirection of /dev/ttyS0 to COM1\n");
 	fprintf(stderr, "             or      COM1=/dev/ttyS0,COM2=/dev/ttyS1\n");
-	fprintf(stderr,	"         '-r disk:A=/mnt/floppy': enable redirection of /mnt/floppy to A:\n");
+	fprintf(stderr,
+		"         '-r disk:A=/mnt/floppy': enable redirection of /mnt/floppy to A:\n");
 	fprintf(stderr, "             or   A=/mnt/floppy,D=/mnt/cdrom'\n");
-	fprintf(stderr,	"         '-r lptport:LPT1=/dev/lp0': enable parallel redirection of /dev/lp0 to LPT1\n");
+	fprintf(stderr,
+		"         '-r lptport:LPT1=/dev/lp0': enable parallel redirection of /dev/lp0 to LPT1\n");
 	fprintf(stderr, "             or      LPT1=/dev/lp0,LPT2=/dev/lp1\n");
 	fprintf(stderr, "         '-r printer:mydeskjet': enable printer redirection\n");
-	fprintf(stderr,	"             or       mydeskjet=\"HP LaserJet IIIP\" to enter server driver as well\n");
+	fprintf(stderr,
+		"             or       mydeskjet=\"HP LaserJet IIIP\" to enter server driver as well\n");
 	fprintf(stderr, "         '-r sound': enable sound redirection\n");
 	fprintf(stderr, "   -0: attach to console\n");
 	fprintf(stderr, "   -4: use RDP version 4\n");
