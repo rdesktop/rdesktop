@@ -82,11 +82,8 @@ lstroke 0x26 altgr
 Lstroke 0x26 shift altgr
 ae 0x27
 AE 0x27 shift
-dead_acute 0x27 altgr
-dead_doubleacute 0x27 shift altgr
 oslash 0x28
 Ooblique 0x28 shift
-dead_circumflex 0x28 altgr
 dead_caron 0x28 shift altgr
 onehalf 0x29
 section 0x29 shift
@@ -97,14 +94,11 @@ asterisk 0x2b shift
 dead_doubleacute 0x2b altgr
 multiply 0x2b shift altgr
 guillemotleft 0x2c altgr
-less 0x2c shift altgr
 guillemotright 0x2d altgr
-greater 0x2d shift altgr
 copyright 0x2e altgr
 leftdoublequotemark 0x2f altgr
 grave 0x2f shift altgr
 rightdoublequotemark 0x30 altgr
-apostrophe 0x30 shift altgr
 mu 0x32 altgr
 masculine 0x32 shift altgr
 comma 0x33
@@ -120,5 +114,7 @@ underscore 0x35 shift
 hyphen 0x35 altgr
 macron 0x35 shift altgr
 nobreakspace 0x39 altgr
+less 0x56
+greater 0x56 shift
 backslash 0x56 altgr
 notsign 0x56 shift altgr
