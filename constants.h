@@ -199,6 +199,15 @@ enum RDP_INPUT_DEVICE
 #define TEXT2_VERTICAL		0x04
 #define TEXT2_IMPLICIT_X	0x20
 
+/* RDP bitmap cache (version 2) constants */
+#define BMPCACHE2_C0_CELLS	0x78
+#define BMPCACHE2_C1_CELLS	0x78
+#define BMPCACHE2_C2_CELLS	0x150
+#define BMPCACHE2_NUM_PSTCELLS	0x9f6
+
+#define PDU_FLAG_FIRST		0x01
+#define PDU_FLAG_LAST		0x02
+
 /* RDP capabilities */
 #define RDP_CAPSET_GENERAL	1	/* Maps to generalCapabilitySet in T.128 page 138 */
 #define RDP_CAPLEN_GENERAL	0x18
@@ -231,8 +240,9 @@ enum RDP_INPUT_DEVICE
 #define RDP_CAPSET_COLCACHE	10
 #define RDP_CAPLEN_COLCACHE	0x08
 
-#define RDP_CAPSET_UNKNOWN	13
-#define RDP_CAPLEN_UNKNOWN	0x9C
+#define RDP_CAPSET_BMPCACHE2	19
+#define RDP_CAPLEN_BMPCACHE2	0x28
+#define BMPCACHE2_FLAG_PERSIST	(1<<31)
 
 #define RDP_SOURCE		"MSTSC"
 

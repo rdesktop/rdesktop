@@ -108,13 +108,20 @@ More than 8 bpp are only supported when connecting to Windows XP
 limited by the server configuration.
 .TP
 .BR "-x <experience>"
-Alters default bandwith performance behaviour for RDP5. By default only
+Changes default bandwidth performance behaviour for RDP5. By default only
 theming is enabled, and all other options are disabled (corresponding
 to modem (56 Kbps)). Setting experience to b[roadband] enables menu
 animations and full window dragging. Setting experience to l[an] will
 also enable the desktop wallpaper. Setting experience to m[odem]
-disables all (including theming). Experience can also be a hexidecimal
+disables all (including themes). Experience can also be a hexidecimal
 number containing the flags.
+.TP
+.BR "-P"
+Enable caching of bitmaps to disk (persistent bitmap caching). This generally
+improves performance (especially on low bandwidth connections) and reduces
+network traffic at the cost of slightly longer startup and some disk space.
+(10MB for 8-bit colour, 20MB for 15/16-bit colour and 30MB for 24-bit colour
+sessions)
 .TP
 .BR "-r <device>"
 Enable redirection of the specified device on the client, such

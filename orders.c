@@ -670,7 +670,7 @@ process_raw_bmpcache(STREAM s)
 
 	bitmap = ui_create_bitmap(width, height, inverted);
 	xfree(inverted);
-	cache_put_bitmap(cache_id, cache_idx, bitmap);
+	cache_put_bitmap(cache_id, cache_idx, bitmap, 0);
 }
 
 /* Process a bitmap cache order */
@@ -695,7 +695,11 @@ process_bmpcache(STREAM s)
 	in_uint16_le(s, bufsize);	/* bufsize */
 	in_uint16_le(s, cache_idx);
 
-	if (!g_use_rdp5)
+	if (g_use_rdp5)
+	{
+		size = bufsize;
+	}
+	else
 	{
 
 		/* Begin compressedBitmapData */
@@ -706,10 +710,6 @@ process_bmpcache(STREAM s)
 		in_uint16_le(s, final_size);
 
 	}
-	else
-	{
-		size = bufsize;
-	}
 	in_uint8p(s, data, size);
 
 	DEBUG(("BMPCACHE(cx=%d,cy=%d,id=%d,idx=%d,bpp=%d,size=%d,pad1=%d,bufsize=%d,pad2=%d,rs=%d,fs=%d)\n", width, height, cache_id, cache_idx, bpp, size, pad1, bufsize, pad2, row_size, final_size));
@@ -719,11 +719,91 @@ process_bmpcache(STREAM s)
 	if (bitmap_decompress(bmpdata, width, height, data, size, Bpp))
 	{
 		bitmap = ui_create_bitmap(width, height, bmpdata);
-		cache_put_bitmap(cache_id, cache_idx, bitmap);
+		cache_put_bitmap(cache_id, cache_idx, bitmap, 0);
 	}
 	else
 	{
 		DEBUG(("Failed to decompress bitmap data\n"));
+	}
+
+	xfree(bmpdata);
+}
+
+/* Process a bitmap cache v2 order */
+static void
+process_bmpcache2(STREAM s, uint16 flags, BOOL compressed)
+{
+	HBITMAP bitmap;
+	int y;
+	uint8 cache_id, cache_idx_low, width, height, Bpp;
+	uint16 cache_idx, bufsize;
+	uint8 *data, *bmpdata, *bitmap_id;
+
+	bitmap_id = NULL;	/* prevent compiler warning */
+	cache_id = flags & ID_MASK;
+	Bpp = ((flags & MODE_MASK) >> MODE_SHIFT) - 2;
+
+	if (flags & PERSIST)
+	{
+		in_uint8p(s, bitmap_id, 8);
+	}
+
+	if (flags & SQUARE)
+	{
+		in_uint8(s, width);
+		height = width;
+	}
+	else
+	{
+		in_uint8(s, width);
+		in_uint8(s, height);
+	}
+
+	in_uint16_be(s, bufsize);
+	bufsize &= BUFSIZE_MASK;
+	in_uint8(s, cache_idx);
+
+	if (cache_idx & LONG_FORMAT)
+	{
+		in_uint8(s, cache_idx_low);
+		cache_idx = ((cache_idx ^ LONG_FORMAT) << 8) + cache_idx_low;
+	}
+
+	in_uint8p(s, data, bufsize);
+
+	DEBUG(("BMPCACHE2(compr=%d,flags=%x,cx=%d,cy=%d,id=%d,idx=%d,Bpp=%d,bs=%d)\n",
+			compressed, flags, width, height, cache_id, cache_idx, Bpp, bufsize));
+
+	bmpdata = (uint8 *) xmalloc(width * height * Bpp);
+
+	if (compressed)
+	{
+		if (!bitmap_decompress(bmpdata, width, height, data, bufsize, Bpp))
+		{
+			DEBUG(("Failed to decompress bitmap data\n"));
+			xfree(bmpdata);
+			return;
+		}
+	}
+	else
+	{
+		for (y = 0; y < height; y++)
+			memcpy(&bmpdata[(height - y - 1) * (width * Bpp)],
+					&data[y * (width * Bpp)], width * Bpp);
+	}
+
+	bitmap = ui_create_bitmap(width, height, bmpdata);
+
+	if (bitmap)
+	{
+		cache_put_bitmap(cache_id, cache_idx, bitmap, 0);
+		if (flags & PERSIST)
+			pstcache_put_bitmap(cache_id, cache_idx, bitmap_id, width, height,
+					width * height * Bpp, bmpdata);
+	}
+	else
+	{
+		DEBUG(("process_bmpcache2: ui_create_bitmap failed\n"));
 	}
 
 	xfree(bmpdata);
@@ -796,12 +876,16 @@ process_fontcache(STREAM s)
 static void
 process_secondary_order(STREAM s)
 {
-	uint16 length;
+	/* The length isn't calculated correctly by the server.
+	 * For very compact orders the length becomes negative
+	 * so a signed integer must be used. */
+	sint16 length;
+	uint16 flags;
 	uint8 type;
 	uint8 *next_order;
 
-	in_uint16_le(s, length);
-	in_uint8s(s, 2);	/* flags */
+	in_uint16_le(s, (uint16) length);
+	in_uint16_le(s, flags);		/* used by bmpcache2 */
 	in_uint8(s, type);
 
 	next_order = s->p + length + 7;
@@ -822,6 +906,14 @@ process_secondary_order(STREAM s)
 
 		case RDP_ORDER_FONTCACHE:
 			process_fontcache(s);
+			break;
+
+		case RDP_ORDER_RAW_BMPCACHE2:
+			process_bmpcache2(s, flags, False);	/* uncompressed */
+			break;
+
+		case RDP_ORDER_BMPCACHE2:
+			process_bmpcache2(s, flags, True);	/* compressed */
 			break;
 
 		default:

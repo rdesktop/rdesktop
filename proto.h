@@ -2,7 +2,8 @@
 BOOL bitmap_decompress(uint8 * output, int width, int height, uint8 * input, int size, int Bpp);
 /* cache.c */
 HBITMAP cache_get_bitmap(uint8 cache_id, uint16 cache_idx);
-void cache_put_bitmap(uint8 cache_id, uint16 cache_idx, HBITMAP bitmap);
+void cache_put_bitmap(uint8 cache_id, uint16 cache_idx, HBITMAP bitmap, uint32 stamp);
+void cache_save_state(void);
 FONTGLYPH *cache_get_font(uint8 font, uint16 character);
 void cache_put_font(uint8 font, uint16 character, uint16 offset, uint16 baseline, uint16 width,
 		    uint16 height, HGLYPH pixmap);
@@ -60,6 +61,13 @@ int printer_enum_devices(uint32 * id, char *optarg);
 /* printercache.c */
 int printercache_load_blob(char *printer_name, uint8 ** data);
 void printercache_process(STREAM s);
+/* pstcache.c */
+void pstcache_touch_bitmap(uint8 id, uint16 idx, uint32 stamp);
+BOOL pstcache_load_bitmap(uint8 id, uint16 idx);
+BOOL pstcache_put_bitmap(uint8 id, uint16 idx, uint8 *bmp_id, uint16 wd,
+		uint16 ht, uint16 len, uint8 *data);
+int pstcache_enumerate(uint8 id, uint8 *list);
+BOOL pstcache_init(uint8 id);
 /* rdesktop.c */
 int main(int argc, char *argv[]);
 void generate_random(uint8 * random);
@@ -75,6 +83,13 @@ void toupper_str(char *p);
 char *l_to_a(long N, int base);
 int load_licence(unsigned char **data);
 void save_licence(unsigned char *data, int length);
+BOOL rd_pstcache_mkdir(void);
+int rd_open_file(char *filename);
+void rd_close_file(int fd);
+int rd_read_file(int fd, void *ptr, int len);
+int rd_write_file(int fd, void* ptr, int len);
+int rd_lseek_file(int fd, int offset);
+BOOL rd_lock_file(int fd, int start, int len);
 /* rdp5.c */
 void rdp5_process(STREAM s, BOOL encryption);
 /* rdp.c */

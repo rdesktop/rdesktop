@@ -119,6 +119,28 @@ typedef struct _VCHANNEL
 }
 VCHANNEL;
 
+typedef struct _BMPCACHEENTRY
+{
+	HBITMAP bitmap;
+	uint32 usage;
+
+}
+BMPCACHEENTRY;
+
+/* PSTCACHE */
+
+typedef uint8 BITMAP_ID[8];
+
+/* Header for an entry in the persistent bitmap cache file */
+typedef struct _PSTCACHE_CELLHEADER
+{
+	BITMAP_ID bitmap_id;
+	uint8 width, height;
+	uint16 length;
+	uint32 stamp;
+}
+CELLHEADER;
+
 #define MAX_CBSIZE 256
 
 /* RDPSND */

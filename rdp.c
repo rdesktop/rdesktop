@@ -34,6 +34,7 @@ extern int g_server_bpp;
 extern int g_width;
 extern int g_height;
 extern BOOL g_bitmap_cache;
+extern BOOL g_bitmap_cache_persist_enable;
 
 uint8 *g_next_packet;
 uint32 g_rdp_shareid;
@@ -366,6 +367,51 @@ rdp_send_input(uint32 time, uint16 message_type, uint16 device_flags, uint16 par
 	rdp_send_data(s, RDP_DATA_PDU_INPUT);
 }
 
+/* Inform the server on the contents of the persistent bitmap cache */
+static void
+rdp_enum_bmpcache2(void)
+{
+	STREAM s;
+	uint8 idlist[BMPCACHE2_NUM_PSTCELLS * sizeof(BITMAP_ID)];
+	uint32 nids, offset, count, flags;
+
+	offset = 0;
+	nids = pstcache_enumerate(2, idlist);
+
+	while (offset < nids)
+	{
+		count = MIN(nids - offset, 169);
+
+		s = rdp_init_data(24 + count * sizeof(BITMAP_ID));
+
+		flags = 0;
+		if (offset == 0)
+			flags |= PDU_FLAG_FIRST;
+		if (nids - offset <= 169)
+			flags |= PDU_FLAG_LAST;
+
+		/* header */
+		out_uint32_le(s, 0);
+		out_uint16_le(s, count);
+		out_uint16_le(s, 0);
+		out_uint16_le(s, 0);
+		out_uint16_le(s, 0);
+		out_uint16_le(s, 0);
+		out_uint16_le(s, nids);
+		out_uint32_le(s, 0);
+		out_uint32_le(s, flags);
+
+		/* list */
+		out_uint8a(s, idlist + offset * sizeof(BITMAP_ID),
+				count * sizeof(BITMAP_ID));
+
+		s_mark_end(s);
+		rdp_send_data(s, 0x2b);
+
+		offset += 169;
+	}
+}
+
 /* Send an (empty) font information PDU */
 static void
 rdp_send_fonts(uint16 seq)
@@ -486,6 +532,30 @@ rdp_out_bmpcache_caps(STREAM s)
 	out_uint16_le(s, 0x1000 * Bpp);	/* max cell size */
 }
 
+/* Output bitmap cache v2 capability set */
+static void
+rdp_out_bmpcache2_caps(STREAM s)
+{
+	out_uint16_le(s, RDP_CAPSET_BMPCACHE2);
+	out_uint16_le(s, RDP_CAPLEN_BMPCACHE2);
+
+	out_uint16_le(s, g_bitmap_cache_persist_enable ? 1 : 0);	/* version */
+
+	out_uint16_le(s, 0x0300);	/* flags? number of caches? */
+
+	out_uint32_le(s, BMPCACHE2_C0_CELLS);
+	out_uint32_le(s, BMPCACHE2_C1_CELLS);
+	if (pstcache_init(2))
+	{
+		out_uint32_le(s, BMPCACHE2_NUM_PSTCELLS | BMPCACHE2_FLAG_PERSIST);
+	}
+	else
+	{
+		out_uint32_le(s, BMPCACHE2_C2_CELLS);
+	}
+	out_uint8s(s, 20);		/* other bitmap caches not used */
+}
+
 /* Output control capability set */
 static void
 rdp_out_control_caps(STREAM s)
@@ -545,36 +615,41 @@ rdp_out_colcache_caps(STREAM s)
 	out_uint16(s, 0);	/* pad */
 }
 
-static uint8 canned_caps[] = {
-	0x01, 0x00, 0x00, 0x00, 0x09, 0x04, 0x00, 0x00, 0x04,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0C, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x0C, 0x00, 0x08, 0x00, 0x01,
-	0x00, 0x00, 0x00, 0x0E, 0x00, 0x08, 0x00, 0x01, 0x00, 0x00, 0x00,
-	0x10, 0x00, 0x34, 0x00, 0xFE,
-	0x00, 0x04, 0x00, 0xFE, 0x00, 0x04, 0x00, 0xFE, 0x00, 0x08, 0x00,
-	0xFE, 0x00, 0x08, 0x00, 0xFE,
-	0x00, 0x10, 0x00, 0xFE, 0x00, 0x20, 0x00, 0xFE, 0x00, 0x40, 0x00,
-	0xFE, 0x00, 0x80, 0x00, 0xFE,
-	0x00, 0x00, 0x01, 0x40, 0x00, 0x00, 0x08, 0x00, 0x01, 0x00, 0x01,
-	0x02, 0x00, 0x00, 0x00
+static uint8 caps_0x0d[] = {
+	0x01, 0x00, 0x00, 0x00, 0x09, 0x04, 0x00, 0x00,
+	0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x0C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00
 };
 
-/* Output unknown capability sets (number 13, 12, 14 and 16) */
-static void
-rdp_out_unknown_caps(STREAM s)
-{
-	out_uint16_le(s, RDP_CAPSET_UNKNOWN);
-	out_uint16_le(s, 0x58);
+static uint8 caps_0x0c[] = { 0x01, 0x00, 0x00, 0x00 };
 
-	out_uint8p(s, canned_caps, RDP_CAPLEN_UNKNOWN - 4);
+static uint8 caps_0x0e[] = { 0x01, 0x00, 0x00, 0x00 };
+
+static uint8 caps_0x10[] = {
+	0xFE, 0x00, 0x04, 0x00, 0xFE, 0x00, 0x04, 0x00,
+	0xFE, 0x00, 0x08, 0x00, 0xFE, 0x00, 0x08, 0x00,
+	0xFE, 0x00, 0x10, 0x00, 0xFE, 0x00, 0x20, 0x00,
+	0xFE, 0x00, 0x40, 0x00, 0xFE, 0x00, 0x80, 0x00,
+	0xFE, 0x00, 0x00, 0x01, 0x40, 0x00, 0x00, 0x08,
+	0x00, 0x01, 0x00, 0x01, 0x02, 0x00, 0x00, 0x00
+};
+
+/* Output unknown capability sets */
+static void
+rdp_out_unknown_caps(STREAM s, uint16 id, uint16 length, uint8 *caps)
+{
+	out_uint16_le(s, id);
+	out_uint16_le(s, length);
+
+	out_uint8p(s, caps, length - 4);
 }
 
 #define RDP5_FLAG 0x0030
@@ -588,7 +663,9 @@ rdp_send_confirm_active(void)
 		RDP_CAPLEN_GENERAL + RDP_CAPLEN_BITMAP + RDP_CAPLEN_ORDER +
 		RDP_CAPLEN_BMPCACHE + RDP_CAPLEN_COLCACHE +
 		RDP_CAPLEN_ACTIVATE + RDP_CAPLEN_CONTROL +
-		RDP_CAPLEN_POINTER + RDP_CAPLEN_SHARE + RDP_CAPLEN_UNKNOWN + 4 /* w2k fix, why? */ ;
+		RDP_CAPLEN_POINTER + RDP_CAPLEN_SHARE +
+		0x58 + 0x08 + 0x08 + 0x34 /* unknown caps */ +
+		4 /* w2k fix, why? */ ;
 
 	s = sec_init(sec_flags, 6 + 14 + caplen + sizeof(RDP_SOURCE));
 
@@ -608,14 +685,18 @@ rdp_send_confirm_active(void)
 	rdp_out_general_caps(s);
 	rdp_out_bitmap_caps(s);
 	rdp_out_order_caps(s);
-	rdp_out_bmpcache_caps(s);
+	g_use_rdp5 ? rdp_out_bmpcache2_caps(s) : rdp_out_bmpcache_caps(s);
 	rdp_out_colcache_caps(s);
 	rdp_out_activate_caps(s);
 	rdp_out_control_caps(s);
 	rdp_out_pointer_caps(s);
 	rdp_out_share_caps(s);
-	rdp_out_unknown_caps(s);
 
+	rdp_out_unknown_caps(s, 0x0d, 0x58, caps_0x0d); /* international? */
+	rdp_out_unknown_caps(s, 0x0c, 0x08, caps_0x0c);
+	rdp_out_unknown_caps(s, 0x0e, 0x08, caps_0x0e);
+	rdp_out_unknown_caps(s, 0x10, 0x34, caps_0x10); /* glyph cache? */
+				
 	s_mark_end(s);
 	sec_send(s, sec_flags);
 }
@@ -659,33 +740,31 @@ rdp_process_bitmap_caps(STREAM s)
 	if (g_width != width || g_height != height)
 	{
 		warning("screen size changed from %dx%d to %dx%d\n", g_width, g_height,
-			width, height);
+				width, height);
 		g_width = width;
 		g_height = height;
 		ui_resize_window();
 	}
 }
 
-/* Respond to a demand active PDU */
-static void
-process_demand_active(STREAM s)
+/* Process server capabilities */
+void
+rdp_process_server_caps(STREAM s, uint16 length)
 {
 	int n;
-	uint8 type, *next;
-	uint16 len_src_descriptor, len_combined_caps, num_capsets, capset_type, capset_length;
+	uint8 *next, *start;
+	uint16 ncapsets, capset_type, capset_length;
 
-	in_uint32_le(s, g_rdp_shareid);
-	in_uint16_le(s, len_src_descriptor);
-	in_uint16_le(s, len_combined_caps);
-	in_uint8s(s, len_src_descriptor);
+	start = s->p;
 
-	in_uint16_le(s, num_capsets);
+	in_uint16_le(s, ncapsets);
 	in_uint8s(s, 2);	/* pad */
 
-	DEBUG(("DEMAND_ACTIVE(id=0x%x,num_caps=%d)\n", g_rdp_shareid, num_capsets));
-
-	for (n = 0; n < num_capsets; n++)
+	for (n = 0; n < ncapsets; n++)
 	{
+		if (s->p > start + length)
+			return;
+
 		in_uint16_le(s, capset_type);
 		in_uint16_le(s, capset_length);
 
@@ -704,6 +783,22 @@ process_demand_active(STREAM s)
 
 		s->p = next;
 	}
+}
+
+/* Respond to a demand active PDU */
+static void
+process_demand_active(STREAM s)
+{
+	uint8 type;
+	uint16 len_src_descriptor, len_combined_caps;
+
+	in_uint32_le(s, g_rdp_shareid);
+	in_uint16_le(s, len_src_descriptor);
+	in_uint16_le(s, len_combined_caps);
+	in_uint8s(s, len_src_descriptor);
+
+	DEBUG(("DEMAND_ACTIVE(id=0x%x)\n", g_rdp_shareid));
+	rdp_process_server_caps(s, len_combined_caps);
 
 	rdp_send_confirm_active();
 	rdp_send_synchronise();
@@ -716,6 +811,7 @@ process_demand_active(STREAM s)
 
 	if (g_use_rdp5)
 	{
+		rdp_enum_bmpcache2();
 		rdp_send_fonts(3);
 	}
 	else

@@ -47,6 +47,8 @@ extern uint32 g_embed_wnd;
 BOOL g_enable_compose = False;
 BOOL g_Unobscured;		/* used for screenblt */
 static GC g_gc = NULL;
+static GC g_create_bitmap_gc = NULL;
+static GC g_create_glyph_gc = NULL;
 static Visual *g_visual;
 static int g_depth;
 static int g_bpp;
@@ -969,6 +971,9 @@ ui_create_window(void)
 	if (g_gc == NULL)
 		g_gc = XCreateGC(g_display, g_wnd, 0, NULL);
 
+	if (g_create_bitmap_gc == NULL)
+		g_create_bitmap_gc = XCreateGC(g_display, g_wnd, 0, NULL);
+
 	if ((g_ownbackstore) && (g_backstore == 0))
 	{
 		g_backstore = XCreatePixmap(g_display, g_wnd, g_width, g_height, g_depth);
@@ -1481,7 +1486,7 @@ ui_create_bitmap(int width, int height, uint8 * data)
 	image = XCreateImage(g_display, g_visual, g_depth, ZPixmap, 0,
 			     (char *) tdata, width, height, bitmap_pad, 0);
 
-	XPutImage(g_display, bitmap, g_gc, image, 0, 0, 0, 0, width, height);
+	XPutImage(g_display, bitmap, g_create_bitmap_gc, image, 0, 0, 0, 0, width, height);
 
 	XFree(image);
 	if (tdata != data)
@@ -1539,12 +1544,12 @@ ui_create_glyph(int width, int height, uint8 * data)
 	XImage *image;
 	Pixmap bitmap;
 	int scanline;
-	GC gc;
 
 	scanline = (width + 7) / 8;
 
 	bitmap = XCreatePixmap(g_display, g_wnd, width, height, 1);
-	gc = XCreateGC(g_display, bitmap, 0, NULL);
+	if (g_create_glyph_gc == 0)
+		g_create_glyph_gc = XCreateGC(g_display, bitmap, 0, NULL);
 
 	image = XCreateImage(g_display, g_visual, 1, ZPixmap, 0, (char *) data,
 			     width, height, 8, scanline);
@@ -1552,10 +1557,9 @@ ui_create_glyph(int width, int height, uint8 * data)
 	image->bitmap_bit_order = MSBFirst;
 	XInitImage(image);
 
-	XPutImage(g_display, bitmap, gc, image, 0, 0, 0, 0, width, height);
+	XPutImage(g_display, bitmap, g_create_glyph_gc, image, 0, 0, 0, 0, width, height);
 
 	XFree(image);
-	XFreeGC(g_display, gc);
 	return (HGLYPH) bitmap;
 }
 

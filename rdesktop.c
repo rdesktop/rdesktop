@@ -59,6 +59,8 @@ int g_win_button_size = 0;	/* If zero, disable single app mode */
 BOOL g_bitmap_compression = True;
 BOOL g_sendmotion = True;
 BOOL g_bitmap_cache = True;
+BOOL g_bitmap_cache_persist_enable = False;
+BOOL g_bitmap_cache_precache = True;
 BOOL g_encryption = True;
 BOOL packet_encryption = True;
 BOOL g_desktop_save = True;
@@ -124,8 +126,8 @@ usage(char *program)
 	fprintf(stderr, "   -N: enable numlock syncronization\n");
 	fprintf(stderr, "   -X: embed into another window with a given id.\n");
 	fprintf(stderr, "   -a: connection colour depth\n");
-	fprintf(stderr,
-		"   -x: RDP5 experience (m[odem 28.8], b[roadband], l[an] or hex number)\n");
+	fprintf(stderr, "   -x: RDP5 experience (m[odem 28.8], b[roadband], l[an] or hex nr.)\n");
+	fprintf(stderr, "   -P: use persistent bitmap caching\n");
 	fprintf(stderr, "   -r: enable specified device redirection (this flag can be repeated)\n");
 	fprintf(stderr,
 		"         '-r comport:COM1=/dev/ttyS0': enable serial redirection of /dev/ttyS0 to COM1\n");
@@ -364,7 +366,8 @@ main(int argc, char *argv[])
 #define VNCOPT
 #endif
 
-	while ((c = getopt(argc, argv, VNCOPT "u:d:s:c:p:n:k:g:fbBeEmCDKS:T:NX:a:x:r:045h?")) != -1)
+	while ((c = getopt(argc, argv,
+			VNCOPT "u:d:s:c:p:n:k:g:fbBeEmCDKS:T:NX:a:x:Pr:045h?")) != -1)
 	{
 		switch (c)
 		{
@@ -547,6 +550,10 @@ main(int argc, char *argv[])
 				}
 				break;
 
+			case 'P':
+				g_bitmap_cache_persist_enable = True;
+				break;
+
 			case 'r':
 
 				if (strncmp("sound", optarg, 5) == 0)
@@ -713,6 +720,7 @@ main(int argc, char *argv[])
 	}
 
 	DEBUG(("Disconnecting...\n"));
+	cache_save_state();
 	rdp_disconnect();
 	ui_deinit();
 
@@ -1120,4 +1128,96 @@ save_licence(unsigned char *data, int length)
 	close(fd);
 	xfree(tmppath);
 	xfree(path);
+}
+
+/* Create the bitmap cache directory */
+BOOL
+rd_pstcache_mkdir(void)
+{
+	char *home;
+	char bmpcache_dir[256];
+
+	home = getenv("HOME");
+
+	if (home == NULL)
+		return False;
+
+	sprintf(bmpcache_dir, "%s/%s", home, ".rdesktop");
+
+	if ((mkdir(bmpcache_dir, S_IRWXU) == -1) && errno != EEXIST)
+	{
+		perror(bmpcache_dir);
+		return False;
+	}
+
+	sprintf(bmpcache_dir, "%s/%s", home, ".rdesktop/cache");
+
+	if ((mkdir(bmpcache_dir, S_IRWXU) == -1) && errno != EEXIST)
+	{
+		perror(bmpcache_dir);
+		return False;
+	}
+
+	return True;
+}
+
+/* open a file in the .rdesktop directory */
+int
+rd_open_file(char *filename)
+{
+	char *home;
+	char fn[256];
+   int fd;
+
+	home = getenv("HOME");
+	if (home == NULL)
+		return -1;
+	sprintf(fn, "%s/.rdesktop/%s", home, filename);
+	fd = open(fn, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+	if (fd == -1)
+		perror(fn);
+	return fd;
+}
+
+/* close file */
+void
+rd_close_file(int fd)
+{
+  close(fd);
+}
+
+/* read from file*/
+int
+rd_read_file(int fd, void *ptr, int len)
+{
+  return read(fd, ptr, len);
+}
+
+/* write to file */
+int
+rd_write_file(int fd, void* ptr, int len)
+{
+  return write(fd, ptr, len);
+}
+
+/* move file pointer */
+int
+rd_lseek_file(int fd, int offset)
+{
+  return lseek(fd, offset, SEEK_SET);
+}
+
+/* do a write lock on a file */
+BOOL
+rd_lock_file(int fd, int start, int len)
+{
+	struct flock lock;
+
+	lock.l_type = F_WRLCK;
+	lock.l_whence = SEEK_SET;
+	lock.l_start = start;
+	lock.l_len = len;
+	if (fcntl(fd, F_SETLK, &lock) == -1)
+		return False;
+	return True;
 }
