@@ -26,7 +26,7 @@ extern uint8 *next_packet;
 void
 rdp5_process(STREAM s, BOOL encryption)
 {
-	uint16 length, count;
+	uint16 length, count, x, y;
 	uint8 type;
 	uint8 *next;
 
@@ -49,6 +49,10 @@ rdp5_process(STREAM s, BOOL encryption)
 
 		switch (type)
 		{
+			/* Thanks to Jeroen Meijer <jdmeijer at yahoo
+			   dot com> for finding out the meaning of
+			   most of the opcodes here. Especially opcode
+			   8! :) */
 			case 0:	/* orders */
 				in_uint16_le(s, count);
 				process_orders(s, count);
@@ -65,6 +69,12 @@ rdp5_process(STREAM s, BOOL encryption)
 				break;
 			case 5:
 				process_null_system_pointer_pdu(s);
+				break;
+        		case 8: 
+				in_uint16_le(s, x);
+				in_uint16_le(s, y);
+				if (s_check(s))
+					ui_move_pointer(x, y);
 				break;
 			case 9:
 				process_colour_pointer_pdu(s);
