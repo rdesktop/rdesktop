@@ -98,3 +98,10 @@ typedef struct _DATABLOB
 
 }
 DATABLOB;
+
+typedef struct _key_translation
+{
+	uint8 scancode;
+	uint16 modifiers;
+}
+key_translation;

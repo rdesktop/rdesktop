@@ -1,3 +1,3 @@
 # Portuguese (Brazilian ABNT)
 include common
-map 416 br
+map 0x416

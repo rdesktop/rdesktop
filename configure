@@ -49,6 +49,7 @@ case $arg in
     echo "Build configuration:"
     echo " --with-openssl         use system OpenSSL libraries for crypto"
     echo " --with-debug           enable debugging output"
+    echo " --with-debug-kbd       enable debugging of keyboard handling"
     echo
     rm -f Makeconf
     exit 1

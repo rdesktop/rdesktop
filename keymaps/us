@@ -1,50 +1,34 @@
-# US
+map 0x00000808
 include common
-map 409 us
-02 1 exclam
-03 2 at
-04 3 numbersign
-05 4 dollar
-06 5 percent
-07 6 asciicircum
-08 7 ampersand
-09 8 asterisk
-0a 9 parenleft
-0b 0 parenright
-0c minus underscore
-0d equal plus
-10 q Q
-11 w W
-12 e E
-13 r R
-14 t T
-15 y Y
-16 u U
-17 i I
-18 o O
-19 p P
-1a bracketleft braceleft
-1b bracketright braceright
-1e a A
-1f s S
-20 d D
-21 f F
-22 g G
-23 h H
-24 j J
-25 k K
-26 l L
-27 semicolon colon
-28 apostrophe quotedbl
-29 grave asciitilde
-2b backslash bar
-2c z Z
-2d x X
-2e c C
-2f v V
-30 b B
-31 n N
-32 m M
-33 comma less
-34 period greater
-35 slash question
+grave 0x29
+asciitilde 0x29 shift
+exclam 0x02 shift
+at 0x03 shift
+numbersign 0x04 shift
+dollar 0x05 shift
+percent 0x06 shift
+asciicircum 0x07 shift
+ampersand 0x08 shift
+asterisk 0x09 shift
+parenleft 0x0a shift
+parenright 0x0b shift
+minus 0x0c
+underscore 0x0c shift
+equal 0x0d
+plus 0x0d shift
+bracketleft 0x1a
+braceleft 0x1a shift
+bracketright 0x1b
+braceright 0x1b shift
+backslash 0x2b
+bar 0x2b shift
+semicolon 0x27
+colon 0x27 shift
+apostrophe 0x28
+quotedbl 0x28 shift
+comma 0x33
+less 0x33 shift
+period 0x34
+greater 0x34 shift
+slash 0x35
+question 0x35 shift

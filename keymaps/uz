@@ -1,3 +1,3 @@
 # Uzbek Cyrillic
 include common
-map 843 uz
+map 0x843

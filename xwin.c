@@ -20,20 +20,18 @@
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
-#include <X11/XKBlib.h>
 #include <time.h>
 #include <errno.h>
+#define XK_MISCELLANY
+#include <X11/keysymdef.h>
 #include "rdesktop.h"
 
-extern char keymapname[16];
-extern int keylayout;
 extern int width;
 extern int height;
 extern BOOL sendmotion;
 extern BOOL fullscreen;
 
-Display *display;
-XkbDescPtr xkb;
+Display *display = NULL;
 static int x_socket;
 static Window wnd;
 static GC gc;
@@ -49,23 +47,6 @@ static BOOL xserver_be;
 static BOOL ownbackstore;
 static Pixmap backstore;
 
-/* needed to keep track of the modifiers */
-static unsigned int numlock_modifier_mask = 0;
-static unsigned int key_down_state = 0;
-
-
-#define DShift1Mask   (1<<0)
-#define DLockMask     (1<<1)
-#define DControl1Mask (1<<2)
-#define DMod1Mask     (1<<3)
-#define DMod2Mask     (1<<4)
-#define DMod3Mask     (1<<5)
-#define DMod4Mask     (1<<6)
-#define DMod5Mask     (1<<7)
-#define DShift2Mask   (1<<8)
-#define DControl2Mask (1<<9)
-#define DNumLockMask  (1<<10)
-
 #define FILL_RECTANGLE(x,y,cx,cy)\
 { \
 	XFillRectangle(display, wnd, gc, x, y, cx, cy); \
@@ -78,6 +59,8 @@ static BOOL owncolmap;
 static Colormap xcolmap;
 static uint32 white;
 static uint32 *colmap;
+static XIM IM = NULL;
+static XIC IC = NULL;
 
 #define TRANSLATE(col)		( owncolmap ? col : translate_colour(colmap[col]) )
 #define SET_FOREGROUND(col)	XSetForeground(display, gc, TRANSLATE(col));
@@ -104,11 +87,6 @@ static int rop2_map[] = {
 
 #define SET_FUNCTION(rop2)	{ if (rop2 != ROP2_COPY) XSetFunction(display, gc, rop2_map[rop2]); }
 #define RESET_FUNCTION(rop2)	{ if (rop2 != ROP2_COPY) XSetFunction(display, gc, GXcopy); }
-
-void xwin_get_numlock_mask();
-void xwin_mod_update(uint32 state, uint32 ev_time);
-void xwin_mod_release(uint32 state, uint32 ev_time, uint32 scancode);
-void xwin_mod_press(uint32 state, uint32 ev_time, uint32 scancode);
 
 static void
 translate8(uint8 * data, uint8 * out, uint8 * end)
@@ -204,6 +182,61 @@ translate_colour(uint32 colour)
 	return colour;
 }
 
+static unsigned long
+init_inputmethod(void)
+{
+	unsigned long filtered_events;
+
+	IM = XOpenIM(display, NULL, NULL, NULL);
+	if (IM == NULL)
+	{
+		error("Failed to open input method\n");
+	}
+
+	if (IM != NULL)
+	{
+		/* Must be done after XCreateWindow */
+		IC = XCreateIC(IM, XNInputStyle,
+			       (XIMPreeditNothing | XIMStatusNothing),
+			       XNClientWindow, wnd, XNFocusWindow, wnd, NULL);
+
+		if (IC == NULL)
+		{
+			error("Failed to create input context\n");
+			XCloseIM(IM);
+			IM = NULL;
+		}
+	}
+
+	/* For correct Multi_key/Compose processing, I guess.
+	   It seems to work alright anyway, though. */
+	if (IC != NULL)
+	{
+		if (XGetICValues(IC, XNFilterEvents, &filtered_events, NULL)
+		    != NULL)
+		{
+			error("Failed to obtain XNFilterEvents value from IC\n");
+			filtered_events = 0;
+		}
+	}
+	return filtered_events;
+}
+
+static void
+close_inputmethod(void)
+{
+	if (IC != NULL)
+	{
+		XDestroyIC(IC);
+		if (IM != NULL)
+		{
+			XCloseIM(IM);
+			IM = NULL;
+		}
+	}
+}
+
+
 BOOL
 ui_create_window(char *title)
 {
@@ -215,41 +248,9 @@ ui_create_window(char *title)
 	Screen *screen;
 	uint16 test;
 	int i;
+	unsigned long filtered_events;
 
-	int xkb_minor, xkb_major;
-	int xkb_event, xkb_error, xkb_reason;
-
-	/* compare compiletime libs with runtime libs. */
-	xkb_major = XkbMajorVersion;
-	xkb_minor = XkbMinorVersion;
-	if (XkbLibraryVersion(&xkb_major, &xkb_minor) == False)
-	{
-		error("please re-compile rdesktop\ncompile time version of xkb is not compatible with\nyour runtime version of the library\n");
-		return False;
-	}
-
-
-	display =
-		XkbOpenDisplay(NULL, &xkb_event, &xkb_error, &xkb_major,
-			       &xkb_minor, &xkb_reason);
-	switch (xkb_reason)
-	{
-		case XkbOD_BadLibraryVersion:
-			error("XkbOD_BadLibraryVersion: XKB extensions in server and the library rdesktop is linked against aren't compatible with each other.\n");
-			break;
-		case XkbOD_ConnectionRefused:
-			error("XkbOD_ConnectionRefused\n");
-			break;
-		case XkbOD_BadServerVersion:
-			error("XkbOD_BadServerVersion\n");
-			break;
-		case XkbOD_NonXkbServer:
-			error("XkbOD_NonXkbServer: XKB extension not present in server\nupdate your X server.\n");
-			break;
-		case XkbOD_Success:
-			DEBUG("XkbOD_Success: Connection established with display\n");
-			break;
-	}
+	display = XOpenDisplay(NULL);
 
 	if (display == NULL)
 	{
@@ -340,18 +341,21 @@ ui_create_window(char *title)
 		XFree(sizehints);
 	}
 
-	xkeymap_init();
+	xkeymap_init2();
 
-	input_mask = KeyPressMask | KeyReleaseMask |
-		ButtonPressMask | ButtonReleaseMask |
-		EnterWindowMask | LeaveWindowMask;
+	input_mask =
+		KeyPressMask | KeyReleaseMask | ButtonPressMask |
+		ButtonReleaseMask | EnterWindowMask | LeaveWindowMask;
 	if (sendmotion)
 		input_mask |= PointerMotionMask;
 
 	if (ownbackstore)
 		input_mask |= ExposureMask;
 
-	XSelectInput(display, wnd, input_mask);
+	filtered_events = init_inputmethod();
+
+	XSelectInput(display, wnd, input_mask | filtered_events);
+
 	gc = XCreateGC(display, wnd, 0, NULL);
 
 	if (ownbackstore)
@@ -359,86 +363,19 @@ ui_create_window(char *title)
 
 	XMapWindow(display, wnd);
 
-	/* TODO: error texts... make them friendly. */
-	xkb = XkbGetKeyboard(display, XkbAllComponentsMask, XkbUseCoreKbd);
-	if ((int) xkb == BadAlloc || xkb == NULL)
-	{
-		error("XkbGetKeyboard failed.\n");
-		exit(0);
-	}
-
-	/* TODO: error texts... make them friendly. */
-	if (XkbSelectEvents
-	    (display, xkb->device_spec, XkbAllEventsMask,
-	     XkbAllEventsMask) == False)
-	{
-		error("XkbSelectEvents failed.\n");
-		exit(0);
-	}
-
-	xwin_get_numlock_mask();
-
 	return True;
-}
-
-void
-xwin_get_numlock_mask()
-{
-	KeyCode numlockcode;
-	KeyCode *keycode;
-	XModifierKeymap *modmap;
-	int i, j;
-
-	/* Find out if numlock is already defined as a modifier key, and if so where */
-	numlockcode = XKeysymToKeycode(display, 0xFF7F);	/* XF_Num_Lock = 0xFF7F */
-	if (numlockcode)
-	{
-		modmap = XGetModifierMapping(display);
-		if (modmap)
-		{
-			keycode = modmap->modifiermap;
-			for (i = 0; i < 8; i++)
-				for (j = modmap->max_keypermod; j--;)
-				{
-					if (*keycode == numlockcode)
-					{
-						numlock_modifier_mask =
-							(1 << i);
-						i = 8;
-						break;
-					}
-					keycode++;
-				}
-			if (!numlock_modifier_mask)
-			{
-				modmap->modifiermap[7 *
-						    modmap->max_keypermod] =
-					numlockcode;
-				if (XSetModifierMapping(display, modmap) ==
-				    MappingSuccess)
-					numlock_modifier_mask = (1 << 7);
-				else
-					printf("XSetModifierMapping failed!\n");
-			}
-			XFreeModifiermap(modmap);
-		}
-	}
-
-	if (!numlock_modifier_mask)
-		printf("WARNING: Failed to get a numlock modifier mapping.\n");
-
 }
 
 void
 ui_destroy_window()
 {
-	if (xkb != NULL)
-		XkbFreeKeyboard(xkb, XkbAllControlsMask, True);
-
 	if (ownbackstore)
 		XFreePixmap(display, backstore);
 
 	XFreeGC(display, gc);
+
+	close_inputmethod();
+
 	XDestroyWindow(display, wnd);
 	XCloseDisplay(display);
 	display = NULL;
@@ -450,48 +387,105 @@ xwin_process_events()
 	XEvent xevent;
 
 	KeySym keysym;
-	uint8 scancode;
 	uint16 button, flags;
 	uint32 ev_time;
-	uint32 tmpmods;
+	key_translation tr;
+	char *ksname = NULL;
+	char str[256];
+	Status status;
+
+	/* Refresh keyboard mapping if it has changed. This is important for 
+	   Xvnc, since it allocates keycodes dynamically */
+	if (XCheckTypedEvent(display, MappingNotify, &xevent))
+	{
+		if (xevent.xmapping.request == MappingKeyboard
+		    || xevent.xmapping.request == MappingModifier)
+			XRefreshKeyboardMapping(&xevent.xmapping);
+	}
 
 	while (XCheckMaskEvent(display, ~0, &xevent))
 	{
+		if (XFilterEvent(&xevent, None) == True)
+		{
+			DEBUG_KBD("Filtering event\n");
+			continue;
+		}
+
 		ev_time = time(NULL);
 		flags = 0;
 
 		switch (xevent.type)
 		{
-			case KeyRelease:
-				flags = KBD_FLAG_DOWN | KBD_FLAG_UP;
-				/* fall through */
 			case KeyPress:
-				if (XkbTranslateKeyCode
-				    (xkb, xevent.xkey.keycode,
-				     xevent.xkey.state, &tmpmods,
-				     &keysym) == False)
+				if (IC != NULL)
+					/* Multi_key compatible version */
+				{
+					XmbLookupString(IC,
+							(XKeyPressedEvent *) &
+							xevent, str,
+							sizeof(str), &keysym,
+							&status);
+					if (!
+					    ((status == XLookupKeySym)
+					     || (status == XLookupBoth)))
+					{
+						error("XmbLookupString failed with status 0x%x\n", status);
+						break;
+					}
+				}
+				else
+				{
+					/* Plain old XLookupString */
+					DEBUG_KBD
+						("No input context, using XLookupString\n");
+					XLookupString((XKeyEvent *) & xevent,
+						      str, sizeof(str),
+						      &keysym, NULL);
+				}
+
+				ksname = get_ksname(keysym);
+				DEBUG_KBD
+					("\nKeyPress for (keysym 0x%lx, %s)\n",
+					 keysym, ksname);
+
+				if (inhibit_key(keysym))
+				{
+					DEBUG_KBD("Inhibiting key\n");
 					break;
-				scancode =
-					xkeymap_translate_key(keysym,
-							      xevent.xkey.
-							      keycode,
-							      &flags);
+				}
 
-				if (scancode == 0)
+				tr = xkeymap_translate_key(keysym,
+							   xevent.xkey.
+							   keycode);
+				ensure_remote_modifiers(ev_time, tr);
+
+				if (tr.scancode == 0)
 					break;
 
-				/* keep track of the modifiers -- needed for stickykeys... */
-				if (xevent.type == KeyPress)
-					xwin_mod_press(xevent.xkey.state,
-						       ev_time, scancode);
+				rdp_send_scancode(ev_time, RDP_KEYPRESS,
+						  tr.scancode);
+				break;
+			case KeyRelease:
+				XLookupString((XKeyEvent *) & xevent, str,
+					      sizeof(str), &keysym, NULL);
 
-				rdp_send_input(ev_time, RDP_INPUT_SCANCODE,
-					       flags, scancode, 0);
+				ksname = get_ksname(keysym);
+				DEBUG_KBD
+					("\nKeyRelease for (keysym 0x%lx, %s)\n",
+					 keysym, ksname);
 
-				if (xevent.type == KeyRelease)
-					xwin_mod_release(xevent.xkey.state,
-							 ev_time, scancode);
+				if (inhibit_key(keysym))
+					break;
 
+				tr = xkeymap_translate_key(keysym,
+							   xevent.xkey.
+							   keycode);
+
+				if (tr.scancode == 0)
+					break;
+
+				rdp_send_scancode(ev_time, RDP_KEYRELEASE,
+						  tr.scancode);
 				break;
 
 			case ButtonPress:
@@ -522,9 +516,6 @@ xwin_process_events()
 				XGrabKeyboard(display, wnd, True,
 					      GrabModeAsync, GrabModeAsync,
 					      CurrentTime);
-
-				xwin_mod_update(xevent.xcrossing.state,
-						ev_time);
 				break;
 
 			case LeaveNotify:
@@ -539,178 +530,6 @@ xwin_process_events()
 					  xevent.xexpose.x, xevent.xexpose.y);
 				break;
 		}
-	}
-}
-
-void
-xwin_mod_update(uint32 state, uint32 ev_time)
-{
-	xwin_mod_press(state, ev_time, 0);
-	xwin_mod_release(state, ev_time, 0);
-}
-
-void
-xwin_mod_release(uint32 state, uint32 ev_time, uint32 scancode)
-{
-	switch (scancode)
-	{
-		case 0x2a:
-			key_down_state &= ~DShift1Mask;
-			break;
-		case 0x36:
-			key_down_state &= ~DShift2Mask;
-			break;
-		case 0x1d:
-			key_down_state &= ~DControl1Mask;
-			break;
-		case 0x9d:
-			key_down_state &= ~DControl2Mask;
-			break;
-		case 0x38:
-			key_down_state &= ~DMod1Mask;
-			break;
-		case 0xb8:
-			key_down_state &= ~DMod2Mask;
-			break;
-	}
-
-	if (!(numlock_modifier_mask & state)
-	    && (key_down_state & DNumLockMask))
-	{
-		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, 0, 0x45, 0);
-		rdp_send_input(ev_time, RDP_INPUT_SCANCODE,
-			       KBD_FLAG_DOWN | KBD_FLAG_UP, 0x45, 0);
-		key_down_state &= ~DNumLockMask;
-	}
-
-	if (!(LockMask & state) && (key_down_state & DLockMask))
-	{
-		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, 0, 0x3a, 0);
-		rdp_send_input(ev_time, RDP_INPUT_SCANCODE,
-			       KBD_FLAG_DOWN | KBD_FLAG_UP, 0x3a, 0);
-		key_down_state &= ~DLockMask;
-
-	}
-
-
-	if (!(ShiftMask & state) && (key_down_state & DShift1Mask))
-	{
-		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, KBD_FLAG_UP, 0x2a,
-			       0);
-		key_down_state &= ~DShift1Mask;
-
-	}
-
-	if (!(ControlMask & state) && (key_down_state & DControl1Mask))
-	{
-		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, KBD_FLAG_UP, 0x1d,
-			       0);
-		key_down_state &= ~DControl1Mask;
-
-	}
-
-	if (!(Mod1Mask & state) && (key_down_state & DMod1Mask))
-	{
-		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, KBD_FLAG_UP, 0x38,
-			       0);
-		key_down_state &= ~DMod1Mask;
-
-	}
-
-	if (!(Mod2Mask & state) && (key_down_state & DMod2Mask))
-	{
-		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, KBD_FLAG_UP, 0xb8,
-			       0);
-		key_down_state &= ~DMod2Mask;
-	}
-}
-
-
-void
-xwin_mod_press(uint32 state, uint32 ev_time, uint32 scancode)
-{
-
-	switch (scancode)
-	{
-		case 0x2a:
-			key_down_state |= DShift1Mask;
-			break;
-		case 0x36:
-			key_down_state |= DShift2Mask;
-			break;
-		case 0x1d:
-			key_down_state |= DControl1Mask;
-			break;
-		case 0x9d:
-			key_down_state |= DControl2Mask;
-			break;
-		case 0x3a:
-			key_down_state ^= DLockMask;
-			break;
-		case 0x45:
-			key_down_state ^= DNumLockMask;
-			break;
-		case 0x38:
-			key_down_state |= DMod1Mask;
-			break;
-		case 0xb8:
-			key_down_state |= DMod2Mask;
-			break;
-	}
-
-	if ((numlock_modifier_mask && state)
-	    && !(key_down_state & DNumLockMask))
-	{
-		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, 0, 0x45, 0);
-		rdp_send_input(ev_time, RDP_INPUT_SCANCODE,
-			       KBD_FLAG_DOWN | KBD_FLAG_UP, 0x45, 0);
-		key_down_state |= DNumLockMask;
-	}
-
-	if ((LockMask & state) && !(key_down_state & DLockMask))
-	{
-		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, 0, 0x3a, 0);
-		rdp_send_input(ev_time, RDP_INPUT_SCANCODE,
-			       KBD_FLAG_DOWN | KBD_FLAG_UP, 0x3a, 0);
-		key_down_state |= DLockMask;
-
-	}
-
-
-	if ((ShiftMask & state)
-	    && !((key_down_state & DShift1Mask)
-		 || (key_down_state & DShift2Mask)))
-	{
-		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, KBD_FLAG_DOWN,
-			       0x2a, 0);
-		key_down_state |= DShift1Mask;
-
-	}
-
-	if ((ControlMask & state)
-	    && !((key_down_state & DControl1Mask)
-		 || (key_down_state & DControl2Mask)))
-	{
-		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, KBD_FLAG_DOWN,
-			       0x1d, 0);
-		key_down_state |= DControl1Mask;
-
-	}
-
-	if ((Mod1Mask & state) && !(key_down_state & DMod1Mask))
-	{
-		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, KBD_FLAG_DOWN,
-			       0x38, 0);
-		key_down_state |= DMod1Mask;
-
-	}
-
-	if ((Mod2Mask & state) && !(key_down_state & DMod2Mask))
-	{
-		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, KBD_FLAG_DOWN,
-			       0xb8, 0);
-		key_down_state |= DMod2Mask;
-
 	}
 }
 
@@ -764,8 +583,8 @@ ui_create_bitmap(int width, int height, uint8 * data)
 
 	tdata = (owncolmap ? data : translate_image(width, height, data));
 	bitmap = XCreatePixmap(display, wnd, width, height, depth);
-	image = XCreateImage(display, visual, depth, ZPixmap,
-			     0, tdata, width, height, 8, 0);
+	image = XCreateImage(display, visual, depth, ZPixmap, 0, tdata, width,
+			     height, 8, 0);
 
 	XPutImage(display, bitmap, gc, image, 0, 0, 0, 0, width, height);
 
@@ -776,15 +595,15 @@ ui_create_bitmap(int width, int height, uint8 * data)
 }
 
 void
-ui_paint_bitmap(int x, int y, int cx, int cy,
-		int width, int height, uint8 * data)
+ui_paint_bitmap(int x, int y, int cx, int cy, int width, int height,
+		uint8 * data)
 {
 	XImage *image;
 	uint8 *tdata;
 
 	tdata = (owncolmap ? data : translate_image(width, height, data));
-	image = XCreateImage(display, visual, depth, ZPixmap,
-			     0, tdata, width, height, 8, 0);
+	image = XCreateImage(display, visual, depth, ZPixmap, 0, tdata, width,
+			     height, 8, 0);
 
 	if (ownbackstore)
 	{
@@ -820,8 +639,8 @@ ui_create_glyph(int width, int height, uint8 * data)
 	bitmap = XCreatePixmap(display, wnd, width, height, 1);
 	gc = XCreateGC(display, bitmap, 0, NULL);
 
-	image = XCreateImage(display, visual, 1, ZPixmap, 0,
-			     data, width, height, 8, scanline);
+	image = XCreateImage(display, visual, 1, ZPixmap, 0, data, width,
+			     height, 8, scanline);
 	image->byte_order = MSBFirst;
 	image->bitmap_bit_order = MSBFirst;
 	XInitImage(image);
@@ -840,8 +659,8 @@ ui_destroy_glyph(HGLYPH glyph)
 }
 
 HCURSOR
-ui_create_cursor(unsigned int x, unsigned int y, int width,
-		 int height, uint8 * andmask, uint8 * xormask)
+ui_create_cursor(unsigned int x, unsigned int y, int width, int height,
+		 uint8 * andmask, uint8 * xormask)
 {
 	HGLYPH maskglyph, cursorglyph;
 	XColor bg, fg;
@@ -899,8 +718,9 @@ ui_create_cursor(unsigned int x, unsigned int y, int width,
 	cursorglyph = ui_create_glyph(width, height, cursor);
 	maskglyph = ui_create_glyph(width, height, mask);
 
-	xcursor = XCreatePixmapCursor(display, (Pixmap) cursorglyph,
-				      (Pixmap) maskglyph, &fg, &bg, x, y);
+	xcursor =
+		XCreatePixmapCursor(display, (Pixmap) cursorglyph,
+				    (Pixmap) maskglyph, &fg, &bg, x, y);
 
 	ui_destroy_glyph(maskglyph);
 	ui_destroy_glyph(cursorglyph);
@@ -1084,8 +904,8 @@ ui_screenblt(uint8 opcode,
 	SET_FUNCTION(opcode);
 	XCopyArea(display, wnd, wnd, gc, srcx, srcy, cx, cy, x, y);
 	if (ownbackstore)
-		XCopyArea(display, backstore, backstore, gc, srcx, srcy,
-			  cx, cy, x, y);
+		XCopyArea(display, backstore, backstore, gc, srcx, srcy, cx,
+			  cy, x, y);
 	RESET_FUNCTION(opcode);
 }
 
@@ -1115,16 +935,16 @@ ui_triblt(uint8 opcode,
 	{
 		case 0x69:	/* PDSxxn */
 			ui_memblt(ROP2_XOR, x, y, cx, cy, src, srcx, srcy);
-			ui_patblt(ROP2_NXOR, x, y, cx, cy,
-				  brush, bgcolour, fgcolour);
+			ui_patblt(ROP2_NXOR, x, y, cx, cy, brush, bgcolour,
+				  fgcolour);
 			break;
 
 		case 0xb8:	/* PSDPxax */
-			ui_patblt(ROP2_XOR, x, y, cx, cy,
-				  brush, bgcolour, fgcolour);
+			ui_patblt(ROP2_XOR, x, y, cx, cy, brush, bgcolour,
+				  fgcolour);
 			ui_memblt(ROP2_AND, x, y, cx, cy, src, srcx, srcy);
-			ui_patblt(ROP2_XOR, x, y, cx, cy,
-				  brush, bgcolour, fgcolour);
+			ui_patblt(ROP2_XOR, x, y, cx, cy, brush, bgcolour,
+				  fgcolour);
 			break;
 
 		case 0xc0:	/* PSa */
@@ -1164,14 +984,15 @@ ui_rect(
 void
 ui_draw_glyph(int mixmode,
 	      /* dest */ int x, int y, int cx, int cy,
-	      /* src */ HGLYPH glyph, int srcx, int srcy, int bgcolour,
-	      int fgcolour)
+	      /* src */ HGLYPH glyph, int srcx, int srcy,
+	      int bgcolour, int fgcolour)
 {
 	SET_FOREGROUND(fgcolour);
 	SET_BACKGROUND(bgcolour);
 
-	XSetFillStyle(display, gc, (mixmode == MIX_TRANSPARENT)
-		      ? FillStippled : FillOpaqueStippled);
+	XSetFillStyle(display, gc,
+		      (mixmode ==
+		       MIX_TRANSPARENT) ? FillStippled : FillOpaqueStippled);
 	XSetStipple(display, gc, (Pixmap) glyph);
 	XSetTSOrigin(display, gc, x, y);
 
@@ -1214,8 +1035,8 @@ ui_draw_glyph(int mixmode,
 
 void
 ui_draw_text(uint8 font, uint8 flags, int mixmode, int x, int y,
-	     int clipx, int clipy, int clipcx, int clipcy, int boxx,
-	     int boxy, int boxcx, int boxcy, int bgcolour,
+	     int clipx, int clipy, int clipcx, int clipcy,
+	     int boxx, int boxy, int boxcx, int boxcy, int bgcolour,
 	     int fgcolour, uint8 * text, uint8 length)
 {
 	FONTGLYPH *glyph;
@@ -1312,8 +1133,8 @@ ui_desktop_save(uint32 offset, int x, int y, int cx, int cy)
 	}
 
 	offset *= bpp / 8;
-	cache_put_desktop(offset, cx, cy, image->bytes_per_line,
-			  bpp / 8, (uint8 *) image->data);
+	cache_put_desktop(offset, cx, cy, image->bytes_per_line, bpp / 8,
+			  (uint8 *) image->data);
 
 	XDestroyImage(image);
 }
@@ -1329,9 +1150,8 @@ ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy)
 	if (data == NULL)
 		return;
 
-	image = XCreateImage(display, visual, depth, ZPixmap,
-			     0, data, cx, cy, BitmapPad(display),
-			     cx * bpp / 8);
+	image = XCreateImage(display, visual, depth, ZPixmap, 0, data, cx, cy,
+			     BitmapPad(display), cx * bpp / 8);
 
 	if (ownbackstore)
 	{

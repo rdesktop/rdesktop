@@ -1,0 +1,24 @@
+Shift_R 36
+Shift_L 2a
+
+Alt_R 0xb8
+Mode_switch 0xb8
+Alt_L 0x38
+
+Control_R 0x9d
+Control_L 0x1d
+
+Num_Lock 0x45
+
+# Translate Meta, Super and Hyper to Windows key
+# For some reason, these are broken, it seems.
+Meta_L 0xdb
+Super_L 0xdb
+Hyper_L 0xdb
+Meta_R 0xdc	
+Super_R 0xdc
+Hyper_R 0xdc
+
+# Translate Menu to the Windows Application key. 
+# This one does not work either. 
+Menu 0xdd

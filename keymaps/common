@@ -1,52 +1,139 @@
-01 Escape
-0e BackSpace
-0f Tab ISO_Left_Tab
-1c Return
-1d Control_L
-2a Shift_L
-36 Shift_R
-37 KP_Multiply
-38 Alt_L
-39 space
-3a Caps_Lock
-3b F1
-3c F2
-3d F3
-3e F4
-3f F5
-40 F6
-41 F7
-42 F8
-43 F9
-44 F10
-45 Num_Lock
-46 Scroll_Lock
-47 KP_Home KP_7
-48 KP_Up KP_8
-49 KP_Prior KP_9
-4a KP_Subtract
-4b KP_Left KP_4
-4c KP_Begin KP_5
-4d KP_Right KP_6
-4e KP_Add
-4f KP_End KP_1
-50 KP_Down KP_2
-51 KP_Next KP_3
-52 KP_Insert KP_0
-53 KP_Delete KP_Decimal
-54 Print
-57 F11
-58 F12
-9c KP_Enter
-9d Control_R
-b8 Alt_R
-c7 Home
-c8 Up
-c9 Prior
-cb Left
-cd Right
-cf End
-d0 Down
-d1 Next
-d2 Insert
-d3 Delete
+include modifiers
+
+#
+# Top row
+#
+1 0x2
+2 0x3
+3 0x4
+4 0x5
+5 0x6
+6 0x7
+7 0x8
+8 0x9
+9 0xa
+0 0xb
+BackSpace 0xe
+
+#
+# QWERTY first row
+#
+Tab 0xf
+q 0x10 addupper
+w 0x11 addupper
+e 0x12 addupper
+r 0x13 addupper
+t 0x14 addupper
+y 0x15 addupper
+u 0x16 addupper
+i 0x17 addupper
+o 0x18 addupper
+p 0x19 addupper
+
+#
+# QWERTY second row
+#
+a 0x1e addupper
+s 0x1f addupper
+d 0x20 addupper
+f 0x21 addupper
+g 0x22 addupper
+h 0x23 addupper
+j 0x24 addupper
+k 0x25 addupper
+l 0x26 addupper
+Return 0x1c
+
+#
+# QWERTY third row
+#
+z 0x2c addupper
+x 0x2d addupper
+c 0x2e addupper
+v 0x2f addupper
+b 0x30 addupper
+n 0x31 addupper
+m 0x32 addupper
+
+space 0x39
+
+#
+# Esc and Function keys
+#
+Escape 0x1
+F1 0x3b
+F2 0x3c
+F3 0x3d
+F4 0x3e
+F5 0x3f
+F6 0x40
+F7 0x41
+F8 0x42
+F9 0x43
+F10 0x44
+F11 0x57
+F12 0x58
+
+# Printscreen, Scrollock and Pause
+# Printscreen really requires four scancodes (0xe0, 0x2a, 0xe0, 0x37),
+# but (0xe0, 0x37) seems to work. 
+Print 0xb7
+Scroll_Lock 0x46
+# Pause requires five scancodes. TBD. 
+
+#
+# Insert - PgDown
+#
+Insert 0xd2
+Delete 0xd3
+Home 0xc7
+End 0xcf
+Page_Up 0xc9
+Page_Down 0xd1
+
+#
+# Arrow keys
+#
+Left 0xcb
+Up 0xc8
+Down 0xd0
+Right 0xcd
+
+#
+# Numpad
+#
+KP_Divide 0xb5
+KP_Multiply 0x37
+KP_Subtract 0x4a
+KP_Add 0x4e
+KP_Enter 0x9c
+KP_Decimal 0x33
+
+KP_0 0x52 numlock
+KP_Insert 0x52
+
+KP_1 0x4f numlock
+KP_End 0x4f
+
+KP_2 0x50 numlock
+KP_Down 0x50
+
+KP_3 0x51 numlock
+KP_Page_Down 0x51
+
+KP_4 0x4b numlock
+KP_Left 0x4b
+
+KP_5 0x4c numlock
+
+KP_6 0x4d numlock
+KP_Right 0x4d
+
+KP_7 0x47 numlock
+KP_Home 0x47
+
+KP_8 0x48 numlock
+KP_Up 0x48
+
+KP_9 0x49 numlock
+KP_Page_Up 0x49

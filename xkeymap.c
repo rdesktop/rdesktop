@@ -23,27 +23,58 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <limits.h>
 #include "rdesktop.h"
+#include "scancodes.h"
 
 #define KEYMAP_SIZE 4096
 #define KEYMAP_MASK (KEYMAP_SIZE - 1)
+#define KEYMAP_MAX_LINE_LENGTH 80
 
 extern Display *display;
 extern char keymapname[16];
 extern int keylayout;
 
-static uint8 keymap[KEYMAP_SIZE];
+static key_translation keymap[KEYMAP_SIZE];
 static unsigned int min_keycode;
+static uint16 remote_modifier_state = 0;
+
+static void
+add_to_keymap(char *keyname, uint8 scancode, uint16 modifiers, char *mapname)
+{
+	KeySym keysym;
+
+	keysym = XStringToKeysym(keyname);
+	if (keysym == NoSymbol)
+	{
+		error("Bad keysym %s in keymap %s\n", keyname, mapname);
+		return;
+	}
+
+	DEBUG_KBD("Adding translation, keysym=0x%x, scancode=0x%x, "
+		  "modifiers=0x%x\n", (unsigned int) keysym, scancode,
+		  modifiers);
+
+	keymap[keysym & KEYMAP_MASK].scancode = scancode;
+	keymap[keysym & KEYMAP_MASK].modifiers = modifiers;
+
+	return;
+}
+
 
 static BOOL
 xkeymap_read(char *mapname)
 {
 	FILE *fp;
-	char line[PATH_MAX], path[PATH_MAX];
+	char line[KEYMAP_MAX_LINE_LENGTH], path[PATH_MAX];
+	unsigned int line_num = 0;
+	unsigned int line_length = 0;
 	char *keyname, *p;
-	KeySym keysym;
-	unsigned char keycode;
+	char *line_rest;
+	uint8 scancode;
+	uint16 modifiers;
+
 
 	strcpy(path, KEYMAP_PATH);
 	strncat(path, mapname, sizeof(path) - sizeof(KEYMAP_PATH));
@@ -55,45 +86,93 @@ xkeymap_read(char *mapname)
 		return False;
 	}
 
+	/* FIXME: More tolerant on white space */
 	while (fgets(line, sizeof(line), fp) != NULL)
 	{
+		line_num++;
+
+		/* Replace the \n with \0 */
 		p = strchr(line, '\n');
 		if (p != NULL)
 			*p = 0;
 
-		keycode = strtol(line, &keyname, 16);
-		if ((keycode != 0) && (*keyname == ' '))
+		line_length = strlen(line);
+
+		/* Completely empty line */
+		if (strspn(line, " \t\n\r\f\v") == line_length)
 		{
-			do
-			{
-				keyname++;
-				p = strchr(keyname, ' ');
-				if (p != NULL)
-					*p = 0;
-
-				keysym = XStringToKeysym(keyname);
-				if (keysym == NoSymbol)
-					error("Bad keysym %s in keymap %s\n",
-					      keyname, mapname);
-
-				keymap[keysym & KEYMAP_MASK] = keycode;
-				keyname = p;
-
-			}
-			while (keyname != NULL);
+			continue;
 		}
-		else if (strncmp(line, "include ", 8) == 0)
+
+		/* Include */
+		if (strncmp(line, "include ", 8) == 0)
 		{
 			if (!xkeymap_read(line + 8))
 				return False;
+			continue;
 		}
-		else if (strncmp(line, "map ", 4) == 0)
+
+		/* map */
+		if (strncmp(line, "map ", 4) == 0)
 		{
 			keylayout = strtol(line + 4, NULL, 16);
+			DEBUG_KBD("Keylayout 0x%x\n", keylayout);
+			continue;
 		}
-		else if (line[0] != '#')
+
+		/* Comment */
+		if (line[0] == '#')
 		{
-			error("Malformed line in keymap %s\n", mapname);
+			continue;
+		}
+
+		/* Normal line */
+		keyname = line;
+		p = strchr(line, ' ');
+		if (p == NULL)
+		{
+			error("Bad line %d in keymap %s\n", line_num,
+			      mapname);
+			continue;
+		}
+		else
+		{
+			*p = 0;
+		}
+
+		/* scancode */
+		p++;
+		scancode = strtol(p, &line_rest, 16);
+
+		/* flags */
+		/* FIXME: Should allow case-insensitive flag names. 
+		   Fix by using lex+yacc... */
+		modifiers = 0;
+		if (strstr(line_rest, "altgr"))
+		{
+			MASK_ADD_BITS(modifiers, MapAltGrMask);
+		}
+
+		if (strstr(line_rest, "shift"))
+		{
+			MASK_ADD_BITS(modifiers, MapLeftShiftMask);
+		}
+
+		if (strstr(line_rest, "numlock"))
+		{
+			MASK_ADD_BITS(modifiers, MapNumLockMask);
+		}
+
+		add_to_keymap(keyname, scancode, modifiers, mapname);
+
+		if (strstr(line_rest, "addupper"))
+		{
+			/* Automatically add uppercase key, with same modifiers 
+			   plus shift */
+			for (p = keyname; *p; p++)
+				*p = toupper(*p);
+			MASK_ADD_BITS(modifiers, MapLeftShiftMask);
+			add_to_keymap(keyname, scancode, modifiers, mapname);
 		}
 	}
 
@@ -101,82 +180,66 @@ xkeymap_read(char *mapname)
 	return True;
 }
 
-void
-xkeymap_init(void)
-{
-	unsigned int max_keycode;
 
-	XDisplayKeycodes(display, &min_keycode, &max_keycode);
+/* Before connecting and creating UI */
+void
+xkeymap_init1(void)
+{
+	int i;
+
+	/* Zeroing keymap */
+	for (i = 0; i < KEYMAP_SIZE; i++)
+	{
+		keymap[i].scancode = 0;
+		keymap[i].modifiers = 0;
+	}
 
 	if (strcmp(keymapname, "none"))
+	{
 		xkeymap_read(keymapname);
+	}
+
 }
 
-uint8
-xkeymap_translate_key(unsigned int keysym, unsigned int keycode,
-		      uint16 * flags)
+/* After connecting and creating UI */
+void
+xkeymap_init2(void)
 {
-	uint8 scancode;
+	unsigned int max_keycode;
+	XDisplayKeycodes(display, &min_keycode, &max_keycode);
+}
 
-	scancode = keymap[keysym & KEYMAP_MASK];
-	if (scancode != 0)
+
+key_translation
+xkeymap_translate_key(KeySym keysym, unsigned int keycode)
+{
+	key_translation tr = { 0, 0 };
+
+	tr = keymap[keysym & KEYMAP_MASK];
+
+	if (tr.scancode != 0)
 	{
-		if (scancode & 0x80)
-			*flags |= KBD_FLAG_EXT;
-
-		return (scancode & 0x7f);
+		DEBUG_KBD
+			("Found key translation, scancode=0x%x, modifiers=0x%x\n",
+			 tr.scancode, tr.modifiers);
+		return tr;
 	}
+
+	printf("No translation for (keysym 0x%lx, %s)\n", keysym,
+	       get_ksname(keysym));
 
 	/* not in keymap, try to interpret the raw scancode */
-
 	if ((keycode >= min_keycode) && (keycode <= 0x60))
-		return (uint8) (keycode - min_keycode);
-
-	*flags |= KBD_FLAG_EXT;
-
-	switch (keycode)
 	{
-		case 0x61:	/* home */
-			return 0x47;
-		case 0x62:	/* up arrow */
-			return 0x48;
-		case 0x63:	/* page up */
-			return 0x49;
-		case 0x64:	/* left arrow */
-			return 0x4b;
-		case 0x66:	/* right arrow */
-			return 0x4d;
-		case 0x67:	/* end */
-			return 0x4f;
-		case 0x68:	/* down arrow */
-			return 0x50;
-		case 0x69:	/* page down */
-			return 0x51;
-		case 0x6a:	/* insert */
-			return 0x52;
-		case 0x6b:	/* delete */
-			return 0x53;
-		case 0x6c:	/* keypad enter */
-			return 0x1c;
-		case 0x6d:	/* right ctrl */
-			return 0x1d;
-		case 0x6f:	/* ctrl - print screen */
-			return 0x37;
-		case 0x70:	/* keypad '/' */
-			return 0x35;
-		case 0x71:	/* right alt */
-			return 0x38;
-		case 0x72:	/* ctrl break */
-			return 0x46;
-		case 0x73:	/* left window key */
-			return 0x5b;
-		case 0x74:	/* right window key */
-			return 0x5c;
-		case 0x75:	/* menu key */
-			return 0x5d;
+		tr.scancode = keycode - min_keycode;
+		printf("Sending guessed scancode 0x%x\n", tr.scancode);
+	}
+	else
+	{
+		printf("No good guess for keycode 0x%x found\n", keycode);
 	}
 
-	return 0;
+	return tr;
 }
 
 uint16
@@ -190,11 +253,204 @@ xkeymap_translate_button(unsigned int button)
 			return MOUSE_FLAG_BUTTON3;
 		case Button3:	/* right */
 			return MOUSE_FLAG_BUTTON2;
-		case Button4:	/* wheel up */
-			return MOUSE_FLAG_BUTTON4;
-		case Button5:	/* wheel down */
-			return MOUSE_FLAG_BUTTON5;
 	}
 
 	return 0;
+}
+
+char *
+get_ksname(KeySym keysym)
+{
+	char *ksname = NULL;
+
+	if (keysym == NoSymbol)
+		ksname = "NoSymbol";
+	else if (!(ksname = XKeysymToString(keysym)))
+		ksname = "(no name)";
+
+	return ksname;
+}
+
+BOOL
+inhibit_key(KeySym keysym)
+{
+	switch (keysym)
+	{
+		case XK_Caps_Lock:
+			return True;
+			break;
+		case XK_Multi_key:
+			return True;
+			break;
+		default:
+			break;
+	}
+	return False;
+}
+
+void
+ensure_remote_modifiers(uint32 ev_time, key_translation tr)
+{
+	/* If this key is a modifier, do nothing */
+	switch (tr.scancode)
+	{
+		case SCANCODE_CHAR_LSHIFT:
+		case SCANCODE_CHAR_RSHIFT:
+		case SCANCODE_CHAR_LCTRL:
+		case SCANCODE_CHAR_RCTRL:
+		case SCANCODE_CHAR_LALT:
+		case SCANCODE_CHAR_RALT:
+		case SCANCODE_CHAR_LWIN:
+		case SCANCODE_CHAR_RWIN:
+		case SCANCODE_CHAR_NUMLOCK:
+			return;
+		default:
+			break;
+	}
+
+	/* Shift */
+	if (MASK_HAS_BITS(tr.modifiers, MapShiftMask)
+	    != MASK_HAS_BITS(remote_modifier_state, MapShiftMask))
+	{
+		/* The remote modifier state is not correct */
+		if (MASK_HAS_BITS(tr.modifiers, MapShiftMask))
+		{
+			/* Needs this modifier. Send down. */
+			rdp_send_scancode(ev_time, RDP_KEYPRESS,
+					  SCANCODE_CHAR_LSHIFT);
+		}
+		else
+		{
+			/* Should not use this modifier. Send up. */
+			rdp_send_scancode(ev_time, RDP_KEYRELEASE,
+					  SCANCODE_CHAR_LSHIFT);
+		}
+	}
+
+	/* AltGr */
+	if (MASK_HAS_BITS(tr.modifiers, MapAltGrMask)
+	    != MASK_HAS_BITS(remote_modifier_state, MapAltGrMask))
+	{
+		/* The remote modifier state is not correct */
+		if (MASK_HAS_BITS(tr.modifiers, MapAltGrMask))
+		{
+			/* Needs this modifier. Send down. */
+			rdp_send_scancode(ev_time, RDP_KEYPRESS,
+					  SCANCODE_CHAR_RALT);
+		}
+		else
+		{
+			/* Should not use this modifier. Send up. */
+			rdp_send_scancode(ev_time, RDP_KEYRELEASE,
+					  SCANCODE_CHAR_RALT);
+		}
+	}
+
+	/* NumLock */
+	if (MASK_HAS_BITS(tr.modifiers, MapNumLockMask)
+	    != MASK_HAS_BITS(remote_modifier_state, MapNumLockMask))
+	{
+		/* The remote modifier state is not correct */
+		DEBUG_KBD("Remote NumLock state is incorrect. Toggling\n");
+		if (MASK_HAS_BITS(tr.modifiers, MapNumLockMask))
+		{
+			/* Needs this modifier. Toggle */
+			rdp_send_scancode(ev_time, RDP_KEYPRESS,
+					  SCANCODE_CHAR_NUMLOCK);
+			rdp_send_scancode(ev_time, RDP_KEYRELEASE,
+					  SCANCODE_CHAR_NUMLOCK);
+		}
+		else
+		{
+			/* Should not use this modifier. Toggle */
+			rdp_send_scancode(ev_time, RDP_KEYPRESS,
+					  SCANCODE_CHAR_NUMLOCK);
+			rdp_send_scancode(ev_time, RDP_KEYRELEASE,
+					  SCANCODE_CHAR_NUMLOCK);
+		}
+	}
+
+}
+
+
+static void
+update_modifier_state(uint16 modifiers, BOOL pressed)
+{
+
+	DEBUG_KBD("Before updating modifier_state:0x%x, pressed=0x%x\n",
+		  remote_modifier_state, pressed);
+	switch (modifiers)
+	{
+		case SCANCODE_CHAR_LSHIFT:
+			MASK_CHANGE_BIT(remote_modifier_state,
+					MapLeftShiftMask, pressed);
+			break;
+		case SCANCODE_CHAR_RSHIFT:
+			MASK_CHANGE_BIT(remote_modifier_state,
+					MapRightShiftMask, pressed);
+			break;
+		case SCANCODE_CHAR_LCTRL:
+			MASK_CHANGE_BIT(remote_modifier_state,
+					MapLeftCtrlMask, pressed);
+			break;
+		case SCANCODE_CHAR_RCTRL:
+			MASK_CHANGE_BIT(remote_modifier_state,
+					MapRightCtrlMask, pressed);
+			break;
+		case SCANCODE_CHAR_LALT:
+			MASK_CHANGE_BIT(remote_modifier_state, MapLeftAltMask,
+					pressed);
+			break;
+		case SCANCODE_CHAR_RALT:
+			MASK_CHANGE_BIT(remote_modifier_state,
+					MapRightAltMask, pressed);
+			break;
+		case SCANCODE_CHAR_LWIN:
+			MASK_CHANGE_BIT(remote_modifier_state, MapLeftWinMask,
+					pressed);
+			break;
+		case SCANCODE_CHAR_RWIN:
+			MASK_CHANGE_BIT(remote_modifier_state,
+					MapRightWinMask, pressed);
+			break;
+		case SCANCODE_CHAR_NUMLOCK:
+			/* KeyReleases for NumLocks are sent immediately. Toggle the
+			   modifier state only on Keypress */
+			if (pressed)
+			{
+				BOOL newNumLockState;
+				newNumLockState =
+					(MASK_HAS_BITS
+					 (remote_modifier_state,
+					  MapNumLockMask) == False);
+				MASK_CHANGE_BIT(remote_modifier_state,
+						MapNumLockMask,
+						newNumLockState);
+			}
+			break;
+	}
+	DEBUG_KBD("After updating modifier_state:0x%x\n",
+		  remote_modifier_state);
+
+}
+
+/* Send keyboard input */
+void
+rdp_send_scancode(uint32 time, uint16 flags, uint16 scancode)
+{
+	update_modifier_state(scancode, !(flags & RDP_KEYRELEASE));
+
+	if (scancode & SCANCODE_EXTENDED)
+	{
+		DEBUG_KBD("Sending extended scancode=0x%x, flags=0x%x\n",
+			  scancode & ~SCANCODE_EXTENDED, flags);
+		rdp_send_input(time, RDP_INPUT_SCANCODE, flags | KBD_FLAG_EXT,
+			       scancode & ~SCANCODE_EXTENDED, 0);
+	}
+	else
+	{
+		DEBUG_KBD("Sending scancode=0x%x, flags=0x%x\n", scancode,
+			  flags);
+		rdp_send_input(time, RDP_INPUT_SCANCODE, flags, scancode, 0);
+	}
 }

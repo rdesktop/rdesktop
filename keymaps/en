@@ -1,8 +1,13 @@
 # English
 include us
-map 809 en
-03 2 quotedbl
-04 3 sterling
-28 apostrophe at
-2b numbersign asciitilde
-56 backslash bar
+map 0x809
+2 0x03 
+quotedbl 0x03 shift
+3 0x04 
+sterling 0x04 shift
+apostrophe 0x28 
+at 0x28 shift
+numbersign 0x2b 
+asciitilde 0x2b shift
+backslash 0x56 
+bar 0x56 shift

@@ -32,7 +32,7 @@
 char username[16];
 char hostname[16];
 char keymapname[16];
-int keylayout;
+int keylayout = 0x409;		/* Defaults to US keyboard layout */
 int width;
 int height;
 int tcp_port_rdp = TCP_PORT_RDP;
@@ -55,7 +55,7 @@ usage(char *program)
 	printf("   -c: working directory\n");
 	printf("   -p: password (autologon)\n");
 	printf("   -n: client hostname\n");
-	printf("   -k: keyboard layout\n");
+	printf("   -k: keyboard layout on terminal server (us,sv,gr etc.)\n");
 	printf("   -g: desktop geometry (WxH)\n");
 	printf("   -f: full-screen mode\n");
 	printf("   -b: force bitmap updates\n");
@@ -221,6 +221,8 @@ main(int argc, char *argv[])
 
 	strcpy(title, "rdesktop - ");
 	strncat(title, server, sizeof(title) - sizeof("rdesktop - "));
+
+	xkeymap_init1();
 
 	if (!rdp_connect(server, flags, domain, password, shell, directory))
 		return 1;
