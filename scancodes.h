@@ -310,7 +310,7 @@
 /* Key 109 does not exist */
 
 #define SCANCODE_KEY_110 0x1
-#define SCANCODE_CHAR_ESC SCANCODE_KEY_109
+#define SCANCODE_CHAR_ESC SCANCODE_KEY_110
 
 /* Key 111 does not exist */
 
