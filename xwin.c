@@ -32,6 +32,7 @@ extern int g_width;
 extern int g_height;
 extern int g_xpos;
 extern int g_ypos;
+extern int g_pos;
 extern BOOL g_sendmotion;
 extern BOOL g_fullscreen;
 extern BOOL g_grab_keyboard;
@@ -1163,6 +1164,12 @@ ui_create_window(void)
 	wndwidth = g_fullscreen ? WidthOfScreen(g_screen) : g_width;
 	wndheight = g_fullscreen ? HeightOfScreen(g_screen) : g_height;
 
+	/* Handle -x-y portion of geometry string */
+	if (g_xpos < 0 || (g_xpos == 0 && (g_pos & 2)))
+		g_xpos = WidthOfScreen(g_screen) + g_xpos - g_width;
+	if (g_ypos < 0 || (g_ypos == 0 && (g_pos & 4)))
+		g_ypos = HeightOfScreen(g_screen) + g_ypos - g_height;
+
 	attribs.background_pixel = BlackPixelOfScreen(g_screen);
 	attribs.border_pixel = WhitePixelOfScreen(g_screen);
 	attribs.backing_store = g_ownbackstore ? NotUseful : Always;
@@ -1206,6 +1213,8 @@ ui_create_window(void)
 	if (sizehints)
 	{
 		sizehints->flags = PMinSize | PMaxSize;
+		if (g_pos)
+			sizehints->flags |= PPosition;
 		sizehints->min_width = sizehints->max_width = g_width;
 		sizehints->min_height = sizehints->max_height = g_height;
 		XSetWMNormalHints(g_display, g_wnd, sizehints);
