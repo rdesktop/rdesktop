@@ -38,7 +38,7 @@ static WAVEFORMATEX formats[MAX_FORMATS];
 static unsigned int format_count;
 static unsigned int current_format;
 
-STREAM
+static STREAM
 rdpsnd_init_packet(uint16 type, uint16 size)
 {
 	STREAM s;
@@ -49,7 +49,7 @@ rdpsnd_init_packet(uint16 type, uint16 size)
 	return s;
 }
 
-void
+static void
 rdpsnd_send(STREAM s)
 {
 #ifdef RDPSND_DEBUG
@@ -73,7 +73,7 @@ rdpsnd_send_completion(uint16 tick, uint8 packet_index)
 	rdpsnd_send(s);
 }
 
-void
+static void
 rdpsnd_process_negotiate(STREAM in)
 {
 	unsigned int in_format_count, i;
@@ -156,7 +156,7 @@ rdpsnd_process_negotiate(STREAM in)
 	rdpsnd_send(out);
 }
 
-void
+static void
 rdpsnd_process_unknown6(STREAM in)
 {
 	uint16 unknown1, unknown2;
@@ -173,7 +173,7 @@ rdpsnd_process_unknown6(STREAM in)
 	rdpsnd_send(out);
 }
 
-void
+static void
 rdpsnd_process(STREAM s)
 {
 	uint8 type;

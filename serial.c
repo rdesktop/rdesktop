@@ -76,7 +76,7 @@
 
 extern RDPDR_DEVICE g_rdpdr_device[];
 
-SERIAL_DEVICE *
+static SERIAL_DEVICE *
 get_serial_info(HANDLE handle)
 {
 	int index;
@@ -89,7 +89,7 @@ get_serial_info(HANDLE handle)
 	return NULL;
 }
 
-BOOL
+static BOOL
 get_termios(SERIAL_DEVICE * pser_inf, HANDLE serial_fd)
 {
 	speed_t speed;
@@ -392,7 +392,7 @@ serial_enum_devices(uint32 * id, char *optarg)
 	return count;
 }
 
-NTSTATUS
+static NTSTATUS
 serial_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 disposition,
 	      uint32 flags_and_attributes, char *filename, HANDLE * handle)
 {
@@ -452,7 +452,7 @@ serial_close(HANDLE handle)
 	return STATUS_SUCCESS;
 }
 
-NTSTATUS
+static NTSTATUS
 serial_read(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
 {
 	long timeout;
@@ -499,7 +499,7 @@ serial_read(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * 
 	return STATUS_SUCCESS;
 }
 
-NTSTATUS
+static NTSTATUS
 serial_write(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
 {
 	*result = write(handle, data, length);
