@@ -1,7 +1,3 @@
-include us
-map 809 uk
-03 2 quotedbl
-04 3 sterling
-28 apostrophe at
-2b numbersign asciitilde
-56 backslash bar
+# Ukrainian
+include common
+map 422 uk
