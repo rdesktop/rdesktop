@@ -4,7 +4,6 @@
    Support functions for Extended Window Manager Hints,
    http://www.freedesktop.org/standards/wm-spec.html
 
-   Copyright (C) Matthew Chapman 1999-2002
    Copyright (C) Peter Astrand <peter@cendio.se> 2003
    
    This program is free software; you can redistribute it and/or modify
