@@ -820,7 +820,7 @@ disk_query_directory(HANDLE handle, uint32 info_class, char *pattern, STREAM out
 
 	switch (info_class)
 	{
-		case 3:	//FIXME: Why 3?
+		case FileBothDirectoryInformation:
 
 			// If a search pattern is received, remember this pattern, and restart search
 			if (pattern[0] != 0)
@@ -840,7 +840,7 @@ disk_query_directory(HANDLE handle, uint32 info_class, char *pattern, STREAM out
 			// Get information for directory entry
 			sprintf(fullpath, "%s/%s", dirname, pdirent->d_name);
 
-			/* JIF
+			/* JIF 
 			   printf("Stat: %s\n", fullpath); */
 			if (stat(fullpath, &fstat))
 			{
@@ -890,6 +890,9 @@ disk_query_directory(HANDLE handle, uint32 info_class, char *pattern, STREAM out
 			break;
 
 		default:
+			/* FIXME: Support FileDirectoryInformation,
+			   FileFullDirectoryInformation, and
+			   FileNamesInformation */
 
 			unimpl("IRP Query Directory sub: 0x%x\n", info_class);
 			return STATUS_INVALID_PARAMETER;
