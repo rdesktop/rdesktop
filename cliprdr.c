@@ -26,6 +26,7 @@ extern BOOL encryption;
 extern Display *display;
 extern Window wnd;
 extern Time last_gesturetime;
+extern Atom ipc_atom;
 
 // static Time selection_timestamp;
 static Atom clipboard_atom, primary_atom, targets_atom, timestamp_atom;
@@ -35,6 +36,8 @@ static uint16 num_server_formats = 0;
 static XSelectionEvent selection_event;
 static uint16 clipboard_channelno;
 static Atom targets[NUM_TARGETS];
+static int have_primary = 0;
+static int rdesktop_is_selection_owner = 0;
 
 static void
 cliprdr_print_server_formats(void) 
@@ -75,7 +78,7 @@ cliprdr_set_selection_timestamp(void)
 static void
 cliprdr_send_format_announce(void) 
 {
-	DEBUG_CLIPBOARD(("Sending format announce\n"));
+	DEBUG_CLIPBOARD(("Sending (empty) format announce\n"));
 
 	STREAM s;
 	int number_of_formats = 1;
@@ -100,6 +103,28 @@ cliprdr_send_format_announce(void)
 	sec_send_to_channel(s, encryption ? SEC_ENCRYPT : 0, 
 			    clipboard_channelno); 
 }
+
+void cliprdr_ipc_format_announce(unsigned char *data, uint16 length)
+{
+	STREAM s;
+	rdesktop_is_selection_owner = 1;
+	DEBUG_CLIPBOARD(("cliprdr_ipc_format_announce called, length is %d, data is %s, sending native format announce\n", length, data));
+
+	s = sec_init(encryption ? SEC_ENCRYPT : 0, length+12+4+4);
+	out_uint32_le(s, length+12);
+	out_uint32_le(s, 0x13);
+	out_uint16_le(s, 2);
+	out_uint16_le(s, 0);
+	out_uint32_le(s, length);
+	out_uint8p(s, data, length);
+	out_uint32_le(s, 0); // Pad
+	s_mark_end(s);
+
+	sec_send_to_channel(s, encryption ? SEC_ENCRYPT : 0, 
+			    clipboard_channelno); 
+}
+
+
 
 
 static void
@@ -193,6 +218,7 @@ cliprdr_handle_SelectionNotify(XSelectionEvent *event)
 				  wnd, event->time);
 
 	} 
+
 	else  /* Other clipboard data */
 	{
 		
@@ -303,7 +329,8 @@ cliprdr_handle_SelectionNotify(XSelectionEvent *event)
 
 
 		XFree(data);
-		cliprdr_send_format_announce();
+		if (!rdesktop_clipboard_target_atom)
+			cliprdr_send_format_announce();
 		
 	}
 	
@@ -314,6 +341,9 @@ void
 cliprdr_handle_SelectionClear(void)
 {
 	DEBUG_CLIPBOARD(("cliprdr_handle_SelectionClear\n"));
+	have_primary = 0;
+	ipc_send_message(RDESKTOP_IPC_CLIPRDR_PRIMARY_LOST,
+			 "", 0);
 	cliprdr_send_format_announce();
 }
 
@@ -343,6 +373,12 @@ cliprdr_handle_SelectionRequest(XSelectionRequestEvent *xevent)
 {
 
 	XSelectionEvent xev;
+	unsigned char	*data;
+	unsigned long	nitems, bytes_left;
+	Atom type_return;	
+	uint32 *wanted_formatcode;
+	int format;
+	
 	DEBUG_CLIPBOARD(("cliprdr_handle_SelectionRequest\n"));
 	DEBUG_CLIPBOARD(("Requestor window id 0x%x ", 
 			 (unsigned)xevent->requestor));
@@ -367,7 +403,26 @@ cliprdr_handle_SelectionRequest(XSelectionRequestEvent *xevent)
 	xev.property = xevent->property;
 	xev.time = xevent->time;
 
-	if (targets_atom == xevent->target) 
+	memcpy(&selection_event, &xev, sizeof(xev));
+
+	if (ipc_atom == xevent->target)
+	{
+		DEBUG_CLIPBOARD(("Target atom is ipc_atom, getting INTEGER from requestor\n"));
+		XGetWindowProperty(display, xevent->requestor,
+				   rdesktop_clipboard_target_atom,
+				   0, 
+				   1,
+				   True, XA_INTEGER,
+				   &type_return,
+				   &format, 
+				   &nitems,
+				   &bytes_left,
+				   &wanted_formatcode);
+		DEBUG_CLIPBOARD(("Got wanted formatcode %d, format is %d\n", *wanted_formatcode, format));
+		cliprdr_request_clipboard_data(*wanted_formatcode);
+	}
+
+	else if (targets_atom == xevent->target) 
 	{
 		DEBUG_CLIPBOARD(("TARGETS requested, sending list..\n"));
 		XChangeProperty(display, 
@@ -403,7 +458,6 @@ cliprdr_handle_SelectionRequest(XSelectionRequestEvent *xevent)
 	} else /* Some other target */
 	{
 		cliprdr_request_clipboard_data(CF_TEXT);
-		memcpy(&selection_event, &xev, sizeof(xev));
 		/* Return and wait for data, handled by 
 		   cliprdr_handle_server_data */
 	}
@@ -439,10 +493,14 @@ cliprdr_register_server_formats(STREAM s)
 	uint16 num_formats;
 	cliprdr_dataformat *this, *next;
 
-	DEBUG_CLIPBOARD(("cliprdr_register_server_formats\n"));
 	in_uint32_le(s, remaining_length);
+	DEBUG_CLIPBOARD(("cliprdr_register_server_formats, remaining_length is %d\n", remaining_length));
+
 
 	num_formats = remaining_length / 36;
+
+	ipc_send_message(RDESKTOP_IPC_CLIPRDR_FORMAT_ANNOUNCE,
+			 s->p, remaining_length);
 	if (NULL != server_formats) {
 		this = server_formats;
 		next = this->next;
@@ -481,6 +539,10 @@ cliprdr_select_X_clipboards(void)
 	if (wnd != XGetSelectionOwner(display, primary_atom))
 	{
 		warning("Failed to aquire ownership of PRIMARY clipboard\n");
+	} 
+	else
+	{
+		have_primary = 1;
 	}
 	XSetSelectionOwner(display, clipboard_atom, wnd, last_gesturetime);
 	if (wnd != XGetSelectionOwner(display, clipboard_atom)) 
@@ -489,8 +551,6 @@ cliprdr_select_X_clipboards(void)
 	}		
 	
 }
-
-	
 
 
 
@@ -581,6 +641,20 @@ void cliprdr_handle_server_data_request(STREAM s)
 			 wanted_formatcode));
 
 	selectionowner = XGetSelectionOwner(display, primary_atom);
+
+	if (rdesktop_is_selection_owner)
+	{
+		XChangeProperty(display, wnd, rdesktop_clipboard_target_atom,
+				XA_INTEGER, 32, PropModeReplace,
+				(unsigned char *)&wanted_formatcode, 1);
+
+		XConvertSelection(display, primary_atom, 
+				  ipc_atom, 
+				  rdesktop_clipboard_target_atom,
+				  wnd, CurrentTime);
+		return;
+	}
+
 
 	if (None != selectionowner) 
 	{
@@ -682,6 +756,14 @@ void cliprdr_callback(STREAM s, uint16 channelno)
 	}
 }
 
+void cliprdr_ipc_primary_lost(unsigned char *data, uint16 length)
+{
+	DEBUG_CLIPBOARD(("cliprdr_ipc_primary_lost called\n"));
+	if (!have_primary)
+		cliprdr_send_format_announce();
+	rdesktop_is_selection_owner = 0;
+}
+
 
 void cliprdr_init(void) 
 {
@@ -697,5 +779,10 @@ void cliprdr_init(void)
 	targets[3] = XInternAtom(display, "text/unicode", False);
 	targets[4] = XInternAtom(display, "TIMESTAMP", False);
 	targets[5] = XInternAtom(display, "STRING", False);
+	ipc_register_ipcnotify(RDESKTOP_IPC_CLIPRDR_FORMAT_ANNOUNCE, 
+			       cliprdr_ipc_format_announce);
+	ipc_register_ipcnotify(RDESKTOP_IPC_CLIPRDR_FORMAT_ANNOUNCE, 
+			       cliprdr_ipc_primary_lost);
+
 
 }
