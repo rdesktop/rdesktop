@@ -315,19 +315,26 @@ enum RDP_INPUT_DEVICE
 
 /* NT status codes for RDPDR */
 #define STATUS_SUCCESS			0x00000000
+#define STATUS_PENDING                  0x00000103
+
+#define STATUS_NO_MORE_FILES            0x80000006
+#define STATUS_DEVICE_PAPER_EMPTY       0x8000000e
+#define STATUS_DEVICE_POWERED_OFF       0x8000000f
+#define STATUS_DEVICE_OFF_LINE          0x80000010
+#define STATUS_DEVICE_BUSY              0x80000011
+
+#define STATUS_INVALID_HANDLE           0xc0000008
 #define STATUS_INVALID_PARAMETER	0xc000000d
+#define STATUS_NO_SUCH_FILE             0xc000000f
 #define STATUS_INVALID_DEVICE_REQUEST	0xc0000010
 #define STATUS_ACCESS_DENIED		0xc0000022
-#define STATUS_NO_SUCH_FILE             0xc000000f
-#define STATUS_NO_MORE_FILES            0x80000006
-#define STATUS_INVALID_HANDLE           0xc0000008
 #define STATUS_DISK_FULL                0xc000007f
 #define STATUS_FILE_IS_A_DIRECTORY      0xc00000ba
 #define STATUS_NOT_SUPPORTED            0xc00000bb
-#define STATUS_PENDING                  0x00000103
-#define STATUS_CANCELLED                0xc0000120
 #define STATUS_TIMEOUT                  0xc0000102
+#define STATUS_CANCELLED                0xc0000120
 #define STATUS_OBJECT_NAME_COLLISION    0xc0000035
+
 
 /* RDPDR constants */
 #define RDPDR_MAX_DEVICES               0x10
