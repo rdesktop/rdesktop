@@ -586,12 +586,6 @@ xwin_process_events()
 				ksname = get_ksname(keysym);
 				DEBUG_KBD(("\nKeyPress for (keysym 0x%lx, %s)\n", keysym, ksname));
 
-				if (inhibit_key(keysym))
-				{
-					DEBUG_KBD(("Inhibiting key\n"));
-					break;
-				}
-
 				tr = xkeymap_translate_key(keysym,
 							   xevent.xkey.keycode, xevent.xkey.state);
 
@@ -609,9 +603,6 @@ xwin_process_events()
 				ksname = get_ksname(keysym);
 				DEBUG_KBD(("\nKeyRelease for (keysym 0x%lx, %s)\n", keysym,
 					   ksname));
-
-				if (inhibit_key(keysym))
-					break;
 
 				tr = xkeymap_translate_key(keysym,
 							   xevent.xkey.keycode, xevent.xkey.state);

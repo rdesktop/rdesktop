@@ -177,6 +177,11 @@ xkeymap_read(char *mapname)
 			MASK_ADD_BITS(modifiers, MapLocalStateMask);
 		}
 
+		if (strstr(line_rest, "inhibit"))
+		{
+			MASK_ADD_BITS(modifiers, MapInhibitMask);
+		}
+
 		add_to_keymap(keyname, scancode, modifiers, mapname);
 
 		if (strstr(line_rest, "addupper"))
@@ -230,6 +235,13 @@ xkeymap_translate_key(KeySym keysym, unsigned int keycode, unsigned int state)
 	key_translation tr = { 0, 0 };
 
 	tr = keymap[keysym & KEYMAP_MASK];
+
+	if (tr.modifiers & MapInhibitMask)
+	{
+		DEBUG_KBD(("Inhibiting key\n"));
+		tr.scancode = 0;
+		return tr;
+	}
 
 	if (tr.modifiers & MapLocalStateMask)
 	{
@@ -298,25 +310,6 @@ get_ksname(KeySym keysym)
 	return ksname;
 }
 
-BOOL
-inhibit_key(KeySym keysym)
-{
-	switch (keysym)
-	{
-		case XK_Caps_Lock:
-			return True;
-			break;
-		case XK_Multi_key:
-			return True;
-			break;
-		case XK_Num_Lock:
-			return True;
-			break;
-		default:
-			break;
-	}
-	return False;
-}
 
 void
 ensure_remote_modifiers(uint32 ev_time, key_translation tr)

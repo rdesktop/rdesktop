@@ -138,3 +138,11 @@ KP_Up 0x48
 
 KP_9 0x49 numlock
 KP_Page_Up 0x49
+
+#
+# Inhibited keys
+#
+Caps_Lock 0x0 inhibit
+Multi_key 0x0 inhibit
+Num_Lock 0x0 inhibit
+KP_Begin 0x0 inhibit
