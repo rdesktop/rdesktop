@@ -34,15 +34,10 @@ The current working directory for the user.  Often used in combination with -s
 to setup a fixed environment for the user after logon.
 .TP
 .BR "-p <password>"
-The password to authenticate with, used in combination with -u for
-autologon.   Use -p - to make rdesktop request a password at startup.
-WARNING: the -p <password> option will be visible to all users when
-they use tools like ps.  The -P option is safer. 
-.TP
-.BR "-P <program>"
-The program to fetch the password from.  The program will be executed,
-and the output will be used as the password.  This is a safe way to
-transfer the password to rdesktop. 
+The password to authenticate with.  Use -p - to make rdesktop request a
+password at startup (from standard input).
+WARNING: if you specify a password on the command line it may be visible
+to other users when they use tools like ps.
 .TP
 .BR "-n <name>"
 Client name.  The default is the hostname. 

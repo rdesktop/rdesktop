@@ -60,7 +60,6 @@ usage(char *program)
 	fprintf(stderr, "   -s: shell\n");
 	fprintf(stderr, "   -c: working directory\n");
 	fprintf(stderr, "   -p: password (- to prompt)\n");
-	fprintf(stderr, "   -P: askpass-program (autologon)\n");
 	fprintf(stderr, "   -n: client hostname\n");
 	fprintf(stderr, "   -k: keyboard layout on terminal server (us,sv,gr etc.)\n");
 	fprintf(stderr, "   -g: desktop geometry (WxH)\n");
@@ -117,7 +116,6 @@ main(int argc, char *argv[])
 	char fullhostname[64];
 	char domain[16];
 	char password[16];
-	char *askpass_result;
 	char shell[32];
 	char directory[32];
 	BOOL prompt_password;
@@ -131,7 +129,7 @@ main(int argc, char *argv[])
 	domain[0] = password[0] = shell[0] = directory[0] = 0;
 	strcpy(keymapname, "us");
 
-	while ((c = getopt(argc, argv, "u:d:s:c:p:P:n:k:g:t:fbemlKw:h?")) != -1)
+	while ((c = getopt(argc, argv, "u:d:s:c:p:n:k:g:t:fbemlKw:h?")) != -1)
 	{
 		switch (c)
 		{
@@ -165,16 +163,6 @@ main(int argc, char *argv[])
 				p = optarg;
 				while (*p)
 					*(p++) = 'X';
-				break;
-
-			case 'P':
-				askpass_result = askpass(optarg, "Enter password");
-				if (askpass_result == NULL)
-					exit(1);
-
-				STRNCPY(password, askpass_result, sizeof(password));
-				free(askpass_result);
-				flags |= RDP_LOGON_AUTO;
 				break;
 
 			case 'n':
