@@ -7,28 +7,20 @@
 .br
 .SH DESCRIPTION
 .I rdesktop
-is a client for Microsoft Windows NT Terminal Server, Windows 2000 Terminal
-Services, Windows XP Remote Desktop, and possibly other Terminal Services
-products.  rdesktop currently implements the RDP version 4 protocol.
+is a client for Remote Desktop Protocol (RDP), used in a number of Microsoft
+products including Windows NT Terminal Server, Windows 2000 Server, Windows XP
+and Windows 2003 Server.
 
 .SH OPTIONS
 .TP
 .BR "-u <username>"
-Username for authentication on the terminal server.
+Username for authentication on the server.
 .TP
 .BR "-d <domain>"
 Domain for authentication.
 .TP
 .BR "-s <shell>"
 Startup shell for the user - starts a specific application instead of Explorer.
-.TP
-.BR "-S <button size>"
-Enable single application mode. This option can be used when running a
-single, maximized application (via -s). When the minimize button of
-the windows application is pressed, the rdesktop window is minimized
-instead of the remote application. The maximize/restore button is
-disabled. For this to work, you must specify the correct button
-size, in pixels. The special word "standard" means 18 pixels. 
 .TP
 .BR "-c <directory>"
 The initial working directory for the user.  Often used in combination with -s
@@ -54,8 +46,8 @@ en-us, en-gb, de, fr, sv, etc.  The default is en-us (a US keyboard).
 .BR "-g <geometry>"
 Desktop geometry (WxH). If geometry is the special word "workarea", the geometry
 will be fetched from the extended window manager hints property _NET_WORKAREA, from
-the root window. The geometry can also be specified in terms of percent of the whole
-screen, like "-g 80%". 
+the root window. The geometry can also be specified as a percentage of the whole
+screen, e.g. "-g 80%". 
 .TP
 .BR "-f"
 Enable fullscreen mode.  This overrides the window manager and causes the
@@ -71,8 +63,8 @@ Disable encryption.  This option is only needed (and will only work) if you
 have a French version of NT TSE.
 .TP
 .BR "-E"
-Disable encryption from client to server.  This sends an encrypted login-packet,
-but everything after this is unencrypted. This also includes interactive logins.
+Disable encryption from client to server.  This sends an encrypted login packet,
+but everything after this is unencrypted (including interactive logins).
 .TP
 .BR "-m"
 Do not send mouse motion events.  This saves bandwidth, although some Windows
@@ -82,23 +74,39 @@ applications may rely on receiving mouse motion.
 Use private colourmap.  This will improve colour accuracy on an 8-bit display,
 but rdesktop will appear in false colour when not focused.
 .TP
+.BR "-D"
+Hide window manager decorations, by using MWM hints. 
+.TP
 .BR "-K"
 Do not override window manager key bindings.  By default rdesktop attempts
 to grab all keyboard input when it is in focus.
 .TP
-.BR "-T <title>"
-Window title.
+.BR "-S <button size>"
+Enable single application mode. This option can be used when running a
+single, maximized application (via -s). When the minimize button of
+the windows application is pressed, the rdesktop window is minimized
+instead of the remote application. The maximize/restore button is
+disabled. For this to work, you must specify the correct button
+size, in pixels. The special word "standard" means 18 pixels. 
 .TP
-.BR "-D"
-Hide window manager decorations, by using MWM hints. 
+.BR "-T <title>"
+Sets the window title.
 .TP
 .BR "-a <bpp>"
-Use bpp as colourdepth for the connection. Supported are 8, 15, 16 and 24.
-More than 8 bpp are only supported when connecting to Windows XP or
-Windows Server 2003.
+Sets the colour depth for the connection (8, 15, 16 or 24).
+More than 8 bpp are only supported when connecting to Windows XP
+(up to 16 bpp) or newer.  Note that the colour depth may also be
+limited by the server configuration.
+.TP
+.BR "-r <device>"
+Enable redirection of the specified device on the client, such
+that it appears on the server.  The only device currently supported
+is "sound" (requires Windows XP or newer).  Note that the allowed
+redirections may be restricted by the server configuration.
 .TP
 .BR "-0"
-Attach to the console of the Server.
+Attach to the console of the server (requires Windows Server 2003
+or newer).
 .TP
 .BR "-4"
 Use RDP version 4.
