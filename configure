@@ -242,9 +242,14 @@ if [ -f /usr/include/sys/soundcard.h ]; then
     echo
     echo "SOUNDOBJ    = rdpsnd.o rdpsnd_oss.o" >>Makeconf
     cflags="$cflags -DWITH_RDPSND"
+elif [ -f /usr/include/sys/audio.h ]; then
+    echo Sound support enabled: Sun
+    echo
+    echo "SOUNDOBJ    = rdpsnd.o rdpsnd_sun.o" >>Makeconf
+    cflags="$cflags -DWITH_RDPSND"
 else
-    echo "WARNING: sound support disabled (no /usr/include/sys/soundcard.h)"
-    echo "Only Open Sound System audio is supported at present"
+    echo "WARNING: sound support disabled (no /usr/include/sys/soundcard.h or /usr/include/sys/audio.h)"
+    echo "Currently supported systems are Open Sound System and Sun"
     echo
 fi
 

@@ -1,8 +1,9 @@
 /* 
    rdesktop: A Remote Desktop Protocol client.
-   Sound Channel Process Functions - Open Sound System
+   Sound Channel Process Functions - Sun
    Copyright (C) Matthew Chapman 2003
    Copyright (C) GuoJunBo guojunbo@ict.ac.cn 2003
+   Copyright (C) Michael Gernoth mike@zerfleddert.de 2003
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -24,12 +25,15 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/ioctl.h>
-#include <sys/soundcard.h>
+#include <sys/audio.h>
+#include <stropts.h>
 
 #define MAX_QUEUE	10
 
 int g_dsp_fd;
 BOOL g_dsp_busy;
+static BOOL swapaudio;
+static short samplewidth;
 
 static struct audio_packet {
 	struct stream s;
@@ -41,22 +45,25 @@ static unsigned int queue_hi, queue_lo;
 BOOL
 wave_out_open(void)
 {
-	char *dsp_dev = "/dev/dsp";
+	char *dsp_dev = "/dev/audio";
 
-	if ((g_dsp_fd = open(dsp_dev, O_WRONLY)) == -1)
+	if ((g_dsp_fd = open(dsp_dev, O_WRONLY|O_NONBLOCK)) == -1)
 	{
 		perror(dsp_dev);
 		return False;
 	}
 
+
 	/* Non-blocking so that user interface is responsive */
 	fcntl(g_dsp_fd, F_SETFL, fcntl(g_dsp_fd, F_GETFL)|O_NONBLOCK);
+	queue_lo = queue_hi = 0;
 	return True;
 }
 
 void
 wave_out_close(void)
 {
+	ioctl(g_dsp_fd,I_FLUSH,FLUSHW);
 	close(g_dsp_fd);
 }
 
@@ -76,35 +83,45 @@ wave_out_format_supported(WAVEFORMATEX *pwfx)
 BOOL
 wave_out_set_format(WAVEFORMATEX *pwfx)
 {
-	int speed, channels, format;
+	audio_info_t info;
+	int test = 1;
 
-	ioctl(g_dsp_fd, SNDCTL_DSP_RESET, NULL);
-	ioctl(g_dsp_fd, SNDCTL_DSP_SYNC, NULL);
+	ioctl(g_dsp_fd, AUDIO_DRAIN, 0);
+	swapaudio = False;
+	AUDIO_INITINFO(&info);
+
 
 	if (pwfx->wBitsPerSample == 8)
-		format = AFMT_U8;
+	{
+		info.play.encoding = AUDIO_ENCODING_LINEAR8;
+		samplewidth=1;
+	}
 	else if (pwfx->wBitsPerSample == 16)
-		format = AFMT_S16_LE;
-
-	if (ioctl(g_dsp_fd, SNDCTL_DSP_SETFMT, &format) == -1)
 	{
-		perror("SNDCTL_DSP_SETFMT");
-		close(g_dsp_fd);
-		return False;
+		info.play.encoding = AUDIO_ENCODING_LINEAR;
+		swapaudio = !(*(uint8 *) (&test));
+		samplewidth=2;
 	}
 
-	channels = pwfx->nChannels;
-	if (ioctl(g_dsp_fd, SNDCTL_DSP_CHANNELS, &channels) == -1)
+	if (pwfx->nChannels == 1 )
+	{	
+		info.play.channels = AUDIO_CHANNELS_MONO;
+	}
+	else if (pwfx->nChannels == 2 )
 	{
-		perror("SNDCTL_DSP_CHANNELS");
-		close(g_dsp_fd);
-		return False;
+		info.play.channels = AUDIO_CHANNELS_STEREO;
+		samplewidth*=2;
 	}
 
-	speed = pwfx->nSamplesPerSec;
-	if (ioctl(g_dsp_fd, SNDCTL_DSP_SPEED, &speed) == -1)
+	info.play.sample_rate = pwfx->nSamplesPerSec;
+	info.play.precision = pwfx->wBitsPerSample;
+	info.play.samples = 0;
+	info.play.eof = 0;
+	info.play.error = 0;
+
+	if (ioctl(g_dsp_fd, AUDIO_SETINFO, &info) == -1)
 	{
-		perror("SNDCTL_DSP_SPEED");
+		perror("AUDIO_SETINFO");
 		close(g_dsp_fd);
 		return False;
 	}
@@ -123,7 +140,7 @@ wave_out_write(STREAM s, uint16 tick, uint8 index)
 		error("No space to queue audio packet\n");
 		return;
 	}
-
+	
 	queue_hi = next_hi;
 
 	packet->s = *s;
@@ -141,8 +158,15 @@ void
 wave_out_play(void)
 {
 	struct audio_packet *packet;
+	audio_info_t info;
 	ssize_t len;
+	unsigned int i;
+	uint8 swap;
 	STREAM out;
+	static BOOL swapped = False;
+	static BOOL sentcompletion = True;
+	static int samplecnt;
+	static int numsamples;
 
 	while (1)
 	{
@@ -155,22 +179,64 @@ wave_out_play(void)
 		packet = &packet_queue[queue_lo];
 		out = &packet->s;
 
-		len = write(g_dsp_fd, out->p, out->end-out->p);
-		if (len == -1)
+		if ( swapaudio && ! swapped )
 		{
-			if (errno != EWOULDBLOCK)
-				perror("write audio");
-			g_dsp_busy = 1;
-			return;
+			for ( i = 0; i < out->end - out->p; i+=2 )
+			{
+				swap = *(out->p + i);
+				*(out->p + i ) = *(out->p + i + 1);
+				*(out->p + i + 1) = swap;
+				swapped = True;
+			}
+		}
+
+		if ( sentcompletion )
+		{
+			if (ioctl(g_dsp_fd, AUDIO_GETINFO, &info) == -1)
+			{
+				perror("AUDIO_GETINFO");
+				return;
+			}
+			samplecnt=info.play.samples;
+			sentcompletion = False;
+			numsamples = (out->end-out->p)/samplewidth;
+		}
+
+		len=0;
+
+		if ( out->end - out->p != 0 )
+		{
+			len = write(g_dsp_fd, out->p, out->end - out->p);
+			if (len == -1)
+			{
+				if (errno != EWOULDBLOCK)
+					perror("write audio");
+				g_dsp_busy = 1;
+				return;
+			}
 		}
 
 		out->p += len;
 		if (out->p == out->end)
 		{
-			rdpsnd_send_completion(packet->tick, packet->index);
-			free(out->data);
-			queue_lo = (queue_lo + 1) % MAX_QUEUE;
+			if (ioctl(g_dsp_fd, AUDIO_GETINFO, &info) == -1)
+			{
+				perror("AUDIO_GETINFO");
+				return;
+			}
+			if ( info.play.samples >= samplecnt+(numsamples)*0.9 )
+			{
+				rdpsnd_send_completion(packet->tick, packet->index);
+				free(out->data);
+				queue_lo = (queue_lo + 1) % MAX_QUEUE;
+				swapped = False;
+				sentcompletion = True;
+			}
+			else
+			{
+				g_dsp_busy = 1;
+				return;
+			}
 		}
 	}
-
 }
