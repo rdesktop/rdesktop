@@ -1,6 +1,6 @@
 
-Future syntax for configuring RDP redirection modules
-=====================================================
+Syntax for configuring RDP redirection modules
+==============================================
 
 General
 -------
