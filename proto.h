@@ -43,6 +43,8 @@ void error(char *format, ...);
 void warning(char *format, ...);
 void unimpl(char *format, ...);
 void hexdump(unsigned char *p, unsigned int len);
+int load_licence(unsigned char **data);
+void save_licence(unsigned char *data, int length);
 /* rdp.c */
 void rdp_out_unistr(STREAM s, char *string, int len);
 void rdp_send_input(uint32 time, uint16 message_type, uint16 device_flags, uint16 param1,
