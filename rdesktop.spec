@@ -1,4 +1,4 @@
-Summary: Remote Desktop
+Summary: Remote Desktop Protocol client
 Name: rdesktop
 Version: 1.3.1
 Release: 1
