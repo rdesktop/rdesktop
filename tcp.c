@@ -31,6 +31,7 @@
 static int sock;
 static struct stream in;
 static struct stream out;
+extern int tcp_port_rdp;
 
 /* Initialise TCP transport data packet */
 STREAM
@@ -125,7 +126,7 @@ tcp_connect(char *server)
 	}
 
 	servaddr.sin_family = AF_INET;
-	servaddr.sin_port = htons(TCP_PORT_RDP);
+	servaddr.sin_port = htons(tcp_port_rdp);
 
 	if (connect
 	    (sock, (struct sockaddr *) &servaddr,

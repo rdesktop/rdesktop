@@ -35,6 +35,7 @@ char keymapname[16];
 int keylayout;
 int width;
 int height;
+int tcp_port_rdp = TCP_PORT_RDP;
 BOOL bitmap_compression = True;
 BOOL sendmotion = True;
 BOOL orders = True;
@@ -60,7 +61,8 @@ usage(char *program)
 	printf("   -b: force bitmap updates\n");
 	printf("   -e: disable encryption (French TS)\n");
 	printf("   -m: do not send motion events\n");
-	printf("   -l: do not request licence\n\n");
+	printf("   -l: do not request licence\n");
+	printf("   -t: rdp tcp port\n\n");
 }
 
 /* Client program */
@@ -86,7 +88,7 @@ main(int argc, char *argv[])
 	domain[0] = password[0] = shell[0] = directory[0] = 0;
 	strcpy(keymapname, "us");
 
-	while ((c = getopt(argc, argv, "u:d:s:c:p:n:k:g:fbemlh?")) != -1)
+	while ((c = getopt(argc, argv, "u:d:s:c:p:n:k:g:t:fbemlh?")) != -1)
 	{
 		switch (c)
 		{
@@ -149,6 +151,10 @@ main(int argc, char *argv[])
 
 			case 'l':
 				licence = False;
+				break;
+
+			case 't':
+				tcp_port_rdp = strtol(optarg, NULL, 10);
 				break;
 
 			case 'h':
