@@ -42,8 +42,6 @@ static GC gc;
 static Visual *visual;
 static int depth;
 static int bpp;
-static int dpy_width;
-static int dpy_height;
 
 /* endianness */
 static BOOL host_be;
@@ -280,6 +278,19 @@ get_key_state(int keysym)
 	return (current_state & keysymMask) ? True : False;
 }
 
+static void
+xwin_map_window()
+{
+	XEvent xevent;
+
+	XMapWindow(display, wnd);
+
+	/* wait for VisibilityChange */
+	XMaskEvent(display, VisibilityChangeMask, &xevent);
+
+	if (fullscreen)
+		XSetInputFocus(display, wnd, RevertToPointerRoot, CurrentTime);
+}
 
 BOOL
 ui_init()
@@ -359,6 +370,9 @@ ui_create_window()
 			    0, CopyFromParent, InputOutput, CopyFromParent,
 			    CWBackPixel | CWBackingStore | CWOverrideRedirect, &attribs);
 
+	if (ownbackstore)
+		backstore = XCreatePixmap(display, wnd, width, height, depth);
+
 	XStoreName(display, wnd, title);
 
 	classhints = XAllocClassHint();
@@ -393,27 +407,12 @@ ui_create_window()
 
 	XSelectInput(display, wnd, input_mask);
 
+	xwin_map_window();
+
+	/* clear the window so that cached data is not seen */
 	gc = XCreateGC(display, wnd, 0, NULL);
-
-	XMapWindow(display, wnd);
-
-	/* Wait for VisibilityNotify Event */
-	for (;;)
-	{
-		XNextEvent(display, &xevent);
-		if (xevent.type == VisibilityNotify)
-			break;
-	}
-
-	if (ownbackstore)
-		backstore = XCreatePixmap(display, wnd, width, height, depth);
-
-	/* clear the window so that cached data is not viewed upon start... */
-	XSetBackground(display, gc, 0);
 	XSetForeground(display, gc, 0);
 	FILL_RECTANGLE(0, 0, width, height);
-	/* make sure the window is focused */
-	XSetInputFocus(display, wnd, RevertToPointerRoot, CurrentTime);
 
 	return True;
 }
@@ -433,8 +432,8 @@ ui_destroy_window()
 	display = NULL;
 }
 
-void
-reset_keys()
+static void
+xwin_reset_keys()
 {
 	/* reset keys */
 	uint32 ev_time;
@@ -448,30 +447,21 @@ reset_keys()
 }
 
 void
-toggle_fullscreen()
+xwin_toggle_fullscreen()
 {
-	/* save window contents */
-	Pixmap pixmap;
-	pixmap = XCreatePixmap(display, wnd, width, height, depth);
-	if (ownbackstore)
-		XCopyArea(display, backstore, pixmap, gc, 0, 0, width, height, 0, 0);
-	else
-		XCopyArea(display, wnd, pixmap, gc, 0, 0, width, height, 0, 0);
-	fullscreen = fullscreen ? False : True;
-	close_inputmethod();
-	if (ownbackstore)
-		XFreePixmap(display, backstore);
-	XFreeGC(display, gc);
-	XDestroyWindow(display, wnd);
-	ui_create_window();
-	ui_set_cursor(cache_get_cursor(0));
-	ui_move_pointer(width / 2, height / 2);
-	reset_keys();
-	/* restore window contents */
-	if (ownbackstore)
-		XCopyArea(display, pixmap, backstore, gc, 0, 0, width, height, 0, 0);
-	XCopyArea(display, pixmap, wnd, gc, 0, 0, width, height, 0, 0);
-	XFreePixmap(display, pixmap);
+	XEvent xevent;
+	XSetWindowAttributes attribs;
+	int newwidth, newheight;
+
+	fullscreen = !fullscreen;
+	newwidth  = fullscreen ? WidthOfScreen(screen) : width;
+	newheight = fullscreen ? HeightOfScreen(screen) : height;
+
+	XUnmapWindow(display, wnd);
+	attribs.override_redirect = fullscreen;
+	XChangeWindowAttributes(display, wnd, CWOverrideRedirect, &attribs);
+	XResizeWindow(display, wnd, newwidth, newheight);
+	xwin_map_window();
 }
 
 /* Process all events in Xlib queue */
@@ -479,7 +469,6 @@ static void
 xwin_process_events()
 {
 	XEvent xevent;
-
 	KeySym keysym;
 	uint16 button, flags;
 	uint32 ev_time;
@@ -488,8 +477,10 @@ xwin_process_events()
 	char str[256];
 	Status status;
 
-	while (XCheckMaskEvent(display, ~0, &xevent))
+	while (XPending(display) > 0)
 	{
+		XNextEvent(display, &xevent);
+
 		if (enable_compose && (XFilterEvent(&xevent, None) == True))
 		{
 			DEBUG_KBD(("Filtering event\n"));
@@ -586,7 +577,7 @@ xwin_process_events()
 				break;
 
 			case FocusOut:
-				reset_keys();
+				xwin_reset_keys();
 				/* fall through */
 			case LeaveNotify:
 				if (grab_keyboard)
@@ -624,7 +615,6 @@ ui_select(int rdp_socket)
 	while (True)
 	{
 		/* Process any events already waiting */
-		XFlush(display);
 		xwin_process_events();
 
 		FD_ZERO(&rfds);
