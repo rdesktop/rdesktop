@@ -33,8 +33,20 @@ Composing/Multi_key is supported. For more information, see:
   Irix6:            compose(5)
 
 
-Keymap-files
-============
+Keymap files
+=============
+The keymap-files have two-letter names. These follows ISO 639
+(2-letter codes). ISO639 can be found at
+http://www.w3.org/WAI/ER/IG/ert/iso639.htm
+
+(You can find a translation from Windows keyboard layout numbers to
+keymap names by looking at
+HKEY_LOCAL_MACHINE\SOFTWARE\Classes\MIME\Database\RFC1766 in the
+registry.)
+
+
+Contents of keymap files
+========================
 The keymaps are line based. There are four different types of lines:
 
 1) include-lines
