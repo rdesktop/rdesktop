@@ -69,7 +69,8 @@ static BOOL
 xkeymap_read(char *mapname)
 {
 	FILE *fp;
-	char line[KEYMAP_MAX_LINE_LENGTH], path[PATH_MAX];
+	char line[KEYMAP_MAX_LINE_LENGTH];
+	char path[PATH_MAX], inplace_path[PATH_MAX];
 	unsigned int line_num = 0;
 	unsigned int line_length = 0;
 	char *keyname, *p;
@@ -84,8 +85,16 @@ xkeymap_read(char *mapname)
 	fp = fopen(path, "r");
 	if (fp == NULL)
 	{
-		error("Failed to open keymap %s\n", path);
-		return False;
+		/* in case we are running from the source tree */
+		strcpy(inplace_path, "keymaps/");
+		strncat(inplace_path, mapname, sizeof(inplace_path) - sizeof("keymaps/"));
+
+		fp = fopen(inplace_path, "r");
+		if (fp == NULL)
+		{
+			error("Failed to open keymap %s\n", path);
+			return False;
+		}
 	}
 
 	/* FIXME: More tolerant on white space */
