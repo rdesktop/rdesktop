@@ -93,8 +93,7 @@ get_current_desktop(void)
 	unsigned char *prop_return;
 	int current_desktop;
 
-	if (get_property_value("_NET_CURRENT_DESKTOP", 1, &nitems_return,
-			       &prop_return) < 0)
+	if (get_property_value("_NET_CURRENT_DESKTOP", 1, &nitems_return, &prop_return) < 0)
 		return (-1);
 
 	if (nitems_return != 1)
@@ -126,8 +125,7 @@ get_current_workarea(uint32 * x, uint32 * y, uint32 * width, uint32 * height)
 	const uint32 net_workarea_height_offset = 3;
 	const uint32 max_prop_length = 32 * 4;	/* Max 32 desktops */
 
-	if (get_property_value("_NET_WORKAREA", max_prop_length, &nitems_return,
-			       &prop_return) < 0)
+	if (get_property_value("_NET_WORKAREA", max_prop_length, &nitems_return, &prop_return) < 0)
 		return (-1);
 
 	if (nitems_return % 4)
@@ -141,7 +139,7 @@ get_current_workarea(uint32 * x, uint32 * y, uint32 * width, uint32 * height)
 	if (current_desktop < 0)
 		return -1;
 
-	return_words = (uint32 *)prop_return;
+	return_words = (uint32 *) prop_return;
 
 	*x = return_words[current_desktop * 4 + net_workarea_x_offset];
 	*y = return_words[current_desktop * 4 + net_workarea_y_offset];

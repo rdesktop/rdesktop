@@ -157,8 +157,7 @@ xclip_handle_SelectionRequest(XSelectionRequestEvent * event)
 	{
 		res = XGetWindowProperty(g_display, event->requestor,
 					 rdesktop_clipboard_target_atom, 0, 1, True, XA_INTEGER,
-					 &type, &format, &nitems, &bytes_left,
-					 &prop_return);
+					 &type, &format, &nitems, &bytes_left, &prop_return);
 		wanted_format = (uint32 *) prop_return;
 		format = (res == Success) ? *wanted_format : CF_TEXT;
 		/* FIXME: Need to free returned data? */
