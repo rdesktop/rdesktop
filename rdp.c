@@ -410,8 +410,7 @@ rdp_enum_bmpcache2(void)
 		out_uint32_le(s, flags);
 
 		/* list */
-		out_uint8a(s, idlist + offset * sizeof(BITMAP_ID),
-				count * sizeof(BITMAP_ID));
+		out_uint8a(s, idlist + offset * sizeof(BITMAP_ID), count * sizeof(BITMAP_ID));
 
 		s_mark_end(s);
 		rdp_send_data(s, 0x2b);
@@ -561,7 +560,7 @@ rdp_out_bmpcache2_caps(STREAM s)
 	{
 		out_uint32_le(s, BMPCACHE2_C2_CELLS);
 	}
-	out_uint8s(s, 20);		/* other bitmap caches not used */
+	out_uint8s(s, 20);	/* other bitmap caches not used */
 }
 
 /* Output control capability set */
@@ -652,7 +651,7 @@ static uint8 caps_0x10[] = {
 
 /* Output unknown capability sets */
 static void
-rdp_out_unknown_caps(STREAM s, uint16 id, uint16 length, uint8 *caps)
+rdp_out_unknown_caps(STREAM s, uint16 id, uint16 length, uint8 * caps)
 {
 	out_uint16_le(s, id);
 	out_uint16_le(s, length);
@@ -672,7 +671,7 @@ rdp_send_confirm_active(void)
 		RDP_CAPLEN_BMPCACHE + RDP_CAPLEN_COLCACHE +
 		RDP_CAPLEN_ACTIVATE + RDP_CAPLEN_CONTROL +
 		RDP_CAPLEN_POINTER + RDP_CAPLEN_SHARE +
-		0x58 + 0x08 + 0x08 + 0x34 /* unknown caps */ +
+		0x58 + 0x08 + 0x08 + 0x34 /* unknown caps */  +
 		4 /* w2k fix, why? */ ;
 
 	s = sec_init(sec_flags, 6 + 14 + caplen + sizeof(RDP_SOURCE));
@@ -700,11 +699,11 @@ rdp_send_confirm_active(void)
 	rdp_out_pointer_caps(s);
 	rdp_out_share_caps(s);
 
-	rdp_out_unknown_caps(s, 0x0d, 0x58, caps_0x0d); /* international? */
+	rdp_out_unknown_caps(s, 0x0d, 0x58, caps_0x0d);	/* international? */
 	rdp_out_unknown_caps(s, 0x0c, 0x08, caps_0x0c);
 	rdp_out_unknown_caps(s, 0x0e, 0x08, caps_0x0e);
-	rdp_out_unknown_caps(s, 0x10, 0x34, caps_0x10); /* glyph cache? */
-				
+	rdp_out_unknown_caps(s, 0x10, 0x34, caps_0x10);	/* glyph cache? */
+
 	s_mark_end(s);
 	sec_send(s, sec_flags);
 }
@@ -748,7 +747,7 @@ rdp_process_bitmap_caps(STREAM s)
 	if (g_width != width || g_height != height)
 	{
 		warning("screen size changed from %dx%d to %dx%d\n", g_width, g_height,
-				width, height);
+			width, height);
 		g_width = width;
 		g_height = height;
 		ui_resize_window();

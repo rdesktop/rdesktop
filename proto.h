@@ -64,9 +64,9 @@ void printercache_process(STREAM s);
 /* pstcache.c */
 void pstcache_touch_bitmap(uint8 id, uint16 idx, uint32 stamp);
 BOOL pstcache_load_bitmap(uint8 id, uint16 idx);
-BOOL pstcache_put_bitmap(uint8 id, uint16 idx, uint8 *bmp_id, uint16 wd,
-		uint16 ht, uint16 len, uint8 *data);
-int pstcache_enumerate(uint8 id, uint8 *list);
+BOOL pstcache_put_bitmap(uint8 id, uint16 idx, uint8 * bmp_id, uint16 wd,
+			 uint16 ht, uint16 len, uint8 * data);
+int pstcache_enumerate(uint8 id, uint8 * list);
 BOOL pstcache_init(uint8 id);
 /* rdesktop.c */
 int main(int argc, char *argv[]);
@@ -87,7 +87,7 @@ BOOL rd_pstcache_mkdir(void);
 int rd_open_file(char *filename);
 void rd_close_file(int fd);
 int rd_read_file(int fd, void *ptr, int len);
-int rd_write_file(int fd, void* ptr, int len);
+int rd_write_file(int fd, void *ptr, int len);
 int rd_lseek_file(int fd, int offset);
 BOOL rd_lock_file(int fd, int start, int len);
 /* rdp5.c */

@@ -40,7 +40,7 @@ cache_remove_lru_bitmap(uint8 cache_id)
 {
 	int i;
 	uint16 cache_idx = 0;
-	uint32 m = (uint32)-1;
+	uint32 m = (uint32) - 1;
 	BMPCACHEENTRY *pbce;
 
 	for (i = 0; i < NUM_ELEMENTS(g_bmpcache[cache_id]); i++)

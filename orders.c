@@ -772,7 +772,7 @@ process_bmpcache2(STREAM s, uint16 flags, BOOL compressed)
 	in_uint8p(s, data, bufsize);
 
 	DEBUG(("BMPCACHE2(compr=%d,flags=%x,cx=%d,cy=%d,id=%d,idx=%d,Bpp=%d,bs=%d)\n",
-			compressed, flags, width, height, cache_id, cache_idx, Bpp, bufsize));
+	       compressed, flags, width, height, cache_id, cache_idx, Bpp, bufsize));
 
 	bmpdata = (uint8 *) xmalloc(width * height * Bpp);
 
@@ -789,7 +789,7 @@ process_bmpcache2(STREAM s, uint16 flags, BOOL compressed)
 	{
 		for (y = 0; y < height; y++)
 			memcpy(&bmpdata[(height - y - 1) * (width * Bpp)],
-					&data[y * (width * Bpp)], width * Bpp);
+			       &data[y * (width * Bpp)], width * Bpp);
 	}
 
 	bitmap = ui_create_bitmap(width, height, bmpdata);
@@ -799,7 +799,7 @@ process_bmpcache2(STREAM s, uint16 flags, BOOL compressed)
 		cache_put_bitmap(cache_id, cache_idx, bitmap, 0);
 		if (flags & PERSIST)
 			pstcache_put_bitmap(cache_id, cache_idx, bitmap_id, width, height,
-					width * height * Bpp, bmpdata);
+					    width * height * Bpp, bmpdata);
 	}
 	else
 	{
@@ -885,10 +885,10 @@ process_secondary_order(STREAM s)
 	uint8 *next_order;
 
 	in_uint16_le(s, length);
-	in_uint16_le(s, flags);		/* used by bmpcache2 */
+	in_uint16_le(s, flags);	/* used by bmpcache2 */
 	in_uint8(s, type);
 
-	next_order = s->p + (sint16)length + 7;
+	next_order = s->p + (sint16) length + 7;
 
 	switch (type)
 	{

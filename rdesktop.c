@@ -367,7 +367,7 @@ main(int argc, char *argv[])
 #endif
 
 	while ((c = getopt(argc, argv,
-			VNCOPT "u:d:s:c:p:n:k:g:fbBeEmCDKS:T:NX:a:x:Pr:045h?")) != -1)
+			   VNCOPT "u:d:s:c:p:n:k:g:fbBeEmCDKS:T:NX:a:x:Pr:045h?")) != -1)
 	{
 		switch (c)
 		{
@@ -1167,7 +1167,7 @@ rd_open_file(char *filename)
 {
 	char *home;
 	char fn[256];
-   int fd;
+	int fd;
 
 	home = getenv("HOME");
 	if (home == NULL)
@@ -1183,28 +1183,28 @@ rd_open_file(char *filename)
 void
 rd_close_file(int fd)
 {
-  close(fd);
+	close(fd);
 }
 
 /* read from file*/
 int
 rd_read_file(int fd, void *ptr, int len)
 {
-  return read(fd, ptr, len);
+	return read(fd, ptr, len);
 }
 
 /* write to file */
 int
-rd_write_file(int fd, void* ptr, int len)
+rd_write_file(int fd, void *ptr, int len)
 {
-  return write(fd, ptr, len);
+	return write(fd, ptr, len);
 }
 
 /* move file pointer */
 int
 rd_lseek_file(int fd, int offset)
 {
-  return lseek(fd, offset, SEEK_SET);
+	return lseek(fd, offset, SEEK_SET);
 }
 
 /* do a write lock on a file */

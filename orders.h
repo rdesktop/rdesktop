@@ -264,7 +264,7 @@ RDP_BMPCACHE_ORDER;
 #define MODE_SHIFT		3
 
 #define LONG_FORMAT		0x80
-#define BUFSIZE_MASK		0x3FFF  /* or 0x1FFF? */
+#define BUFSIZE_MASK		0x3FFF	/* or 0x1FFF? */
 
 #define MAX_GLYPH 32
 

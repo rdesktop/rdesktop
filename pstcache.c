@@ -20,7 +20,7 @@
 
 #include "rdesktop.h"
 
-#define MAX_CELL_SIZE		0x1000			/* pixels */
+#define MAX_CELL_SIZE		0x1000	/* pixels */
 
 #define IS_PERSISTENT(id) (g_pstcache_fd[id] > 0)
 
@@ -33,7 +33,7 @@ extern BOOL g_bitmap_cache_precache;
 int g_pstcache_fd[8];
 int g_pstcache_Bpp;
 BOOL g_pstcache_enumerated = False;
-uint8 zero_id[] = {0, 0, 0, 0, 0, 0, 0, 0};
+uint8 zero_id[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
 
 /* Update usage info for a bitmap */
@@ -65,7 +65,7 @@ pstcache_load_bitmap(uint8 cache_id, uint16 cache_idx)
 	fd = g_pstcache_fd[cache_id];
 	rd_lseek_file(fd, cache_idx * (g_pstcache_Bpp * MAX_CELL_SIZE + sizeof(CELLHEADER)));
 	rd_read_file(fd, &cellhdr, sizeof(CELLHEADER));
-	celldata = (uint8 *)xmalloc(cellhdr.length);
+	celldata = (uint8 *) xmalloc(cellhdr.length);
 	rd_read_file(fd, celldata, cellhdr.length);
 
 	DEBUG(("Loading bitmap from disk (%d:%d)\n", cache_id, cache_idx));
@@ -79,8 +79,8 @@ pstcache_load_bitmap(uint8 cache_id, uint16 cache_idx)
 
 /* Store a bitmap in the persistent cache */
 BOOL
-pstcache_put_bitmap(uint8 cache_id, uint16 cache_idx, uint8 *bitmap_id,
-		uint16 width, uint16 height, uint16 length, uint8 *data)
+pstcache_put_bitmap(uint8 cache_id, uint16 cache_idx, uint8 * bitmap_id,
+		    uint16 width, uint16 height, uint16 length, uint8 * data)
 {
 	int fd;
 	CELLHEADER cellhdr;
@@ -104,7 +104,7 @@ pstcache_put_bitmap(uint8 cache_id, uint16 cache_idx, uint8 *bitmap_id,
 
 /* list the bitmaps from the persistent cache file */
 int
-pstcache_enumerate(uint8 cache_id, uint8 *idlist)
+pstcache_enumerate(uint8 cache_id, uint8 * idlist)
 {
 	int fd, n, c = 0;
 	CELLHEADER cellhdr;
@@ -127,7 +127,7 @@ pstcache_enumerate(uint8 cache_id, uint8 *idlist)
 		if (memcmp(cellhdr.bitmap_id, zero_id, sizeof(BITMAP_ID)) != 0)
 		{
 			memcpy(idlist + n * sizeof(BITMAP_ID), cellhdr.bitmap_id,
-					sizeof(BITMAP_ID));
+			       sizeof(BITMAP_ID));
 
 			if (cellhdr.stamp)
 			{
