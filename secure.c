@@ -38,7 +38,7 @@ extern int width;
 extern int height;
 extern int keylayout;
 extern BOOL encryption;
-extern BOOL licence_issued;
+extern BOOL g_licence_issued;
 extern BOOL use_rdp5;
 extern int server_bpp;
 
@@ -330,7 +330,7 @@ sec_init(uint32 flags, int maxlen)
 	int hdrlen;
 	STREAM s;
 
-	if (!licence_issued)
+	if (!g_licence_issued)
 		hdrlen = (flags & SEC_ENCRYPT) ? 12 : 4;
 	else
 		hdrlen = (flags & SEC_ENCRYPT) ? 12 : 0;
@@ -347,7 +347,7 @@ sec_send(STREAM s, uint32 flags)
 	int datalen;
 
 	s_pop_layer(s, sec_hdr);
-	if (!licence_issued || (flags & SEC_ENCRYPT))
+	if (!g_licence_issued || (flags & SEC_ENCRYPT))
 		out_uint32_le(s, flags);
 
 	if (flags & SEC_ENCRYPT)
@@ -769,7 +769,7 @@ sec_recv(void)
 
 	while ((s = mcs_recv(&channel)) != NULL)
 	{
-		if (encryption || !licence_issued)
+		if (encryption || !g_licence_issued)
 		{
 			in_uint32_le(s, sec_flags);
 
@@ -777,7 +777,7 @@ sec_recv(void)
 			{
 				if (sec_flags & SEC_ENCRYPT) {
 					DEBUG_RDP5(("Encrypted license detected\n"));
-				} 
+				}
 				licence_process(s);
 				continue;
 			}

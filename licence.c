@@ -29,10 +29,10 @@
 extern char username[16];
 extern char hostname[16];
 
-static uint8 licence_key[16];
-static uint8 licence_sign_key[16];
+static uint8 g_licence_key[16];
+static uint8 g_licence_sign_key[16];
 
-BOOL licence_issued = False;
+BOOL g_licence_issued = False;
 
 /* Generate a session key and RC4 keys, given client and server randoms */
 static void
@@ -46,10 +46,10 @@ licence_generate_keys(uint8 * client_key, uint8 * server_key, uint8 * client_rsa
 	sec_hash_48(session_key, temp_hash, server_key, client_key, 65);
 
 	/* Store first 16 bytes of session key, for generating signatures */
-	memcpy(licence_sign_key, session_key, 16);
+	memcpy(g_licence_sign_key, session_key, 16);
 
 	/* Generate RC4 key */
-	sec_hash_16(licence_key, &session_key[16], client_key, server_key);
+	sec_hash_16(g_licence_key, &session_key[16], client_key, server_key);
 }
 
 static void
@@ -163,10 +163,10 @@ licence_process_demand(STREAM s)
 	{
 		/* Generate a signature for the HWID buffer */
 		licence_generate_hwid(hwid);
-		sec_sign(signature, 16, licence_sign_key, 16, hwid, sizeof(hwid));
+		sec_sign(signature, 16, g_licence_sign_key, 16, hwid, sizeof(hwid));
 
 		/* Now encrypt the HWID */
-		RC4_set_key(&crypt_key, 16, licence_key);
+		RC4_set_key(&crypt_key, 16, g_licence_key);
 		RC4(&crypt_key, sizeof(hwid), hwid, hwid);
 
 		licence_present(null_data, null_data, licence_data, licence_size, hwid, signature);
@@ -242,17 +242,17 @@ licence_process_authreq(STREAM s)
 	memcpy(out_token, in_token, LICENCE_TOKEN_SIZE);
 
 	/* Decrypt the token. It should read TEST in Unicode. */
-	RC4_set_key(&crypt_key, 16, licence_key);
+	RC4_set_key(&crypt_key, 16, g_licence_key);
 	RC4(&crypt_key, LICENCE_TOKEN_SIZE, in_token, decrypt_token);
 
 	/* Generate a signature for a buffer of token and HWID */
 	licence_generate_hwid(hwid);
 	memcpy(sealed_buffer, decrypt_token, LICENCE_TOKEN_SIZE);
 	memcpy(sealed_buffer + LICENCE_TOKEN_SIZE, hwid, LICENCE_HWID_SIZE);
-	sec_sign(out_sig, 16, licence_sign_key, 16, sealed_buffer, sizeof(sealed_buffer));
+	sec_sign(out_sig, 16, g_licence_sign_key, 16, sealed_buffer, sizeof(sealed_buffer));
 
 	/* Now encrypt the HWID */
-	RC4_set_key(&crypt_key, 16, licence_key);
+	RC4_set_key(&crypt_key, 16, g_licence_key);
 	RC4(&crypt_key, LICENCE_HWID_SIZE, hwid, crypt_hwid);
 
 	licence_send_authresp(out_token, crypt_hwid, out_sig);
@@ -272,14 +272,14 @@ licence_process_issue(STREAM s)
 	if (!s_check_rem(s, length))
 		return;
 
-	RC4_set_key(&crypt_key, 16, licence_key);
+	RC4_set_key(&crypt_key, 16, g_licence_key);
 	RC4(&crypt_key, length, s->p, s->p);
 
 	in_uint16(s, check);
 	if (check != 0)
 		return;
 
-	licence_issued = True;
+	g_licence_issued = True;
 
 	in_uint8s(s, 2);	/* pad */
 
@@ -293,7 +293,7 @@ licence_process_issue(STREAM s)
 			return;
 	}
 
-	licence_issued = True;
+	g_licence_issued = True;
 	save_licence(s->p, length);
 }
 
