@@ -60,7 +60,7 @@ extern DEVICE_FNS printer_fns;
 extern DEVICE_FNS parallel_fns;
 extern DEVICE_FNS disk_fns;
 extern FILEINFO g_fileinfo[];
- 
+
 static VCHANNEL *rdpdr_channel;
 
 /* If select() times out, the request for the device with handle g_min_timeout_fd is aborted */
@@ -814,14 +814,21 @@ rdpdr_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv, BOOL * t
 	iorq = g_iorequest;
 	while (iorq != NULL)
 	{
-		/* We need to test that the fd is still valid */
-		if ((iorq->fd != 0) && (read(iorq->fd, &c, 0) == 0))
+		if (iorq->fd != 0)
 		{
 			switch (iorq->major)
 			{
 				case IRP_MJ_READ:
+					/* Is this FD valid? FDs will
+					   be invalid when
+					   reconnecting. FIXME: Real
+					   support for reconnects. */
+
+					if (read(iorq->fd, &c, 0) != 0)
+						break;
 
 					FD_SET(iorq->fd, rfds);
+					*n = MAX(*n, iorq->fd);
 
 					// Check if io request timeout is smaller than current (but not 0).
 					if (iorq->timeout
@@ -835,14 +842,20 @@ rdpdr_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv, BOOL * t
 						tv->tv_usec = (select_timeout % 1000) * 1000;
 						*timeout = True;
 					}
+
 					break;
 
 				case IRP_MJ_WRITE:
+					/* FD still valid? See above. */
+					if (write(iorq->fd, &c, 0) != 0)
+						break;
+
 					FD_SET(iorq->fd, wfds);
+					*n = MAX(*n, iorq->fd);
 					break;
 
 			}
-			*n = MAX(*n, iorq->fd);
+
 		}
 
 		iorq = iorq->next;
