@@ -88,7 +88,8 @@ BOOL bitmap_decompress(unsigned char *output, int width, int height,
 		switch (opcode)
 		{
 			case 0: /* Fill */
-				if ((lastopcode == opcode) && (x != width))
+				if ((lastopcode == opcode)
+				    && !((x == width) && (prevline == NULL)))
 					insertmix = True;
 				break;
 			case 8: /* Bicolour */
