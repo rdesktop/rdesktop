@@ -11,7 +11,7 @@ mandir      = @mandir@
 datadir     = @datadir@
 
 VERSION     = @PACKAGE_VERSION@
-KEYMAP_PATH = $(datadir)/keymaps/
+KEYMAP_PATH = $(datadir)/rdesktop/keymaps/
 
 CC          = @CC@
 INSTALL     = @INSTALL@
