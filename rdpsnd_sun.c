@@ -87,6 +87,9 @@ wave_out_close(void)
 	/* Flush the audiobuffer */
 	ioctl(g_dsp_fd, I_FLUSH, FLUSHW);
 #endif
+#if defined AUDIO_FLUSH
+	ioctl(g_dsp_fd, AUDIO_FLUSH, NULL);
+#endif
 	close(g_dsp_fd);
 }
 
