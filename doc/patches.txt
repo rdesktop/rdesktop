@@ -31,9 +31,9 @@ Xserver does not provide one.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/ben_xwin.c.diff
 Description:
-TDB
+Fixes for CapsLock and NumLock. 
 Status:
-Not yet examined. 
+Not needed anymore, with the new keyboard mapping implementation. 
 
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/ctrl1nohang.diff
