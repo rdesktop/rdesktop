@@ -110,6 +110,7 @@ KP_Add 0x4e
 KP_Enter 0x9c
 
 KP_Decimal 0x53 numlock
+KP_Separator 0x53 numlock
 KP_Delete 0x53
 
 KP_0 0x52 numlock
