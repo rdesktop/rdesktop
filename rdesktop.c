@@ -136,7 +136,7 @@ main(int argc, char *argv[])
 	flags = RDP_LOGON_NORMAL;
 	prompt_password = False;
 	domain[0] = password[0] = shell[0] = directory[0] = 0;
-	strcpy(keymapname, "us");
+	strcpy(keymapname, "en-us");
 
 	while ((c = getopt(argc, argv, "u:d:s:c:p:n:k:g:fbemKT:h?")) != -1)
 	{
