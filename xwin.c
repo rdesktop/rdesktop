@@ -1016,9 +1016,10 @@ ui_draw_glyph(int mixmode,
       if ((xyoffset & 0x80))\
 	{\
 	  if (flags & TEXT2_VERTICAL) \
-	    y += ttext[++idx] | (ttext[++idx] << 8);\
+	    y += ttext[idx+1] | (ttext[idx+2] << 8);\
 	  else\
-	    x += ttext[++idx] | (ttext[++idx] << 8);\
+	    x += ttext[idx+1] | (ttext[idx+2] << 8);\
+	  idx += 2;\
 	}\
       else\
 	{\
