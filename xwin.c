@@ -1435,12 +1435,9 @@ ui_select(int rdp_socket)
 				error("select: %s\n", strerror(errno));
 
 			case 0:
-				/* TODO: if tv.tv_sec just times out
-				 * we will segfault.
-				 * FIXME:
-				 */
-				//s_timeout = True;
-				//rdpdr_check_fds(&rfds, &wfds, (BOOL) True);
+				/* Abort serial read calls */
+				if (s_timeout)
+					rdpdr_check_fds(&rfds, &wfds, (BOOL) True);
 				continue;
 		}
 

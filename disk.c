@@ -81,6 +81,7 @@
 extern RDPDR_DEVICE g_rdpdr_device[];
 
 FILEINFO g_fileinfo[MAX_OPEN_FILES];
+BOOL g_notify_stamp = False;
 
 typedef struct
 {
@@ -90,6 +91,7 @@ typedef struct
 	char type[256];
 } FsInfoType;
 
+static NTSTATUS NotifyInfo(NTHANDLE handle, uint32 info_class, NOTIFY * p);
 
 static time_t
 get_create_time(struct stat *st)
@@ -328,7 +330,7 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 			break;
 	}
 
-	//printf("Open: \"%s\"  flags: %u, accessmask: %u sharemode: %u create disp: %u\n", path, flags_and_attributes, accessmask, sharemode, create_disposition);
+	//printf("Open: \"%s\"  flags: %X, accessmask: %X sharemode: %X create disp: %X\n", path, flags_and_attributes, accessmask, sharemode, create_disposition);
 
 	// Get information about file and set that flag ourselfs
 	if ((stat(path, &filestat) == 0) && (S_ISDIR(filestat.st_mode)))
@@ -424,9 +426,15 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 
 	if (dirp)
 		g_fileinfo[handle].pdir = dirp;
+	else
+		g_fileinfo[handle].pdir = NULL;
+
 	g_fileinfo[handle].device_id = device_id;
 	g_fileinfo[handle].flags_and_attributes = flags_and_attributes;
+	g_fileinfo[handle].accessmask = accessmask;
 	strncpy(g_fileinfo[handle].path, path, 255);
+	g_fileinfo[handle].delete_on_close = False;
+	g_notify_stamp = True;
 
 	*phandle = handle;
 	return STATUS_SUCCESS;
@@ -439,14 +447,41 @@ disk_close(NTHANDLE handle)
 
 	pfinfo = &(g_fileinfo[handle]);
 
-	if (pfinfo->flags_and_attributes & FILE_DIRECTORY_FILE)
+	g_notify_stamp = True;
+
+	rdpdr_abort_io(handle, 0, STATUS_CANCELLED);
+
+	if (pfinfo->pdir)
 	{
-		closedir(pfinfo->pdir);
-		//FIXME: Should check exit code
+		if (closedir(pfinfo->pdir) < 0)
+		{
+			perror("closedir");
+			return STATUS_INVALID_HANDLE;
+		}
+
+		if (pfinfo->delete_on_close)
+			if (rmdir(pfinfo->path) < 0)
+			{
+				perror(pfinfo->path);
+				return STATUS_ACCESS_DENIED;
+			}
+		pfinfo->delete_on_close = False;
 	}
 	else
 	{
-		close(handle);
+		if (close(handle) < 0)
+		{
+			perror("close");
+			return STATUS_INVALID_HANDLE;
+		}
+		if (pfinfo->delete_on_close)
+			if (unlink(pfinfo->path) < 0)
+			{
+				perror(pfinfo->path);
+				return STATUS_ACCESS_DENIED;
+			}
+
+		pfinfo->delete_on_close = False;
 	}
 
 	return STATUS_SUCCESS;
@@ -477,7 +512,10 @@ disk_read(NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * 
 		switch (errno)
 		{
 			case EISDIR:
-				return STATUS_FILE_IS_A_DIRECTORY;
+				/* Implement 24 Byte directory read ??
+				   with STATUS_NOT_IMPLEMENTED server doesn't read again */
+				/* return STATUS_FILE_IS_A_DIRECTORY; */
+				return STATUS_NOT_IMPLEMENTED;
 			default:
 				perror("read");
 				return STATUS_INVALID_PARAMETER;
@@ -600,10 +638,9 @@ disk_query_information(NTHANDLE handle, uint32 info_class, STREAM out)
 NTSTATUS
 disk_set_information(NTHANDLE handle, uint32 info_class, STREAM in, STREAM out)
 {
-	uint32 length, file_attributes, ft_high, ft_low;
+	uint32 length, file_attributes, ft_high, ft_low, delete_on_close;
 	char newname[256], fullpath[256];
 	struct fileinfo *pfinfo;
-
 	int mode;
 	struct stat filestat;
 	time_t write_time, change_time, access_time, mod_time;
@@ -611,6 +648,7 @@ disk_set_information(NTHANDLE handle, uint32 info_class, STREAM in, STREAM out)
 	struct STATFS_T stat_fs;
 
 	pfinfo = &(g_fileinfo[handle]);
+	g_notify_stamp = True;
 
 	switch (info_class)
 	{
@@ -670,7 +708,7 @@ disk_set_information(NTHANDLE handle, uint32 info_class, STREAM in, STREAM out)
 				printf("FileBasicInformation modification time %s",
 				       ctime(&tvs.modtime));
 #endif
-				if (utime(pfinfo->path, &tvs))
+				if (utime(pfinfo->path, &tvs) && errno != EPERM)
 					return STATUS_ACCESS_DENIED;
 			}
 
@@ -728,25 +766,16 @@ disk_set_information(NTHANDLE handle, uint32 info_class, STREAM in, STREAM out)
 			   FileDispositionInformation requests with
 			   DeleteFile set to FALSE should unschedule
 			   the delete. See
-			   http://www.osronline.com/article.cfm?article=245. Currently,
-			   we are deleting the file immediately. I
-			   guess this is a FIXME. */
+			   http://www.osronline.com/article.cfm?article=245. */
 
-			//in_uint32_le(in, delete_on_close);
+			in_uint32_le(in, delete_on_close);
 
-			/* Make sure we close the file before
-			   unlinking it. Not doing so would trigger
-			   silly-delete if using NFS, which might fail
-			   on FAT floppies, for example. */
-			disk_close(handle);
-
-			if ((pfinfo->flags_and_attributes & FILE_DIRECTORY_FILE))	// remove a directory
+			if (delete_on_close ||
+			    (pfinfo->
+			     accessmask & (FILE_DELETE_ON_CLOSE | FILE_COMPLETE_IF_OPLOCKED)))
 			{
-				if (rmdir(pfinfo->path) < 0)
-					return STATUS_ACCESS_DENIED;
+				pfinfo->delete_on_close = True;
 			}
-			else if (unlink(pfinfo->path) < 0)	// unlink a file
-				return STATUS_ACCESS_DENIED;
 
 			break;
 
@@ -763,7 +792,7 @@ disk_set_information(NTHANDLE handle, uint32 info_class, STREAM in, STREAM out)
 
 			/* prevents start of writing if not enough space left on device */
 			if (STATFS_FN(g_rdpdr_device[pfinfo->device_id].local_path, &stat_fs) == 0)
-				if (stat_fs.f_bsize * stat_fs.f_bfree < length)
+				if (stat_fs.f_bfree * stat_fs.f_bsize < length)
 					return STATUS_DISK_FULL;
 
 			if (ftruncate_growable(handle, length) != 0)
@@ -780,20 +809,129 @@ disk_set_information(NTHANDLE handle, uint32 info_class, STREAM in, STREAM out)
 	return STATUS_SUCCESS;
 }
 
+NTSTATUS
+disk_check_notify(NTHANDLE handle)
+{
+	struct fileinfo *pfinfo;
+	NTSTATUS status = STATUS_PENDING;
+
+	NOTIFY notify;
+
+	pfinfo = &(g_fileinfo[handle]);
+	if (!pfinfo->pdir)
+		return STATUS_INVALID_DEVICE_REQUEST;
+
+
+
+	status = NotifyInfo(handle, pfinfo->info_class, &notify);
+
+	if (status != STATUS_PENDING)
+		return status;
+
+	if (memcmp(&pfinfo->notify, &notify, sizeof(NOTIFY)))
+	{
+		//printf("disk_check_notify found changed event\n");
+		memcpy(&pfinfo->notify, &notify, sizeof(NOTIFY));
+		status = STATUS_NOTIFY_ENUM_DIR;
+	}
+
+	return status;
+
+
+}
+
+NTSTATUS
+disk_create_notify(NTHANDLE handle, uint32 info_class)
+{
+
+	struct fileinfo *pfinfo;
+	NTSTATUS ret = STATUS_PENDING;
+
+	/* printf("start disk_create_notify info_class %X\n", info_class); */
+
+	pfinfo = &(g_fileinfo[handle]);
+	pfinfo->info_class = info_class;
+
+	ret = NotifyInfo(handle, info_class, &pfinfo->notify);
+
+	if (info_class & 0x1000)
+	{			/* ???? */
+		if (ret == STATUS_PENDING)
+			return STATUS_SUCCESS;
+	}
+
+	/* printf("disk_create_notify: num_entries %d\n", pfinfo->notify.num_entries); */
+
+
+	return ret;
+
+}
+
+static NTSTATUS
+NotifyInfo(NTHANDLE handle, uint32 info_class, NOTIFY * p)
+{
+	struct fileinfo *pfinfo;
+	struct stat buf;
+	struct dirent *dp;
+	char *fullname;
+	DIR *dpr;
+
+	pfinfo = &(g_fileinfo[handle]);
+	if (fstat(handle, &buf) < 0)
+	{
+		perror("NotifyInfo");
+		return STATUS_ACCESS_DENIED;
+	}
+	p->modify_time = buf.st_mtime;
+	p->status_time = buf.st_ctime;
+	p->num_entries = 0;
+	p->total_time = 0;
+
+
+	dpr = opendir(pfinfo->path);
+	if (!dpr)
+	{
+		perror("NotifyInfo");
+		return STATUS_ACCESS_DENIED;
+	}
+
+
+	while ((dp = readdir(dpr)))
+	{
+		if (!strcmp(dp->d_name, ".") || !strcmp(dp->d_name, ".."))
+			continue;
+		p->num_entries++;
+		fullname = xmalloc(strlen(pfinfo->path) + strlen(dp->d_name) + 2);
+		sprintf(fullname, "%s/%s", pfinfo->path, dp->d_name);
+
+		if (!stat(fullname, &buf))
+		{
+			p->total_time += (buf.st_mtime + buf.st_ctime);
+		}
+
+		xfree(fullname);
+	}
+	closedir(dpr);
+
+	return STATUS_PENDING;
+}
+
 static FsInfoType *
 FsVolumeInfo(char *fpath)
 {
 
-#ifdef HAVE_MNTENT_H
 	FILE *fdfs;
-	struct mntent *e;
 	static FsInfoType info;
+#ifdef HAVE_MNTENT_H
+	struct mntent *e;
+#endif
 
 	/* initialize */
 	memset(&info, 0, sizeof(info));
 	strcpy(info.label, "RDESKTOP");
 	strcpy(info.type, "RDPFS");
 
+#ifdef HAVE_MNTENT_H
 	fdfs = setmntent(MNTENT_PATH, "r");
 	if (!fdfs)
 		return &info;
@@ -836,8 +974,6 @@ FsVolumeInfo(char *fpath)
 	}
 	endmntent(fdfs);
 #else
-	static FsInfoType info;
-
 	/* initialize */
 	memset(&info, 0, sizeof(info));
 	strcpy(info.label, "RDESKTOP");

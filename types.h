@@ -197,6 +197,7 @@ typedef struct rdpdr_serial_device_info
 {
 	int dtr;
 	int rts;
+	uint32 control, xonoff, onlimit, offlimit;
 	uint32 baud_rate,
 		queue_in_size,
 		queue_out_size,
@@ -206,7 +207,9 @@ typedef struct rdpdr_serial_device_info
 		read_total_timeout_constant,
 		write_total_timeout_multiplier, write_total_timeout_constant, posix_wait_mask;
 	uint8 stop_bits, parity, word_length;
+	uint8 chars[6];
 	struct termios *ptermios, *pold_termios;
+	int event_txempty, event_cts, event_dsr, event_rlsd, event_pending;
 }
 SERIAL_DEVICE;
 
@@ -235,13 +238,24 @@ typedef struct rdpdr_printer_info
 }
 PRINTER;
 
+typedef struct notify_data
+{
+	time_t modify_time;
+	time_t status_time;
+	time_t total_time;
+	unsigned int num_entries;
+}
+NOTIFY;
+
 typedef struct fileinfo
 {
-	uint32 device_id, flags_and_attributes;
+	uint32 device_id, flags_and_attributes, accessmask;
 	char path[256];
 	DIR *pdir;
 	struct dirent *pdirent;
 	char pattern[64];
 	BOOL delete_on_close;
+	NOTIFY notify;
+	uint32 info_class;
 }
 FILEINFO;

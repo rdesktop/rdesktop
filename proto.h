@@ -32,6 +32,8 @@ NTSTATUS disk_query_information(NTHANDLE handle, uint32 info_class, STREAM out);
 NTSTATUS disk_set_information(NTHANDLE handle, uint32 info_class, STREAM in, STREAM out);
 NTSTATUS disk_query_volume_information(NTHANDLE handle, uint32 info_class, STREAM out);
 NTSTATUS disk_query_directory(NTHANDLE handle, uint32 info_class, char *pattern, STREAM out);
+NTSTATUS disk_create_notify(NTHANDLE handle, uint32 info_class);
+NTSTATUS disk_check_notify(NTHANDLE handle);
 /* mppc.c */
 int mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen);
 /* ewmhints.c */
@@ -144,6 +146,7 @@ void sec_disconnect(void);
 /* serial.c */
 int serial_enum_devices(uint32 * id, char *optarg);
 BOOL serial_get_timeout(NTHANDLE handle, uint32 length, uint32 * timeout, uint32 * itv_timeout);
+BOOL serial_get_event(NTHANDLE handle, uint32 * result);
 /* tcp.c */
 STREAM tcp_init(uint32 maxlen);
 void tcp_send(STREAM s);
