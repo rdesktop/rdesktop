@@ -9,7 +9,7 @@
 CC       = cc
 CFLAGS   = -O2 -DKEYMAP_PATH=\"$(KEYMAP_PATH)\"
 INCLUDES = -I/usr/X11R6/include
-LDLIBS   = -L/usr/X11R6/lib -lX11
+LDLIBS   = -L/usr/X11R6/lib -lX11 -lXext
 
 PREFIX   = /usr/local
 EPREFIX  = $(PREFIX)
