@@ -83,6 +83,7 @@ wave_out_close(void)
 
 	if (o_device != NULL)
 		ao_close(o_device);
+
 	ao_shutdown();
 }
 
@@ -132,6 +133,7 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 void
 wave_out_volume(uint16 left, uint16 right)
 {
+	warning("volume changes not supported with libao-output\n");
 }
 
 void
