@@ -20,6 +20,7 @@
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <unistd.h>
 #include <time.h>
 #include <errno.h>
 #include "rdesktop.h"
