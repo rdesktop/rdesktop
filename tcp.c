@@ -147,7 +147,7 @@ tcp_connect(char *server)
 
 	if (n < 0)
 	{
-		error("getaddrinfo error:: [%s]\n", gai_strerror(n));
+		error("getaddrinfo: %s\n", gai_strerror(n));
 		return False;
 	}
 
@@ -166,6 +166,12 @@ tcp_connect(char *server)
 		res = res->ai_next;
 	}
 	freeaddrinfo(ressave);
+
+	if (sock == -1)
+	{
+		error("%s: unable to connect\n", server);
+		return False;
+	}
 
 #else /* no IPv6 support */
 
