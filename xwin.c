@@ -57,6 +57,7 @@ static BOOL g_mouse_in_wnd;
 /* endianness */
 static BOOL g_host_be;
 static BOOL g_xserver_be;
+static BOOL g_xserver_bgr;
 
 /* software backing store */
 static BOOL g_ownbackstore;
@@ -202,33 +203,29 @@ make_colour16(PixelColour pc)
 	pc.red = (pc.red * 0x1f) / 0xff;
 	pc.green = (pc.green * 0x3f) / 0xff;
 	pc.blue = (pc.blue * 0x1f) / 0xff;
-	return (pc.red << 11) | (pc.green << 5) | pc.blue;
+	if (g_xserver_bgr)
+		return (pc.blue << 11) | (pc.green << 5) | pc.red;
+	else
+		return (pc.red << 11) | (pc.green << 5) | pc.blue;
+		
 }
 
 static uint32
 make_colour24(PixelColour pc)
 {
-	if (g_xserver_be)
-	{
-		return pc.red | (pc.green << 8) | (pc.blue << 16);
-	}
+	if (g_xserver_bgr)
+		return (pc.blue << 16) | (pc.green << 8) | pc.red;
 	else
-	{
 		return (pc.red << 16) | (pc.green << 8) | pc.blue;
-	}
 }
 
 static uint32
 make_colour32(PixelColour pc)
 {
-	if (g_xserver_be)
-	{
-		return pc.red | (pc.green << 8) | (pc.blue << 16);
-	}
+	if (g_xserver_bgr)
+		return (pc.blue << 16) | (pc.green << 8) | pc.red;
 	else
-	{
 		return (pc.red << 16) | (pc.green << 8) | pc.blue;
-	}
 }
 
 #define BSWAP16(x) { x = (((x & 0xff) << 8) | (x >> 8)); }
@@ -772,6 +769,7 @@ ui_init(void)
 	test = 1;
 	g_host_be = !(BOOL) (*(uint8 *) (&test));
 	g_xserver_be = (ImageByteOrder(g_display) == MSBFirst);
+	g_xserver_bgr = (g_visual->blue_mask > g_visual->red_mask);
 
 	/*
 	 * Determine desktop size
