@@ -319,9 +319,9 @@ Applied.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/vincent_19-7-3_excel.patch
 Description:
-TBD
+Makes matrixes appear better, such as those found in Excel/toad etc.
 Status:
-Not yet examined. 
+Applied. 
 
 
 URL:
