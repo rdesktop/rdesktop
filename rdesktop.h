@@ -1,7 +1,7 @@
 /*
    rdesktop: A Remote Desktop Protocol client.
    Master include file
-   Copyright (C) Matthew Chapman 1999-2004
+   Copyright (C) Matthew Chapman 1999-2005
    
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -77,6 +77,12 @@
 #error Unknown endianness. Edit rdesktop.h.
 #endif
 #endif /* B_ENDIAN, L_ENDIAN from configure */
+
+/* Temporary NEED_ALIGN for alpha, should be properly detected
+   by configure in the future */
+#if defined(__alpha__)
+#define NEED_ALIGN
+#endif
 
 #include "parse.h"
 #include "constants.h"
