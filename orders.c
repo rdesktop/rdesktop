@@ -684,6 +684,8 @@ process_bmpcache(STREAM s)
 	uint16 bufsize, pad2, row_size, final_size;
 	uint8 pad1;
 
+	pad2 = row_size = final_size = -1; /* Shut the compiler up */
+
 	in_uint8(s, cache_id);
 	in_uint8(s, pad1);	/* pad */
 	in_uint8(s, width);
