@@ -1,7 +1,7 @@
 /*
    rdesktop: A Remote Desktop Protocol client.
    Persistent Bitmap Cache routines
-   Copyright (C) Jeroen Meijer 2004
+   Copyright (C) Jeroen Meijer 2004-2005
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -25,7 +25,6 @@
 #define IS_PERSISTENT(id) (id < 8 && g_pstcache_fd[id] > 0)
 
 extern int g_server_bpp;
-extern uint32 g_stamp;
 extern BOOL g_bitmap_cache;
 extern BOOL g_bitmap_cache_persist_enable;
 extern BOOL g_bitmap_cache_precache;
@@ -33,10 +32,10 @@ extern BOOL g_bitmap_cache_precache;
 int g_pstcache_fd[8];
 int g_pstcache_Bpp;
 BOOL g_pstcache_enumerated = False;
-uint8 zero_id[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+uint8 zero_key[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
 
-/* Update usage info for a bitmap */
+/* Update mru stamp/index for a bitmap */
 void
 pstcache_touch_bitmap(uint8 cache_id, uint16 cache_idx, uint32 stamp)
 {
@@ -71,10 +70,9 @@ pstcache_load_bitmap(uint8 cache_id, uint16 cache_idx)
 	celldata = (uint8 *) xmalloc(cellhdr.length);
 	rd_read_file(fd, celldata, cellhdr.length);
 
-	DEBUG(("Loading bitmap from disk (%d:%d)\n", cache_id, cache_idx));
-
 	bitmap = ui_create_bitmap(cellhdr.width, cellhdr.height, celldata);
-	cache_put_bitmap(cache_id, cache_idx, bitmap, cellhdr.stamp);
+	DEBUG(("Load bitmap from disk: id=%d, idx=%d, bmp=0x%x)\n", cache_id, cache_idx, bitmap));
+	cache_put_bitmap(cache_id, cache_idx, bitmap);
 
 	xfree(celldata);
 	return True;
@@ -82,8 +80,8 @@ pstcache_load_bitmap(uint8 cache_id, uint16 cache_idx)
 
 /* Store a bitmap in the persistent cache */
 BOOL
-pstcache_put_bitmap(uint8 cache_id, uint16 cache_idx, uint8 * bitmap_id,
-		    uint16 width, uint16 height, uint16 length, uint8 * data)
+pstcache_save_bitmap(uint8 cache_id, uint16 cache_idx, uint8 * key,
+		     uint16 width, uint16 height, uint16 length, uint8 * data)
 {
 	int fd;
 	CELLHEADER cellhdr;
@@ -91,7 +89,7 @@ pstcache_put_bitmap(uint8 cache_id, uint16 cache_idx, uint8 * bitmap_id,
 	if (!IS_PERSISTENT(cache_id) || cache_idx >= BMPCACHE2_NUM_PSTCELLS)
 		return False;
 
-	memcpy(cellhdr.bitmap_id, bitmap_id, sizeof(BITMAP_ID));
+	memcpy(cellhdr.key, key, sizeof(HASH_KEY));
 	cellhdr.width = width;
 	cellhdr.height = height;
 	cellhdr.length = length;
@@ -105,45 +103,47 @@ pstcache_put_bitmap(uint8 cache_id, uint16 cache_idx, uint8 * bitmap_id,
 	return True;
 }
 
-/* list the bitmaps from the persistent cache file */
+/* List the bitmap keys from the persistent cache file */
 int
-pstcache_enumerate(uint8 cache_id, uint8 * idlist)
+pstcache_enumerate(uint8 id, HASH_KEY * keylist)
 {
-	int fd, n, c = 0;
+	int fd, idx, n;
+	sint16 mru_idx[0xa00];
+	uint32 mru_stamp[0xa00];
 	CELLHEADER cellhdr;
 
-	if (!(g_bitmap_cache && g_bitmap_cache_persist_enable && IS_PERSISTENT(cache_id)))
+	if (!(g_bitmap_cache && g_bitmap_cache_persist_enable && IS_PERSISTENT(id)))
 		return 0;
 
 	/* The server disconnects if the bitmap cache content is sent more than once */
 	if (g_pstcache_enumerated)
 		return 0;
 
-	DEBUG(("pstcache enumeration... "));
-	for (n = 0; n < BMPCACHE2_NUM_PSTCELLS; n++)
+	DEBUG_RDP5(("Persistent bitmap cache enumeration... "));
+	for (idx = 0; idx < BMPCACHE2_NUM_PSTCELLS; idx++)
 	{
-		fd = g_pstcache_fd[cache_id];
-		rd_lseek_file(fd, n * (g_pstcache_Bpp * MAX_CELL_SIZE + sizeof(CELLHEADER)));
+		fd = g_pstcache_fd[id];
+		rd_lseek_file(fd, idx * (g_pstcache_Bpp * MAX_CELL_SIZE + sizeof(CELLHEADER)));
 		if (rd_read_file(fd, &cellhdr, sizeof(CELLHEADER)) <= 0)
 			break;
 
-		if (memcmp(cellhdr.bitmap_id, zero_id, sizeof(BITMAP_ID)) != 0)
+		if (memcmp(cellhdr.key, zero_key, sizeof(HASH_KEY)) != 0)
 		{
-			memcpy(idlist + n * sizeof(BITMAP_ID), cellhdr.bitmap_id,
-			       sizeof(BITMAP_ID));
+			memcpy(keylist[idx], cellhdr.key, sizeof(HASH_KEY));
 
-			if (cellhdr.stamp)
+			/* Pre-cache (not possible for 8bpp because 8bpp needs a colourmap) */
+			if (g_bitmap_cache_precache && cellhdr.stamp && g_server_bpp > 8)
+				pstcache_load_bitmap(id, idx);
+
+			/* Sort by stamp */
+			for (n = idx; n > 0 && cellhdr.stamp < mru_stamp[n - 1]; n--)
 			{
-				/* Pre-caching is not possible with 8bpp because a colourmap
-				 * is needed to load them */
-				if (g_bitmap_cache_precache && (g_server_bpp > 8))
-				{
-					if (pstcache_load_bitmap(cache_id, n))
-						c++;
-				}
-
-				g_stamp = MAX(g_stamp, cellhdr.stamp);
+				mru_idx[n] = mru_idx[n - 1];
+				mru_stamp[n] = mru_stamp[n - 1];
 			}
+
+			mru_idx[n] = idx;
+			mru_stamp[n] = cellhdr.stamp;
 		}
 		else
 		{
@@ -151,9 +151,11 @@ pstcache_enumerate(uint8 cache_id, uint8 * idlist)
 		}
 	}
 
-	DEBUG(("%d bitmaps in persistent cache, %d bitmaps loaded in memory\n", n, c));
+	DEBUG_RDP5(("%d cached bitmaps.\n", idx));
+
+	cache_rebuild_bmpcache_linked_list(id, mru_idx, idx);
 	g_pstcache_enumerated = True;
-	return n;
+	return idx;
 }
 
 /* initialise the persistent bitmap cache */

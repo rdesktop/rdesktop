@@ -1,8 +1,9 @@
 /* bitmap.c */
 BOOL bitmap_decompress(uint8 * output, int width, int height, uint8 * input, int size, int Bpp);
 /* cache.c */
+void cache_rebuild_bmpcache_linked_list(uint8 cache_id, sint16 * cache_idx, int count);
 HBITMAP cache_get_bitmap(uint8 cache_id, uint16 cache_idx);
-void cache_put_bitmap(uint8 cache_id, uint16 cache_idx, HBITMAP bitmap, uint32 stamp);
+void cache_put_bitmap(uint8 cache_id, uint16 cache_idx, HBITMAP bitmap);
 void cache_save_state(void);
 FONTGLYPH *cache_get_font(uint8 font, uint16 character);
 void cache_put_font(uint8 font, uint16 character, uint16 offset, uint16 baseline, uint16 width,
@@ -66,9 +67,9 @@ void printercache_process(STREAM s);
 /* pstcache.c */
 void pstcache_touch_bitmap(uint8 id, uint16 idx, uint32 stamp);
 BOOL pstcache_load_bitmap(uint8 id, uint16 idx);
-BOOL pstcache_put_bitmap(uint8 id, uint16 idx, uint8 * bmp_id, uint16 wd,
-			 uint16 ht, uint16 len, uint8 * data);
-int pstcache_enumerate(uint8 id, uint8 * list);
+BOOL pstcache_save_bitmap(uint8 id, uint16 idx, uint8 * hash_key, uint16 wd,
+			  uint16 ht, uint16 len, uint8 * data);
+int pstcache_enumerate(uint8 id, HASH_KEY * keylist);
 BOOL pstcache_init(uint8 id);
 /* rdesktop.c */
 int main(int argc, char *argv[]);

@@ -2,6 +2,7 @@
    rdesktop: A Remote Desktop Protocol client.
    Cache routines
    Copyright (C) Matthew Chapman 1999-2005
+   Copyright (C) Jeroen Meijer 2005
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -20,104 +21,230 @@
 
 #include "rdesktop.h"
 
-#define NUM_ELEMENTS(array) (sizeof(array) / sizeof(array[0]))
-#define TOUCH(id, idx) (g_bmpcache[id][idx].usage = ++g_stamp)
-#define IS_PERSISTENT(id) (g_pstcache_fd[id] > 0)
-
-extern int g_pstcache_fd[];
-extern BOOL g_use_rdp5;
-
-uint32 g_stamp;
-
-static int g_num_bitmaps_in_memory[3];
-
 /* BITMAP CACHE */
-static BMPCACHEENTRY g_bmpcache[3][0xa00];
+extern int g_pstcache_fd[];
+
+#define NUM_ELEMENTS(array) (sizeof(array) / sizeof(array[0]))
+#define IS_PERSISTENT(id) (g_pstcache_fd[id] > 0)
+#define TO_TOP -1
+#define NOT_SET -1
+#define IS_SET(idx) (idx >= 0)
+
+/*
+ * TODO: Test for optimal value of BUMP_COUNT. TO_TOP gives lowest cpu utilisation but using
+ * a positive value will hopefully result in less frequently used bitmaps having a greater chance
+ * of being evicted from the cache, and therby reducing the need to load bitmaps from disk.
+ * (Jeroen)
+ */
+#define BUMP_COUNT 40
+
+struct bmpcache_entry
+{
+	HBITMAP bitmap;
+	sint16 previous;
+	sint16 next;
+};
+
+static struct bmpcache_entry g_bmpcache[3][0xa00];
 static HBITMAP g_volatile_bc[3];
 
-/* Remove the least-recently used bitmap from the cache */
-void
-cache_remove_lru_bitmap(uint8 cache_id)
-{
-	uint32 i;
-	uint16 cache_idx = 0;
-	uint32 m = 0xffffffff;
-	BMPCACHEENTRY *pbce;
+static int g_bmpcache_lru[3] = { NOT_SET, NOT_SET, NOT_SET };
+static int g_bmpcache_mru[3] = { NOT_SET, NOT_SET, NOT_SET };
+static int g_bmpcache_count[3];
 
-	for (i = 0; i < NUM_ELEMENTS(g_bmpcache[cache_id]); i++)
+/* Setup the bitmap cache lru/mru linked list */
+void
+cache_rebuild_bmpcache_linked_list(uint8 id, sint16 * idx, int count)
+{
+	int n = count, c = 0;
+	sint16 n_idx;
+
+	/* find top, skip evicted bitmaps */
+	while (--n >= 0 && g_bmpcache[id][idx[n]].bitmap == NULL);
+	if (n < 0)
 	{
-		if (g_bmpcache[cache_id][i].bitmap && g_bmpcache[cache_id][i].usage < m)
-		{
-			cache_idx = i;
-			m = g_bmpcache[cache_id][i].usage;
-		}
+		g_bmpcache_mru[id] = g_bmpcache_lru[id] = NOT_SET;
+		return;
 	}
 
-	pbce = &g_bmpcache[cache_id][cache_idx];
-	ui_destroy_bitmap(pbce->bitmap);
-	--g_num_bitmaps_in_memory[cache_id];
-	pbce->bitmap = 0;
-	pbce->usage = 0;
+	g_bmpcache_mru[id] = idx[n];
+	g_bmpcache[id][idx[n]].next = NOT_SET;
+	n_idx = idx[n];
+	c++;
+
+	/* link list */
+	while (n >= 0)
+	{
+		/* skip evicted bitmaps */
+		while (--n >= 0 && g_bmpcache[id][idx[n]].bitmap == NULL);
+
+		if (n < 0)
+			break;
+
+		g_bmpcache[id][n_idx].previous = idx[n];
+		g_bmpcache[id][idx[n]].next = n_idx;
+		n_idx = idx[n];
+		c++;
+	}
+
+	g_bmpcache[id][n_idx].previous = NOT_SET;
+	g_bmpcache_lru[id] = n_idx;
+
+	if (c != g_bmpcache_count[id])
+	{
+		error("Oops. %d in bitmap cache linked list, %d in ui cache...\n", c,
+		      g_bmpcache_count[id]);
+		exit(1);
+	}
+}
+
+/* Move a bitmap to a new position in the linked list. */
+void
+cache_bump_bitmap(uint8 id, uint16 idx, int bump)
+{
+	int p_idx, n_idx, n;
+
+	if (!IS_PERSISTENT(id))
+		return;
+
+	if (g_bmpcache_mru[id] == idx)
+		return;
+
+	DEBUG_RDP5(("bump bitmap: id=%d, idx=%d, bump=%d\n", id, idx, bump));
+
+	n_idx = g_bmpcache[id][idx].next;
+	p_idx = g_bmpcache[id][idx].previous;
+
+	if (IS_SET(n_idx))
+	{
+		/* remove */
+		--g_bmpcache_count[id];
+		if (IS_SET(p_idx))
+			g_bmpcache[id][p_idx].next = n_idx;
+		else
+			g_bmpcache_lru[id] = n_idx;
+		if (IS_SET(n_idx))
+			g_bmpcache[id][n_idx].previous = p_idx;
+		else
+			g_bmpcache_mru[id] = p_idx;
+	}
+	else
+	{
+		p_idx = NOT_SET;
+		n_idx = g_bmpcache_lru[id];
+	}
+
+	if (bump >= 0)
+	{
+		for (n = 0; n < bump && IS_SET(n_idx); n++)
+		{
+			p_idx = n_idx;
+			n_idx = g_bmpcache[id][p_idx].next;
+		}
+	}
+	else
+	{
+		p_idx = g_bmpcache_mru[id];
+		n_idx = NOT_SET;
+	}
+
+	/* insert */
+	++g_bmpcache_count[id];
+	g_bmpcache[id][idx].previous = p_idx;
+	g_bmpcache[id][idx].next = n_idx;
+
+	if (p_idx >= 0)
+		g_bmpcache[id][p_idx].next = idx;
+	else
+		g_bmpcache_lru[id] = idx;
+
+	if (n_idx >= 0)
+		g_bmpcache[id][n_idx].previous = idx;
+	else
+		g_bmpcache_mru[id] = idx;
+}
+
+/* Evict the least-recently used bitmap from the cache */
+void
+cache_evict_bitmap(uint8 id)
+{
+	uint16 idx;
+	int n_idx;
+
+	if (!IS_PERSISTENT(id))
+		return;
+
+	idx = g_bmpcache_lru[id];
+	n_idx = g_bmpcache[id][idx].next;
+	DEBUG_RDP5(("evict bitmap: id=%d idx=%d n_idx=%d bmp=0x%x\n", id, idx, n_idx,
+		    g_bmpcache[id][idx].bitmap));
+
+	ui_destroy_bitmap(g_bmpcache[id][idx].bitmap);
+	--g_bmpcache_count[id];
+	g_bmpcache[id][idx].bitmap = 0;
+
+	g_bmpcache_lru[id] = n_idx;
+	g_bmpcache[id][n_idx].previous = NOT_SET;
+
+	pstcache_touch_bitmap(id, idx, 0);
 }
 
 /* Retrieve a bitmap from the cache */
 HBITMAP
-cache_get_bitmap(uint8 cache_id, uint16 cache_idx)
+cache_get_bitmap(uint8 id, uint16 idx)
 {
-	HBITMAP *pbitmap;
-
-	if ((cache_id < NUM_ELEMENTS(g_bmpcache)) && (cache_idx < NUM_ELEMENTS(g_bmpcache[0])))
+	if ((id < NUM_ELEMENTS(g_bmpcache)) && (idx < NUM_ELEMENTS(g_bmpcache[0])))
 	{
-		pbitmap = &g_bmpcache[cache_id][cache_idx].bitmap;
-		if ((*pbitmap != 0) || pstcache_load_bitmap(cache_id, cache_idx))
+		if (g_bmpcache[id][idx].bitmap || pstcache_load_bitmap(id, idx))
 		{
-			if (IS_PERSISTENT(cache_id))
-				TOUCH(cache_id, cache_idx);
+			if (IS_PERSISTENT(id))
+				cache_bump_bitmap(id, idx, BUMP_COUNT);
 
-			return *pbitmap;
+			return g_bmpcache[id][idx].bitmap;
 		}
 	}
-	else if ((cache_id < NUM_ELEMENTS(g_volatile_bc)) && (cache_idx == 0x7fff))
+	else if ((id < NUM_ELEMENTS(g_volatile_bc)) && (idx == 0x7fff))
 	{
-		return g_volatile_bc[cache_id];
+		return g_volatile_bc[id];
 	}
 
-	error("get bitmap %d:%d\n", cache_id, cache_idx);
+	error("get bitmap %d:%d\n", id, idx);
 	return NULL;
 }
 
 /* Store a bitmap in the cache */
 void
-cache_put_bitmap(uint8 cache_id, uint16 cache_idx, HBITMAP bitmap, uint32 stamp)
+cache_put_bitmap(uint8 id, uint16 idx, HBITMAP bitmap)
 {
 	HBITMAP old;
 
-	if ((cache_id < NUM_ELEMENTS(g_bmpcache)) && (cache_idx < NUM_ELEMENTS(g_bmpcache[0])))
+	if ((id < NUM_ELEMENTS(g_bmpcache)) && (idx < NUM_ELEMENTS(g_bmpcache[0])))
 	{
-		old = g_bmpcache[cache_id][cache_idx].bitmap;
+		old = g_bmpcache[id][idx].bitmap;
 		if (old != NULL)
-		{
 			ui_destroy_bitmap(old);
-		}
-		else if (g_use_rdp5)
-		{
-			if (++g_num_bitmaps_in_memory[cache_id] > BMPCACHE2_C2_CELLS)
-				cache_remove_lru_bitmap(cache_id);
-		}
+		g_bmpcache[id][idx].bitmap = bitmap;
 
-		g_bmpcache[cache_id][cache_idx].bitmap = bitmap;
-		g_bmpcache[cache_id][cache_idx].usage = stamp;
+		if (IS_PERSISTENT(id))
+		{
+			if (old == NULL)
+				g_bmpcache[id][idx].previous = g_bmpcache[id][idx].next = NOT_SET;
+
+			cache_bump_bitmap(id, idx, TO_TOP);
+			if (g_bmpcache_count[id] > BMPCACHE2_C2_CELLS)
+				cache_evict_bitmap(id);
+		}
 	}
-	else if ((cache_id < NUM_ELEMENTS(g_volatile_bc)) && (cache_idx == 0x7fff))
+	else if ((id < NUM_ELEMENTS(g_volatile_bc)) && (idx == 0x7fff))
 	{
-		old = g_volatile_bc[cache_id];
+		old = g_volatile_bc[id];
 		if (old != NULL)
 			ui_destroy_bitmap(old);
-		g_volatile_bc[cache_id] = bitmap;
+		g_volatile_bc[id] = bitmap;
 	}
 	else
 	{
-		error("put bitmap %d:%d\n", cache_id, cache_idx);
+		error("put bitmap %d:%d\n", id, idx);
 	}
 }
 
@@ -125,12 +252,21 @@ cache_put_bitmap(uint8 cache_id, uint16 cache_idx, HBITMAP bitmap, uint32 stamp)
 void
 cache_save_state(void)
 {
-	uint32 id, idx;
+	uint32 id = 0, t = 0;
+	int idx;
 
 	for (id = 0; id < NUM_ELEMENTS(g_bmpcache); id++)
 		if (IS_PERSISTENT(id))
-			for (idx = 0; idx < NUM_ELEMENTS(g_bmpcache[id]); idx++)
-				pstcache_touch_bitmap(id, idx, g_bmpcache[id][idx].usage);
+		{
+			DEBUG_RDP5(("Saving cache state for bitmap cache %d...", id));
+			idx = g_bmpcache_lru[id];
+			while (idx >= 0)
+			{
+				pstcache_touch_bitmap(id, idx, ++t);
+				idx = g_bmpcache[id][idx].next;
+			}
+			DEBUG_RDP5((" %d stamps written.\n", t));
+		}
 }
 
 
