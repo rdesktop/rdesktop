@@ -572,14 +572,14 @@ main(int argc, char *argv[])
 #ifdef WITH_RDPSND
 								g_rdpsnd = True;
 #else
-								warning("Not compiled with sound support");
+								warning("Not compiled with sound support\n");
 #endif
 
 							if (strncmp("off", optarg, 3) == 0)
 #ifdef WITH_RDPSND
 								g_rdpsnd = False;
 #else
-								warning("Not compiled with sound support");
+								warning("Not compiled with sound support\n");
 #endif
 
 							optarg = p;
@@ -590,7 +590,7 @@ main(int argc, char *argv[])
 #ifdef WITH_RDPSND
 						g_rdpsnd = True;
 #else
-						warning("Not compiled with sound support");
+						warning("Not compiled with sound support\n");
 #endif
 					}
 				}
