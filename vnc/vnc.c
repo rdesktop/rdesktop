@@ -84,7 +84,7 @@ BOOL enable_compose = False;
 void
 vncHideCursor()
 {
-	if (server->rfbClientHead)
+	if (server->clientHead)
 		rfbUndrawCursor(server);
 }
 
@@ -218,7 +218,7 @@ vncMouse(int buttonMask, int x, int y, struct _rfbClientRec *cl)
 	lastbuttons = buttonMask;
 
 	/* handle cursor */
-	defaultPtrAddEvent(buttonMask, x, y, cl);
+	rfbDefaultPtrAddEvent(buttonMask, x, y, cl);
 }
 
 
@@ -231,7 +231,7 @@ rdp2vnc_connect(char *server, uint32 flags, char *domain, char *password,
 	struct timeval tv;
 	int rfbListenSock, addrlen = sizeof(addr);
 
-	rfbListenSock = ListenOnTCPPort(rfb_port);
+	rfbListenSock = rfbListenOnTCPPort(rfb_port);
 	fprintf(stderr, "Listening on VNC port %d\n", rfb_port);
 	if (rfbListenSock <= 0)
 		error("Cannot listen on port %d", rfb_port);
@@ -259,8 +259,10 @@ rdp2vnc_connect(char *server, uint32 flags, char *domain, char *password,
 				}
 				if (!fork())
 				{
+					BOOL deactivated;
+					uint32_t ext_disc_reason;
 					printf("Connection successful.\n");
-					rdp_main_loop();
+					rdp_main_loop(&deactivated,&ext_disc_reason);
 					printf("Disconnecting...\n");
 					rdp_disconnect();
 					ui_destroy_window();
@@ -293,18 +295,18 @@ ui_create_window()
 	server->kbdAddEvent = vncKey;
 #ifdef ENABLE_SHADOW
 	server->httpPort = 6124 + client_counter;
-	server->rfbPort = 5924 + client_counter;
+	server->port = 5924 + client_counter;
 	rfbInitSockets(server);
-	server->rfbAlwaysShared = TRUE;
-	server->rfbNeverShared = FALSE;
+	server->alwaysShared = TRUE;
+	server->neverShared = FALSE;
 #else
-	server->rfbPort = -1;
-	server->rfbAlwaysShared = FALSE;
-	server->rfbNeverShared = FALSE;
+	server->port = -1;
+	server->alwaysShared = FALSE;
+	server->neverShared = FALSE;
 #endif
 	server->inetdSock = rfbClientSocket;
-	server->rfbServerFormat.trueColour = FALSE;	/* activate colour maps */
-	server->rfbDeferUpdateTime = defer_time;
+	server->serverFormat.trueColour = FALSE;	/* activate colour maps */
+	server->deferUpdateTime = defer_time;
 
 	frameBuffer = (vncBuffer *) malloc(sizeof(vncBuffer));
 	frameBuffer->w = g_width;
@@ -312,16 +314,16 @@ ui_create_window()
 	frameBuffer->linew = g_width;
 	frameBuffer->data = server->frameBuffer;
 	frameBuffer->owner = FALSE;
-	frameBuffer->format = &server->rfbServerFormat;
+	frameBuffer->format = &server->serverFormat;
 
 	ui_set_clip(0, 0, g_width, g_height);
 
 	rfbInitServer(server);
 #ifndef ENABLE_SHADOW
-	server->rfbPort = rfb_port;
+	server->port = rfb_port;
 #else
-	fprintf(stderr, "server listening on port %d (socket %d)\n", server->rfbPort,
-		server->rfbListenSock);
+	fprintf(stderr, "server listening on port %d (socket %d)\n", server->port,
+		server->listenSock);
 #endif
 
 	init_keyboard();
@@ -332,7 +334,7 @@ ui_create_window()
 void
 ui_destroy_window()
 {
-	rfbCloseClient(server->rfbClientHead);
+	rfbCloseClient(server->clientHead);
 }
 
 
@@ -354,7 +356,7 @@ ui_select(int rdpSocket)
 		n = select(m + 1, &fds, NULL, NULL, &tv);
 		rfbProcessEvents(server, 0);
 		/* if client is gone, close connection */
-		if (!server->rfbClientHead)
+		if (!server->clientHead)
 			close(rdpSocket);
 		if (FD_ISSET(rdpSocket, &fds))
 			return 1;
@@ -465,6 +467,7 @@ ui_create_cursor(unsigned int x, unsigned int y, int width, int height, uint8 * 
 	cursor->mask = (char *) d0;
 	cursor->source = 0;
 	cursor->richSource = cdata;
+	cursor->cleanup = 0; // workaround: this produces a memleak
 
 	cursor->backRed = cursor->backGreen = cursor->backBlue = 0xffff;
 	cursor->foreRed = cursor->foreGreen = cursor->foreBlue = 0;
@@ -933,8 +936,8 @@ ui_desktop_save(uint32 offset, int x, int y, int cx, int cy)
 	vncBuffer *buf;
 
 	buf = vncGetRect(server, x, y, cx, cy);
-	offset *= TOBYTES(server->rfbServerFormat.bitsPerPixel);
-	cache_put_desktop(offset, cx, cy, cx, TOBYTES(server->rfbServerFormat.bitsPerPixel),
+	offset *= TOBYTES(server->serverFormat.bitsPerPixel);
+	cache_put_desktop(offset, cx, cy, cx, TOBYTES(server->serverFormat.bitsPerPixel),
 			  (buf->data));
 }
 
@@ -949,8 +952,8 @@ ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy)
 	ox = x;
 	oy = y;
 
-	offset *= TOBYTES(server->rfbServerFormat.bitsPerPixel);
-	data = cache_get_desktop(offset, cx, cy, TOBYTES(server->rfbServerFormat.bitsPerPixel));
+	offset *= TOBYTES(server->serverFormat.bitsPerPixel);
+	data = cache_get_desktop(offset, cx, cy, TOBYTES(server->serverFormat.bitsPerPixel));
 	if (data == NULL)
 		return;
 
@@ -1007,8 +1010,8 @@ vncDupBuffer(vncBuffer * b)
 void
 vncPrintStats()
 {
-	if (server && server->rfbClientHead)
-		rfbPrintStats(server->rfbClientHead);
+	if (server && server->clientHead)
+		rfbPrintStats(server->clientHead);
 }
 
 /* blit */
@@ -1026,7 +1029,7 @@ vncCopyBlitFromNoEncode(rfbScreenInfoPtr s, int x, int y, int w, int h,
 
 	vncHideCursor();
 
-	if (s->rfbServerFormat.bitsPerPixel == src->format->bitsPerPixel
+	if (s->serverFormat.bitsPerPixel == src->format->bitsPerPixel
 	    && srcx + w <= src->w && srcy + h <= src->h)
 	{
 		//simple copy
@@ -1240,7 +1243,7 @@ vncSetRect(rfbScreenInfoPtr s, int x, int y, int w, int h, vncPixel c)
 	vncHideCursor();
 
 	// - Fill the rect in the local framebuffer
-	if (s->rfbServerFormat.bitsPerPixel == 8)
+	if (s->serverFormat.bitsPerPixel == 8)
 	{
 		// - Simple 8-bit fill
 		uint8_t *dstdata;
@@ -1269,19 +1272,19 @@ vncBuffer *
 vncGetRect(rfbScreenInfoPtr s, int x, int y, int w, int h)
 {
 	int xx, yy;
-	vncBuffer *b = vncNewBuffer(w, h, s->rfbServerFormat.depth);
+	vncBuffer *b = vncNewBuffer(w, h, s->serverFormat.depth);
 
 	vncHideCursor();
 
-	if (s->rfbServerFormat.bitsPerPixel == 8)
+	if (s->serverFormat.bitsPerPixel == 8)
 	{
 		//simple copy
 		int srcstep, dststep;
 		char *srcdata, *dstdata;
-		srcstep = s->paddedWidthInBytes * s->rfbServerFormat.bitsPerPixel / 8;
-		dststep = w * s->rfbServerFormat.bitsPerPixel / 8;
+		srcstep = s->paddedWidthInBytes * s->serverFormat.bitsPerPixel / 8;
+		dststep = w * s->serverFormat.bitsPerPixel / 8;
 		dstdata = b->data;
-		srcdata = s->frameBuffer + (y * srcstep + x * s->rfbServerFormat.bitsPerPixel / 8);
+		srcdata = s->frameBuffer + (y * srcstep + x * s->serverFormat.bitsPerPixel / 8);
 		for (yy = 0; yy < h; yy++)
 		{
 			memcpy(dstdata, srcdata, dststep);
@@ -1341,3 +1344,34 @@ vncSetColourMap(rfbScreenInfoPtr s, rfbColourMap * m)
 	s->colourMap = *m;
 	rfbSetClientColourMaps(s, 0, 0);
 }
+
+void
+ui_begin_update()
+{
+}
+
+void
+ui_end_update()
+{
+}
+
+void
+ui_resize_window()
+{
+	rfbClientIteratorPtr iter;
+	rfbClientPtr cl;
+
+	server->width = g_width;
+	server->height = g_height;
+	server->frameBuffer = (char *) realloc(server->frameBuffer, g_width * g_height);
+	server->paddedWidthInBytes = g_width;
+
+	iter=rfbGetClientIterator(server);
+	while((cl=rfbClientIteratorNext(iter)))
+		if(cl->useNewFBSize)
+			cl->newFBSizePending = TRUE;
+		else
+			rfbLog("Warning: Client %s does not support NewFBSize!\n ",cl->host);
+	rfbReleaseClientIterator(iter);
+}
+
