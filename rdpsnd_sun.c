@@ -26,7 +26,6 @@
 #include <errno.h>
 #include <sys/ioctl.h>
 #include <sys/audioio.h>
-#include <stropts.h>
 
 #define MAX_QUEUE	10
 
