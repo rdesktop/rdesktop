@@ -240,60 +240,59 @@ handle_special_keys(uint32 keysym, unsigned int state, uint32 ev_time, BOOL pres
 {
 	switch (keysym)
 	{
-		case XK_Break:
-		case XK_Pause:
+		case XK_Return:
 			if ((get_key_state(state, XK_Alt_L) || get_key_state(state, XK_Alt_R))
 			    && (get_key_state(state, XK_Control_L)
 				|| get_key_state(state, XK_Control_R)))
 			{
-				/* Ctrl-Alt-Break: toggle full screen */
+				/* Ctrl-Alt-Enter: toggle full screen */
 				if (pressed)
 					xwin_toggle_fullscreen();
+				return True;
+			}
+			break;
 
-			}
-			else if (keysym == XK_Break)
+		case XK_Break:
+			/* Send Break sequence E0 46 E0 C6 */
+			if (pressed)
 			{
-				/* Send Break sequence E0 46 E0 C6 */
-				if (pressed)
-				{
-					rdp_send_scancode(ev_time, RDP_KEYPRESS,
-							  (SCANCODE_EXTENDED | 0x46));
-					rdp_send_scancode(ev_time, RDP_KEYPRESS,
-							  (SCANCODE_EXTENDED | 0xc6));
-				}
-				/* No break sequence */
+				rdp_send_scancode(ev_time, RDP_KEYPRESS,
+						  (SCANCODE_EXTENDED | 0x46));
+				rdp_send_scancode(ev_time, RDP_KEYPRESS,
+						  (SCANCODE_EXTENDED | 0xc6));
 			}
-			else	/* XK_Pause */
+			/* No release sequence */
+			return True;
+
+		case XK_Pause:
+			/* According to MS Keyboard Scan Code
+			   Specification, pressing Pause should result
+			   in E1 1D 45 E1 9D C5. I'm not exactly sure
+			   of how this is supposed to be sent via
+			   RDP. The code below seems to work, but with
+			   the side effect that Left Ctrl stays
+			   down. Therefore, we release it when Pause
+			   is released. */
+			if (pressed)
 			{
-				/* According to MS Keyboard Scan Code
-				   Specification, pressing Pause should result
-				   in E1 1D 45 E1 9D C5. I'm not exactly sure
-				   of how this is supposed to be sent via
-				   RDP. The code below seems to work, but with
-				   the side effect that Left Ctrl stays
-				   down. Therefore, we release it when Pause
-				   is released. */
-				if (pressed)
-				{
-					rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS,
-						       0xe1, 0);
-					rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS,
-						       0x1d, 0);
-					rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS,
-						       0x45, 0);
-					rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS,
-						       0xe1, 0);
-					rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS,
-						       0x9d, 0);
-					rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS,
-						       0xc5, 0);
-				}
-				else
-				{
-					/* Release Left Ctrl */
-					rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYRELEASE,
-						       0x1d, 0);
-				}
+				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS,
+					       0xe1, 0);
+				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS,
+					       0x1d, 0);
+				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS,
+					       0x45, 0);
+				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS,
+					       0xe1, 0);
+				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS,
+					       0x9d, 0);
+				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS,
+					       0xc5, 0);
+			}
+			else
+			{
+				/* Release Left Ctrl */
+				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYRELEASE,
+					       0x1d, 0);
 			}
 			return True;
 
