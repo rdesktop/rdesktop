@@ -112,9 +112,14 @@ tcp_recv(STREAM s, uint32 length)
 			return NULL;
 
 		rcvd = recv(sock, s->end, length, 0);
-		if (rcvd <= 0)
+		if (rcvd < 0)
 		{
 			error("recv: %s\n", strerror(errno));
+			return NULL;
+		}
+		else if (rcvd == 0)
+		{
+			error("Connection closed\n");
 			return NULL;
 		}
 
