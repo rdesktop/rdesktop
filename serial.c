@@ -53,6 +53,27 @@
 #define ODD_PARITY			1
 #define EVEN_PARITY			2
 
+#define SERIAL_PURGE_TXABORT 0x00000001
+#define SERIAL_PURGE_RXABORT 0x00000002
+#define SERIAL_PURGE_TXCLEAR 0x00000004
+#define SERIAL_PURGE_RXCLEAR 0x00000008
+
+/* SERIAL_WAIT_ON_MASK */
+#define SERIAL_EV_RXCHAR           0x0001	// Any Character received
+#define SERIAL_EV_RXFLAG           0x0002	// Received certain character
+#define SERIAL_EV_TXEMPTY          0x0004	// Transmitt Queue Empty
+#define SERIAL_EV_CTS              0x0008	// CTS changed state
+#define SERIAL_EV_DSR              0x0010	// DSR changed state
+#define SERIAL_EV_RLSD             0x0020	// RLSD changed state
+#define SERIAL_EV_BREAK            0x0040	// BREAK received
+#define SERIAL_EV_ERR              0x0080	// Line status error occurred
+#define SERIAL_EV_RING             0x0100	// Ring signal detected
+#define SERIAL_EV_PERR             0x0200	// Printer error occured
+#define SERIAL_EV_RX80FULL         0x0400	// Receive buffer is 80 percent full
+#define SERIAL_EV_EVENT1           0x0800	// Provider specific event 1
+#define SERIAL_EV_EVENT2           0x1000	// Provider specific event 2
+
+
 extern RDPDR_DEVICE g_rdpdr_device[];
 
 SERIAL_DEVICE *
@@ -186,6 +207,8 @@ get_termios(SERIAL_DEVICE * pser_inf, HANDLE serial_fd)
 			break;
 	}
 
+	pser_inf->rts = (ptermios->c_cflag & CRTSCTS) ? 1 : 0;
+
 	return True;
 }
 
@@ -286,13 +309,14 @@ set_termios(SERIAL_DEVICE * pser_inf, HANDLE serial_fd)
 	cfsetispeed(pser_inf->ptermios, speed);
 	cfsetospeed(pser_inf->ptermios, pser_inf->dtr ? speed : 0);
 
-	ptermios->c_cflag &= ~(CSTOPB | PARENB | PARODD | CSIZE);
+	ptermios->c_cflag &= ~(CSTOPB | PARENB | PARODD | CSIZE | CRTSCTS);
 	switch (pser_inf->stop_bits)
 	{
 		case STOP_BITS_2:
 			ptermios->c_cflag |= CSTOPB;
 			break;
 	}
+
 	switch (pser_inf->parity)
 	{
 		case EVEN_PARITY:
@@ -302,6 +326,7 @@ set_termios(SERIAL_DEVICE * pser_inf, HANDLE serial_fd)
 			ptermios->c_cflag |= PARENB | PARODD;
 			break;
 	}
+
 	switch (pser_inf->word_length)
 	{
 		case 5:
@@ -317,6 +342,9 @@ set_termios(SERIAL_DEVICE * pser_inf, HANDLE serial_fd)
 			ptermios->c_cflag |= CS8;
 			break;
 	}
+
+	if (pser_inf->rts)
+		ptermios->c_cflag |= CRTSCTS;
 
 	tcsetattr(serial_fd, TCSANOW, ptermios);
 }
@@ -383,13 +411,18 @@ serial_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 disposi
 	}
 
 	if (!get_termios(pser_inf, serial_fd))
+	{
+		printf("INFO: SERIAL %s access denied\n", g_rdpdr_device[device_id].name);
+		fflush(stdout);
 		return STATUS_ACCESS_DENIED;
+	}
 
 	// Store handle for later use
 	g_rdpdr_device[device_id].handle = serial_fd;
 
 	/* some sane information */
-	printf("INFO: SERIAL %s to %s\nINFO: speed %u baud, stop bits %u, parity %u, word length %u bits, dtr %u\n", g_rdpdr_device[device_id].name, g_rdpdr_device[device_id].local_path, pser_inf->baud_rate, pser_inf->stop_bits, pser_inf->parity, pser_inf->word_length, pser_inf->dtr);
+	printf("INFO: SERIAL %s to %s\nINFO: speed %u baud, stop bits %u, parity %u, word length %u bits, dtr %u, rts %u\n", g_rdpdr_device[device_id].name, g_rdpdr_device[device_id].local_path, pser_inf->baud_rate, pser_inf->stop_bits, pser_inf->parity, pser_inf->word_length, pser_inf->dtr, pser_inf->rts);
+
 	printf("INFO: use stty to change settings\n");
 
 /*	ptermios->c_cflag = B115200 | CRTSCTS | CS8 | CLOCAL | CREAD;
@@ -412,7 +445,9 @@ serial_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 disposi
 static NTSTATUS
 serial_close(HANDLE handle)
 {
-	g_rdpdr_device[get_device_index(handle)].handle = 0;
+	int i = get_device_index(handle);
+	if (i >= 0)
+		g_rdpdr_device[i].handle = 0;
 	close(handle);
 	return STATUS_SUCCESS;
 }
@@ -459,6 +494,8 @@ serial_read(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * 
 
 	*result = read(handle, data, length);
 
+	//hexdump(data, *read);
+
 	return STATUS_SUCCESS;
 }
 
@@ -472,6 +509,7 @@ serial_write(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 *
 static NTSTATUS
 serial_device_control(HANDLE handle, uint32 request, STREAM in, STREAM out)
 {
+	int flush_mask, purge_mask;
 	uint32 result;
 	uint8 immediate;
 	SERIAL_DEVICE *pser_inf;
@@ -555,15 +593,27 @@ serial_device_control(HANDLE handle, uint32 request, STREAM in, STREAM out)
 			pser_inf->dtr = 0;
 			set_termios(pser_inf, handle);
 			break;
+		case SERIAL_SET_RTS:
+			pser_inf->rts = 1;
+			set_termios(pser_inf, handle);
+			break;
+		case SERIAL_CLR_RTS:
+			pser_inf->rts = 0;
+			set_termios(pser_inf, handle);
+			break;
+		case SERIAL_GET_MODEMSTATUS:
+			out_uint32_le(out, 0);	/* Errors */
+			break;
+		case SERIAL_GET_COMMSTATUS:
+			out_uint32_le(out, 0);	/* Errors */
+			out_uint32_le(out, 0);	/* Hold reasons */
+			out_uint32_le(out, 0);	/* Amount in in queue */
+			out_uint32_le(out, 0);	/* Amount in out queue */
+			out_uint8(out, 0);	/* EofReceived */
+			out_uint8(out, 0);	/* WaitForImmediate */
+			break;
 #if 0
-		case SERIAL_WAIT_ON_MASK:
-			/* XXX implement me */
-			break;
-		case SERIAL_SET_BREAK_ON:
-			tcsendbreak(serial_fd, 0);
-			break;
 		case SERIAL_PURGE:
-
 			printf("SERIAL_PURGE\n");
 			in_uint32(in, purge_mask);
 			if (purge_mask & 0x04)
@@ -577,17 +627,20 @@ serial_device_control(HANDLE handle, uint32 request, STREAM in, STREAM out)
 			if (purge_mask & 0x02)
 				rdpdr_abort_io(handle, 3, STATUS_CANCELLED);
 			break;
-
+		case SERIAL_WAIT_ON_MASK:
+			/* XXX implement me */
+			out_uint32_le(out, pser_inf->wait_mask);
+			break;
+		case SERIAL_SET_BREAK_ON:
+			tcsendbreak(serial_fd, 0);
+			break;
 		case SERIAL_RESET_DEVICE:
 		case SERIAL_SET_BREAK_OFF:
-		case SERIAL_SET_RTS:
-		case SERIAL_CLR_RTS:
 		case SERIAL_SET_XOFF:
 		case SERIAL_SET_XON:
 			/* ignore */
 			break;
 #endif
-
 		default:
 			unimpl("SERIAL IOCTL %d\n", request);
 			return STATUS_INVALID_PARAMETER;
@@ -604,6 +657,8 @@ serial_get_timeout(HANDLE handle, uint32 length, uint32 * timeout, uint32 * itv_
 	SERIAL_DEVICE *pser_inf;
 
 	index = get_device_index(handle);
+	if (index < 0)
+		return True;
 
 	if (g_rdpdr_device[index].device_type != DEVICE_TYPE_SERIAL)
 	{
