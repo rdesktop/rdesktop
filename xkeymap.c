@@ -276,6 +276,17 @@ send_winkey(uint32 ev_time, BOOL pressed, BOOL leftkey)
 	}
 }
 
+static void
+reset_winkey(uint32 ev_time)
+{
+	if (g_use_rdp5)
+	{
+		/* For some reason, it seems to suffice to release
+		 *either* the left or right winkey. */
+		rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_LWIN);
+	}
+}
+
 /* Handles, for example, multi-scancode keypresses (which is not
    possible via keymap-files) */
 BOOL
@@ -599,6 +610,8 @@ reset_modifier_keys()
 	if (MASK_HAS_BITS(remote_modifier_state, MapRightAltMask) &&
 	    !get_key_state(state, XK_Alt_R) && !get_key_state(state, XK_Mode_switch))
 		rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_RALT);
+
+	reset_winkey(ev_time);
 
 	rdp_send_input(ev_time, RDP_INPUT_SYNCHRONIZE, 0, ui_get_numlock_state(state), 0);
 }
