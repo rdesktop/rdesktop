@@ -45,9 +45,9 @@ Not needed anymore, with the new keyboard mapping implementation.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/downkeypatch.diff
 Description:
-TDB
+Seems to keep track of the remote modifier status. 
 Status:
-Not yet examined. 
+Not needed anymore, with the new keyboard mapping implementation. 
 
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/fasttext2+nobackpixmap.patch
