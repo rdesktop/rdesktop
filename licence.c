@@ -40,7 +40,7 @@ static uint8 licence_sign_key[16];
 BOOL licence_issued = False;
 
 
-int
+static int
 load_licence(unsigned char **data)
 {
 	char *path;
@@ -66,7 +66,7 @@ load_licence(unsigned char **data)
 	return read(fd, *data, st.st_size);
 }
 
-void
+static void
 save_licence(unsigned char *data, int length)
 {
 	char *fpath;		/* file path for licence */
