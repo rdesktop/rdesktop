@@ -749,13 +749,22 @@ char *
 next_arg(char *src, char needle)
 {
 	char *nextval;
+	char *p;
 
 	// EOS
 	if (*src == (char) 0x00)
 		return 0;
 
-	// more args available.
-	nextval = strchr(src, needle);
+	p = src;
+	// skip escaped needles.
+	while( (nextval = strchr(p, needle) ) )
+	{
+		if( *(nextval-1) != '\\' )
+			break;
+		p = nextval +1;
+	}
+
+	// more args available
 	if (nextval)
 	{
 		*nextval = (char) 0x00;
