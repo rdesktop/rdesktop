@@ -695,10 +695,12 @@ process_polyline(STREAM s, POLYLINE_ORDER * os, uint32 present, BOOL delta)
 
 	points[0].x = os->x;
 	points[0].y = os->y;
+	pen.style = pen.width = 0;
+	pen.colour = os->fgcolour;
 
 	index = 0;
 	data = ((os->lines - 1) / 4) + 1;
-	for (next = 1; (next < os->lines) && (data < os->datasize); next++)
+	for (next = 1; (next <= os->lines) && (data < os->datasize); next++)
 	{
 		if ((next - 1) % 4 == 0)
 			flags = os->data[index++];
