@@ -1005,7 +1005,7 @@ void ui_move_pointer(int x, int y)
 /*****************************************************************************/
 void ui_set_null_cursor(void)
 {
-  g_MW->setCursor(Qt::BlankCursor);
+  g_MW->setCursor(10); // Qt::BlankCursor
 }
 
 /*****************************************************************************/

@@ -6,7 +6,7 @@ rm -f *.o
 rm -f moc_*
 
 cc="g++"
-cflags="-pipe -DQT_QWS_EBX -DQT_QWS_CUSTOM -DQWS -fno-exceptions -fno-rtti -Wall -Os -fno-default-inline -DNO_DEBUG -DWITH_OPENSSL"
+cflags="-pipe -DQT_QWS_EBX -DQT_QWS_CUSTOM -DQWS -fno-exceptions -fno-rtti -Wall -O2 -fno-default-inline -DNO_DEBUG -DWITH_OPENSSL"
 # uncomment the following line to turn on debug
 #cflags=$cflags" -DWITH_DEBUG"
 # uncomment the following line to turn on sound

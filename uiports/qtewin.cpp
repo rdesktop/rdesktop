@@ -48,6 +48,8 @@
 #include "../rdesktop.h"
 #include "qtewin.h"
 
+#define QT_OPTI
+
 /* types */
 struct QColorMap
 {
@@ -85,6 +87,8 @@ int g_server_bpp = 8;
 char g_hostname[16] = "";
 char g_username[100] = "";
 
+static int g_client_width = 640;
+static int g_client_height = 480;
 static uint32 g_flags = RDP_LOGON_NORMAL;
 static char g_server[64] = "";
 static char g_domain[16] = "";
@@ -740,6 +744,8 @@ void QMyScrollView::timerEvent(QTimerEvent * e)
   {
     g_width = d->Width;
     g_height = d->Height;
+    g_client_width = g_width;
+    g_client_height = g_height;
     g_fullscreen = d->FullScreen;
     sprintf(g_server, "%s", (const char*)d->ServerIP);
     sprintf(g_username, "%s", (const char*)d->UserName);
@@ -760,7 +766,7 @@ void QMyScrollView::timerEvent(QTimerEvent * e)
     memset(g_CM, 0, sizeof(struct QColorMap));
     g_CM->NumColors = 256;
     g_MW = new QMyMainWindow();
-    g_MW->resize(g_width, g_height);
+    g_MW->resize(g_client_width, g_client_height);
     g_MW->show();
     g_SV->addChild(g_MW);
     g_MW->setMouseTracking(true);
@@ -774,8 +780,8 @@ void QMyScrollView::timerEvent(QTimerEvent * e)
       Desktop = g_App->desktop();
       dw = Desktop->width();
       dh = Desktop->height();
-      if (dw == g_width && dh == g_height)
-        g_MW->resize(g_width - 4, g_height - 4);
+      if (dw == g_client_width && dh == g_client_height)
+        g_MW->resize(g_client_width - 4, g_client_height - 4);
       g_SV->showFullScreen();
     }
     delete d;
@@ -805,13 +811,38 @@ QMyMainWindow::~QMyMainWindow()
 }
 
 /******************************************************************************/
+int rd(double in)
+{
+  return (int)(in + 0.50);
+}
+
+/******************************************************************************/
+int c2sx(int cx)
+{
+  double sx;
+
+  sx = (double)g_client_width / (double)g_width;
+  return rd(cx / sx);
+}
+
+/******************************************************************************/
+int c2sy(int cy)
+{
+  double sy;
+
+  sy = (double)g_client_height / (double)g_height;
+  return rd(cy / sy);
+}
+
+/******************************************************************************/
 void QMyMainWindow::timerEvent(QTimerEvent * e)
 {
   QWidget::timerEvent(e);
   if (e->timerId() == timer_id)
   {
     // send mouse up
-    rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_BUTTON1, mx, my);
+    rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_BUTTON1,
+                   rd(c2sx(mx)), rd(c2sy(my)));
     // if in fullscreen, take it out or the menu won't work
     if (g_fullscreen)
     {
@@ -834,8 +865,10 @@ void QMyMainWindow::MemuClicked(int MenuID)
 
   if (MenuID == 1) // right click
   {
-    rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_DOWN | MOUSE_FLAG_BUTTON2, mx, my);
-    rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_BUTTON2, mx, my);
+    rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_DOWN | MOUSE_FLAG_BUTTON2,
+                   rd(c2sx(mx)), rd(c2sy(my)));
+    rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_BUTTON2,
+                   rd(c2sx(mx)), rd(c2sy(my)));
   }
   else if (MenuID == 2) // toggle full screen
   {
@@ -845,15 +878,15 @@ void QMyMainWindow::MemuClicked(int MenuID)
       Desktop = g_App->desktop();
       dw = Desktop->width();
       dh = Desktop->height();
-      if (dw == g_width && dh == g_height)
-        g_MW->resize(g_width - 4, g_height - 4);
+      if (dw == g_client_width && dh == g_client_height)
+        g_MW->resize(g_client_width - 4, g_client_height - 4);
       g_SV->showFullScreen();
     }
     else
     {
       g_SV->showNormal();
       g_SV->showMaximized();
-      g_MW->resize(g_width, g_height);
+      g_MW->resize(g_client_width, g_client_height);
     }
   }
   else if (MenuID == 3) // reset keyboard
@@ -864,22 +897,24 @@ void QMyMainWindow::MemuClicked(int MenuID)
   }
   else if (MenuID == 4) // double click
   {
-    rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_DOWN | MOUSE_FLAG_BUTTON1, mx, my);
-    rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_BUTTON1, mx, my);
-    rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_DOWN | MOUSE_FLAG_BUTTON1, mx, my);
-    rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_BUTTON1, mx, my);
+    rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_DOWN | MOUSE_FLAG_BUTTON1,
+                   rd(c2sx(mx)), rd(c2sy(my)));
+    rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_BUTTON1,
+                   rd(c2sx(mx)), rd(c2sy(my)));
+    rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_DOWN | MOUSE_FLAG_BUTTON1,
+                   rd(c2sx(mx)), rd(c2sy(my)));
+    rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_BUTTON1,
+                   rd(c2sx(mx)), rd(c2sy(my)));
   }
 }
 
 /******************************************************************************/
 void QMyMainWindow::mouseMoveEvent(QMouseEvent* e)
 {
-  int x;
-  int y;
+  int x, y;
 
   x = e->x();
   y = e->y();
-
   if (timer_id)
   {
     x = x - mx;
@@ -890,7 +925,8 @@ void QMyMainWindow::mouseMoveEvent(QMouseEvent* e)
       timer_id = 0;
     }
   }
-  rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_MOVE, e->x(), e->y());
+  rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_MOVE, c2sx(e->x()),
+                 c2sy(e->y()));
 }
 
 /******************************************************************************/
@@ -900,11 +936,14 @@ void QMyMainWindow::mousePressEvent(QMouseEvent* e)
   mx = e->x();
   my = e->y();
   if (e->button() == LeftButton)
-    rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_DOWN | MOUSE_FLAG_BUTTON1, e->x(), e->y());
+    rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_DOWN | MOUSE_FLAG_BUTTON1,
+                   c2sx(e->x()), c2sy(e->y()));
   else if (e->button() == RightButton)
-    rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_DOWN | MOUSE_FLAG_BUTTON2, e->x(), e->y());
+    rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_DOWN | MOUSE_FLAG_BUTTON2,
+                   c2sx(e->x()), c2sy(e->y()));
   else if (e->button() == MidButton)
-    rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_DOWN | MOUSE_FLAG_BUTTON3, e->x(), e->y());
+    rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_DOWN | MOUSE_FLAG_BUTTON3,
+                   c2sx(e->x()), c2sy(e->y()));
 }
 
 /******************************************************************************/
@@ -913,20 +952,25 @@ void QMyMainWindow::mouseReleaseEvent(QMouseEvent* e)
   killTimer(timer_id);
   timer_id = 0;
   if (e->button() == LeftButton)
-    rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_BUTTON1, e->x(), e->y());
+    rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_BUTTON1, c2sx(e->x()),
+                   c2sy(e->y()));
   else if (e->button() == RightButton)
-    rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_BUTTON2, e->x(), e->y());
+    rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_BUTTON2, c2sx(e->x()),
+                   c2sy(e->y()));
   else if (e->button() == MidButton)
-    rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_BUTTON3, e->x(), e->y());
+    rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_BUTTON3, c2sx(e->x()),
+                   c2sy(e->y()));
 }
 
 /******************************************************************************/
 void QMyMainWindow::wheelEvent(QWheelEvent* e)
 {
   if (e->delta() > 0)
-    rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_BUTTON4, e->x(), e->y());
+    rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_BUTTON4, c2sx(e->x()),
+                   c2sy(e->y()));
   else if (e->delta() < 0)
-    rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_BUTTON5, e->x(), e->y());
+    rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_BUTTON5, c2sx(e->x()),
+                   c2sy(e->y()));
 }
 
 #define NOT(x) (~x)
@@ -962,11 +1006,11 @@ int get_pixel(int x, int y)
   if (x >= 0 && x < g_width && y >= 0 && y < g_height)
   {
     if (g_server_bpp == 8)
-      return g_BS[y * g_width + x];
+      return GETPIXEL8(g_BS, x, y, g_width);
     else if (g_server_bpp == 16)
-      return *(((uint16*)g_BS) + (y * g_width + x));
+      return GETPIXEL16(g_BS, x, y, g_width);
     else if (g_server_bpp == 24)
-      return *(((uint32*)g_BS) + (y * g_width + x));
+      return GETPIXEL32(g_BS, x, y, g_width);
     else
       return 0;
   }
@@ -977,7 +1021,7 @@ int get_pixel(int x, int y)
 /******************************************************************************/
 void set_pixel(int x, int y, int pixel, int op = 0xc)
 {
-  uint32 p;
+  int p;
 
   if (x >= g_clipx && x < (g_clipx + g_clipcx) &&
       y >= g_clipy && y < (g_clipy + g_clipcy))
@@ -1049,34 +1093,14 @@ bool WarpCoords(int * x, int * y, int * cx, int * cy, int * srcx, int * srcy)
 }
 
 /******************************************************************************/
-uint32 color16to32(uint32 colour)
-{
-  uint32 r, g, b;
-  r = ((colour >> 8) & 0xf8) | ((colour >> 13) & 0x7);
-  g = ((colour >> 3) & 0xfc) | ((colour >> 9) & 0x3);
-  b = ((colour << 3) & 0xf8) | ((colour >> 2) & 0x7);
-  return ((r << 16) | (g << 8) | b);
-}
-
-/******************************************************************************/
-uint32 color24to32(uint32 colour)
-{
-  uint32 r, g, b;
-  r = (colour >> 0) & 0xff;
-  g = (colour >> 8) & 0xff;
-  b = (colour >> 16) & 0xff;
-  return ((r << 16) | (g << 8) | b);
-}
-
-/******************************************************************************/
 void QMyMainWindow::paintEvent(QPaintEvent * pe)
 {
   QImage * Image;
   QPainter * Painter;
   QRect Rect;
-  int i, j, w, h, l, t;
-  int pixel;
+  int i, j, w, h, l, t, pixel, r, g, b;
   uint8 * data;
+  double sx, sy;
 
   Image = 0;
   data = 0;
@@ -1084,11 +1108,13 @@ void QMyMainWindow::paintEvent(QPaintEvent * pe)
     setWFlags(WRepaintNoErase);
   if (g_CM != NULL || g_server_bpp > 8)
   {
+    sx = (double)g_client_width / (double)g_width;
+    sy = (double)g_client_height / (double)g_height;
     Rect = pe->rect();
-    l = Rect.left();
-    t = Rect.top();
-    w = Rect.width();
-    h = Rect.height();
+    l = rd(Rect.left() / sx);
+    t = rd(Rect.top() / sy);
+    w = rd(Rect.width() / sx);
+    h = rd(Rect.height() / sy);
     if (w > 0 && h > 0)
     {
       if (g_server_bpp == 8 && g_CM->NumColors > 0)
@@ -1097,7 +1123,7 @@ void QMyMainWindow::paintEvent(QPaintEvent * pe)
         data = (uint8*)xmalloc(w * h);
         for (i = 0; i < h; i++)
           for (j = 0; j < w; j++)
-            data[i * w + j] = get_pixel(l + j, t + i);
+            data[i * w + j] = GETPIXEL8(g_BS, l + j, t + i, g_width);
         Image = new QImage(data, w, h, 8,(QRgb*)g_CM->RGBColors,
                            g_CM->NumColors, QImage::IgnoreEndian);
       }
@@ -1109,7 +1135,10 @@ void QMyMainWindow::paintEvent(QPaintEvent * pe)
           for (j = 0; j < w; j++)
           {
             pixel = GETPIXEL16(g_BS, l + j, t + i, g_width);
-            pixel = color16to32(pixel);
+            r = ((pixel >> 8) & 0xf8) | ((pixel >> 13) & 0x7);
+            g = ((pixel >> 3) & 0xfc) | ((pixel >> 9) & 0x3);
+            b = ((pixel << 3) & 0xf8) | ((pixel >> 2) & 0x7);
+            pixel = ((r << 16) | (g << 8) | b);
             SETPIXEL32(data, j, i, w, pixel);
           }
         Image = new QImage(data, w, h, 32, NULL,
@@ -1123,7 +1152,10 @@ void QMyMainWindow::paintEvent(QPaintEvent * pe)
           for (j = 0; j < w; j++)
           {
             pixel = GETPIXEL32(g_BS, l + j, t + i, g_width);
-            pixel = color24to32(pixel);
+            r = (pixel >> 0) & 0xff;
+            g = (pixel >> 8) & 0xff;
+            b = (pixel >> 16) & 0xff;
+            pixel = ((r << 16) | (g << 8) | b);
             SETPIXEL32(data, j, i, w, pixel);
           }
         Image = new QImage(data, w, h, 32, NULL,
@@ -1132,6 +1164,7 @@ void QMyMainWindow::paintEvent(QPaintEvent * pe)
       if (Image != 0)
       {
         Painter = new QPainter(this);
+        Painter->scale(sx, sy);
         Painter->drawImage(l, t, *Image, 0, 0, w, h);
         delete Painter;
         delete Image;
@@ -1185,8 +1218,16 @@ void QMyMainWindow::soundSend()
 /******************************************************************************/
 void redraw(int x, int y, int cx, int cy)
 {
+  double sx, sy;
+
   if (WarpCoords(&x, &y, &cx, &cy, NULL, NULL))
   {
+    sx = (double)g_client_width / (double)g_width;
+    sy = (double)g_client_height / (double)g_height;
+    x = rd(x * sx);
+    y = rd(y * sy);
+    cx = rd(cx * sx);
+    cy = rd(cy * sy);
     g_MW->update(x, y, cx, cy);
   }
 }
@@ -1484,9 +1525,38 @@ void fill_rect(int x, int y, int cx, int cy, int colour, int opcode = 0xc)
     cx = g_width - x;
   if (y + cy > g_height)
     cy = g_height - y;
-  for (i = 0; i < cy; i++)
-    for (j = 0; j < cx; j++)
-      set_pixel(x + j, y + i, colour, opcode);
+#ifdef QT_OPTI
+  if (opcode == 0xc) /* optimize */
+  {
+    if (WarpCoords(&x, &y, &cx, &cy, 0, 0))
+    {
+      if (g_server_bpp == 8)
+      {
+        for (i = 0; i < cy; i++)
+          for (j = 0; j < cx; j++)
+            SETPIXEL8(g_BS, x + j, y + i, g_width, colour);
+      }
+      else if (g_server_bpp == 16)
+      {
+        for (i = 0; i < cy; i++)
+          for (j = 0; j < cx; j++)
+            SETPIXEL16(g_BS, x + j, y + i, g_width, colour);
+      }
+      else if (g_server_bpp == 24)
+      {
+        for (i = 0; i < cy; i++)
+          for (j = 0; j < cx; j++)
+            SETPIXEL32(g_BS, x + j, y + i, g_width, colour);
+      }
+    }
+  }
+  else
+#endif
+  {
+    for (i = 0; i < cy; i++)
+      for (j = 0; j < cx; j++)
+        set_pixel(x + j, y + i, colour, opcode);
+  }
 }
 
 /******************************************************************************/
@@ -1527,10 +1597,10 @@ void ui_patblt(uint8 opcode, int x, int y, int cx, int cy,
 void ui_screenblt(uint8 opcode, int x, int y, int cx, int cy,
                   int srcx, int srcy)
 {
-  int i, j;
+  int i, j, pixel;
   uint8 * temp;
 
-  temp = (uint8*)xmalloc(cx * cy * (BPP + 1));
+  temp = (uint8*)xmalloc(cx * cy * 4);
   if (g_server_bpp == 8)
   {
     for (i = 0; i < cy; i++)
@@ -1544,10 +1614,16 @@ void ui_screenblt(uint8 opcode, int x, int y, int cx, int cy,
   {
     for (i = 0; i < cy; i++)
       for (j = 0; j < cx; j++)
-        *(((uint16*)temp) + (i * cx + j)) = get_pixel(srcx + j, srcy + i);
+      {
+        pixel = get_pixel(srcx + j, srcy + i);
+        SETPIXEL16(temp, j, i, cx, pixel);
+      }
     for (i = 0; i < cy; i++)
       for (j = 0; j < cx; j++)
-        set_pixel(x + j, y + i, *(((uint16*)temp) + (i * cx + j)), opcode);
+      {
+        pixel = GETPIXEL16(temp, j, i, cx);
+        set_pixel(x + j, y + i, pixel, opcode);
+      }
   }
   else if (g_server_bpp == 24)
   {
@@ -1566,38 +1642,76 @@ void ui_screenblt(uint8 opcode, int x, int y, int cx, int cy,
 void ui_memblt(uint8 opcode, int x, int y, int cx, int cy,
                HBITMAP src, int srcx, int srcy)
 {
-  int i, j;
+  int i, j, p;
   struct bitmap * the_bitmap;
 
   the_bitmap = (struct bitmap*)src;
   if (the_bitmap == NULL)
     return;
-  if (g_server_bpp == 8)
+#ifdef QT_OPTI
+  if (opcode == 0xc) /* optimize */
   {
-    for (i = 0; i < cy; i++)
-      for (j = 0; j < cx; j++)
-        if ((i + srcy) < the_bitmap->h && (j + srcx) < the_bitmap->w)
-          set_pixel(x + j, y + i,
-                    the_bitmap->data[(i + srcy) * the_bitmap->w + (j + srcx)],
-                    opcode);
+    if (WarpCoords(&x, &y, &cx, &cy, &srcx, &srcy))
+    {
+      if (g_server_bpp == 8)
+      {
+        for (i = 0; i < cy; i++)
+          for (j = 0; j < cx; j++)
+          {
+            p = GETPIXEL8(the_bitmap->data, srcx + j, srcy + i, the_bitmap->w);
+            SETPIXEL8(g_BS, x + j, y + i, g_width, p);
+          }
+      }
+      else if (g_server_bpp == 16)
+      {
+        for (i = 0; i < cy; i++)
+          for (j = 0; j < cx; j++)
+          {
+            p = GETPIXEL16(the_bitmap->data, srcx + j, srcy + i, the_bitmap->w);
+            SETPIXEL16(g_BS, x + j, y + i, g_width, p);
+          }
+      }
+      else if (g_server_bpp == 24)
+      {
+        for (i = 0; i < cy; i++)
+          for (j = 0; j < cx; j++)
+          {
+            p = GETPIXEL32(the_bitmap->data, srcx + j, srcy + i, the_bitmap->w);
+            SETPIXEL32(g_BS, x + j, y + i, g_width, p);
+          }
+      }
+    }
   }
-  else if (g_server_bpp == 16)
+  else
+#endif
   {
-    for (i = 0; i < cy; i++)
-      for (j = 0; j < cx; j++)
-        if ((i + srcy) < the_bitmap->h && (j + srcx) < the_bitmap->w)
-          set_pixel(x + j, y + i,
-                    *(((uint16*)the_bitmap->data) + ((i + srcy) * the_bitmap->w + (j + srcx))),
-                    opcode);
-  }
-  else if (g_server_bpp == 24)
-  {
-    for (i = 0; i < cy; i++)
-      for (j = 0; j < cx; j++)
-        if ((i + srcy) < the_bitmap->h && (j + srcx) < the_bitmap->w)
-          set_pixel(x + j, y + i,
-                    *(((uint32*)the_bitmap->data) + ((i + srcy) * the_bitmap->w + (j + srcx))),
-                    opcode);
+    if (g_server_bpp == 8)
+    {
+      for (i = 0; i < cy; i++)
+        for (j = 0; j < cx; j++)
+          if ((i + srcy) < the_bitmap->h && (j + srcx) < the_bitmap->w)
+            set_pixel(x + j, y + i,
+                      the_bitmap->data[(i + srcy) * the_bitmap->w + (j + srcx)],
+                      opcode);
+    }
+    else if (g_server_bpp == 16)
+    {
+      for (i = 0; i < cy; i++)
+        for (j = 0; j < cx; j++)
+          if ((i + srcy) < the_bitmap->h && (j + srcx) < the_bitmap->w)
+            set_pixel(x + j, y + i,
+                      *(((uint16*)the_bitmap->data) + ((i + srcy) * the_bitmap->w + (j + srcx))),
+                      opcode);
+    }
+    else if (g_server_bpp == 24)
+    {
+      for (i = 0; i < cy; i++)
+        for (j = 0; j < cx; j++)
+          if ((i + srcy) < the_bitmap->h && (j + srcx) < the_bitmap->w)
+            set_pixel(x + j, y + i,
+                      *(((uint32*)the_bitmap->data) + ((i + srcy) * the_bitmap->w + (j + srcx))),
+                      opcode);
+    }
   }
   redraw(x, y, cx, cy);
 }
@@ -1742,9 +1856,14 @@ void ui_draw_text(uint8 font, uint8 flags, int mixmode,
                   int boxy, int boxcx, int boxcy, int bgcolour,
                   int fgcolour, uint8 * text, uint8 length)
 {
-  FONTGLYPH *glyph;
+  FONTGLYPH * glyph;
   int i, j, xyoffset;
-  DATABLOB *entry;
+  DATABLOB * entry;
+
+  if (boxx + boxcx > g_width)
+    boxcx = g_width - boxx;
+  if (boxy + boxcy > g_height)
+    boxcy = g_height - boxy;
 
   if (boxcx > 1)
     fill_rect(boxx, boxy, boxcx, boxcy, bgcolour);
@@ -1810,8 +1929,7 @@ void ui_draw_text(uint8 font, uint8 flags, int mixmode,
 void ui_desktop_save(uint32 offset, int x, int y, int cx, int cy)
 {
   uint8 * data;
-  int i, j;
-  int Bpp;
+  int i, j, Bpp, pixel;
 
   Bpp = 4;
   switch (g_server_bpp)
@@ -1825,13 +1943,19 @@ void ui_desktop_save(uint32 offset, int x, int y, int cx, int cy)
   {
     for (i = 0; i < cy; i++)
       for (j = 0; j < cx; j++)
-        data[i * cx + j] = get_pixel(x + j, y + i);
+      {
+        pixel = get_pixel(x + j, y + i);
+        SETPIXEL8(data, j, i, cx, pixel);
+      }
   }
   else if (g_server_bpp == 16)
   {
     for (i = 0; i < cy; i++)
       for (j = 0; j < cx; j++)
-        *(((uint16*)data) + (i * cx + j)) = get_pixel(x + j, y + i);
+      {
+        pixel = get_pixel(x + j, y + i);
+        SETPIXEL16(data, j, i, cx, pixel);
+      }
   }
   else if (g_server_bpp == 24)
   {
@@ -1847,7 +1971,7 @@ void ui_desktop_save(uint32 offset, int x, int y, int cx, int cy)
 /******************************************************************************/
 void ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy)
 {
-  uint8* data;
+  uint8 * data;
   int i, j;
   int Bpp;
 
@@ -1882,7 +2006,7 @@ void ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy)
 }
 
 /*****************************************************************************/
-void* xrealloc(void *in_val, int size)
+void* xrealloc(void * in_val, int size)
 {
   if (size < 1)
     size = 1;
@@ -2033,8 +2157,8 @@ void hexdump(uint8 * p, uint32 len)
 void get_username_and_hostname(void)
 {
   char fullhostname[64];
-  char* p;
-  struct passwd* pw;
+  char * p;
+  struct passwd * pw;
 
   STRNCPY(g_username, "unknown", sizeof(g_username));
   STRNCPY(g_hostname, "unknown", sizeof(g_hostname));
@@ -2071,6 +2195,7 @@ void out_params(void)
   fprintf(stderr, "   -c: working directory\n");
   fprintf(stderr, "   -p: password (- to prompt)\n");
   fprintf(stderr, "   -n: client hostname\n");
+  fprintf(stderr, "   -f: full screen\n");
 
   fprintf(stderr, "\n");
 }
@@ -2092,19 +2217,22 @@ int parse_parameters(int in_argc, char ** in_argv)
     else if (strcmp(in_argv[i], "-g") == 0)
     {
       g_width = strtol(in_argv[i + 1], &p, 10);
-      if (g_width <= 0)
+      if (*p == 'x')
+        g_height = strtol(p + 1, &p, 10);
+      if (*p == '-')
+        g_client_width = strtol(p + 1, &p, 10);
+      else
       {
-        error("invalid geometry\n");
-        return 0;
+        g_client_width = g_width;
+        g_client_height = g_height;
       }
       if (*p == 'x')
-        g_height = strtol(p + 1, NULL, 10);
-      if (g_height <= 0)
-      {
-        error("invalid geometry\n");
-        return 0;
-      }
+        g_client_height = strtol(p + 1, NULL, 10);
       g_width = (g_width + 3) & ~3;
+      g_height = (g_height + 3) & ~3;
+      g_client_width = (g_client_width + 3) & ~3;
+      g_client_height = (g_client_height + 3) & ~3;
+      //printf("%d %d %d %d\n", g_width, g_height, g_client_width, g_client_height);
     }
     else if (strcmp(in_argv[i], "-4") == 0)
       g_use_rdp5 = 0;
@@ -2113,7 +2241,7 @@ int parse_parameters(int in_argc, char ** in_argv)
     else if (strcmp(in_argv[i], "-a") == 0)
     {
       g_server_bpp = strtol(in_argv[i + 1], &p, 10);
-      if (g_server_bpp != 8 && g_server_bpp != 15 &&
+      if (g_server_bpp != 8 &&
           g_server_bpp != 16 && g_server_bpp != 24)
       {
         error("invalid bpp\n");
@@ -2148,6 +2276,10 @@ int parse_parameters(int in_argc, char ** in_argv)
     {
       STRNCPY(g_hostname, in_argv[i + 1], sizeof(g_hostname));
     }
+    else if (strcmp(in_argv[i], "-f") == 0)
+    {
+      g_fullscreen = 1;
+    }
   }
   return 1;
 }
@@ -2174,7 +2306,7 @@ int param_connect(void)
     memset(g_CM, 0, sizeof(struct QColorMap));
     g_CM->NumColors = 256;
     g_MW = new QMyMainWindow();
-    g_MW->resize(g_width, g_height);
+    g_MW->resize(g_client_width, g_client_height);
     g_MW->show();
     g_SV->addChild(g_MW);
     g_MW->setMouseTracking(true);
@@ -2188,8 +2320,8 @@ int param_connect(void)
       Desktop = g_App->desktop();
       dw = Desktop->width();
       dh = Desktop->height();
-      if (dw == g_width && dh == g_height)
-        g_MW->resize(g_width - 4, g_height - 4);
+      if (dw == g_client_width && dh == g_client_height)
+        g_MW->resize(g_client_width - 4, g_client_height - 4);
       g_SV->showFullScreen();
     }
     g_MW->setCursor((int)10); /* Qt::BlankCursor */
@@ -2204,7 +2336,8 @@ int main(int argc, char ** argv)
 #ifdef SHARP
   g_App = new QPEApplication(argc, argv);
 #else
-  g_App = new QApplication(argc, argv, QApplication::GuiServer);
+  //g_App = new QApplication(argc, argv, QApplication::GuiServer);
+  g_App = new QApplication(argc, argv);
 #endif
   g_SV = new QMyScrollView();
   g_App->setMainWidget(g_SV);
