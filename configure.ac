@@ -247,6 +247,15 @@ AC_DEFUN([UTILS_FUNC_DIRFD],
 
 UTILS_FUNC_DIRFD
 
+
+#
+# IPv6
+#
+AC_ARG_WITH(ipv6,
+    [  --with-ipv6             enable IPv6-support],
+    [ AC_DEFINE(IPv6) ])
+
+
 #
 # debugging
 #
