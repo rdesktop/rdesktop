@@ -277,8 +277,8 @@ ui_create_window_obj(int xpos, int ypos, int width, int height, int valuemask)
 	screen = DefaultScreenOfDisplay(display);
 
 	wnd = XCreateWindow(display, RootWindowOfScreen(screen), xpos,
-				ypos, width, height, 0, CopyFromParent,
-				InputOutput, CopyFromParent, valuemask, &attribs);
+			    ypos, width, height, 0, CopyFromParent,
+			    InputOutput, CopyFromParent, valuemask, &attribs);
 
 
 	XStoreName(display, wnd, title);
@@ -311,7 +311,8 @@ ui_create_window_obj(int xpos, int ypos, int width, int height, int valuemask)
 	XMapWindow(display, wnd);
 
 	/* Wait for VisibilityNotify Event */
-	for (;;) {
+	for (;;)
+	{
 		XNextEvent(display, &xevent);
 		if (xevent.type == VisibilityNotify)
 			break;
@@ -397,7 +398,7 @@ ui_create_window()
 
 
 	input_mask = KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask |
-			VisibilityChangeMask | FocusChangeMask;
+		VisibilityChangeMask | FocusChangeMask;
 
 	if (grab_keyboard)
 		input_mask |= EnterWindowMask | LeaveWindowMask;
@@ -408,7 +409,8 @@ ui_create_window()
 		input_mask |= ExposureMask;
 
 	if (fullscreen)
-		ui_create_window_obj(0, 0, width, height, CWBackingStore | CWBackPixel | CWOverrideRedirect);
+		ui_create_window_obj(0, 0, width, height,
+				     CWBackingStore | CWBackPixel | CWOverrideRedirect);
 	else
 		ui_create_window_obj(0, 0, width, height, CWBackingStore | CWBackPixel);
 
@@ -462,15 +464,16 @@ toggle_fullscreen()
 		XFreePixmap(display, backstore);
 	XFreeGC(display, gc);
 	XDestroyWindow(display, wnd);
-	if (fullscreen) {
+	if (fullscreen)
+	{
 		attribs.override_redirect = True;
 		ui_create_window_obj(0, 0, dpy_width, dpy_height,
-									CWBackingStore | CWBackPixel | CWOverrideRedirect);
+				     CWBackingStore | CWBackPixel | CWOverrideRedirect);
 	}
-	else {
+	else
+	{
 		attribs.override_redirect = False;
-		ui_create_window_obj(0, 0, width, height,
-									CWBackingStore | CWBackPixel);
+		ui_create_window_obj(0, 0, width, height, CWBackingStore | CWBackPixel);
 	}
 	ui_set_cursor(cache_get_cursor(0));
 	ui_move_pointer(width / 2, height / 2);
@@ -540,7 +543,7 @@ xwin_process_events()
 				}
 
 				/* FIXME needs alt modifier */
-				if (keysym == XK_Break) /* toggle full screen */
+				if (keysym == XK_Break)	/* toggle full screen */
 				{
 					toggle_fullscreen();
 					break;
