@@ -70,6 +70,10 @@ higher-level drawing operations.
 Disable encryption.  This option is only needed (and will only work) if you
 have a French version of NT TSE.
 .TP
+.BR "-E"
+Disable encryption from client to server.  This sends an encrypted login-packet,
+but everything after this is unencrypted. This also includes interactive logins.
+.TP
 .BR "-m"
 Do not send mouse motion events.  This saves bandwidth, although some Windows
 applications may rely on receiving mouse motion.
@@ -87,6 +91,24 @@ Window title.
 .TP
 .BR "-D"
 Hide window manager decorations, by using MWM hints. 
+.TP
+.BR "-a <bpp>"
+Use bpp as colourdepth for the connection. Supported are 8, 15, 16 and 24.
+More than 8 bpp are only supported when connecting to Windows XP or
+Windows Server 2003.
+.TP
+.BR "-0"
+Attach to the console of the Server.
+.TP
+.BR "-4"
+Use RDP version 4.
+.TP
+.BR "-5"
+Use RDP version 5 (default).
+.TP
+.BR "-r redirection"
+Enable/disable specific resource-redirections. Please have a look at
+redirection.txt for more informations.
 
 .PP
 .SH LINKS
