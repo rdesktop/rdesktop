@@ -241,6 +241,24 @@ close_inputmethod(void)
 	}
 }
 
+BOOL
+ui_init()
+{
+	Screen *screen;
+	display = XOpenDisplay(NULL);
+	if (display == NULL)
+	{
+		error("Failed to open display\n");
+		return False;
+	}
+	if(fullscreen)
+	{
+		screen = DefaultScreenOfDisplay(display);
+		width = WidthOfScreen(screen);
+		height = HeightOfScreen(screen);
+	}
+	return True;
+}
 
 BOOL
 ui_create_window(char *title)
@@ -253,14 +271,6 @@ ui_create_window(char *title)
 	Screen *screen;
 	uint16 test;
 	int i;
-
-	display = XOpenDisplay(NULL);
-
-	if (display == NULL)
-	{
-		error("Failed to open display\n");
-		return False;
-	}
 
 	x_socket = ConnectionNumber(display);
 	screen = DefaultScreenOfDisplay(display);

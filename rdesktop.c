@@ -229,6 +229,8 @@ main(int argc, char *argv[])
 	strncat(title, server, sizeof(title) - sizeof("rdesktop - "));
 
 	xkeymap_init1();
+	if(!ui_init())
+	  return 1;
 
 	if (!rdp_connect(server, flags, domain, password, shell, directory))
 		return 1;
