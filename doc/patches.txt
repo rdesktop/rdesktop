@@ -180,17 +180,17 @@ Functionality for 3) is currently missing.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/rdesktop-1.0.0-19-7-1-mmihalik-3.diff
 Description:
-TDB
+Defines DO_GLYPH() etc. 
 Status:
-Not yet examined. 
+As far as I understand, this patch is applied. 
 
 
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/rdesktop-1.0.0-mmihalik-1.diff
 Description:
-TDB
+Misc drawing changes. 
 Status:
-Not yet examined. 
+As far as I understand, this patch is applied. 
 
 
 URL:
