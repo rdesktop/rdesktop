@@ -741,6 +741,8 @@ sec_process_srv_info(STREAM s)
 {
 	in_uint16_le(s, server_rdp_version);
 	DEBUG_RDP5(("Server RDP version is %d\n", server_rdp_version));
+	if (1 == server_rdp_version)
+		use_rdp5 = 0;
 }
 
 
