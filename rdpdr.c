@@ -824,12 +824,14 @@ rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
 							{
 								prev->next = iorq->next;
 								xfree(iorq);
+								iorq = prev->next;
 							}
 							else
 							{
 								// Even if NULL
 								g_iorequest = iorq->next;
 								xfree(iorq);
+								iorq = NULL;
 							}
 						}
 					}
@@ -877,12 +879,14 @@ rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
 							{
 								prev->next = iorq->next;
 								xfree(iorq);
+								iorq = prev->next;
 							}
 							else
 							{
 								// Even if NULL
 								g_iorequest = iorq->next;
 								xfree(iorq);
+								iorq = NULL;
 							}
 						}
 					}
@@ -891,7 +895,8 @@ rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
 
 		}
 		prev = iorq;
-		iorq = iorq->next;
+		if (iorq)
+			iorq = iorq->next;
 	}
 
 }
