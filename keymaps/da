@@ -39,7 +39,6 @@ dead_acute 0x0d
 dead_grave 0x0d shift
 bar 0x0d altgr
 brokenbar 0x0d shift altgr
-at 0x10 altgr
 Greek_OMEGA 0x10 shift altgr
 lstroke 0x11 altgr
 Lstroke 0x11 shift altgr
@@ -79,7 +78,6 @@ ENG 0x22 shift altgr
 hstroke 0x23 altgr
 Hstroke 0x23 shift altgr
 kra 0x25 altgr
-ampersand 0x25 shift altgr
 lstroke 0x26 altgr
 Lstroke 0x26 shift altgr
 ae 0x27
