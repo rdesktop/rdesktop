@@ -1,6 +1,6 @@
 This file documents some of all patches for rdesktop, floating around
 the net, and how they are related to the current (CVS) version of
-rdesktop. 
+rdesktop. Things left to do are marked with TDB (To Be Done). 
 
 
 URL:
@@ -61,11 +61,11 @@ http://bibl4.oru.se/projects/rdesktop/patch19/patches/fasttext2+nobackpixmap.pat
 Description:
 (From http://mail.rdesktop.org/archive/2001/msg00218.html):
 
-* Added --no-backpixmap option to disable the ugly double drawing in
+1) Added --no-backpixmap option to disable the ugly double drawing in
 xwin.c (I have a very robust backing storage in my X, so I don't need
 it ;)
 
-* More optimizations to text draw (previous fast-text patch was
+2) More optimizations to text draw (previous fast-text patch was
 included in 192-3-6-2). In text drawing with solid background the
 glyphs are drawn with stippled fill instead of XCopyPlane (runs faster
 on my S3Trio64 with XFree 3.3.6, please test it on other
@@ -74,10 +74,12 @@ with this change, it seems to use all transparent background text
 draws, but with a old PC Magazine Winbench (3.1) doing the scroll text
 test the speed gain is significative.
 
-* My Previous patch to disable backing storage in fullscreen
+3) My Previous patch to disable backing storage in fullscreen
 
 Status:
-Not yet examined. 
+1) is not relevant any more, since rdesktop only uses backing store if
+the Xserver does not provide backing store. 
+Need to examine if 2) and 3) are still useful. TDB. 
 
 
 URL:
