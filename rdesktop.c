@@ -690,6 +690,12 @@ main(int argc, char *argv[])
 		STRNCPY(g_hostname, fullhostname, sizeof(g_hostname));
 	}
 
+	if ((flags & RDP_COMPRESSION) && (g_server_bpp > 8))
+	{
+		warning("rdp compression not supported for bpp > 8, compression disabled\n");
+		flags ^= RDP_COMPRESSION;
+	}
+
 	if (prompt_password && read_password(password, sizeof(password)))
 		flags |= RDP_LOGON_AUTO;
 
