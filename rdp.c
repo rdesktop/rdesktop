@@ -20,7 +20,7 @@
 
 #include "rdesktop.h"
 
-extern uint16 mcs_userid;
+extern uint16 g_mcs_userid;
 extern char username[16];
 extern BOOL bitmap_compression;
 extern BOOL orders;
@@ -100,7 +100,7 @@ rdp_send_data(STREAM s, uint8 data_pdu_type)
 
 	out_uint16_le(s, length);
 	out_uint16_le(s, (RDP_PDU_DATA | 0x10));
-	out_uint16_le(s, (mcs_userid + 1001));
+	out_uint16_le(s, (g_mcs_userid + 1001));
 
 	out_uint32_le(s, rdp_shareid);
 	out_uint8(s, 0);	/* pad */
@@ -552,7 +552,7 @@ rdp_send_confirm_active(void)
 
 	out_uint16_le(s, 2 + 14 + caplen + sizeof(RDP_SOURCE));
 	out_uint16_le(s, (RDP_PDU_CONFIRM_ACTIVE | 0x10));	/* Version 1 */
-	out_uint16_le(s, (mcs_userid + 1001));
+	out_uint16_le(s, (g_mcs_userid + 1001));
 
 	out_uint32_le(s, rdp_shareid);
 	out_uint16_le(s, 0x3ea);	/* userid */

@@ -20,7 +20,7 @@
 
 #include "rdesktop.h"
 
-uint16 mcs_userid;
+uint16 g_mcs_userid;
 extern BOOL use_rdp5;
 
 /* Parse an ASN.1 BER header */
@@ -177,7 +177,7 @@ mcs_recv_connect_response(STREAM mcs_data)
 	/*
 	   if (length > mcs_data->size)
 	   {
-	   error("MCS data length %d, expected %d\n", length, 
+	   error("MCS data length %d, expected %d\n", length,
 	   mcs_data->size);
 	   length = mcs_data->size;
 	   }
@@ -259,7 +259,7 @@ mcs_send_cjrq(uint16 chanid)
 	s = iso_init(5);
 
 	out_uint8(s, (MCS_CJRQ << 2));
-	out_uint16_be(s, mcs_userid);
+	out_uint16_be(s, g_mcs_userid);
 	out_uint16_be(s, chanid);
 
 	s_mark_end(s);
@@ -321,7 +321,7 @@ mcs_send(STREAM s)
 	length |= 0x8000;
 
 	out_uint8(s, (MCS_SDRQ << 2));
-	out_uint16_be(s, mcs_userid);
+	out_uint16_be(s, g_mcs_userid);
 	out_uint16_be(s, MCS_GLOBAL_CHANNEL);
 	out_uint8(s, 0x70);	/* flags */
 	out_uint16_be(s, length);
@@ -375,10 +375,10 @@ mcs_connect(char *server, STREAM mcs_data, char *username)
 	mcs_send_edrq();
 
 	mcs_send_aurq();
-	if (!mcs_recv_aucf(&mcs_userid))
+	if (!mcs_recv_aucf(&g_mcs_userid))
 		goto error;
 
-	mcs_send_cjrq(mcs_userid + 1001);
+	mcs_send_cjrq(g_mcs_userid + 1001);
 	if (!mcs_recv_cjcf())
 		goto error;
 
@@ -388,7 +388,7 @@ mcs_connect(char *server, STREAM mcs_data, char *username)
 
 	if (use_rdp5)
 	{
-		/* Note: If we send this cjrq after telling the server we support RDP4 only, 
+		/* Note: If we send this cjrq after telling the server we support RDP4 only,
 		   the server won't respond with a cjcf and we will hang. */
 		mcs_send_cjrq(MCS_GLOBAL_CHANNEL + 1);	/* hack - clipboard */
 		if (!mcs_recv_cjcf())
