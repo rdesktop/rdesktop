@@ -190,6 +190,11 @@ wave_out_play(void)
 		for (i = 0; (i < ((WAVEOUTBUF / 4) * (3 - g_samplewidth))) && (out->p < out->end);
 		     i++)
 		{
+			/* On a stereo-channel we must make sure that left and right
+			   does not get mixed up, so we need to expand the sample-
+			   data with channels in mind: 1234 -> 12123434
+			   If we have a mono-channel, we can expand the data by simply
+			   doubling the sample-data: 1234 -> 11223344 */
 			if (g_channels == 2)
 				offset = ((i * 2) - (i & 1)) * g_samplewidth;
 			else
@@ -197,8 +202,8 @@ wave_out_play(void)
 
 			memcpy(&outbuf[offset], out->p, g_samplewidth);
 			memcpy(&outbuf[g_channels * g_samplewidth + offset], out->p, g_samplewidth);
-			out->p += 2;
 
+			out->p += g_samplewidth;
 			len += 2 * g_samplewidth;
 		}
 	}
