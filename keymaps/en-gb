@@ -76,7 +76,6 @@ ENG 0x22 shift altgr
 hstroke 0x23 altgr
 Hstroke 0x23 shift altgr
 kra 0x25 altgr
-ampersand 0x25 shift altgr
 lstroke 0x26 altgr
 Lstroke 0x26 shift altgr
 semicolon 0x27
@@ -101,9 +100,7 @@ greater 0x2d shift altgr
 cent 0x2e altgr
 copyright 0x2e shift altgr
 leftdoublequotemark 0x2f altgr
-grave 0x2f shift altgr
 rightdoublequotemark 0x30 altgr
-apostrophe 0x30 shift altgr
 mu 0x32 altgr
 masculine 0x32 shift altgr
 comma 0x33
