@@ -52,6 +52,33 @@ cliprdr_print_server_formats(void)
 }
 
 static void
+cliprdr_send_format_announce(void) 
+{
+	STREAM s;
+	int number_of_formats = 1;
+	s = sec_init(encryption ? SEC_ENCRYPT : 0, number_of_formats*36+12+4+4);
+	out_uint32_le(s, number_of_formats*36+12);
+	out_uint32_le(s, 0x13);
+	out_uint16_le(s, 2);
+	out_uint16_le(s, 0);
+	out_uint32_le(s, number_of_formats*36);
+	
+	//	out_uint32_le(s, 0xd); // FIXME: This is a rather bogus unicode text description..
+	//	rdp_out_unistr(s, "", 16);
+	//	out_uint8s(s, 32);
+
+
+	out_uint32_le(s, 1); // FIXME: This is a rather bogus text description..
+	out_uint8s(s, 32);
+
+	out_uint32_le(s, 0); 
+
+	s_mark_end(s);
+	sec_send_to_channel(s, encryption ? SEC_ENCRYPT : 0, 1005); // FIXME: Don't hardcode channel!
+}
+
+
+static void
 cliprdr_send_empty_datapacket(void)
 {
 	STREAM out;
@@ -172,6 +199,7 @@ void
 cliprdr_handle_SelectionClear(void)
 {
 	DEBUG_CLIPBOARD(("cliprdr_handle_SelectionClear\n"));
+	cliprdr_send_format_announce();
 }
 
 void print_X_error(int res) 
@@ -394,31 +422,6 @@ cliprdr_select_X_clipboards(void)
 
 	
 
-static void
-cliprdr_send_format_announce(void) 
-{
-	STREAM s;
-	int number_of_formats = 1;
-	s = sec_init(encryption ? SEC_ENCRYPT : 0, number_of_formats*36+12+4+4);
-	out_uint32_le(s, number_of_formats*36+12);
-	out_uint32_le(s, 0x13);
-	out_uint16_le(s, 2);
-	out_uint16_le(s, 0);
-	out_uint32_le(s, number_of_formats*36);
-	
-	//	out_uint32_le(s, 0xd); // FIXME: This is a rather bogus unicode text description..
-	//	rdp_out_unistr(s, "", 16);
-	//	out_uint8s(s, 32);
-
-
-	out_uint32_le(s, 1); // FIXME: This is a rather bogus text description..
-	out_uint8s(s, 32);
-
-	out_uint32_le(s, 0); 
-
-	s_mark_end(s);
-	sec_send_to_channel(s, encryption ? SEC_ENCRYPT : 0, 1005); // FIXME: Don't hardcode channel!
-}
 
 
 static void 
