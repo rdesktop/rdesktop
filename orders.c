@@ -22,7 +22,7 @@
 #include "orders.h"
 
 extern uint8 *next_packet;
-static RDP_ORDER_STATE order_state;
+static RDP_ORDER_STATE g_order_state;
 extern BOOL use_rdp5;
 
 /* Read field indicating which parameters are present */
@@ -835,7 +835,7 @@ process_secondary_order(STREAM s)
 void
 process_orders(STREAM s, uint16 num_orders)
 {
-	RDP_ORDER_STATE *os = &order_state;
+	RDP_ORDER_STATE *os = &g_order_state;
 	uint32 present;
 	uint8 order_flags;
 	int size, processed = 0;
@@ -957,6 +957,6 @@ process_orders(STREAM s, uint16 num_orders)
 void
 reset_order_state(void)
 {
-	memset(&order_state, 0, sizeof(order_state));
-	order_state.order_type = RDP_ORDER_PATBLT;
+	memset(&g_order_state, 0, sizeof(g_order_state));
+	g_order_state.order_type = RDP_ORDER_PATBLT;
 }
