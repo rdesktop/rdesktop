@@ -327,9 +327,9 @@ Applied.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/vincent_8bpp.patch
 Description:
-TBD
+Support a 8bpp display (256 colours). 
 Status:
-Not yet examined. 
+Applied. Can probably be enhanced, though. 
 
 
 URL:
