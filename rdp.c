@@ -659,7 +659,7 @@ rdp_process_bitmap_caps(STREAM s)
 	if (g_width != width || g_height != height)
 	{
 		warning("screen size changed from %dx%d to %dx%d\n", g_width, g_height,
-				width, height);
+			width, height);
 		g_width = width;
 		g_height = height;
 		ui_resize_window();
@@ -1088,7 +1088,7 @@ rdp_loop(BOOL * deactivated, uint32 * ext_disc_reason)
 	BOOL cont = True;
 	STREAM s;
 
-   while (cont)
+	while (cont)
 	{
 		s = rdp_recv(&type);
 		if (s == NULL)
