@@ -724,6 +724,12 @@ process_bitmap_updates(STREAM s)
 		DEBUG(("BITMAP_UPDATE(l=%d,t=%d,r=%d,b=%d,w=%d,h=%d,Bpp=%d,cmp=%d)\n",
 		       left, top, right, bottom, width, height, Bpp, compress));
 
+		/* Server may limit bpp - this is how we find out */
+		if (g_server_bpp != bpp) {
+			warning("Server limited colour depth to %d bits\n", bpp);
+			g_server_bpp = bpp;
+		}
+
 		if (!compress)
 		{
 			int y;
