@@ -6,9 +6,11 @@ This directory is provided to include information and examples
 on how to do a new uiport.  Not all ports of rdesktop can
 be included.
 
-files and descriptions
+see xxxreadme.txt for info on a blank empty uiport
 
-qtrdesktopreadme.txt - notes
-qtrdesktopbuild.sh - script to build
-qtwin.cpp - ui lib
-qtwin.h - header
+see qtreadme.txt for info on the Qt/X11 uiport
+
+see qtereadme.txt for info on the Qt embeded uiport
+
+see svgareadme.txt for info in the svga uiport
+
