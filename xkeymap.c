@@ -450,27 +450,10 @@ get_ksname(uint32 keysym)
 	return ksname;
 }
 
-void
-save_remote_modifiers()
+static BOOL
+is_modifier(uint8 scancode)
 {
-	saved_remote_modifier_state = remote_modifier_state;
-}
-
-void
-restore_remote_modifiers(uint32 ev_time)
-{
-	key_translation dummy;
-
-	dummy.scancode = 0;
-	dummy.modifiers = saved_remote_modifier_state;
-	ensure_remote_modifiers(ev_time, dummy);
-}
-
-void
-ensure_remote_modifiers(uint32 ev_time, key_translation tr)
-{
-	/* If this key is a modifier, do nothing */
-	switch (tr.scancode)
+	switch (scancode)
 	{
 		case SCANCODE_CHAR_LSHIFT:
 		case SCANCODE_CHAR_RSHIFT:
@@ -481,10 +464,41 @@ ensure_remote_modifiers(uint32 ev_time, key_translation tr)
 		case SCANCODE_CHAR_LWIN:
 		case SCANCODE_CHAR_RWIN:
 		case SCANCODE_CHAR_NUMLOCK:
-			return;
+			return True;
 		default:
 			break;
 	}
+	return False;
+}
+
+void
+save_remote_modifiers(uint8 scancode)
+{
+	if (is_modifier(scancode))
+		return;
+
+	saved_remote_modifier_state = remote_modifier_state;
+}
+
+void
+restore_remote_modifiers(uint32 ev_time, uint8 scancode)
+{
+	key_translation dummy;
+
+	if (is_modifier(scancode))
+		return;
+
+	dummy.scancode = 0;
+	dummy.modifiers = saved_remote_modifier_state;
+	ensure_remote_modifiers(ev_time, dummy);
+}
+
+void
+ensure_remote_modifiers(uint32 ev_time, key_translation tr)
+{
+	/* If this key is a modifier, do nothing */
+	if (is_modifier(tr.scancode))
+		return;
 
 	/* NumLock */
 	if (MASK_HAS_BITS(tr.modifiers, MapNumLockMask)

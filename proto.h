@@ -116,8 +116,8 @@ BOOL handle_special_keys(uint32 keysym, unsigned int state, uint32 ev_time, BOOL
 key_translation xkeymap_translate_key(uint32 keysym, unsigned int keycode, unsigned int state);
 uint16 xkeymap_translate_button(unsigned int button);
 char *get_ksname(uint32 keysym);
-void save_remote_modifiers(void);
-void restore_remote_modifiers(uint32 ev_time);
+void save_remote_modifiers(uint8 scancode);
+void restore_remote_modifiers(uint32 ev_time, uint8 scancode);
 void ensure_remote_modifiers(uint32 ev_time, key_translation tr);
 void reset_modifier_keys(unsigned int state);
 void rdp_send_scancode(uint32 time, uint16 flags, uint8 scancode);

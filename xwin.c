@@ -833,10 +833,10 @@ xwin_process_events(void)
 				if (tr.scancode == 0)
 					break;
 
-				save_remote_modifiers();
+				save_remote_modifiers(tr.scancode);
 				ensure_remote_modifiers(ev_time, tr);
 				rdp_send_scancode(ev_time, RDP_KEYPRESS, tr.scancode);
-				restore_remote_modifiers(ev_time);
+				restore_remote_modifiers(ev_time, tr.scancode);
 
 				break;
 
