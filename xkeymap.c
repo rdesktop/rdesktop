@@ -427,7 +427,7 @@ ensure_remote_modifiers(uint32 ev_time, key_translation tr)
 
 
 void
-reset_modifier_keys()
+reset_modifier_keys(void)
 {
 	/* reset keys */
 	uint32 ev_time;

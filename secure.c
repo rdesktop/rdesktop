@@ -363,7 +363,7 @@ sec_send(STREAM s, uint32 flags)
 
 /* Transfer the client random to the server */
 static void
-sec_establish_key()
+sec_establish_key(void)
 {
 	uint32 length = SEC_MODULUS_SIZE + SEC_PADDING_SIZE;
 	uint32 flags = SEC_CLIENT_RANDOM;
@@ -584,7 +584,7 @@ sec_process_mcs_data(STREAM s)
 
 /* Receive secure transport packet */
 STREAM
-sec_recv()
+sec_recv(void)
 {
 	uint32 sec_flags;
 	STREAM s;
@@ -636,7 +636,7 @@ sec_connect(char *server)
 
 /* Disconnect a connection */
 void
-sec_disconnect()
+sec_disconnect(void)
 {
 	mcs_disconnect();
 }

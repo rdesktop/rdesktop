@@ -910,7 +910,7 @@ process_orders(STREAM s)
 
 /* Reset order state */
 void
-reset_order_state()
+reset_order_state(void)
 {
 	memset(&order_state, 0, sizeof(order_state));
 	order_state.order_type = RDP_ORDER_PATBLT;

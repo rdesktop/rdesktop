@@ -184,7 +184,7 @@ mcs_recv_connect_response(STREAM mcs_data)
 
 /* Send an EDrq message (ASN.1 PER) */
 static void
-mcs_send_edrq()
+mcs_send_edrq(void)
 {
 	STREAM s;
 
@@ -200,7 +200,7 @@ mcs_send_edrq()
 
 /* Send an AUrq message (ASN.1 PER) */
 static void
-mcs_send_aurq()
+mcs_send_aurq(void)
 {
 	STREAM s;
 
@@ -261,7 +261,7 @@ mcs_send_cjrq(uint16 chanid)
 
 /* Expect a CJcf message (ASN.1 PER) */
 static BOOL
-mcs_recv_cjcf()
+mcs_recv_cjcf(void)
 {
 	uint8 opcode, result;
 	STREAM s;
@@ -324,7 +324,7 @@ mcs_send(STREAM s)
 
 /* Receive an MCS transport data packet */
 STREAM
-mcs_recv()
+mcs_recv(void)
 {
 	uint8 opcode, appid, length;
 	STREAM s;
@@ -386,7 +386,7 @@ mcs_connect(char *server, STREAM mcs_data)
 
 /* Disconnect from the MCS layer */
 void
-mcs_disconnect()
+mcs_disconnect(void)
 {
 	iso_disconnect();
 }

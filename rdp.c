@@ -196,7 +196,7 @@ rdp_send_control(uint16 action)
 
 /* Send a synchronisation PDU */
 static void
-rdp_send_synchronise()
+rdp_send_synchronise(void)
 {
 	STREAM s;
 
@@ -434,7 +434,7 @@ rdp_out_unknown_caps(STREAM s)
 
 /* Send a confirm active PDU */
 static void
-rdp_send_confirm_active()
+rdp_send_confirm_active(void)
 {
 	STREAM s;
 	uint16 caplen =
@@ -681,7 +681,7 @@ process_data_pdu(STREAM s)
 
 /* Process incoming packets */
 void
-rdp_main_loop()
+rdp_main_loop(void)
 {
 	uint8 type;
 	STREAM s;
@@ -721,7 +721,7 @@ rdp_connect(char *server, uint32 flags, char *domain, char *password,
 
 /* Disconnect from the RDP layer */
 void
-rdp_disconnect()
+rdp_disconnect(void)
 {
 	sec_disconnect();
 }

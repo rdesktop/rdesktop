@@ -217,7 +217,7 @@ get_key_state(int keysym)
 }
 
 BOOL
-ui_init()
+ui_init(void)
 {
 	XPixmapFormatValues *pfm;
 	uint16 test;
@@ -293,7 +293,7 @@ ui_init()
 }
 
 void
-ui_deinit()
+ui_deinit(void)
 {
 	if (IM != NULL)
 		XCloseIM(IM);
@@ -307,7 +307,7 @@ ui_deinit()
 }
 
 BOOL
-ui_create_window()
+ui_create_window(void)
 {
 	XSetWindowAttributes attribs;
 	XClassHint *classhints;
@@ -381,7 +381,7 @@ ui_create_window()
 }
 
 void
-ui_destroy_window()
+ui_destroy_window(void)
 {
 	if (IC != NULL)
 		XDestroyIC(IC);
@@ -390,7 +390,7 @@ ui_destroy_window()
 }
 
 void
-xwin_toggle_fullscreen()
+xwin_toggle_fullscreen(void)
 {
 	Pixmap contents = 0;
 
@@ -416,7 +416,7 @@ xwin_toggle_fullscreen()
 
 /* Process all events in Xlib queue */
 static void
-xwin_process_events()
+xwin_process_events(void)
 {
 	XEvent xevent;
 	KeySym keysym;
@@ -852,7 +852,7 @@ ui_set_clip(int x, int y, int cx, int cy)
 }
 
 void
-ui_reset_clip()
+ui_reset_clip(void)
 {
 	XRectangle rect;
 
@@ -864,7 +864,7 @@ ui_reset_clip()
 }
 
 void
-ui_bell()
+ui_bell(void)
 {
 	XBell(display, 0);
 }

@@ -147,7 +147,7 @@ tcp_connect(char *server)
 
 /* Disconnect on the TCP layer */
 void
-tcp_disconnect()
+tcp_disconnect(void)
 {
 	close(sock);
 }

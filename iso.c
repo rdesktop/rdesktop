@@ -115,7 +115,7 @@ iso_send(STREAM s)
 
 /* Receive ISO transport data packet */
 STREAM
-iso_recv()
+iso_recv(void)
 {
 	STREAM s;
 	uint8 code;
@@ -159,7 +159,7 @@ iso_connect(char *server)
 
 /* Disconnect from the ISO layer */
 void
-iso_disconnect()
+iso_disconnect(void)
 {
 	iso_send_msg(ISO_PDU_DR);
 	tcp_disconnect();
