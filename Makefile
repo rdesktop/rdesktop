@@ -35,7 +35,7 @@ install: installbin installkeymaps installman
 
 installbin: rdesktop
 	mkdir -p $(DESTDIR)/$(BINDIR)
-	cp rdesktop $(DESTDIR)/$(BINDIR)
+	install rdesktop $(DESTDIR)/$(BINDIR)
 	strip $(DESTDIR)/$(BINDIR)/rdesktop
 	chmod 755 $(DESTDIR)/$(BINDIR)/rdesktop
 
