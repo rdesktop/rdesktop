@@ -36,6 +36,7 @@ extern char keymapname[16];
 extern int keylayout;
 extern BOOL enable_compose;
 
+static BOOL keymap_loaded;
 static key_translation keymap[KEYMAP_SIZE];
 static int min_keycode;
 static uint16 remote_modifier_state = 0;
@@ -206,7 +207,10 @@ xkeymap_init(void)
 	unsigned int max_keycode;
 
 	if (strcmp(keymapname, "none"))
-		xkeymap_read(keymapname);
+	{
+		if (xkeymap_read(keymapname))
+			keymap_loaded = True;
+	}
 
 	XDisplayKeycodes(display, &min_keycode, (int *) &max_keycode);
 }
@@ -324,7 +328,8 @@ xkeymap_translate_key(uint32 keysym, unsigned int keycode, unsigned int state)
 		return tr;
 	}
 
-	DEBUG_KBD(("No translation for (keysym 0x%lx, %s)\n", keysym, get_ksname(keysym)));
+	if (keymap_loaded)
+		error("No translation for (keysym 0x%lx, %s)\n", keysym, get_ksname(keysym));
 
 	/* not in keymap, try to interpret the raw scancode */
 	if ((keycode >= min_keycode) && (keycode <= 0x60))
