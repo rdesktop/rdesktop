@@ -51,7 +51,7 @@ add_to_keymap(char *keyname, uint8 scancode, uint16 modifiers, char *mapname)
 	keysym = XStringToKeysym(keyname);
 	if (keysym == NoSymbol)
 	{
-		warning("Bad keysym %s in keymap %s\n", keyname, mapname);
+		DEBUG_KBD(("Bad keysym \"%s\" in keymap %s (ignoring)\n", keyname, mapname)); 
 		return;
 	}
 
