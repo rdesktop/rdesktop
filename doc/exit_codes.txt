@@ -1,0 +1,11 @@
+The exit codes of rdesktop are:
+
+0	 Everything went well. Specifically, the server sent a
+         RDP_PDU_DEACTIVATE which seems to be a signal that the
+         session has ended normally.
+
+1	 Usage error, i.e. wrong commandline option, invalid hostname
+	 or similar.
+
+2	 End of connection by other reason than received
+	 RDP_PDU_DEACTIVATE. 

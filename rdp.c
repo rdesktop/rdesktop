@@ -849,7 +849,7 @@ process_data_pdu(STREAM s)
 }
 
 /* Process incoming packets */
-void
+BOOL
 rdp_main_loop(void)
 {
 	uint8 type;
@@ -864,6 +864,8 @@ rdp_main_loop(void)
 				break;
 
 			case RDP_PDU_DEACTIVATE:
+				DEBUG(("RDP_PDU_DEACTIVATE\n"));
+				return True;
 				break;
 
 			case RDP_PDU_DATA:
@@ -877,6 +879,7 @@ rdp_main_loop(void)
 				unimpl("PDU %d\n", type);
 		}
 	}
+	return False;
 }
 
 /* Establish a connection up to the RDP layer */

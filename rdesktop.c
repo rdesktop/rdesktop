@@ -149,7 +149,7 @@ main(int argc, char *argv[])
 	char password[16];
 	char shell[128];
 	char directory[32];
-	BOOL prompt_password;
+	BOOL prompt_password, rdp_retval = False;
 	struct passwd *pw;
 	uint32 flags;
 	char *p;
@@ -366,6 +366,7 @@ main(int argc, char *argv[])
 
 #ifdef RDP2VNC
 	rdp2vnc_connect(server, flags, domain, password, shell, directory);
+	return 0;
 #else
 
 	if (!ui_init())
@@ -384,7 +385,7 @@ main(int argc, char *argv[])
 
 	if (ui_create_window())
 	{
-		rdp_main_loop();
+		rdp_retval = rdp_main_loop();
 		ui_destroy_window();
 	}
 
@@ -392,9 +393,13 @@ main(int argc, char *argv[])
 	rdp_disconnect();
 	ui_deinit();
 
+	if (True == rdp_retval) 
+		return 0;
+	else
+		return 2;
+
 #endif
 
-	return 0;
 }
 
 #ifdef EGD_SOCKET

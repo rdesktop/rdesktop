@@ -75,7 +75,7 @@ void process_colour_pointer_pdu(STREAM s);
 void process_cached_pointer_pdu(STREAM s);
 void process_bitmap_updates(STREAM s);
 void process_palette(STREAM s);
-void rdp_main_loop(void);
+BOOL rdp_main_loop(void);
 BOOL rdp_connect(char *server, uint32 flags, char *domain, char *password, char *command,
 		 char *directory);
 void rdp_disconnect(void);
