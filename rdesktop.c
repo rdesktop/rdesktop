@@ -40,6 +40,7 @@
 #endif
 
 #ifdef EGD_SOCKET
+#include <sys/types.h>
 #include <sys/socket.h>		/* socket connect */
 #include <sys/un.h>		/* sockaddr_un */
 #endif
