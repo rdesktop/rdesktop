@@ -45,7 +45,9 @@ en-us, en-gb, de, fr, sv, etc.  The default is en-us (a US keyboard).
 
 .TP
 .BR "-g <geometry>"
-Desktop geometry (WxH). 
+Desktop geometry (WxH). If geometry is the special word "workarea", the geometry
+will be fetched from the extended window manager hints property _NET_WORKAREA, from
+the root window. 
 .TP
 .BR "-f"
 Enable fullscreen mode.  This overrides the window manager and causes the
@@ -70,6 +72,9 @@ to grab all keyboard input when it is in focus.
 .TP
 .BR "-T <title>"
 Window title.
+.TP
+.BR "-D"
+Hide window manager decorations, by using MWM hints. 
 
 .PP
 .SH LINKS
