@@ -103,7 +103,7 @@ PixelColour;
 /* colour maps */
 BOOL owncolmap = False;
 static Colormap xcolmap;
-static uint32 *colmap;
+static uint32 *colmap = NULL;
 
 #define TRANSLATE(col)		( g_server_bpp != 8 ? translate_colour(col) : owncolmap ? col : translate_colour(colmap[col]) )
 #define SET_FOREGROUND(col)	XSetForeground(display, gc, TRANSLATE(col));
@@ -600,7 +600,8 @@ ui_init(void)
 	if (ownbackstore)
 	{
 		backstore =
-			XCreatePixmap(display, RootWindowOfScreen(screen), g_width, g_height, depth);
+			XCreatePixmap(display, RootWindowOfScreen(screen), g_width, g_height,
+				      depth);
 
 		/* clear to prevent rubbish being exposed at startup */
 		XSetForeground(display, gc, BlackPixelOfScreen(screen));
@@ -1347,7 +1348,12 @@ void
 ui_set_colourmap(HCOLOURMAP map)
 {
 	if (!owncolmap)
+	{
+		if (colmap)
+			xfree(colmap);
+
 		colmap = (uint32 *) map;
+	}
 	else
 		XSetWindowColormap(display, wnd, (Colormap) map);
 }
