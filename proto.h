@@ -14,8 +14,28 @@ void cache_put_desktop(uint32 offset, int cx, int cy, int scanline, int bytes_pe
 		       uint8 * data);
 HCURSOR cache_get_cursor(uint16 cache_idx);
 void cache_put_cursor(uint16 cache_idx, HCURSOR cursor);
+/* channels.c */
+uint16 get_num_channels(void);
+void register_channel(char *name, uint32 flags, void (*callback) (STREAM, uint16));
+rdp5_channel *find_channel_by_channelno(uint16 channelno);
+rdp5_channel *find_channel_by_num(uint16 num);
+void dummy_callback(STREAM s, uint16 channelno);
+void channels_init(void);
+/* cliprdr.c */
+void cliprdr_ipc_format_announce(unsigned char *data, uint16 length);
+void cliprdr_handle_SelectionClear(void);
+void cliprdr_handle_server_data(uint32 length, uint32 flags, STREAM s);
+void cliprdr_handle_server_data_request(STREAM s);
+void cliprdr_callback(STREAM s, uint16 channelno);
+void cliprdr_ipc_primary_lost(unsigned char *data, uint16 length);
+void cliprdr_init(void);
 /* ewmhints.c */
 int get_current_workarea(uint32 * x, uint32 * y, uint32 * width, uint32 * height);
+/* ipc.c */
+void ipc_register_ipcnotify(uint16 messagetype, void (*notifycallback) (unsigned char *, uint16));
+void ipc_deregister_ipcnotify(uint16 messagetype);
+void ipc_init(void);
+void ipc_send_message(uint16 messagetype, unsigned char *data, uint16 length);
 /* iso.c */
 STREAM iso_init(int length);
 void iso_send(STREAM s);
@@ -26,12 +46,13 @@ void iso_disconnect(void);
 void licence_process(STREAM s);
 /* mcs.c */
 STREAM mcs_init(int length);
+void mcs_send_to_channel(STREAM s, uint16 channel);
 void mcs_send(STREAM s);
 STREAM mcs_recv(uint16 * channel);
 BOOL mcs_connect(char *server, STREAM mcs_data, char *username);
 void mcs_disconnect(void);
 /* orders.c */
-void process_orders(STREAM s, uint16 count);
+void process_orders(STREAM s, uint16 num_orders);
 void reset_order_state(void);
 /* rdesktop.c */
 int main(int argc, char *argv[]);
@@ -49,10 +70,10 @@ void save_licence(unsigned char *data, int length);
 void rdp_out_unistr(STREAM s, char *string, int len);
 void rdp_send_input(uint32 time, uint16 message_type, uint16 device_flags, uint16 param1,
 		    uint16 param2);
-void process_bitmap_updates(STREAM s);
+void process_null_system_pointer_pdu(STREAM s);
 void process_colour_pointer_pdu(STREAM s);
 void process_cached_pointer_pdu(STREAM s);
-void process_null_system_pointer_pdu(STREAM s);
+void process_bitmap_updates(STREAM s);
 void process_palette(STREAM s);
 void rdp_main_loop(void);
 BOOL rdp_connect(char *server, uint32 flags, char *domain, char *password, char *command,
@@ -60,20 +81,21 @@ BOOL rdp_connect(char *server, uint32 flags, char *domain, char *password, char 
 void rdp_disconnect(void);
 /* rdp5.c */
 void rdp5_process(STREAM s, BOOL encryption, BOOL shortform);
-void rdp5_process_channel(STREAM s, uint16 channel);
+void rdp5_process_channel(STREAM s, uint16 channelno);
 /* secure.c */
 void sec_hash_48(uint8 * out, uint8 * in, uint8 * salt1, uint8 * salt2, uint8 salt);
 void sec_hash_16(uint8 * out, uint8 * in, uint8 * salt1, uint8 * salt2);
 void buf_out_uint32(uint8 * buffer, uint32 value);
 void sec_sign(uint8 * signature, int siglen, uint8 * session_key, int keylen, uint8 * data,
 	      int datalen);
+void sec_decrypt(uint8 * data, int length);
 STREAM sec_init(uint32 flags, int maxlen);
+void sec_send_to_channel(STREAM s, uint32 flags, uint16 channel);
 void sec_send(STREAM s, uint32 flags);
+void sec_process_mcs_data(STREAM s);
 STREAM sec_recv(void);
 BOOL sec_connect(char *server, char *username);
 void sec_disconnect(void);
-void sec_process_mcs_data(STREAM s);
-void sec_decrypt(uint8 * data, int length);
 /* tcp.c */
 STREAM tcp_init(uint32 maxlen);
 void tcp_send(STREAM s);
