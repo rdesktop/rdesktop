@@ -842,7 +842,7 @@ void process_orders(STREAM s)
 	}
 
 	if (s->p != next_packet)
-		WARN("%d bytes remaining\n", next_packet - s->p);
+		WARN("%d bytes remaining\n", (int)(next_packet - s->p));
 }
 
 /* Reset order state */

@@ -18,7 +18,7 @@ means running X in 8-bit mode. Keyboard mapping may also be problematic.
 The -l option will disable licence negotiation, which is probably
 what you want during testing.
 
-Tested platforms include Linux, Solaris and IRIX, but it is should be
+Tested platforms include Linux, Solaris and OSF1, but it is should be
 fairly straight-forward to port to other platforms and even windowing
 systems.
 

@@ -23,7 +23,7 @@
 #include <sys/time.h>	/* timeval */
 #include <netdb.h>	/* gethostbyname */
 #include <netinet/tcp.h> /* TCP_NODELAY */
-#include <arpa/inet.h>	/* inet_aton */
+#include <arpa/inet.h>	/* sockaddr_in inet_addr */
 #include <errno.h>	/* errno */
 #include "rdesktop.h"
 
@@ -120,7 +120,7 @@ BOOL tcp_connect(char *server)
 	{
 		memcpy(&servaddr.sin_addr, nslookup->h_addr, sizeof(servaddr.sin_addr));
 	}
-	else if (!inet_aton(server, &servaddr.sin_addr))
+	else if (!(servaddr.sin_addr.s_addr = inet_addr(server)))
 	{
 		STATUS("%s: unable to resolve host\n", server);
 		return False;
@@ -142,7 +142,7 @@ BOOL tcp_connect(char *server)
 		return False;
 	}
 
-	setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &true, sizeof(true));
+	setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (void *)&true, sizeof(true));
 
 	in.size = 4096;
 	in.data = xmalloc(in.size);

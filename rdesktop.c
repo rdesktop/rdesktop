@@ -21,7 +21,6 @@
 #include <stdlib.h>	/* malloc realloc free */
 #include <unistd.h>	/* read close getuid getgid getpid getppid gethostname */
 #include <fcntl.h>	/* open */
-#include <getopt.h>	/* getopt */
 #include <pwd.h>	/* getpwuid */
 #include <sys/stat.h>	/* stat */
 #include <sys/time.h>	/* gettimeofday */
@@ -139,7 +138,9 @@ int main(int argc, char *argv[])
 
 	STATUS("Connection successful.\n");
 
-	snprintf(title, sizeof(title), "rdesktop - %s", server);
+	strcpy(title, "rdesktop - ");
+	strncat(title, server, sizeof(title));
+
 	if (ui_create_window(title))
 	{
 		rdp_main_loop();

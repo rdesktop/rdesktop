@@ -526,7 +526,7 @@ void ui_desktop_save(uint32 offset, int x, int y, int cx, int cy)
 	int scanline;
 
 	scanline = (cx + 3) & ~3;
-	STATUS("XGetImage(%p,%x,%d,%d,%d,%d,%x,%d)\n", display, wnd, x, y,
+	DEBUG("XGetImage(%p,%x,%d,%d,%d,%d,%x,%d)\n", display, wnd, x, y,
 		cx, cy, 0xffffffff, ZPixmap);
 	image = XGetImage(display, wnd, x, y, cx, cy, 0xffffffff, ZPixmap);
 	cache_put_desktop(offset, scanline*cy, image->data);
