@@ -4,8 +4,8 @@
 /* Fake a few X11 calls */
 
 #define XK_MISCELLANY
-#include <rfb.h>
-#include <keysym.h>
+#include <rfb/rfb.h>
+#include <rfb/keysym.h>
 
 #define NoSymbol 0L
 #define ShiftMask               (1<<0)

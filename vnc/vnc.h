@@ -2,7 +2,7 @@
 #define VNC_H
 
 #define BOOL rfb_BOOL
-#include "rfb.h"
+#include <rfb/rfb.h>
 #undef BOOL
 
 typedef unsigned int vncPixel;
