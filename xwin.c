@@ -589,8 +589,8 @@ ui_create_bitmap(int width, int height, uint8 * data)
 
 	tdata = (owncolmap ? data : translate_image(width, height, data));
 	bitmap = XCreatePixmap(display, wnd, width, height, depth);
-	image = XCreateImage(display, visual, depth, ZPixmap, 0, tdata, width,
-			     height, 8, 0);
+	image = XCreateImage(display, visual, depth, ZPixmap, 0, (char *)tdata,
+			     width, height, 8, 0);
 
 	XPutImage(display, bitmap, gc, image, 0, 0, 0, 0, width, height);
 
@@ -608,8 +608,8 @@ ui_paint_bitmap(int x, int y, int cx, int cy, int width, int height,
 	uint8 *tdata;
 
 	tdata = (owncolmap ? data : translate_image(width, height, data));
-	image = XCreateImage(display, visual, depth, ZPixmap, 0, tdata, width,
-			     height, 8, 0);
+	image = XCreateImage(display, visual, depth, ZPixmap, 0, (char *)tdata,
+			     width, height, 8, 0);
 
 	if (ownbackstore)
 	{
@@ -645,8 +645,8 @@ ui_create_glyph(int width, int height, uint8 * data)
 	bitmap = XCreatePixmap(display, wnd, width, height, 1);
 	gc = XCreateGC(display, bitmap, 0, NULL);
 
-	image = XCreateImage(display, visual, 1, ZPixmap, 0, data, width,
-			     height, 8, scanline);
+	image = XCreateImage(display, visual, 1, ZPixmap, 0, (char *)data,
+			     width, height, 8, scanline);
 	image->byte_order = MSBFirst;
 	image->bitmap_bit_order = MSBFirst;
 	XInitImage(image);
@@ -1157,8 +1157,8 @@ ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy)
 	if (data == NULL)
 		return;
 
-	image = XCreateImage(display, visual, depth, ZPixmap, 0, data, cx, cy,
-			     BitmapPad(display), cx * bpp / 8);
+	image = XCreateImage(display, visual, depth, ZPixmap, 0, (char *)data,
+			     cx, cy, BitmapPad(display), cx * bpp / 8);
 
 	if (ownbackstore)
 	{

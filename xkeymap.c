@@ -38,7 +38,7 @@ extern int keylayout;
 extern BOOL enable_compose;
 
 static key_translation keymap[KEYMAP_SIZE];
-static unsigned int min_keycode;
+static int min_keycode;
 static uint16 remote_modifier_state = 0;
 
 static void
@@ -220,7 +220,7 @@ void
 xkeymap_init2(void)
 {
 	unsigned int max_keycode;
-	XDisplayKeycodes(display, &min_keycode, &max_keycode);
+	XDisplayKeycodes(display, &min_keycode, (int *)&max_keycode);
 }
 
 
