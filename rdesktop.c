@@ -1,4 +1,4 @@
-/*
+/* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    Entrypoint and utility functions
    Copyright (C) Matthew Chapman 1999-2003
@@ -59,6 +59,7 @@ BOOL desktop_save = True;
 BOOL fullscreen = False;
 BOOL grab_keyboard = True;
 BOOL hide_decorations = False;
+BOOL use_rdp5 = False;
 extern BOOL owncolmap;
 
 #ifdef RDP2VNC
@@ -99,6 +100,7 @@ usage(char *program)
 	fprintf(stderr, "   -T: window title\n");
 	fprintf(stderr, "   -D: hide window manager decorations\n");
 	fprintf(stderr, "   -a: server bpp\n");
+	fprintf(stderr, "   -5: Use RDP5 (EXPERIMENTAL!)\n");
 }
 
 static BOOL
@@ -165,7 +167,7 @@ main(int argc, char *argv[])
 #define VNCOPT
 #endif
 
-	while ((c = getopt(argc, argv, VNCOPT "u:d:s:S:c:p:n:k:g:a:fbemCKT:Dh?")) != -1)
+	while ((c = getopt(argc, argv, VNCOPT "u:d:s:S:c:p:n:k:g:a:fbemCKT:Dh?54")) != -1)
 	{
 		switch (c)
 		{
@@ -301,6 +303,9 @@ main(int argc, char *argv[])
 				}
 				break;
 
+			case '5':
+				use_rdp5 = True;
+				break;
 			case 'h':
 			case '?':
 			default:
