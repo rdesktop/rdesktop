@@ -78,9 +78,9 @@ cliprdr_set_selection_timestamp(void)
 static void
 cliprdr_send_format_announce(void) 
 {
-	DEBUG_CLIPBOARD(("Sending (empty) format announce\n"));
-
 	STREAM s;
+
+	DEBUG_CLIPBOARD(("Sending (empty) format announce\n"));
 	int number_of_formats = 1;
 	s = sec_init(encryption ? SEC_ENCRYPT : 0, number_of_formats*36+12+4+4);
 	out_uint32_le(s, number_of_formats*36+12);
@@ -247,11 +247,6 @@ cliprdr_handle_SelectionNotify(XSelectionEvent *event)
 			return;
 		}
 
-		DEBUG_CLIPBOARD(("Received %d bytes of clipboard data from X, there is %d remaining\n",
-				 nitems, bytes_left));
-		DEBUG_CLIPBOARD(("type_return is %s\n", 
-				 XGetAtomName(display, type_return)));
-
 		datap = data;
 
 		if (nitems+1 <= MAX_CLIPRDR_STANDALONE_DATASIZE) 
@@ -311,7 +306,7 @@ cliprdr_handle_SelectionNotify(XSelectionEvent *event)
 				datap+=MAX_CLIPRDR_CONTINUATION_DATASIZE;
 				
 			}
-			DEBUG_CLIPBOARD(("Sending %d bytes of data\n", 
+			DEBUG_CLIPBOARD(("Sending %u bytes of data\n", 
 					 12+bytes_left_to_transfer));
 			out =  sec_init(encryption ? SEC_ENCRYPT : 0, 
 					12+bytes_left_to_transfer);
@@ -373,7 +368,6 @@ cliprdr_handle_SelectionRequest(XSelectionRequestEvent *xevent)
 {
 
 	XSelectionEvent xev;
-	unsigned char	*data;
 	unsigned long	nitems, bytes_left;
 	Atom type_return;	
 	uint32 *wanted_formatcode;
@@ -417,7 +411,7 @@ cliprdr_handle_SelectionRequest(XSelectionRequestEvent *xevent)
 				   &format, 
 				   &nitems,
 				   &bytes_left,
-				   &wanted_formatcode);
+				   (unsigned char **)&wanted_formatcode);
 		DEBUG_CLIPBOARD(("Got wanted formatcode %d, format is %d\n", *wanted_formatcode, format));
 		cliprdr_request_clipboard_data(*wanted_formatcode);
 	}
@@ -442,6 +436,7 @@ cliprdr_handle_SelectionRequest(XSelectionRequestEvent *xevent)
 		return;
 	} else if (timestamp_atom == xevent->target) 
 	{
+		DEBUG_CLIPBOARD(("Sending TIMESTAMP\n"));
 		XChangeProperty(display, 
 				xevent->requestor,
 				xevent->property,
@@ -605,6 +600,9 @@ void cliprdr_handle_server_data(uint32 length, uint32 flags, STREAM s)
 				 bytes_left_to_read));
 		memcpy(datap, s->p, bytes_left_to_read);
 	}
+	DEBUG_CLIPBOARD(("Setting target atom (%s) on %d\n",
+			 XGetAtomName(display, selection_event.property),
+			 selection_event.requestor));
 	XChangeProperty(display, 
 			selection_event.requestor,
 			selection_event.property,
@@ -644,6 +642,7 @@ void cliprdr_handle_server_data_request(STREAM s)
 
 	if (rdesktop_is_selection_owner)
 	{
+		DEBUG_CLIPBOARD(("XChangeProperty, rdesktop_is_selection_owner\n"));
 		XChangeProperty(display, wnd, rdesktop_clipboard_target_atom,
 				XA_INTEGER, 32, PropModeReplace,
 				(unsigned char *)&wanted_formatcode, 1);
