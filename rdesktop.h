@@ -21,7 +21,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <X11/Xlib.h>
 
 #define VERSION "1.1.0"
 
@@ -31,7 +30,7 @@
 #define DEBUG(args)
 #endif
 
-#if defined(WITH_DEBUG_KBD)
+#ifdef WITH_DEBUG_KBD
 #define DEBUG_KBD(args) printf args;
 #else
 #define DEBUG_KBD(args)

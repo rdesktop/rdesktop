@@ -139,12 +139,14 @@ static void
 licence_process_demand(STREAM s)
 {
 	uint8 null_data[SEC_MODULUS_SIZE];
-	uint8 hwid[LICENCE_HWID_SIZE];
-	uint8 signature[LICENCE_SIGNATURE_SIZE];
 	uint8 *server_random;
+#ifdef SAVE_LICENCE
+	uint8 signature[LICENCE_SIGNATURE_SIZE];
+	uint8 hwid[LICENCE_HWID_SIZE];
 	uint8 *licence_data;
 	int licence_size;
 	RC4_KEY crypt_key;
+#endif
 
 	/* Retrieve the server random from the incoming packet */
 	in_uint8p(s, server_random, SEC_RANDOM_SIZE);

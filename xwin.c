@@ -22,10 +22,7 @@
 #include <X11/Xutil.h>
 #include <time.h>
 #include <errno.h>
-#define XK_MISCELLANY
-#include <X11/keysymdef.h>
 #include "rdesktop.h"
-#include "scancodes.h"
 
 extern int width;
 extern int height;

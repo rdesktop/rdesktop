@@ -19,13 +19,11 @@
 */
 
 #include <X11/Xlib.h>
-#include <X11/keysym.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#define XK_MISCELLANY
+#include <X11/keysymdef.h>
 #include <ctype.h>
 #include <limits.h>
-#include <assert.h>
+#include <time.h>
 #include "rdesktop.h"
 #include "scancodes.h"
 
@@ -206,7 +204,6 @@ void
 xkeymap_init(void)
 {
 	unsigned int max_keycode;
-	int i;
 
 	if (strcmp(keymapname, "none"))
 		xkeymap_read(keymapname);
@@ -217,7 +214,7 @@ xkeymap_init(void)
 /* Handles, for example, multi-scancode keypresses (which is not
    possible via keymap-files) */
 BOOL
-handle_special_keys(KeySym keysym, uint32 ev_time, BOOL pressed)
+handle_special_keys(uint32 keysym, uint32 ev_time, BOOL pressed)
 {
 	switch (keysym)
 	{
@@ -253,7 +250,7 @@ handle_special_keys(KeySym keysym, uint32 ev_time, BOOL pressed)
 
 
 key_translation
-xkeymap_translate_key(KeySym keysym, unsigned int keycode, unsigned int state)
+xkeymap_translate_key(uint32 keysym, unsigned int keycode, unsigned int state)
 {
 	key_translation tr = { 0, 0 };
 
@@ -278,13 +275,12 @@ xkeymap_translate_key(KeySym keysym, unsigned int keycode, unsigned int state)
 
 	if (tr.scancode != 0)
 	{
-		DEBUG_KBD
-			(("Found key translation, scancode=0x%x, modifiers=0x%x\n",
+		DEBUG_KBD(("Found key translation, scancode=0x%x, modifiers=0x%x\n",
 			  tr.scancode, tr.modifiers));
 		return tr;
 	}
 
-	fprintf(stderr, "No translation for (keysym 0x%lx, %s)\n", keysym, get_ksname(keysym));
+	DEBUG_KBD(("No translation for (keysym 0x%lx, %s)\n", keysym, get_ksname(keysym)));
 
 	/* not in keymap, try to interpret the raw scancode */
 	if ((keycode >= min_keycode) && (keycode <= 0x60))
@@ -299,11 +295,11 @@ xkeymap_translate_key(KeySym keysym, unsigned int keycode, unsigned int state)
 			tr.modifiers = MapLeftShiftMask;
 		}
 
-		fprintf(stderr, "Sending guessed scancode 0x%x\n", tr.scancode);
+		DEBUG_KBD(("Sending guessed scancode 0x%x\n", tr.scancode));
 	}
 	else
 	{
-		fprintf(stderr, "No good guess for keycode 0x%x found\n", keycode);
+		DEBUG_KBD(("No good guess for keycode 0x%x found\n", keycode));
 	}
 
 	return tr;
@@ -330,7 +326,7 @@ xkeymap_translate_button(unsigned int button)
 }
 
 char *
-get_ksname(KeySym keysym)
+get_ksname(uint32 keysym)
 {
 	char *ksname = NULL;
 
@@ -385,12 +381,8 @@ ensure_remote_modifiers(uint32 ev_time, key_translation tr)
 				/* Left shift is down */
 				rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_LSHIFT);
 			else
-			{
-				assert(MASK_HAS_BITS(remote_modifier_state, MapRightShiftMask));
 				/* Right shift is down */
 				rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_RSHIFT);
-			}
-
 		}
 	}
 
