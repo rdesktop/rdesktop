@@ -542,7 +542,6 @@ process_polyline(STREAM s, POLYLINE_ORDER *os, uint32 present, BOOL delta)
 static void
 process_text2(STREAM s, TEXT2_ORDER *os, uint32 present, BOOL delta)
 {
-	DATABLOB *entry;
 	int i;
 
 	if (present & 0x000001)
@@ -611,24 +610,6 @@ process_text2(STREAM s, TEXT2_ORDER *os, uint32 present, BOOL delta)
 		DEBUG(("%02x ", os->text[i]));
 
 	DEBUG(("\n"));
-
-	/* Process special cache strings */
-	if ((os->length >= 2) && (os->text[0] == 0xfe))
-	{
-		entry = cache_get_text(os->text[1]);
-
-		if (entry == NULL)
-			return;
-
-		memcpy(os->text, entry->data, entry->size);
-		os->length = entry->size;
-	}
-	else if ((os->length >= 3) && (os->text[os->length - 3] == 0xff))
-	{
-		os->length -= 3;
-		cache_put_text(os->text[os->length + 1], os->text,
-			       os->length);
-	}
 
 	ui_draw_text(os->font, os->flags, os->mixmode, os->x, os->y,
 		     os->clipleft, os->cliptop,

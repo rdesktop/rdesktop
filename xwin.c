@@ -863,15 +863,47 @@ ui_draw_glyph(int mixmode,
 	XSetFillStyle(display, gc, FillSolid);
 }
 
+#define DO_GLYPH(ttext,idx) \
+{\
+  glyph = cache_get_font (font, ttext[idx]);\
+  if (!(flags & TEXT2_IMPLICIT_X))\
+    {\
+      xyoffset = ttext[++idx];\
+      if ((xyoffset & 0x80))\
+	{\
+	  if (flags & TEXT2_VERTICAL) \
+	    y += ttext[++idx] | (ttext[++idx] << 8);\
+	  else\
+	    x += ttext[++idx] | (ttext[++idx] << 8);\
+	}\
+      else\
+	{\
+	  if (flags & TEXT2_VERTICAL) \
+	    y += xyoffset;\
+	  else\
+	    x += xyoffset;\
+	}\
+    }\
+  if (glyph != NULL)\
+    {\
+      ui_draw_glyph (mixmode, x + (short) glyph->offset,\
+		     y + (short) glyph->baseline,\
+		     glyph->width, glyph->height,\
+		     glyph->pixmap, 0, 0, bgcolour, fgcolour);\
+      if (flags & TEXT2_IMPLICIT_X)\
+	x += glyph->width;\
+    }\
+}
+
 void
 ui_draw_text(uint8 font, uint8 flags, int mixmode, int x, int y,
-	     int clipx, int clipy, int clipcx, int clipcy,
-	     int boxx, int boxy, int boxcx, int boxcy,
-	     int bgcolour, int fgcolour, uint8 *text, uint8 length)
+	     int clipx, int clipy, int clipcx, int clipcy, int boxx,
+	     int boxy, int boxcx, int boxcy, int bgcolour,
+	     int fgcolour, uint8 * text, uint8 length)
 {
 	FONTGLYPH *glyph;
-	short offset;
-	int i;
+	int i, j, xyoffset;
+	DATABLOB *entry;
 
 	SET_FOREGROUND(bgcolour);
 
@@ -885,46 +917,52 @@ ui_draw_text(uint8 font, uint8 flags, int mixmode, int x, int y,
 	}
 
 	/* Paint text, character by character */
-	for (i = 0; i < length; i++)
-	{
-		glyph = cache_get_font(font, text[i]);
-
-		if (!(flags & TEXT2_IMPLICIT_X))
-		{
-			offset = text[++i];
-			if (offset & 0x80)
-			{
-				if (offset == 0x80)
-				{
-					/* next two bytes, little-endian */
-					offset = text[++i];
-					offset |= text[++i] << 8;
-				}
-				else
-				{
-					offset = (offset & 0x7f) << 8; 
-					offset |= text[++i];
-				}
+	for (i = 0; i < length;) {
+		switch (text[i]) {
+		case 0xff:
+			if (i + 2 < length)
+				cache_put_text(text[i + 1], text, text[i + 2]);
+			else {
+				error("this shouldn't be happening\n");
+				break;
 			}
+			/* this will move pointer from start to first character after FF command */
+			length -= i + 3;
+			text = &(text[i + 3]);
+			i = 0;
+			break;
 
-			if (flags & TEXT2_VERTICAL)
-				y += offset;
-			else
-				x += offset;
-		}
+		case 0xfe:
+			entry = cache_get_text(text[i + 1]);
+			if (entry != NULL) {
+				if ((((uint8 *) (entry->data))[1] == 0)
+				    && (!(flags & TEXT2_IMPLICIT_X))) {
+					if (flags & TEXT2_VERTICAL)      
+						y += text[i + 2];
+					else
+					    	x += text[i + 2];
+				}
+				if (i + 2 < length)
+					i += 3;
+				else
+				    	i += 2;
+				length -= i;   
+				/* this will move pointer from start to first character after FE command */
+				text = &(text[i]);
+				i = 0;
+				for (j = 0; j < entry->size; j++)
+					DO_GLYPH(((uint8 *) (entry->data)), j);
+			}
+			break;
 
-		if (glyph != NULL)
-		{
-			ui_draw_glyph(mixmode, x + (short) glyph->offset,
-				      y + (short) glyph->baseline,
-				      glyph->width, glyph->height,
-				      glyph->pixmap, 0, 0,
-				      bgcolour, fgcolour);
-
-			if (flags & TEXT2_IMPLICIT_X)
-				x += glyph->width;
+		default:
+			DO_GLYPH(text, i);
+			i++;
+			break;
 		}
 	}
+
+
 }
 
 void
