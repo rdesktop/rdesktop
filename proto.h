@@ -21,6 +21,7 @@ void channel_send(STREAM s, VCHANNEL * channel);
 void channel_process(STREAM s, uint16 mcs_channel);
 /* cliprdr.c */
 void cliprdr_send_text_format_announce(void);
+void cliprdr_send_blah_format_announce(void);
 void cliprdr_send_native_format_announce(uint8 * data, uint32 length);
 void cliprdr_send_data_request(uint32 format);
 void cliprdr_send_data(uint8 * data, uint32 length);
@@ -45,6 +46,7 @@ void mcs_disconnect(void);
 /* orders.c */
 void process_orders(STREAM s, uint16 num_orders);
 void reset_order_state(void);
+/* printer.c */
 /* rdesktop.c */
 int main(int argc, char *argv[]);
 void generate_random(uint8 * random);
@@ -57,6 +59,8 @@ void unimpl(char *format, ...);
 void hexdump(unsigned char *p, int len);
 int load_licence(unsigned char **data);
 void save_licence(unsigned char *data, int length);
+/* rdp5.c */
+void rdp5_process(STREAM s, BOOL encryption);
 /* rdp.c */
 void rdp_out_unistr(STREAM s, char *string, int len);
 void rdp_send_input(uint32 time, uint16 message_type, uint16 device_flags, uint16 param1,
@@ -70,8 +74,6 @@ BOOL rdp_main_loop(void);
 BOOL rdp_connect(char *server, uint32 flags, char *domain, char *password, char *command,
 		 char *directory);
 void rdp_disconnect(void);
-/* rdp5.c */
-void rdp5_process(STREAM s, BOOL encryption);
 /* rdpdr.c */
 void rdpdr_send_connect(void);
 void rdpdr_send_name(void);
@@ -79,6 +81,8 @@ void rdpdr_send_available(void);
 void rdpdr_send_completion(uint32 device, uint32 id, uint32 status, uint32 result, uint8 * buffer,
 			   uint32 length);
 BOOL rdpdr_init(void);
+/* rdpsnd.c */
+BOOL rdpsnd_init(void);
 /* secure.c */
 void sec_hash_48(uint8 * out, uint8 * in, uint8 * salt1, uint8 * salt2, uint8 salt);
 void sec_hash_16(uint8 * out, uint8 * in, uint8 * salt1, uint8 * salt2);
@@ -93,6 +97,7 @@ void sec_process_mcs_data(STREAM s);
 STREAM sec_recv(void);
 BOOL sec_connect(char *server, char *username);
 void sec_disconnect(void);
+/* serial.c */
 /* tcp.c */
 STREAM tcp_init(uint32 maxlen);
 void tcp_send(STREAM s);
@@ -111,6 +116,8 @@ BOOL handle_special_keys(uint32 keysym, unsigned int state, uint32 ev_time, BOOL
 key_translation xkeymap_translate_key(uint32 keysym, unsigned int keycode, unsigned int state);
 uint16 xkeymap_translate_button(unsigned int button);
 char *get_ksname(uint32 keysym);
+void save_remote_modifiers(void);
+void restore_remote_modifiers(uint32 ev_time);
 void ensure_remote_modifiers(uint32 ev_time, key_translation tr);
 void reset_modifier_keys(unsigned int state);
 void rdp_send_scancode(uint32 time, uint16 flags, uint8 scancode);
