@@ -1,3 +1,0 @@
-The files in this directory are taken from OpenSSL (http://www.openssl.org/),
-with minor changes.  They provide the basic cryptographic algorithms
-needed by rdesktop if the OpenSSL library if not available.

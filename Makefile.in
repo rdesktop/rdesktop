@@ -1,34 +1,40 @@
 #
 # rdesktop: A Remote Desktop Protocol client
-# Makefile
+# Makefile.in
 # Copyright (C) Matthew Chapman 1999-2004
 #
 
-# Configuration defaults
+prefix      = @prefix@
+exec_prefix = @exec_prefix@
+bindir      = @bindir@
+mandir      = @mandir@
+datadir     = @datadir@
 
-prefix      = /usr/local
-exec_prefix = $(prefix)
-bindir      = $(exec_prefix)/bin
-mandir      = $(prefix)/man
-datadir     = $(prefix)/share/rdesktop
-
-VERSION     = 1.3.1
+VERSION     = @PACKAGE_VERSION@
 KEYMAP_PATH = $(datadir)/keymaps/
+
+CC          = @CC@
+INSTALL     = @INSTALL@
+CFLAGS      = @CFLAGS@ @X_CFLAGS@ @DEFS@ -DKEYMAP_PATH=\"$(KEYMAP_PATH)\"
+LDFLAGS     = @LDFLAGS@ @LIBS@ @X_LIBS@ @X_EXTRA_LIBS@
+
+TARGETS     = rdesktop @RDP2VNCTARGET@
+VNCINC      = @VNCINC@
+LDVNC       = @LDVNC@
+VNCLINK     = @VNCLINK@
+SOUNDOBJ    = @SOUNDOBJ@
 
 RDPOBJ   = tcp.o iso.o mcs.o secure.o licence.o rdp.o orders.o bitmap.o cache.o rdp5.o channels.o rdpdr.o serial.o printer.o disk.o parallel.o printercache.o mppc.o pstcache.o
 X11OBJ   = rdesktop.o xwin.o xkeymap.o ewmhints.o xclip.o cliprdr.o
 VNCOBJ   = vnc/rdp2vnc.o vnc/vnc.o vnc/xkeymap.o vnc/x11stubs.o
-CRYPTOBJ = crypto/rc4_enc.o crypto/rc4_skey.o crypto/md5_dgst.o crypto/sha1dgst.o crypto/bn_exp.o crypto/bn_mul.o crypto/bn_div.o crypto/bn_sqr.o crypto/bn_add.o crypto/bn_shift.o crypto/bn_asm.o crypto/bn_ctx.o crypto/bn_lib.o
-
-include Makeconf  # configure-generated
 
 all: $(TARGETS)
 
-rdesktop: $(X11OBJ) $(SOUNDOBJ) $(RDPOBJ) $(CRYPTOBJ)
-	$(CC) $(CFLAGS) -o rdesktop $(X11OBJ) $(SOUNDOBJ) $(RDPOBJ) $(CRYPTOBJ) $(LDFLAGS) -lX11
+rdesktop: $(X11OBJ) $(SOUNDOBJ) $(RDPOBJ)
+	$(CC) $(CFLAGS) -o rdesktop $(X11OBJ) $(SOUNDOBJ) $(RDPOBJ) $(LDFLAGS) -lX11
 
-rdp2vnc: $(VNCOBJ) $(SOUNDOBJ) $(RDPOBJ) $(CRYPTOBJ)
-	$(CCLD) $(CFLAGS) -o rdp2vnc $(VNCOBJ) $(SOUNDOBJ) $(RDPOBJ) $(CRYPTOBJ) $(LDFLAGS) $(LDVNC)
+rdp2vnc: $(VNCOBJ) $(SOUNDOBJ) $(RDPOBJ) 
+	$(VNCLINK) $(CFLAGS) -o rdp2vnc $(VNCOBJ) $(SOUNDOBJ) $(RDPOBJ) $(LDFLAGS) $(LDVNC)
 
 vnc/rdp2vnc.o: rdesktop.c
 	$(CC) $(CFLAGS) $(VNCINC) -DRDP2VNC -o vnc/rdp2vnc.o -c rdesktop.c
@@ -41,9 +47,6 @@ vnc/xkeymap.o: xkeymap.c
 
 vnc/x11stubs.o: vnc/x11stubs.c
 	$(CC) $(CFLAGS) $(VNCINC) -o vnc/x11stubs.o -c vnc/x11stubs.c
-
-Makeconf:
-	./configure
 
 install: installbin installkeymaps installman
 
@@ -70,9 +73,9 @@ proto:
 	cproto -DMAKE_PROTO -DWITH_OPENSSL -o proto.h *.c
 
 clean:
-	rm -f *.o crypto/*.o *~ vnc/*.o vnc/*~ rdesktop rdp2vnc
+	rm -f *.o *~ vnc/*.o vnc/*~ rdesktop rdp2vnc
 
-dist:
+dist: Makefile configure
 	mkdir -p /tmp/rdesktop-make-dist-dir
 	ln -sf `pwd` /tmp/rdesktop-make-dist-dir/rdesktop-$(VERSION)
 	(cd /tmp/rdesktop-make-dist-dir; \
@@ -80,13 +83,15 @@ dist:
 	rdesktop-$(VERSION)/COPYING \
 	rdesktop-$(VERSION)/README \
 	rdesktop-$(VERSION)/configure \
-	rdesktop-$(VERSION)/Makefile \
+	rdesktop-$(VERSION)/configure.ac \
+	rdesktop-$(VERSION)/config.sub \
+	rdesktop-$(VERSION)/config.guess \
+	rdesktop-$(VERSION)/bootstrap \
+	rdesktop-$(VERSION)/install-sh \
+	rdesktop-$(VERSION)/Makefile.in \
 	rdesktop-$(VERSION)/rdesktop.spec \
 	rdesktop-$(VERSION)/*.c \
 	rdesktop-$(VERSION)/*.h \
-	rdesktop-$(VERSION)/crypto/README \
-	rdesktop-$(VERSION)/crypto/*.c \
-	rdesktop-$(VERSION)/crypto/*.h \
 	rdesktop-$(VERSION)/keymaps/?? \
 	rdesktop-$(VERSION)/keymaps/??-?? \
 	rdesktop-$(VERSION)/keymaps/common \
@@ -104,6 +109,12 @@ dist:
 	rdesktop-$(VERSION)/doc/redirection.txt \
 	rdesktop-$(VERSION)/doc/rdesktop.1 )
 	rm -rf /tmp/rdesktop-make-dist-dir
+
+Makefile: Makefile.in configure
+	./config.status
+
+configure: configure.ac
+	./bootstrap
 
 .SUFFIXES:
 .SUFFIXES: .c .o

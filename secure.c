@@ -20,18 +20,11 @@
 
 #include "rdesktop.h"
 
-#ifdef WITH_OPENSSL
 #include <openssl/rc4.h>
 #include <openssl/md5.h>
 #include <openssl/sha.h>
 #include <openssl/bn.h>
 #include <openssl/x509v3.h>
-#else
-#include "crypto/rc4.h"
-#include "crypto/md5.h"
-#include "crypto/sha.h"
-#include "crypto/bn.h"
-#endif
 
 extern char g_hostname[16];
 extern int g_width;

@@ -35,11 +35,7 @@
 #include <sys/un.h>		/* sockaddr_un */
 #endif
 
-#ifdef WITH_OPENSSL
 #include <openssl/md5.h>
-#else
-#include "crypto/md5.h"
-#endif
 
 char g_title[64] = "";
 char g_username[64];
