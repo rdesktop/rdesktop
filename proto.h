@@ -139,6 +139,7 @@ void tcp_send(STREAM s);
 STREAM tcp_recv(STREAM s, uint32 length);
 BOOL tcp_connect(char *server);
 void tcp_disconnect(void);
+char *tcp_get_address(void);
 /* xclip.c */
 void ui_clip_format_announce(uint8 * data, uint32 length);
 void ui_clip_handle_data(uint8 * data, uint32 length);

@@ -156,18 +156,24 @@ static void
 rdp_send_logon_info(uint32 flags, char *domain, char *user,
 		    char *password, char *program, char *directory)
 {
+	char *ipaddr = tcp_get_address();
 	int len_domain = 2 * strlen(domain);
 	int len_user = 2 * strlen(user);
 	int len_password = 2 * strlen(password);
 	int len_program = 2 * strlen(program);
 	int len_directory = 2 * strlen(directory);
-	int len_ip = 2 * strlen("127.0.0.1");
+	int len_ip = 2 * strlen(ipaddr);
 	int len_dll = 2 * strlen("C:\\WINNT\\System32\\mstscax.dll");
 	int packetlen = 0;
 	uint32 sec_flags = g_encryption ? (SEC_LOGON_INFO | SEC_ENCRYPT) : SEC_LOGON_INFO;
 	STREAM s;
 	time_t t = time(NULL);
 	time_t tzone;
+
+#if 0
+	// enable rdp compression
+	flags |= RDP_COMPRESSION;
+#endif
 
 	if (!g_use_rdp5 || 1 == g_server_rdp_version)
 	{
@@ -266,7 +272,7 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 		}
 		out_uint16_le(s, 2);
 		out_uint16_le(s, len_ip + 2);	/* Length of client ip */
-		rdp_out_unistr(s, "127.0.0.1", len_ip);
+		rdp_out_unistr(s, ipaddr, len_ip);
 		out_uint16_le(s, len_dll + 2);
 		rdp_out_unistr(s, "C:\\WINNT\\System32\\mstscax.dll", len_dll);
 
@@ -275,7 +281,6 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 
 		rdp_out_unistr(s, "GTB, normaltid", 2 * strlen("GTB, normaltid"));
 		out_uint8s(s, 62 - 2 * strlen("GTB, normaltid"));
-
 
 		out_uint32_le(s, 0x0a0000);
 		out_uint32_le(s, 0x050000);
@@ -865,10 +870,44 @@ static void
 process_data_pdu(STREAM s)
 {
 	uint8 data_pdu_type;
+	uint8 ctype;
+	uint16 clen;
+	int roff, rlen, len, ret;
+	static struct stream ns;
+	static signed char *dict = 0;
 
-	in_uint8s(s, 8);	/* shareid, pad, streamid, length */
+	in_uint8s(s, 6);	/* shareid, pad, streamid */
+	in_uint16(s, len);
 	in_uint8(s, data_pdu_type);
-	in_uint8s(s, 3);	/* compress_type, compress_len */
+	in_uint8(s, ctype);
+	in_uint16(s, clen);
+	clen -= 18;
+
+#if 0
+	if (ctype & 0x20)
+	{
+		if (!dict)
+		{
+			dict = (signed char *) malloc(8200 * sizeof(signed char));
+			dict = (signed char *) memset(dict, 0, 8200 * sizeof(signed char));
+		}
+
+		ret = decompress(s->p, clen, ctype, (signed char *) dict, &roff, &rlen);
+
+		len -= 18;
+
+		ns.data = xrealloc(ns.data, len);
+
+		ns.data = (unsigned char *) memcpy(ns.data, (unsigned char *) (dict + roff), len);
+
+		ns.size = len;
+		ns.end = ns.data + ns.size;
+		ns.p = ns.data;
+		ns.rdp_hdr = ns.p;
+
+		s = &ns;
+	}
+#endif
 
 	switch (data_pdu_type)
 	{
