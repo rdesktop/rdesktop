@@ -33,6 +33,7 @@ int g_dsp_fd;
 BOOL g_dsp_busy = False;
 static int g_snd_rate;
 static short g_samplewidth;
+static BOOL g_driver_broken = False;
 
 static struct audio_packet
 {
@@ -85,7 +86,7 @@ wave_out_format_supported(WAVEFORMATEX * pwfx)
 BOOL
 wave_out_set_format(WAVEFORMATEX * pwfx)
 {
-	int stereo, format;
+	int stereo, format, fragments;
 
 	ioctl(g_dsp_fd, SNDCTL_DSP_RESET, NULL);
 	ioctl(g_dsp_fd, SNDCTL_DSP_SYNC, NULL);
@@ -127,6 +128,30 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 		perror("SNDCTL_DSP_SPEED");
 		close(g_dsp_fd);
 		return False;
+	}
+
+	/* try to get 7 fragments of 2^12 bytes size */
+	fragments = (7 << 16) + 12;
+	ioctl(g_dsp_fd, SNDCTL_DSP_SETFRAGMENT, &fragments);
+
+	if (!g_driver_broken)
+	{
+		audio_buf_info info;
+
+		if (ioctl(g_dsp_fd, SNDCTL_DSP_GETOSPACE, &info) == -1)
+		{
+			perror("SNDCTL_DSP_GETOSPACE");
+			close(g_dsp_fd);
+			return False;
+		}
+
+		if (info.fragments == 0 || info.fragstotal == 0 || info.fragsize == 0)
+		{
+			fprintf(stderr,
+				"Broken OSS-driver detected: fragments: %d, fragstotal: %d, fragsize: %d\n",
+				info.fragments, info.fragstotal, info.fragsize);
+			g_driver_broken = True;
+		}
 	}
 
 	return True;
@@ -203,6 +228,7 @@ wave_out_play(void)
 	static long startedat_s;
 	static BOOL started = False;
 	struct timeval tv;
+	audio_buf_info info;
 
 	while (1)
 	{
@@ -223,7 +249,31 @@ wave_out_play(void)
 			started = True;
 		}
 
-		len = write(g_dsp_fd, out->p, out->end - out->p);
+		len = out->end - out->p;
+
+		if (!g_driver_broken)
+		{
+			if (ioctl(g_dsp_fd, SNDCTL_DSP_GETOSPACE, &info) == -1)
+			{
+				perror("SNDCTL_DSP_GETOSPACE");
+				return;
+			}
+
+			if (info.fragments == 0)
+			{
+				g_dsp_busy = 1;
+				return;
+			}
+
+			if (info.fragments * info.fragsize < len
+			    && info.fragments * info.fragsize > 0)
+			{
+				len = info.fragments * info.fragsize;
+			}
+		}
+
+
+		len = write(g_dsp_fd, out->p, len);
 		if (len == -1)
 		{
 			if (errno != EWOULDBLOCK)
