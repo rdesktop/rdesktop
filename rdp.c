@@ -236,7 +236,7 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 			rdp_out_unistr(s, directory, len_directory);
 		} else {
 			out_uint16_le(s, 0);
-		} 
+		}
 		out_uint16_le(s, 2);
 		out_uint16_le(s, len_ip+2); // Length of client ip
 		rdp_out_unistr(s, "127.0.0.1", len_ip);
@@ -710,7 +710,7 @@ process_bitmap_updates(STREAM s)
 		if (!compress)
 		{
 			int y;
-			bmpdata = xmalloc(width * height * Bpp);
+			bmpdata = (uint8*)xmalloc(width * height * Bpp);
 			for (y = 0; y < height; y++)
 			{
 				in_uint8a(s, &bmpdata[(height - y - 1) * (width * Bpp)],
@@ -733,7 +733,7 @@ process_bitmap_updates(STREAM s)
 			in_uint8s(s, 4);	/* line_size, final_size */
 		}
 		in_uint8p(s, data, size);
-		bmpdata = xmalloc(width * height * Bpp);
+		bmpdata = (uint8*)xmalloc(width * height * Bpp);
 		if (bitmap_decompress(bmpdata, width, height, data, size, Bpp))
 		{
 			ui_paint_bitmap(left, top, cx, cy, width, height, bmpdata);
@@ -760,7 +760,7 @@ process_palette(STREAM s)
 	in_uint16_le(s, map.ncolours);
 	in_uint8s(s, 2);	/* pad */
 
-	map.colours = xmalloc(3 * map.ncolours);
+	map.colours = (COLOURENTRY*)xmalloc(3 * map.ncolours);
 
 	DEBUG(("PALETTE(c=%d)\n", map.ncolours));
 

@@ -12,7 +12,7 @@
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
-   
+
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -39,11 +39,11 @@ extern int tcp_port_rdp;
 
 /* Initialise TCP transport data packet */
 STREAM
-tcp_init(int maxlen)
+tcp_init(uint32 maxlen)
 {
 	if (maxlen > out.size)
 	{
-		out.data = xrealloc(out.data, maxlen);
+		out.data = (uint8*)xrealloc(out.data, maxlen);
 		out.size = maxlen;
 	}
 
@@ -74,13 +74,13 @@ tcp_send(STREAM s)
 
 /* Receive a message on the TCP layer */
 STREAM
-tcp_recv(int length)
+tcp_recv(uint32 length)
 {
 	int rcvd = 0;
 
 	if (length > in.size)
 	{
-		in.data = xrealloc(in.data, length);
+		in.data = (uint8*)xrealloc(in.data, length);
 		in.size = length;
 	}
 
@@ -112,7 +112,7 @@ tcp_connect(char *server)
 {
 	struct hostent *nslookup;
 	struct sockaddr_in servaddr;
-	int true = 1;
+	int true_value = 1;
 
 	if ((nslookup = gethostbyname(server)) != NULL)
 	{
@@ -140,13 +140,13 @@ tcp_connect(char *server)
 		return False;
 	}
 
-	setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (void *) &true, sizeof(true));
+	setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (void *) &true_value, sizeof(true_value));
 
 	in.size = 4096;
-	in.data = xmalloc(in.size);
+	in.data = (uint8*)xmalloc(in.size);
 
 	out.size = 4096;
-	out.data = xmalloc(out.size);
+	out.data = (uint8*)xmalloc(out.size);
 
 	return True;
 }

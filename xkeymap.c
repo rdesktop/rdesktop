@@ -12,7 +12,7 @@
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
-   
+
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -359,7 +359,7 @@ xkeymap_translate_key(uint32 keysym, unsigned int keycode, unsigned int state)
 		warning("No translation for (keysym 0x%lx, %s)\n", keysym, get_ksname(keysym));
 
 	/* not in keymap, try to interpret the raw scancode */
-	if ((keycode >= min_keycode) && (keycode <= 0x60))
+	if (((int)keycode >= min_keycode) && (keycode <= 0x60))
 	{
 		tr.scancode = keycode - min_keycode;
 

@@ -413,7 +413,7 @@ static uint8 *
 translate_image(int width, int height, uint8 * data)
 {
 	int size = width * height * bpp / 8;
-	uint8 *out = xmalloc(size);
+	uint8 *out = (uint8*)xmalloc(size);
 	uint8 *end = out + size;
 
 	switch (server_bpp)
@@ -787,7 +787,7 @@ xwin_process_events(void)
 			case ClientMessage:
 				/* the window manager told us to quit */
 				if ((xevent.xclient.message_type == protocol_atom)
-				    && (xevent.xclient.data.l[0] == kill_atom))
+				    && ((Atom)xevent.xclient.data.l[0] == kill_atom))
 					/* Quit */
 					return 0;
 				break;
@@ -1137,10 +1137,10 @@ ui_create_cursor(unsigned int x, unsigned int y, int width, int height,
 	scanline = (width + 7) / 8;
 	offset = scanline * height;
 
-	cursor = xmalloc(offset);
+	cursor = (uint8*)xmalloc(offset);
 	memset(cursor, 0, offset);
 
-	mask = xmalloc(offset);
+	mask = (uint8*)xmalloc(offset);
 	memset(mask, 0, offset);
 
 	/* approximate AND and XOR masks with a monochrome X pointer */
@@ -1219,7 +1219,7 @@ ui_create_colourmap(COLOURMAP * colours)
 	int i, ncolours = colours->ncolours;
 	if (!owncolmap)
 	{
-		uint32 *map = xmalloc(sizeof(*colmap) * ncolours);
+		uint32 *map = (uint32*)xmalloc(sizeof(*colmap) * ncolours);
 		XColor xentry;
 		XColor xc_cache[256];
 		uint32 colour;
@@ -1297,7 +1297,7 @@ ui_create_colourmap(COLOURMAP * colours)
 		XColor *xcolours, *xentry;
 		Colormap map;
 
-		xcolours = xmalloc(sizeof(XColor) * ncolours);
+		xcolours = (XColor*)xmalloc(sizeof(XColor) * ncolours);
 		for (i = 0; i < ncolours; i++)
 		{
 			entry = &colours->colours[i];
@@ -1327,7 +1327,7 @@ void
 ui_set_colourmap(HCOLOURMAP map)
 {
 	if (!owncolmap)
-		colmap = map;
+		colmap = (uint32*)map;
 	else
 		XSetWindowColormap(display, wnd, (Colormap) map);
 }

@@ -42,7 +42,7 @@ void xfree(void *mem);
 void error(char *format, ...);
 void warning(char *format, ...);
 void unimpl(char *format, ...);
-void hexdump(unsigned char *p, unsigned int len);
+void hexdump(unsigned char *p, int len);
 int load_licence(unsigned char **data);
 void save_licence(unsigned char *data, int length);
 /* rdp.c */
@@ -75,9 +75,9 @@ void sec_disconnect(void);
 void sec_process_mcs_data(STREAM s);
 void sec_decrypt(uint8 * data, int length);
 /* tcp.c */
-STREAM tcp_init(int maxlen);
+STREAM tcp_init(uint32 maxlen);
 void tcp_send(STREAM s);
-STREAM tcp_recv(int length);
+STREAM tcp_recv(uint32 length);
 BOOL tcp_connect(char *server);
 void tcp_disconnect(void);
 /* xkeymap.c */

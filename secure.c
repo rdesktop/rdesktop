@@ -804,7 +804,7 @@ sec_connect(char *server, char *username)
 
 	/* We exchange some RDP data during the MCS-Connect */
 	mcs_data.size = 512;
-	mcs_data.p = mcs_data.data = xmalloc(mcs_data.size);
+	mcs_data.p = mcs_data.data = (uint8*)xmalloc(mcs_data.size);
 	sec_out_mcs_data(&mcs_data);
 
 	if (!mcs_connect(server, &mcs_data, username))

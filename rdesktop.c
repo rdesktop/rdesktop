@@ -549,11 +549,10 @@ unimpl(char *format, ...)
 
 /* produce a hex dump */
 void
-hexdump(unsigned char *p, unsigned int len)
+hexdump(unsigned char *p, int len)
 {
 	unsigned char *line = p;
-	unsigned int thisline, offset = 0;
-	int i;
+	int i, thisline, offset = 0;
 
 	while (offset < len)
 	{
@@ -589,7 +588,7 @@ load_licence(unsigned char **data)
 	if (home == NULL)
 		return -1;
 
-	path = xmalloc(strlen(home) + strlen(hostname) + sizeof("/.rdesktop/licence."));
+	path = (char*)xmalloc(strlen(home) + strlen(hostname) + sizeof("/.rdesktop/licence."));
 	sprintf(path, "%s/.rdesktop/licence.%s", home, hostname);
 
 	fd = open(path, O_RDONLY);
@@ -599,7 +598,7 @@ load_licence(unsigned char **data)
 	if (fstat(fd, &st))
 		return -1;
 
-	*data = xmalloc(st.st_size);
+	*data = (uint8*)xmalloc(st.st_size);
 	length = read(fd, *data, st.st_size);
 	close(fd);
 	xfree(path);
@@ -616,7 +615,7 @@ save_licence(unsigned char *data, int length)
 	if (home == NULL)
 		return;
 
-	path = xmalloc(strlen(home) + strlen(hostname) + sizeof("/.rdesktop/licence."));
+	path = (char*)xmalloc(strlen(home) + strlen(hostname) + sizeof("/.rdesktop/licence."));
 
 	sprintf(path, "%s/.rdesktop", home);
 	if ((mkdir(path, 0700) == -1) && errno != EEXIST)
@@ -628,7 +627,7 @@ save_licence(unsigned char *data, int length)
 	/* write licence to licence.hostname.new, then atomically rename to licence.hostname */
 
 	sprintf(path, "%s/.rdesktop/licence.%s", home, hostname);
-	tmppath = xmalloc(strlen(path) + sizeof(".new"));
+	tmppath = (char*)xmalloc(strlen(path) + sizeof(".new"));
 	strcpy(tmppath, path);
 	strcat(tmppath, ".new");
 
