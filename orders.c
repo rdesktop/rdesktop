@@ -476,6 +476,7 @@ process_polyline(STREAM s, POLYLINE_ORDER *os, uint32 present, BOOL delta)
 	int x, y, xfrom, yfrom;
 	uint8 flags = 0;
 	PEN pen;
+	uint8 opcode;
 
 	if (present & 0x01)
 		rdp_in_coord(s, &os->x, delta);
@@ -497,6 +498,10 @@ process_polyline(STREAM s, POLYLINE_ORDER *os, uint32 present, BOOL delta)
 		in_uint8(s, os->datasize);
 		in_uint8a(s, os->data, os->datasize);
 	}
+	if (os->flags & 1)
+		opcode = ROP2_COPY;
+	else
+		opcode = ROP2_NXOR;
 
 	DEBUG(("POLYLINE(x=%d,y=%d,fl=0x%x,fg=0x%x,n=%d,sz=%d)\n",
 	       os->x, os->y, os->flags, os->fgcolour, os->lines, os->datasize));
@@ -532,7 +537,7 @@ process_polyline(STREAM s, POLYLINE_ORDER *os, uint32 present, BOOL delta)
 		if (flags & 0x80)
 			y += parse_delta(os->data, &data);
 
-		ui_line(ROP2_NXOR, xfrom, yfrom, x, y, &pen);
+		ui_line(opcode, xfrom, yfrom, x, y, &pen);
 
 		flags <<= 2;
 	}
