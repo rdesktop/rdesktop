@@ -132,12 +132,13 @@ AC_ARG_WITH(libvncserver,
 #
 sound="yes"
 AC_ARG_WITH(sound,
-    [  --with-sound            select sound system ("oss" or "sun") ],
+    [  --with-sound            select sound system ("oss", "sgi" or "sun") ],
     [ 
     sound="$withval" 
     ])
 if test "$sound" = yes; then
     AC_CHECK_HEADER(sys/soundcard.h, [sound=oss])
+    AC_CHECK_HEADER(dmedia/audio.h, [sound=sgi])
     AC_CHECK_HEADER(sys/audioio.h, [sound=sun])
 fi
 if test "$sound" = no; then
@@ -145,12 +146,16 @@ if test "$sound" = no; then
 elif test "$sound" = oss; then
     SOUNDOBJ="rdpsnd.o rdpsnd_oss.o"
     AC_DEFINE(WITH_RDPSND)
+elif test "$sound" = sgi; then
+    SOUNDOBJ="rdpsnd.o rdpsnd_sgi.o"
+    LDFLAGS="$LDFLAGS -laudio"
+    AC_DEFINE(WITH_RDPSND)
 elif test "$sound" = sun; then
     SOUNDOBJ="rdpsnd.o rdpsnd_sun.o"
     AC_DEFINE(WITH_RDPSND)
 else
    AC_MSG_WARN([sound support disabled (no sys/soundcard.h or sys/audioio.h)])
-   AC_MSG_WARN([Currently supported systems are Open Sound System (oss) and Sun/BSD (sun)])
+   AC_MSG_WARN([Currently supported systems are Open Sound System (oss), SGI AL (sgi) and Sun/BSD (sun)])
 fi
 AC_SUBST(SOUNDOBJ)
 
@@ -272,6 +277,10 @@ case "$host" in
     ;;
 *-*-hpux*)
     CFLAGS="$CFLAGS -D_XOPEN_SOURCE_EXTENDED"
+    ;;
+*-*-irix6.5*)
+    LIBS="$LIBS -L$ssldir/lib32 -lcrypto"
+    CFLAGS="$CFLAGS -D__SGI_IRIX__"
     ;;
 esac
 
