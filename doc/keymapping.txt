@@ -1,0 +1,114 @@
+Keyboard mapping
+================
+This release of rdesktop uses a new, portable keyboard mapping
+implementation. It should hopefully work on all X11 systems. This new
+implementation only looks at X11 keysyms: Not on (nonportable)
+keycodes or modifier status. This means that rdesktop will obey your
+local keyboard configuration. For example, if you have swapped
+CapsLock and Control, rdesktop will use this mapping. 
+
+XKB is currently not used. It seems like a good idea to me, but since
+some X servers (like Xvnc) does not support XKB, we still need to use
+the plain old interface as well, at least. 
+
+There are still some small problems.
+
+* NumLock handling: NumLock is switched off when typing a non-numlock
+  key. rdesktop does not know which keys are NumLock-dependent and
+  not. When you type a numlock-dependent key again, NumLock is
+  switched on on the server again. The only problem really is that the
+  NumLock indicator in Wordpad etc switches on and off when you type. 
+
+* CapsLock: CapsLock changes are never sent to the RDP server. This is
+  a problem of the same type as NumLock: rdesktop does not know which
+  keys that are modified by CapsLock and which are not. So, the
+  CapsLock indicator in Wordpad etc will always be off. 
+
+Composing/Multi_key is supported. For more information, see:
+
+  MIT:              $SRC/xc/nls/X11/locale/Compose/iso8859-1
+  XFree86:          /usr/X11R6/lib/X11/locale/*/Compose
+  Solaris' Openwin: /usr/openwin/include/X11/Suncompose.h
+                    /usr/openwin/lib/locale/*/Compose
+  Irix6:            compose(5)
+
+
+Keymap-files
+============
+The keymaps are line based. There are three different types of lines:
+
+1) include-lines
+Syntax:
+include <another-map-file>
+
+
+2) map-lines
+Syntax:
+map <hex-number>
+
+Map-lines specifies how the remote RDP server should interpret the
+sent scancodes. 
+
+
+3) Translation-lines
+Syntax:
+<keysym-name> <scancode> [flags..]
+
+The scancode can be found in scancodes.h. Note: The scancode value for
+extended keys can be calculated by OR:ing with 0x80. Example: The
+Delete key have the scancode sequence 0xe0, 0x52. You can get the
+scancode value to put into the map file by running:
+
+python -c "print hex(0x80 | 0x52)"
+
+If flags are "altgr", "shift", "numlock", the scancode sent for this
+keysym will be prefix with AltGr, Shift or Numlock. 
+
+If flags include "addupper", an translation for this keysyms uppercase
+name will as well, in addition to the non-uppercase name. Example:
+
+x 2d addupper
+
+...will add an translation for "X" automatically, just like if you
+would specify:
+
+X 2d shift
+
+If flags include "localstate", the modifier to send will be determined
+by the local modifier state. 
+
+
+4) enable_compose
+
+If any line starts with the keyword "enable_compose", rdesktop will
+enable local Compose/Multi_key handling. Enabling this will often make
+it impossible to compose characters with dead keys (on the remote
+side). This is because when local compose support is enabled, dead
+keys will not be sent to the remote side. 
+
+
+Suggested X11 keysym mapping on PCs
+===================================
+Unfortunately, there is no standard for which keysyms a given key
+should generate. If you have a PC-keyboard with Windows keys, I suggest this mapping:
+
+Keyboard keys:
+CtrlLeft WinLeft AltLeft Space AltGr WinRight Menu CtrlRight
+
+...should generate keysyms:
+Control_L Hyper_L Alt_L space Mode_switch Hyper_R Menu Control_R
+
+Additionally:
+Shift-Alt should produce Meta_L
+Shift-AltGr should produce Multi_Key. 
+
+Use a modifier-map like this:
+
+shift       Shift_L (0x32),  Shift_R (0x3e)
+lock        Caps_Lock (0x25)
+control     Control_L (0x42),  Control_R (0x6d)
+mod1        Alt_L (0x40)
+mod2        Num_Lock (0x4d)
+mod3        Mode_switch (0x71)
+mod4        Hyper_L (0x73),  Hyper_R (0x74)
+mod5        Scroll_Lock (0x4e)
