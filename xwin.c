@@ -1823,33 +1823,34 @@ ui_draw_glyph(int mixmode,
 {\
   glyph = cache_get_font (font, ttext[idx]);\
   if (!(flags & TEXT2_IMPLICIT_X))\
+  {\
+    xyoffset = ttext[++idx];\
+    if ((xyoffset & 0x80))\
     {\
-      xyoffset = ttext[++idx];\
-      if ((xyoffset & 0x80))\
-	{\
-	  if (flags & TEXT2_VERTICAL) \
-	    y += ttext[idx+1] | (ttext[idx+2] << 8);\
-	  else\
-	    x += ttext[idx+1] | (ttext[idx+2] << 8);\
-	  idx += 2;\
-	}\
+      if (flags & TEXT2_VERTICAL)\
+        y += ttext[idx+1] | (ttext[idx+2] << 8);\
       else\
-	{\
-	  if (flags & TEXT2_VERTICAL) \
-	    y += xyoffset;\
-	  else\
-	    x += xyoffset;\
-	}\
+        x += ttext[idx+1] | (ttext[idx+2] << 8);\
+      idx += 2;\
     }\
-  if (glyph != NULL)\
+    else\
     {\
-      ui_draw_glyph (mixmode, x + glyph->offset,\
-		     y + glyph->baseline,\
-		     glyph->width, glyph->height,\
-		     glyph->pixmap, 0, 0, bgcolour, fgcolour);\
-      if (flags & TEXT2_IMPLICIT_X)\
-	x += glyph->width;\
+      if (flags & TEXT2_VERTICAL)\
+        y += xyoffset;\
+      else\
+        x += xyoffset;\
     }\
+  }\
+  if (glyph != NULL)\
+  {\
+    x1 = x + glyph->offset;\
+    y1 = y + glyph->baseline;\
+    XSetStipple(g_display, g_gc, (Pixmap) glyph->pixmap);\
+    XSetTSOrigin(g_display, g_gc, x1, y1);\
+    FILL_RECTANGLE_BACKSTORE(x1, y1, glyph->width, glyph->height);\
+    if (flags & TEXT2_IMPLICIT_X)\
+      x += glyph->width;\
+  }\
 }
 
 void
@@ -1859,7 +1860,7 @@ ui_draw_text(uint8 font, uint8 flags, int mixmode, int x, int y,
 	     int fgcolour, uint8 * text, uint8 length)
 {
 	FONTGLYPH *glyph;
-	int i, j, xyoffset;
+	int i, j, xyoffset, x1, y1;
 	DATABLOB *entry;
 
 	SET_FOREGROUND(bgcolour);
@@ -1872,6 +1873,10 @@ ui_draw_text(uint8 font, uint8 flags, int mixmode, int x, int y,
 	{
 		FILL_RECTANGLE_BACKSTORE(clipx, clipy, clipcx, clipcy);
 	}
+
+	SET_FOREGROUND(fgcolour);
+	SET_BACKGROUND(bgcolour);
+	XSetFillStyle(g_display, g_gc, FillStippled);
 
 	/* Paint text, character by character */
 	for (i = 0; i < length;)
@@ -1923,6 +1928,9 @@ ui_draw_text(uint8 font, uint8 flags, int mixmode, int x, int y,
 				break;
 		}
 	}
+
+	XSetFillStyle(g_display, g_gc, FillSolid);
+
 	if (g_ownbackstore)
 	{
 		if (boxcx > 1)
