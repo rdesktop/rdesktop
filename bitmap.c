@@ -21,7 +21,6 @@
 #include "rdesktop.h"
 
 #define CVAL(p)   (*(p++))
-#define SVAL(p)   ((*((p++) + 1) << 8) | CVAL(p))
 
 #define UNROLL8(exp) { exp exp exp exp exp exp exp exp }
 
@@ -75,9 +74,14 @@ bitmap_decompress(unsigned char *output, int width, int height,
 			case 0xf:
 				opcode = code & 0xf;
 				if (opcode < 9)
-					count = SVAL(input);
+				{
+					count = CVAL(input);
+					count |= CVAL(input) << 8;
+				}
 				else
+				{
 					count = (opcode < 0xb) ? 8 : 1;
+				}
 				offset = 0;
 				break;
 

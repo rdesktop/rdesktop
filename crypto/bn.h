@@ -75,11 +75,13 @@ extern "C" {
 /* The prime number generation stuff may not work when
  * EIGHT_BIT but I don't care since I've only used this mode
  * for debuging the bignum libraries */
-#undef SIXTY_FOUR_BIT_LONG
-#undef SIXTY_FOUR_BIT
+#if defined(__alpha__) || defined(__ia64__)
+#define SIXTY_FOUR_BIT_LONG
+#elseif defined(__mips__)
+#define SIXTY_FOUR_BIT
+#else
 #define THIRTY_TWO_BIT
-#undef SIXTEEN_BIT
-#undef EIGHT_BIT
+#endif
 
 #undef BN_LLONG
 #undef BN_MUL_COMBA

@@ -998,7 +998,7 @@ ui_desktop_save(uint32 offset, int x, int y, int cx, int cy)
 
 	offset *= bpp/8;
 	cache_put_desktop(offset, cx, cy, image->bytes_per_line,
-			  bpp/8, image->data);
+			  bpp/8, (uint8 *)image->data);
 
 	XDestroyImage(image);
 }
