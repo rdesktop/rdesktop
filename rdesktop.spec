@@ -7,7 +7,6 @@ Group: Applications/Communications
 Source: rdesktop-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-buildroot
 Packager: Peter Åstrand <peter@cendio.se>
-Requires: XFree86-libs 
 
 %description
 rdesktop is a client for Remote Desktop Protocol (RDP), used in a number of
