@@ -31,6 +31,7 @@
 int g_dsp_fd;
 ao_device *o_device = NULL;
 int default_driver;
+int g_samplerate;
 BOOL g_dsp_busy = False;
 static short g_samplewidth;
 
@@ -53,6 +54,7 @@ wave_out_open(void)
 	format.bits = 16;
 	format.channels = 2;
 	format.rate = 44100;
+	g_samplerate = 44100;
 	format.byte_format = AO_FMT_LITTLE;
 
 	o_device = ao_open_live(default_driver, &format, NULL);
@@ -93,9 +95,8 @@ wave_out_format_supported(WAVEFORMATEX * pwfx)
 	if ((pwfx->wBitsPerSample != 8) && (pwfx->wBitsPerSample != 16))
 		return False;
 	/* The only common denominator between libao output drivers is a sample-rate of
-	   44100, windows gives a max of 22050. we need to upsample that...
-	   TODO: support 11025, too */
-	if (pwfx->nSamplesPerSec != 22050)
+	   44100, we need to upsample 22050 to it */
+	if ((pwfx->nSamplesPerSec != 44100) && (pwfx->nSamplesPerSec != 22050))
 		return False;
 
 	return True;
@@ -106,10 +107,10 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 {
 	ao_sample_format format;
 
-	printf("%d\n",pwfx->wBitsPerSample);
 	format.bits = pwfx->wBitsPerSample;
 	format.channels = pwfx->nChannels;
 	format.rate = 44100;
+	g_samplerate = pwfx->nSamplesPerSec;
 	format.byte_format = AO_FMT_LITTLE;
 
 	g_samplewidth = pwfx->wBitsPerSample / 8;
@@ -163,38 +164,52 @@ wave_out_play(void)
 {
 	struct audio_packet *packet;
 	STREAM out;
-	unsigned char expanded[8];
+	unsigned char expanded[16];
+	int offset,len,i;
 
-	while (1)
+	if (queue_lo == queue_hi)
 	{
-		if (queue_lo == queue_hi)
+		g_dsp_busy = 0;
+		return;
+	}
+
+	packet = &packet_queue[queue_lo];
+	out = &packet->s;
+
+	len = 0;
+
+	if (g_samplerate == 22050 )
+	{
+		/* Resample to 44100 */
+		for(i=0; (i<(2*(3-g_samplewidth))) && (out->p < out->end); i++)
 		{
-			g_dsp_busy = 0;
-			return;
-		}
+			offset=i*4*g_samplewidth;
+			memcpy(&expanded[0*g_samplewidth+offset],out->p,g_samplewidth);
+			memcpy(&expanded[2*g_samplewidth+offset],out->p,g_samplewidth);
+			out->p += 2;
 
-		packet = &packet_queue[queue_lo];
-		out = &packet->s;
-
-		/* Resample 22050 -> 44100 */
-		/* TODO: Do this for 11025, too... */
-		memcpy(&expanded[0],out->p,g_samplewidth);
-		memcpy(&expanded[2*g_samplewidth],out->p,g_samplewidth);
-		out->p += 2;
-		memcpy(&expanded[1*g_samplewidth],out->p,g_samplewidth);
-		memcpy(&expanded[3*g_samplewidth],out->p,g_samplewidth);
-		out->p += 2;
-
-		ao_play(o_device, expanded, g_samplewidth*4);
-
-		if (out->p == out->end)
-		{
-			rdpsnd_send_completion(packet->tick, packet->index);
-			free(out->data);
-			queue_lo = (queue_lo + 1) % MAX_QUEUE;
-		} else {
-			g_dsp_busy = 1;
-			return;
+			memcpy(&expanded[1*g_samplewidth+offset],out->p,g_samplewidth);
+			memcpy(&expanded[3*g_samplewidth+offset],out->p,g_samplewidth);
+			out->p += 2;
+			len += 4*g_samplewidth;
 		}
 	}
+	else
+	{
+		len = (16 > (out->end - out->p)) ? (out->end - out->p) : 16;
+		memcpy(expanded,out->p,len);
+		out->p += len;
+	}
+
+	ao_play(o_device, expanded, len);
+
+	if (out->p == out->end)
+	{
+		rdpsnd_send_completion(packet->tick, packet->index);
+		free(out->data);
+		queue_lo = (queue_lo + 1) % MAX_QUEUE;
+	}
+
+	g_dsp_busy = 1;
+	return;
 }
