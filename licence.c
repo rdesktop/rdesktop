@@ -159,7 +159,7 @@ licence_process_demand(STREAM s)
 	licence_generate_keys(null_data, server_random, null_data);
 
 	licence_size = load_licence(&licence_data);
-	if (licence_size != -1)
+	if (licence_size > 0)
 	{
 		/* Generate a signature for the HWID buffer */
 		licence_generate_hwid(hwid);
@@ -265,6 +265,7 @@ licence_process_issue(STREAM s)
 	RC4_KEY crypt_key;
 	uint32 length;
 	uint16 check;
+	int i;
 
 	in_uint8s(s, 2);	/* 3d 45 - unknown */
 	in_uint16_le(s, length);
@@ -279,7 +280,21 @@ licence_process_issue(STREAM s)
 		return;
 
 	licence_issued = True;
-	save_licence(s->p, length - 2);
+
+	in_uint8s(s, 2);	/* pad */
+
+	/* advance to fourth string */
+	length = 0;
+	for (i = 0; i < 4; i++)
+	{
+		in_uint8s(s, length);
+		in_uint32_le(s, length);
+		if (!s_check_rem(s, length))
+			return;
+	}
+
+	licence_issued = True;
+	save_licence(s->p, length);
 }
 
 /* Process a licence packet */

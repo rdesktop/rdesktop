@@ -581,16 +581,15 @@ hexdump(unsigned char *p, unsigned int len)
 int
 load_licence(unsigned char **data)
 {
-	char *path;
-	char *home;
+	char *home, *path;
 	struct stat st;
-	int fd;
+	int fd, length;
 
 	home = getenv("HOME");
 	if (home == NULL)
 		return -1;
 
-	path = xmalloc(strlen(home) + strlen(hostname) + 20);
+	path = xmalloc(strlen(home) + strlen(hostname) + sizeof("/.rdesktop/licence."));
 	sprintf(path, "%s/.rdesktop/licence.%s", home, hostname);
 
 	fd = open(path, O_RDONLY);
@@ -601,136 +600,57 @@ load_licence(unsigned char **data)
 		return -1;
 
 	*data = xmalloc(st.st_size);
-	return read(fd, *data, st.st_size);
+	length = read(fd, *data, st.st_size);
+	close(fd);
+	xfree(path);
+	return length;
 }
 
 void
 save_licence(unsigned char *data, int length)
 {
-	char *fpath;		/* file path for licence */
-	char *fname, *fnamewrk;	/* file name for licence .inkl path. */
-	char *home;
-	uint32 y;
-	struct flock fnfl;
-	int fnfd, fnwrkfd, i, wlen;
-	struct stream s, *s_ptr;
-	uint32 len;
-
-	/* Construct a stream, so that we can use macros to extract the
-	 * licence.
-	 */
-	s_ptr = &s;
-	s_ptr->p = data;
-	/* Skip first two bytes */
-	in_uint16_le(s_ptr, len);
-
-	/* Skip three strings */
-	for (i = 0; i < 3; i++)
-	{
-		in_uint32_le(s_ptr, len);
-		s_ptr->p += len;
-		/* Make sure that we won't be past the end of data after
-		 * reading the next length value
-		 */
-		if ((s_ptr->p) + 4 > data + length)
-		{
-			printf("Error in parsing licence key.\n");
-			printf("Strings %d end value %x > supplied length (%x)\n", i,
-			       (unsigned int) s_ptr->p, (unsigned int) data + length);
-			return;
-		}
-	}
-	in_uint32_le(s_ptr, len);
-	if (s_ptr->p + len > data + length)
-	{
-		printf("Error in parsing licence key.\n");
-		printf("End of licence %x > supplied length (%x)\n",
-		       (unsigned int) s_ptr->p + len, (unsigned int) data + length);
-		return;
-	}
+	char *home, *path, *tmppath;
+	int fd;
 
 	home = getenv("HOME");
 	if (home == NULL)
 		return;
 
-	/* set and create the directory -- if it doesn't exist. */
-	fpath = xmalloc(strlen(home) + 11);
-	STRNCPY(fpath, home, strlen(home) + 1);
+	path = xmalloc(strlen(home) + strlen(hostname) + sizeof("/.rdesktop/licence."));
 
-	sprintf(fpath, "%s/.rdesktop", fpath);
-	if (mkdir(fpath, 0700) == -1 && errno != EEXIST)
+	sprintf(path, "%s/.rdesktop", home);
+	if ((mkdir(path, 0700) == -1) && errno != EEXIST)
 	{
-		perror("mkdir");
-		exit(1);
+		perror(path);
+		return;
 	}
 
-	/* set the real licence filename, and put a write lock on it. */
-	fname = xmalloc(strlen(fpath) + strlen(hostname) + 10);
-	sprintf(fname, "%s/licence.%s", fpath, hostname);
-	fnfd = open(fname, O_RDONLY);
-	if (fnfd != -1)
+	/* write licence to licence.hostname.new, then atomically rename to licence.hostname */
+
+	sprintf(path, "%s/.rdesktop/licence.%s", home, hostname);
+	tmppath = xmalloc(strlen(path) + sizeof(".new"));
+	strcpy(tmppath, path);
+	strcat(tmppath, ".new");
+
+	fd = open(tmppath, O_WRONLY|O_CREAT|O_TRUNC, 0600);
+	if (fd == -1)
 	{
-		fnfl.l_type = F_WRLCK;
-		fnfl.l_whence = SEEK_SET;
-		fnfl.l_start = 0;
-		fnfl.l_len = 1;
-		fcntl(fnfd, F_SETLK, &fnfl);
+		perror(tmppath);
+		return;
 	}
 
-	/* create a temporary licence file */
-	fnamewrk = xmalloc(strlen(fname) + 12);
-	for (y = 0;; y++)
+	if (write(fd, data, length) != length)
 	{
-		sprintf(fnamewrk, "%s.%lu", fname, (long unsigned int) y);
-		fnwrkfd = open(fnamewrk, O_WRONLY | O_CREAT | O_EXCL, 0600);
-		if (fnwrkfd == -1)
-		{
-			if (errno == EINTR || errno == EEXIST)
-				continue;
-			perror("create");
-			exit(1);
-		}
-		break;
+		perror(tmppath);
+		unlink(tmppath);
 	}
-	/* write to the licence file */
-	for (y = 0; y < len;)
+	else if (rename(tmppath, path) == -1)
 	{
-		do
-		{
-			wlen = write(fnwrkfd, s_ptr->p + y, len - y);
-		}
-		while (wlen == -1 && errno == EINTR);
-		if (wlen < 1)
-		{
-			perror("write");
-			unlink(fnamewrk);
-			exit(1);
-		}
-		y += wlen;
+		perror(path);
+		unlink(tmppath);
 	}
 
-	/* close the file and rename it to fname */
-	if (close(fnwrkfd) == -1)
-	{
-		perror("close");
-		unlink(fnamewrk);
-		exit(1);
-	}
-	if (rename(fnamewrk, fname) == -1)
-	{
-		perror("rename");
-		unlink(fnamewrk);
-		exit(1);
-	}
-	/* close the file lock on fname */
-	if (fnfd != -1)
-	{
-		fnfl.l_type = F_UNLCK;
-		fnfl.l_whence = SEEK_SET;
-		fnfl.l_start = 0;
-		fnfl.l_len = 1;
-		fcntl(fnfd, F_SETLK, &fnfl);
-		close(fnfd);
-	}
-
+	close(fd);
+	xfree(tmppath);
+	xfree(path);
 }
