@@ -836,7 +836,7 @@ xwin_process_events(void)
 				save_remote_modifiers();
 				ensure_remote_modifiers(ev_time, tr);
 				rdp_send_scancode(ev_time, RDP_KEYPRESS, tr.scancode);
-				restore_remote_modifiers();
+				restore_remote_modifiers(ev_time);
 
 				break;
 
