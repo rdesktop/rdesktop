@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include "rdesktop.h"
 
 #define IRP_MJ_CREATE		0x00

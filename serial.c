@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <termios.h>
+#include <strings.h>
 #include "rdesktop.h"
 
 #define FILE_DEVICE_SERIAL_PORT		0x1b
@@ -286,7 +287,7 @@ serial_enum_devices(int *id, char* optarg)
 					/* optarg = com1, pos2 = /dev/ttyS0 */
 					strcpy(g_rdpdr_device[*id].name,optarg);
 
-					toupper(g_rdpdr_device[*id].name);
+					toupper_str(g_rdpdr_device[*id].name);
 
 					g_rdpdr_device[*id].local_path = xmalloc( strlen(pos2) + 1 );
 					strcpy(g_rdpdr_device[*id].local_path,pos2);

@@ -48,7 +48,7 @@ parallel_enum_devices(int *id, char *optarg)
 		pos2 = next_arg(optarg, '=');
 		strcpy(g_rdpdr_device[*id].name, optarg);
 
-		toupper(g_rdpdr_device[*id].name);
+		toupper_str(g_rdpdr_device[*id].name);
 
 		g_rdpdr_device[*id].local_path = xmalloc(strlen(pos2) + 1);
 		strcpy(g_rdpdr_device[*id].local_path, pos2);

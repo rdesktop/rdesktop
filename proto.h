@@ -69,7 +69,7 @@ void error(char *format, ...);
 void warning(char *format, ...);
 void unimpl(char *format, ...);
 void hexdump(unsigned char *p, unsigned int len);
-char *toupper(char* p);
+void toupper_str(char* p);
 char *ltoa(long N, int base);
 int load_licence(unsigned char **data);
 void save_licence(unsigned char *data, int length);

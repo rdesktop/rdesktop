@@ -116,7 +116,7 @@ disk_enum_devices(int *id, char *optarg)
 		pos2 = next_arg(optarg, '=');
 		strcpy(g_rdpdr_device[*id].name, optarg);
 
-		toupper(g_rdpdr_device[*id].name);
+		toupper_str(g_rdpdr_device[*id].name);
 
 		/* add trailing colon to name. */
 		strcat(g_rdpdr_device[*id].name, ":");
@@ -212,7 +212,7 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 					return STATUS_NO_SUCH_FILE;
 			}
 		}
-		handle = dirfd(dirp);
+		handle = dirfd(dirp); /* FIXME: dirfd is not portable */
 	}
 	else
 	{

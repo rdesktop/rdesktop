@@ -102,7 +102,7 @@ printer_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 dispos
 		pprinter_data->printer_fp = popen(cmd, "w");
 	}
 
-	g_rdpdr_device[device_id].handle = pprinter_data->printer_fp->_fileno;
+	g_rdpdr_device[device_id].handle = fileno(pprinter_data->printer_fp);
 	*handle = g_rdpdr_device[device_id].handle;
 	return STATUS_SUCCESS;
 }

@@ -26,6 +26,7 @@
 #include <sys/stat.h>		/* stat */
 #include <sys/time.h>		/* gettimeofday */
 #include <sys/times.h>		/* times */
+#include <ctype.h>		/* toupper */
 #include <errno.h>
 #include "rdesktop.h"
 
@@ -767,12 +768,12 @@ next_arg(char *src, char needle)
 }
 
 
-char *
-toupper(char* p)
+void
+toupper_str(char* p)
 {
 	while( *p ){
 		if( (*p >= 'a') && (*p <= 'z') )
-			*p = *p - 32;
+			*p = toupper((int) *p);
 		p++;
 	}
 }
