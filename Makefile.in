@@ -124,7 +124,12 @@ rdesktop-$(VERSION).tar.gz: Makefile configure
 dist-noversion: rdesktop.tar.gz
 
 rdesktop.tar.gz: rdesktop-$(VERSION).tar.gz
-	cp $< $@
+	mkdir -p /tmp/rdesktop-make-dist-dir
+	tar zxvf $< -C /tmp/rdesktop-make-dist-dir
+	mv /tmp/rdesktop-make-dist-dir/rdesktop-$(VERSION) /tmp/rdesktop-make-dist-dir/rdesktop
+	ls /tmp/rdesktop-make-dist-dir/rdesktop
+	tar zcvf $@ -C /tmp/rdesktop-make-dist-dir rdesktop
+	rm -rf /tmp/rdesktop-make-dist-dir
 
 Makefile: Makefile.in configure
 	./config.status
