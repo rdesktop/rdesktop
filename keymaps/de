@@ -35,7 +35,9 @@ question 0x0c shift
 backslash 0x0c altgr
 questiondown 0x0c shift altgr
 acute 0x0d
+dead_acute 0x0d
 grave 0x0d shift
+dead_grave 0x0d shift
 dead_cedilla 0x0d altgr
 dead_ogonek 0x0d shift altgr
 at 0x10 altgr
@@ -63,6 +65,7 @@ dead_abovering 0x1a shift altgr
 plus 0x1b
 asterisk 0x1b shift
 asciitilde 0x1b altgr
+dead_tilde 0x1b altgr
 dead_macron 0x1b shift altgr
 ae 0x1e altgr
 AE 0x1e shift altgr
@@ -82,6 +85,7 @@ adiaeresis 0x28
 Adiaeresis 0x28 shift
 dead_caron 0x28 shift altgr
 asciicircum 0x29
+dead_circum 0x29
 degree 0x29 shift
 notsign 0x29 altgr
 numbersign 0x2b
