@@ -12,7 +12,7 @@
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
-   
+
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -237,10 +237,11 @@ enum RDP_INPUT_DEVICE
 #define RDP_SOURCE		"MSTSC"
 
 /* Logon flags */
-#define RDP_LOGON_NORMAL	0x33
-#define RDP_LOGON_AUTO		0x8
-#define RDP_LOGON_BLOB		0x100
-#define RDP_COMPRESSION		0x80
+#define RDP_LOGON_AUTO		0x0008
+#define RDP_LOGON_NORMAL	0x0033
+#define RDP_COMPRESSION		0x0080
+#define RDP_LOGON_BLOB		0x0100
+#define RDP_LOGON_LEAVE_AUDIO	0x2000
 
 /* Keymap flags */
 #define MapRightShiftMask   (1<<0)
@@ -328,12 +329,12 @@ enum RDP_INPUT_DEVICE
 #define STATUS_NO_SUCH_FILE             0xc000000f
 #define STATUS_INVALID_DEVICE_REQUEST	0xc0000010
 #define STATUS_ACCESS_DENIED		0xc0000022
+#define STATUS_OBJECT_NAME_COLLISION    0xc0000035
 #define STATUS_DISK_FULL                0xc000007f
 #define STATUS_FILE_IS_A_DIRECTORY      0xc00000ba
 #define STATUS_NOT_SUPPORTED            0xc00000bb
 #define STATUS_TIMEOUT                  0xc0000102
 #define STATUS_CANCELLED                0xc0000120
-#define STATUS_OBJECT_NAME_COLLISION    0xc0000035
 
 
 /* RDPDR constants */

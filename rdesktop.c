@@ -131,8 +131,9 @@ usage(char *program)
 	fprintf(stderr, "             or      LPT1=/dev/lp0,LPT2=/dev/lp1\n");
 	fprintf(stderr, "         '-r printer:mydeskjet': enable printer redirection\n");
 	fprintf(stderr,
-		"             or       mydeskjet=\"HP LaserJet IIIP\" to enter server driver as well\n");
-	fprintf(stderr, "         '-r sound': enable sound redirection\n");
+		"             or      mydeskjet=\"HP LaserJet IIIP\" to enter server driver as well\n");
+	fprintf(stderr, "         '-r sound:[on|off|remote]': enable sound redirection\n");
+	fprintf(stderr, "                     remote would leave sound on server\n");
 	fprintf(stderr, "   -0: attach to console\n");
 	fprintf(stderr, "   -4: use RDP version 4\n");
 	fprintf(stderr, "   -5: use RDP version 5 (default)\n");
@@ -414,11 +415,28 @@ main(int argc, char *argv[])
 
 				if (strncmp("sound", optarg, 5) == 0)
 				{
+					if (*(optarg + 6) == ':')
+					{
+
+						if (strncmp("remote", optarg + 7, 6) == 0)
+							flags |= RDP_LOGON_LEAVE_AUDIO;
+						else if (strncmp("on", optarg + 7, 2) == 0)
+						{
 #ifdef WITH_RDPSND
-					g_rdpsnd = True;
+							g_rdpsnd = True;
 #else
-					warning("Not compiled with sound support");
+							warning("Not compiled with sound support");
 #endif
+						}
+					}
+					else
+					{
+#ifdef WITH_RDPSND
+						g_rdpsnd = True;
+#else
+						warning("Not compiled with sound support");
+#endif
+					}
 				}
 				else if (strncmp("disk", optarg, 4) == 0)
 				{
