@@ -220,9 +220,10 @@ Not needed anymore, with the new keyboard mapping implementation.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/rdesktop-openssl.patch
 Description:
-TDB
+Support for linking rdesktop with OpenSSL. 
 Status:
-Not yet examined. 
+Not needed anymore, rdesktop can optionally use system 
+OpenSSL. 
 
 
 URL:
