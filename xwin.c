@@ -966,10 +966,10 @@ ui_create_window(void)
 	attribs.override_redirect = g_fullscreen;
 	attribs.colormap = g_xcolmap;
 
-	g_wnd = XCreateWindow(g_display, RootWindowOfScreen(g_screen), g_xpos, g_ypos, wndwidth, wndheight,
-			      0, g_depth, InputOutput, g_visual,
-			      CWBackPixel | CWBackingStore | CWOverrideRedirect |
-			      CWColormap | CWBorderPixel, &attribs);
+	g_wnd = XCreateWindow(g_display, RootWindowOfScreen(g_screen), g_xpos, g_ypos, wndwidth,
+			      wndheight, 0, g_depth, InputOutput, g_visual,
+			      CWBackPixel | CWBackingStore | CWOverrideRedirect | CWColormap |
+			      CWBorderPixel, &attribs);
 
 	if (g_gc == NULL)
 		g_gc = XCreateGC(g_display, g_wnd, 0, NULL);

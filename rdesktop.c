@@ -457,7 +457,7 @@ main(int argc, char *argv[])
 
 				if (*p == '+' || *p == '-')
 					g_xpos = strtol(p, &p, 10);
-				
+
 				if (*p == '+' || *p == '-')
 					g_ypos = strtol(p, NULL, 10);
 
