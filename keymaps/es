@@ -83,9 +83,9 @@ Ccedilla 0x2b shift
 braceright 0x2b altgr
 dead_breve 0x2b shift altgr
 guillemotleft 0x2c altgr
-less 0x2c shift altgr
+less 0x56
+greater 0x56 shift
 guillemotright 0x2d altgr
-greater 0x2d shift altgr
 cent 0x2e altgr
 copyright 0x2e shift altgr
 leftdoublequotemark 0x2f altgr
