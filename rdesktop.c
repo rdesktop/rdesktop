@@ -41,7 +41,7 @@
 #endif
 
 char title[32] = "";
-char username[16];
+char g_username[16];
 char hostname[16];
 char keymapname[16];
 int keylayout = 0x409;		/* Defaults to US keyboard layout */
@@ -51,10 +51,10 @@ int height = 600;
 int tcp_port_rdp = TCP_PORT_RDP;
 int server_bpp = 8;
 int win_button_size = 0;	/* If zero, disable single app mode */
-BOOL bitmap_compression = True;
+BOOL g_bitmap_compression = True;
 BOOL sendmotion = True;
-BOOL orders = True;
-BOOL encryption = True;
+BOOL g_orders = True;
+BOOL g_encryption = True;
 BOOL packet_encryption = True;
 BOOL desktop_save = True;
 BOOL fullscreen = False;
@@ -188,7 +188,7 @@ main(int argc, char *argv[])
 #endif
 
 			case 'u':
-				STRNCPY(username, optarg, sizeof(username));
+				STRNCPY(g_username, optarg, sizeof(g_username));
 				username_option = 1;
 				break;
 
@@ -268,11 +268,11 @@ main(int argc, char *argv[])
 				break;
 
 			case 'b':
-				orders = False;
+				g_orders = False;
 				break;
 
 			case 'e':
-				encryption = False;
+				g_encryption = False;
 				break;
 			case 'E':
 				packet_encryption = False;
@@ -341,7 +341,7 @@ main(int argc, char *argv[])
 			return 1;
 		}
 
-		STRNCPY(username, pw->pw_name, sizeof(username));
+		STRNCPY(g_username, pw->pw_name, sizeof(g_username));
 	}
 
 	if (hostname[0] == 0)
@@ -385,7 +385,7 @@ main(int argc, char *argv[])
 	/* By setting encryption to False here, we have an encrypted login 
 	   packet but unencrypted transfer of other packets */
 	if (!packet_encryption)
-		encryption = False;
+		g_encryption = False;
 
 
 	DEBUG(("Connection successful.\n"));

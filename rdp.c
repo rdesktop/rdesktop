@@ -21,10 +21,10 @@
 #include "rdesktop.h"
 
 extern uint16 g_mcs_userid;
-extern char username[16];
-extern BOOL bitmap_compression;
-extern BOOL orders;
-extern BOOL encryption;
+extern char g_username[16];
+extern BOOL g_bitmap_compression;
+extern BOOL g_orders;
+extern BOOL g_encryption;
 extern BOOL desktop_save;
 extern BOOL use_rdp5;
 extern uint16 server_rdp_version;
@@ -84,7 +84,7 @@ rdp_init_data(int maxlen)
 {
 	STREAM s;
 
-	s = sec_init(encryption ? SEC_ENCRYPT : 0, maxlen + 18);
+	s = sec_init(g_encryption ? SEC_ENCRYPT : 0, maxlen + 18);
 	s_push_layer(s, rdp_hdr, 18);
 
 	return s;
@@ -111,7 +111,7 @@ rdp_send_data(STREAM s, uint8 data_pdu_type)
 	out_uint8(s, 0);	/* compress_type */
 	out_uint16(s, 0);	/* compress_len */
 
-	sec_send(s, encryption ? SEC_ENCRYPT : 0);
+	sec_send(s, g_encryption ? SEC_ENCRYPT : 0);
 }
 
 /* Output a string in Unicode */
@@ -144,7 +144,7 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 	int len_ip = 2 * strlen("127.0.0.1");
 	int len_dll = 2 * strlen("C:\\WINNT\\System32\\mstscax.dll");
 	int packetlen = 0;
-	uint32 sec_flags = encryption ? (SEC_LOGON_INFO | SEC_ENCRYPT) : SEC_LOGON_INFO;
+	uint32 sec_flags = g_encryption ? (SEC_LOGON_INFO | SEC_ENCRYPT) : SEC_LOGON_INFO;
 	STREAM s;
 
 	if (!use_rdp5 || 1 == server_rdp_version)
@@ -387,7 +387,7 @@ rdp_out_bitmap_caps(STREAM s)
 	out_uint16_le(s, 600);	/* Desktop height */
 	out_uint16(s, 0);	/* Pad */
 	out_uint16(s, 0);	/* Allow resize */
-	out_uint16_le(s, bitmap_compression ? 1 : 0);	/* Support compression */
+	out_uint16_le(s, g_bitmap_compression ? 1 : 0);	/* Support compression */
 	out_uint16(s, 0);	/* Unknown */
 	out_uint16_le(s, 1);	/* Unknown */
 	out_uint16(s, 0);	/* Pad */
@@ -546,7 +546,7 @@ static void
 rdp_send_confirm_active(void)
 {
 	STREAM s;
-	uint32 sec_flags = encryption ? (RDP5_FLAG | SEC_ENCRYPT) : RDP5_FLAG;
+	uint32 sec_flags = g_encryption ? (RDP5_FLAG | SEC_ENCRYPT) : RDP5_FLAG;
 	uint16 caplen =
 		RDP_CAPLEN_GENERAL + RDP_CAPLEN_BITMAP + RDP_CAPLEN_ORDER +
 		RDP_CAPLEN_BMPCACHE + RDP_CAPLEN_COLCACHE +
@@ -898,10 +898,10 @@ BOOL
 rdp_connect(char *server, uint32 flags, char *domain, char *password,
 	    char *command, char *directory)
 {
-	if (!sec_connect(server, username))
+	if (!sec_connect(server, g_username))
 		return False;
 
-	rdp_send_logon_info(flags, domain, username, password, command, directory);
+	rdp_send_logon_info(flags, domain, g_username, password, command, directory);
 	return True;
 }
 

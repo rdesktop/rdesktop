@@ -37,7 +37,7 @@ extern char hostname[16];
 extern int width;
 extern int height;
 extern int keylayout;
-extern BOOL encryption;
+extern BOOL g_encryption;
 extern BOOL g_licence_issued;
 extern BOOL use_rdp5;
 extern int server_bpp;
@@ -480,7 +480,7 @@ sec_out_mcs_data(STREAM s)
 	/* Client encryption settings */
 	out_uint16_le(s, SEC_TAG_CLI_CRYPT);
 	out_uint16_le(s, 12);	/* length */
-	out_uint32_le(s, encryption ? 0x3 : 0);	/* encryption supported, 128-bit supported */
+	out_uint32_le(s, g_encryption ? 0x3 : 0);	/* encryption supported, 128-bit supported */
 	out_uint32(s, 0);	/* Unknown */
 
 	DEBUG_RDP5(("g_num_channels is %d\n", g_num_channels));
@@ -800,7 +800,7 @@ sec_recv(void)
 
 	while ((s = mcs_recv(&channel)) != NULL)
 	{
-		if (encryption || !g_licence_issued)
+		if (g_encryption || !g_licence_issued)
 		{
 			in_uint32_le(s, sec_flags);
 
@@ -844,7 +844,7 @@ sec_connect(char *server, char *username)
 		return False;
 
 	//      sec_process_mcs_data(&mcs_data);
-	if (encryption)
+	if (g_encryption)
 		sec_establish_key();
 	xfree(mcs_data.data);
 	return True;

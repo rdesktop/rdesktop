@@ -28,7 +28,7 @@
 #define CHANNEL_FLAG_SHOW_PROTOCOL	0x10
 
 extern BOOL use_rdp5;
-extern BOOL encryption;
+extern BOOL g_encryption;
 
 VCHANNEL g_channels[MAX_CHANNELS];
 unsigned int g_num_channels;
@@ -71,7 +71,7 @@ channel_init(VCHANNEL * channel, uint32 length)
 {
 	STREAM s;
 
-	s = sec_init(encryption ? SEC_ENCRYPT : 0, length + 8);
+	s = sec_init(g_encryption ? SEC_ENCRYPT : 0, length + 8);
 	s_push_layer(s, channel_hdr, 8);
 	return s;
 }
@@ -96,7 +96,7 @@ channel_send(STREAM s, VCHANNEL * channel)
 	out_uint32_le(s, length);
 	out_uint32_le(s, flags);
 	data = s->end = s->p + thislength;
-	sec_send_to_channel(s, encryption ? SEC_ENCRYPT : 0, channel->mcs_id);
+	sec_send_to_channel(s, g_encryption ? SEC_ENCRYPT : 0, channel->mcs_id);
 
 	/* subsequent segments copied (otherwise would have to generate headers backwards) */
 	while (remaining > 0)
@@ -105,12 +105,12 @@ channel_send(STREAM s, VCHANNEL * channel)
 		remaining -= thislength;
 		flags = (remaining == 0) ? CHANNEL_FLAG_LAST : 0;
 
-		s = sec_init(encryption ? SEC_ENCRYPT : 0, thislength + 8);
+		s = sec_init(g_encryption ? SEC_ENCRYPT : 0, thislength + 8);
 		out_uint32_le(s, length);
 		out_uint32_le(s, flags);
 		out_uint8p(s, data, thislength);
 		s_mark_end(s);
-		sec_send_to_channel(s, encryption ? SEC_ENCRYPT : 0, channel->mcs_id);
+		sec_send_to_channel(s, g_encryption ? SEC_ENCRYPT : 0, channel->mcs_id);
 
 		data += thislength;
 	}

@@ -26,7 +26,7 @@
 #include "crypto/rc4.h"
 #endif
 
-extern char username[16];
+extern char g_username[16];
 extern char hostname[16];
 
 static uint8 g_licence_key[16];
@@ -174,7 +174,7 @@ licence_process_demand(STREAM s)
 		return;
 	}
 
-	licence_send_request(null_data, null_data, username, hostname);
+	licence_send_request(null_data, null_data, g_username, hostname);
 }
 
 /* Send an authentication response packet */
