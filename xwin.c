@@ -308,7 +308,8 @@ ui_init(void)
 			error("Failed to get workarea.\n");
 			error("Perhaps your window manager does not support EWMH?\n");
 			error("Defaulting to geometry 800x600\n");
-			width = 800; height = 600;
+			width = 800;
+			height = 600;
 		}
 	}
 
