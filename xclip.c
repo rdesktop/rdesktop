@@ -56,7 +56,7 @@ xclip_provide_selection(XSelectionRequestEvent * req, Atom type, unsigned int fo
 	XSendEvent(g_display, req->requestor, False, NoEventMask, &xev);
 }
 
-static void
+void
 xclip_handle_SelectionNotify(XSelectionEvent * event)
 {
 	unsigned long nitems, bytes_left;
@@ -129,7 +129,7 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 	cliprdr_send_data(NULL, 0);
 }
 
-static void
+void
 xclip_handle_SelectionRequest(XSelectionRequestEvent * event)
 {
 	unsigned long nitems, bytes_left;
@@ -170,7 +170,7 @@ xclip_handle_SelectionRequest(XSelectionRequestEvent * event)
 	/* wait for data */
 }
 
-static void
+void
 xclip_handle_SelectionClear(void)
 {
 	DEBUG_CLIPBOARD(("xclip_handle_SelectionClear\n"));
@@ -179,7 +179,7 @@ xclip_handle_SelectionClear(void)
 	cliprdr_send_text_format_announce();
 }
 
-static void
+void
 xclip_handle_PropertyNotify(XPropertyEvent * event)
 {
 	unsigned long nitems, bytes_left;
