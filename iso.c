@@ -44,7 +44,7 @@ iso_send_msg(uint8 code)
 
 /* Receive a message on the ISO layer, return code */
 static STREAM
-iso_recv_msg(uint8 *code)
+iso_recv_msg(uint8 * code)
 {
 	STREAM s;
 	uint16 length;

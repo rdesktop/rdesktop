@@ -40,14 +40,16 @@ typedef struct _COLOURENTRY
 	uint8 green;
 	uint8 blue;
 
-} COLOURENTRY;
+}
+COLOURENTRY;
 
 typedef struct _COLOURMAP
 {
 	uint16 ncolours;
 	COLOURENTRY *colours;
 
-} COLOURMAP;
+}
+COLOURMAP;
 
 typedef struct _BOUNDS
 {
@@ -56,7 +58,8 @@ typedef struct _BOUNDS
 	uint16 right;
 	uint16 bottom;
 
-} BOUNDS;
+}
+BOUNDS;
 
 typedef struct _PEN
 {
@@ -64,7 +67,8 @@ typedef struct _PEN
 	uint8 width;
 	uint8 colour;
 
-} PEN;
+}
+PEN;
 
 typedef struct _BRUSH
 {
@@ -73,7 +77,8 @@ typedef struct _BRUSH
 	uint8 style;
 	uint8 pattern[8];
 
-} BRUSH;
+}
+BRUSH;
 
 typedef struct _FONTGLYPH
 {
@@ -83,11 +88,13 @@ typedef struct _FONTGLYPH
 	uint16 height;
 	HBITMAP pixmap;
 
-} FONTGLYPH;
+}
+FONTGLYPH;
 
 typedef struct _DATABLOB
 {
 	void *data;
 	int size;
 
-} DATABLOB;
+}
+DATABLOB;

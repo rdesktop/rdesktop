@@ -32,7 +32,8 @@ typedef struct stream
 	unsigned char *sec_hdr;
 	unsigned char *rdp_hdr;
 
-} *STREAM;
+}
+ *STREAM;
 
 #define s_push_layer(s,h,n)	{ (s)->h = (s)->p; (s)->p += n; }
 #define s_pop_layer(s,h)	(s)->p = (s)->h;

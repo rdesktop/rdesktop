@@ -24,11 +24,11 @@
 /* ISO PDU codes */
 enum ISO_PDU_CODE
 {
-	ISO_PDU_CR = 0xE0, /* Connection Request */
-	ISO_PDU_CC = 0xD0, /* Connection Confirm */
-	ISO_PDU_DR = 0x80, /* Disconnect Request */
-	ISO_PDU_DT = 0xF0, /* Data */
-	ISO_PDU_ER = 0x70  /* Error */
+	ISO_PDU_CR = 0xE0,	/* Connection Request */
+	ISO_PDU_CC = 0xD0,	/* Connection Confirm */
+	ISO_PDU_DR = 0x80,	/* Disconnect Request */
+	ISO_PDU_DT = 0xF0,	/* Data */
+	ISO_PDU_ER = 0x70	/* Error */
 };
 
 /* MCS PDU codes */
@@ -76,7 +76,7 @@ enum MCS_PDU_TYPE
 #define SEC_TAG_PUBKEY		0x0006
 #define SEC_TAG_KEYSIG		0x0008
 
-#define SEC_RSA_MAGIC		0x31415352 /* RSA1 */
+#define SEC_RSA_MAGIC		0x31415352	/* RSA1 */
 
 /* RDP licensing constants */
 #define LICENCE_TOKEN_SIZE	10

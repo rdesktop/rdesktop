@@ -32,7 +32,8 @@ BOOL licence_issued = False;
 
 /* Generate a session key and RC4 keys, given client and server randoms */
 static void
-licence_generate_keys(uint8 *client_key, uint8 *server_key, uint8 *client_rsa)
+licence_generate_keys(uint8 * client_key, uint8 * server_key,
+		      uint8 * client_rsa)
 {
 	uint8 session_key[48];
 	uint8 temp_hash[48];
@@ -49,7 +50,7 @@ licence_generate_keys(uint8 *client_key, uint8 *server_key, uint8 *client_rsa)
 }
 
 static void
-licence_generate_hwid(uint8 *hwid)
+licence_generate_hwid(uint8 * hwid)
 {
 	buf_out_uint32(hwid, 2);
 	strncpy(hwid + 4, hostname, LICENCE_HWID_SIZE - 4);
@@ -57,13 +58,14 @@ licence_generate_hwid(uint8 *hwid)
 
 /* Present an existing licence to the server */
 static void
-licence_present(uint8 *client_random, uint8 *rsa_data,
-		uint8 *licence_data, int licence_size,
-		uint8 *hwid, uint8 *signature)
+licence_present(uint8 * client_random, uint8 * rsa_data,
+		uint8 * licence_data, int licence_size,
+		uint8 * hwid, uint8 * signature)
 {
 	uint32 sec_flags = SEC_LICENCE_NEG;
-	uint16 length = 16 + SEC_RANDOM_SIZE + SEC_MODULUS_SIZE + SEC_PADDING_SIZE
-			+ licence_size + LICENCE_HWID_SIZE + LICENCE_SIGNATURE_SIZE;
+	uint16 length =
+		16 + SEC_RANDOM_SIZE + SEC_MODULUS_SIZE + SEC_PADDING_SIZE +
+		licence_size + LICENCE_HWID_SIZE + LICENCE_SIGNATURE_SIZE;
 	STREAM s;
 
 	s = sec_init(sec_flags, length + 4);
@@ -97,7 +99,7 @@ licence_present(uint8 *client_random, uint8 *rsa_data,
 
 /* Send a licence request packet */
 static void
-licence_send_request(uint8 *client_random, uint8 *rsa_data,
+licence_send_request(uint8 * client_random, uint8 * rsa_data,
 		     char *user, char *host)
 {
 	uint32 sec_flags = SEC_LICENCE_NEG;
@@ -156,7 +158,8 @@ licence_process_demand(STREAM s)
 	licence_size = load_licence(&licence_data);
 	if (licence_size == -1)
 	{
-		licence_send_request(null_data, null_data, username, hostname);
+		licence_send_request(null_data, null_data, username,
+				     hostname);
 		return;
 	}
 
@@ -169,13 +172,13 @@ licence_process_demand(STREAM s)
 	RC4(&crypt_key, sizeof(hwid), hwid, hwid);
 
 	licence_present(null_data, null_data, licence_data, licence_size,
-					hwid, signature);
+			hwid, signature);
 	xfree(licence_data);
 }
 
 /* Send an authentication response packet */
 static void
-licence_send_authresp(uint8 *token, uint8 *crypt_hwid, uint8 *signature)
+licence_send_authresp(uint8 * token, uint8 * crypt_hwid, uint8 * signature)
 {
 	uint32 sec_flags = SEC_LICENCE_NEG;
 	uint16 length = 58;
@@ -202,7 +205,7 @@ licence_send_authresp(uint8 *token, uint8 *crypt_hwid, uint8 *signature)
 
 /* Parse an authentication request packet */
 static BOOL
-licence_parse_authreq(STREAM s, uint8 **token, uint8 **signature)
+licence_parse_authreq(STREAM s, uint8 ** token, uint8 ** signature)
 {
 	uint16 tokenlen;
 
@@ -280,7 +283,7 @@ licence_process_issue(STREAM s)
 		return;
 
 	licence_issued = True;
-	save_licence(s->p, length-2);
+	save_licence(s->p, length - 2);
 }
 
 /* Process a licence packet */

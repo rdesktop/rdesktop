@@ -81,7 +81,8 @@ main(int argc, char *argv[])
 	int c;
 
 	printf("rdesktop: A Remote Desktop Protocol client.\n");
-	printf("Version " VERSION ". Copyright (C) 1999-2001 Matt Chapman.\n");
+	printf("Version " VERSION
+	       ". Copyright (C) 1999-2001 Matt Chapman.\n");
 	printf("See http://www.rdesktop.org/ for more information.\n\n");
 
 	flags = RDP_LOGON_NORMAL;
@@ -118,13 +119,14 @@ main(int argc, char *argv[])
 				break;
 
 			case 'k':
-				STRNCPY(keymapname, optarg, sizeof(keymapname));
+				STRNCPY(keymapname, optarg,
+					sizeof(keymapname));
 				break;
 
 			case 'g':
 				width = strtol(optarg, &p, 10);
 				if (*p == 'x')
-					height = strtol(p+1, NULL, 10);
+					height = strtol(p + 1, NULL, 10);
 
 				if ((width == 0) || (height == 0))
 				{
@@ -238,7 +240,7 @@ main(int argc, char *argv[])
 
 /* Generate a 32-byte random for the secure transport code. */
 void
-generate_random(uint8 *random)
+generate_random(uint8 * random)
 {
 	struct stat st;
 	struct tms tmsbuf;
@@ -343,7 +345,7 @@ hexdump(unsigned char *p, unsigned int len)
 			printf("%02x ", line[i]);
 
 		for (; i < 16; i++)
-				printf("   ");
+			printf("   ");
 
 		for (i = 0; i < thisline; i++)
 			printf("%c",
@@ -369,7 +371,7 @@ load_licence(unsigned char **data)
 		return -1;
 
 	STRNCPY(path, home, sizeof(path));
-	strncat(path, "/.rdesktop/licence", sizeof(path)-strlen(path)-1);
+	strncat(path, "/.rdesktop/licence", sizeof(path) - strlen(path) - 1);
 
 	fd = open(path, O_RDONLY);
 	if (fd == -1)
@@ -394,12 +396,12 @@ save_licence(unsigned char *data, int length)
 		return;
 
 	STRNCPY(path, home, sizeof(path));
-	strncat(path, "/.rdesktop", sizeof(path)-strlen(path)-1);
+	strncat(path, "/.rdesktop", sizeof(path) - strlen(path) - 1);
 	mkdir(path, 0700);
 
-	strncat(path, "/licence", sizeof(path)-strlen(path)-1);
+	strncat(path, "/licence", sizeof(path) - strlen(path) - 1);
 
-	fd = open(path, O_WRONLY|O_CREAT|O_TRUNC, 0600);
+	fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0600);
 	if (fd == -1)
 	{
 		perror("open");
@@ -409,4 +411,3 @@ save_licence(unsigned char *data, int length)
 	write(fd, data, length);
 	close(fd);
 }
-

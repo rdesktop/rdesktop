@@ -60,7 +60,7 @@ rdp_send(STREAM s, uint8 pdu_type)
 
 /* Receive an RDP packet */
 static STREAM
-rdp_recv(uint8 *type)
+rdp_recv(uint8 * type)
 {
 	static STREAM rdp_s;
 	uint16 length, pdu_type;
@@ -156,7 +156,7 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 	int len_program = 2 * strlen(program);
 	int len_directory = 2 * strlen(directory);
 	uint32 sec_flags = encryption ? (SEC_LOGON_INFO | SEC_ENCRYPT)
-				: SEC_LOGON_INFO;
+		: SEC_LOGON_INFO;
 	STREAM s;
 
 	s = sec_init(sec_flags, 18 + len_domain + len_user + len_password
@@ -443,7 +443,7 @@ rdp_send_confirm_active()
 		RDP_CAPLEN_BMPCACHE + RDP_CAPLEN_COLCACHE +
 		RDP_CAPLEN_ACTIVATE + RDP_CAPLEN_CONTROL +
 		RDP_CAPLEN_POINTER + RDP_CAPLEN_SHARE + RDP_CAPLEN_UNKNOWN
-			+ 4 /* w2k fix, why? */;
+		+ 4 /* w2k fix, why? */ ;
 
 	s = rdp_init(14 + caplen + sizeof(RDP_SOURCE));
 
@@ -616,7 +616,7 @@ process_palette(STREAM s)
 	in_uint16_le(s, map.ncolours);
 	in_uint8s(s, 2);	/* pad */
 	in_uint8p(s, colours, (map.ncolours * 3));
-	map.colours = (COLOURENTRY *)colours;
+	map.colours = (COLOURENTRY *) colours;
 
 	hmap = ui_create_colourmap(&map);
 	ui_set_colourmap(hmap);

@@ -26,7 +26,7 @@ static RDP_ORDER_STATE order_state;
 
 /* Read field indicating which parameters are present */
 static void
-rdp_in_present(STREAM s, uint32 *present, uint8 flags, int size)
+rdp_in_present(STREAM s, uint32 * present, uint8 flags, int size)
 {
 	uint8 bits;
 	int i;
@@ -54,7 +54,7 @@ rdp_in_present(STREAM s, uint32 *present, uint8 flags, int size)
 
 /* Read a co-ordinate (16-bit, or 8-bit delta) */
 static void
-rdp_in_coord(STREAM s, uint16 *coord, BOOL delta)
+rdp_in_coord(STREAM s, uint16 * coord, BOOL delta)
 {
 	uint8 change;
 
@@ -71,7 +71,7 @@ rdp_in_coord(STREAM s, uint16 *coord, BOOL delta)
 
 /* Read a colour entry */
 static void
-rdp_in_colour(STREAM s, uint8 *colour)
+rdp_in_colour(STREAM s, uint8 * colour)
 {
 	in_uint8(s, *colour);
 	s->p += 2;
@@ -79,7 +79,7 @@ rdp_in_colour(STREAM s, uint8 *colour)
 
 /* Parse bounds information */
 static BOOL
-rdp_parse_bounds(STREAM s, BOUNDS *bounds)
+rdp_parse_bounds(STREAM s, BOUNDS * bounds)
 {
 	uint8 present;
 
@@ -110,7 +110,7 @@ rdp_parse_bounds(STREAM s, BOUNDS *bounds)
 
 /* Parse a pen */
 static BOOL
-rdp_parse_pen(STREAM s, PEN *pen, uint32 present)
+rdp_parse_pen(STREAM s, PEN * pen, uint32 present)
 {
 	if (present & 1)
 		in_uint8(s, pen->style);
@@ -126,7 +126,7 @@ rdp_parse_pen(STREAM s, PEN *pen, uint32 present)
 
 /* Parse a brush */
 static BOOL
-rdp_parse_brush(STREAM s, BRUSH *brush, uint32 present)
+rdp_parse_brush(STREAM s, BRUSH * brush, uint32 present)
 {
 	if (present & 1)
 		in_uint8(s, brush->xorigin);
@@ -148,7 +148,7 @@ rdp_parse_brush(STREAM s, BRUSH *brush, uint32 present)
 
 /* Process a destination blt order */
 static void
-process_destblt(STREAM s, DESTBLT_ORDER *os, uint32 present, BOOL delta)
+process_destblt(STREAM s, DESTBLT_ORDER * os, uint32 present, BOOL delta)
 {
 	if (present & 0x01)
 		rdp_in_coord(s, &os->x, delta);
@@ -173,7 +173,7 @@ process_destblt(STREAM s, DESTBLT_ORDER *os, uint32 present, BOOL delta)
 
 /* Process a pattern blt order */
 static void
-process_patblt(STREAM s, PATBLT_ORDER *os, uint32 present, BOOL delta)
+process_patblt(STREAM s, PATBLT_ORDER * os, uint32 present, BOOL delta)
 {
 	if (present & 0x0001)
 		rdp_in_coord(s, &os->x, delta);
@@ -198,9 +198,7 @@ process_patblt(STREAM s, PATBLT_ORDER *os, uint32 present, BOOL delta)
 
 	rdp_parse_brush(s, &os->brush, present >> 7);
 
-	DEBUG(("PATBLT(op=0x%x,x=%d,y=%d,cx=%d,cy=%d,bs=%d,bg=0x%x,fg=0x%x)\n",
-	       os->opcode, os->x, os->y, os->cx, os->cy,
-	       os->brush.style, os->bgcolour, os->fgcolour));
+	DEBUG(("PATBLT(op=0x%x,x=%d,y=%d,cx=%d,cy=%d,bs=%d,bg=0x%x,fg=0x%x)\n", os->opcode, os->x, os->y, os->cx, os->cy, os->brush.style, os->bgcolour, os->fgcolour));
 
 	ui_patblt(ROP2_P(os->opcode), os->x, os->y, os->cx, os->cy,
 		  &os->brush, os->bgcolour, os->fgcolour);
@@ -208,7 +206,7 @@ process_patblt(STREAM s, PATBLT_ORDER *os, uint32 present, BOOL delta)
 
 /* Process a screen blt order */
 static void
-process_screenblt(STREAM s, SCREENBLT_ORDER *os, uint32 present, BOOL delta)
+process_screenblt(STREAM s, SCREENBLT_ORDER * os, uint32 present, BOOL delta)
 {
 	if (present & 0x0001)
 		rdp_in_coord(s, &os->x, delta);
@@ -240,7 +238,7 @@ process_screenblt(STREAM s, SCREENBLT_ORDER *os, uint32 present, BOOL delta)
 
 /* Process a line order */
 static void
-process_line(STREAM s, LINE_ORDER *os, uint32 present, BOOL delta)
+process_line(STREAM s, LINE_ORDER * os, uint32 present, BOOL delta)
 {
 	if (present & 0x0001)
 		in_uint16_le(s, os->mixmode);
@@ -281,7 +279,7 @@ process_line(STREAM s, LINE_ORDER *os, uint32 present, BOOL delta)
 
 /* Process an opaque rectangle order */
 static void
-process_rect(STREAM s, RECT_ORDER *os, uint32 present, BOOL delta)
+process_rect(STREAM s, RECT_ORDER * os, uint32 present, BOOL delta)
 {
 	if (present & 0x01)
 		rdp_in_coord(s, &os->x, delta);
@@ -306,7 +304,7 @@ process_rect(STREAM s, RECT_ORDER *os, uint32 present, BOOL delta)
 
 /* Process a desktop save order */
 static void
-process_desksave(STREAM s, DESKSAVE_ORDER *os, uint32 present, BOOL delta)
+process_desksave(STREAM s, DESKSAVE_ORDER * os, uint32 present, BOOL delta)
 {
 	int width, height;
 
@@ -344,7 +342,7 @@ process_desksave(STREAM s, DESKSAVE_ORDER *os, uint32 present, BOOL delta)
 
 /* Process a memory blt order */
 static void
-process_memblt(STREAM s, MEMBLT_ORDER *os, uint32 present, BOOL delta)
+process_memblt(STREAM s, MEMBLT_ORDER * os, uint32 present, BOOL delta)
 {
 	HBITMAP bitmap;
 
@@ -392,7 +390,7 @@ process_memblt(STREAM s, MEMBLT_ORDER *os, uint32 present, BOOL delta)
 
 /* Process a 3-way blt order */
 static void
-process_triblt(STREAM s, TRIBLT_ORDER *os, uint32 present, BOOL delta)
+process_triblt(STREAM s, TRIBLT_ORDER * os, uint32 present, BOOL delta)
 {
 	HBITMAP bitmap;
 
@@ -437,9 +435,7 @@ process_triblt(STREAM s, TRIBLT_ORDER *os, uint32 present, BOOL delta)
 	if (present & 0x010000)
 		in_uint16_le(s, os->unknown);
 
-	DEBUG(("TRIBLT(op=0x%x,x=%d,y=%d,cx=%d,cy=%d,id=%d,idx=%d,bs=%d,bg=0x%x,fg=0x%x)\n",
-	       os->opcode, os->x, os->y, os->cx, os->cy, os->cache_id,
-	       os->cache_idx, os->brush.style, os->bgcolour, os->fgcolour));
+	DEBUG(("TRIBLT(op=0x%x,x=%d,y=%d,cx=%d,cy=%d,id=%d,idx=%d,bs=%d,bg=0x%x,fg=0x%x)\n", os->opcode, os->x, os->y, os->cx, os->cy, os->cache_id, os->cache_idx, os->brush.style, os->bgcolour, os->fgcolour));
 
 	bitmap = cache_get_bitmap(os->cache_id, os->cache_idx);
 	if (bitmap == NULL)
@@ -452,7 +448,7 @@ process_triblt(STREAM s, TRIBLT_ORDER *os, uint32 present, BOOL delta)
 
 /* Parse a delta co-ordinate in polyline order form */
 static int
-parse_delta(uint8 *buffer, int *offset)
+parse_delta(uint8 * buffer, int *offset)
 {
 	int value = buffer[(*offset)++];
 	int two_byte = value & 0x80;
@@ -470,7 +466,7 @@ parse_delta(uint8 *buffer, int *offset)
 
 /* Process a polyline order */
 static void
-process_polyline(STREAM s, POLYLINE_ORDER *os, uint32 present, BOOL delta)
+process_polyline(STREAM s, POLYLINE_ORDER * os, uint32 present, BOOL delta)
 {
 	int index, line, data;
 	int x, y, xfrom, yfrom;
@@ -504,7 +500,8 @@ process_polyline(STREAM s, POLYLINE_ORDER *os, uint32 present, BOOL delta)
 		opcode = ROP2_NXOR;
 
 	DEBUG(("POLYLINE(x=%d,y=%d,fl=0x%x,fg=0x%x,n=%d,sz=%d)\n",
-	       os->x, os->y, os->flags, os->fgcolour, os->lines, os->datasize));
+	       os->x, os->y, os->flags, os->fgcolour, os->lines,
+	       os->datasize));
 
 	DEBUG(("Data: "));
 
@@ -545,7 +542,7 @@ process_polyline(STREAM s, POLYLINE_ORDER *os, uint32 present, BOOL delta)
 
 /* Process a text order */
 static void
-process_text2(STREAM s, TEXT2_ORDER *os, uint32 present, BOOL delta)
+process_text2(STREAM s, TEXT2_ORDER * os, uint32 present, BOOL delta)
 {
 	int i;
 
@@ -603,11 +600,7 @@ process_text2(STREAM s, TEXT2_ORDER *os, uint32 present, BOOL delta)
 		in_uint8a(s, os->text, os->length);
 	}
 
-	DEBUG(("TEXT2(x=%d,y=%d,cl=%d,ct=%d,cr=%d,cb=%d,bl=%d,bt=%d,bb=%d,br=%d,fg=0x%x,bg=0x%x,font=%d,fl=0x%x,mix=%d,unk=0x%x,n=%d)\n",
-	       os->x, os->y, os->clipleft, os->cliptop, os->clipright,
-	       os->clipbottom, os->boxleft, os->boxtop, os->boxright,
-	       os->boxbottom, os->fgcolour, os->bgcolour, os->font,
-	       os->flags, os->mixmode, os->unknown, os->length));
+	DEBUG(("TEXT2(x=%d,y=%d,cl=%d,ct=%d,cr=%d,cb=%d,bl=%d,bt=%d,bb=%d,br=%d,fg=0x%x,bg=0x%x,font=%d,fl=0x%x,mix=%d,unk=0x%x,n=%d)\n", os->x, os->y, os->clipleft, os->cliptop, os->clipright, os->clipbottom, os->boxleft, os->boxtop, os->boxright, os->boxbottom, os->fgcolour, os->bgcolour, os->font, os->flags, os->mixmode, os->unknown, os->length));
 
 	DEBUG(("Text: "));
 

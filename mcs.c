@@ -215,7 +215,7 @@ mcs_send_aurq()
 
 /* Expect a AUcf message (ASN.1 PER) */
 static BOOL
-mcs_recv_aucf(uint16 *mcs_userid)
+mcs_recv_aucf(uint16 * mcs_userid)
 {
 	uint8 opcode, result;
 	STREAM s;

@@ -56,7 +56,7 @@ static uint8 sec_crypted_random[SEC_MODULUS_SIZE];
  * Both SHA1 and MD5 algorithms are used.
  */
 void
-sec_hash_48(uint8 *out, uint8 *in, uint8 *salt1, uint8 *salt2, uint8 salt)
+sec_hash_48(uint8 * out, uint8 * in, uint8 * salt1, uint8 * salt2, uint8 salt)
 {
 	uint8 shasig[20];
 	uint8 pad[4];
@@ -87,7 +87,7 @@ sec_hash_48(uint8 *out, uint8 *in, uint8 *salt1, uint8 *salt2, uint8 salt)
  * only using a single round of MD5.
  */
 void
-sec_hash_16(uint8 *out, uint8 *in, uint8 *salt1, uint8 *salt2)
+sec_hash_16(uint8 * out, uint8 * in, uint8 * salt1, uint8 * salt2)
 {
 	MD5_CTX md5;
 
@@ -100,7 +100,7 @@ sec_hash_16(uint8 *out, uint8 *in, uint8 *salt1, uint8 *salt2)
 
 /* Reduce key entropy from 64 to 40 bits */
 static void
-sec_make_40bit(uint8 *key)
+sec_make_40bit(uint8 * key)
 {
 	key[0] = 0xd1;
 	key[1] = 0x26;
@@ -109,7 +109,7 @@ sec_make_40bit(uint8 *key)
 
 /* Generate a session key and RC4 keys, given client and server randoms */
 static void
-sec_generate_keys(uint8 *client_key, uint8 *server_key, int rc4_key_size)
+sec_generate_keys(uint8 * client_key, uint8 * server_key, int rc4_key_size)
 {
 	uint8 session_key[48];
 	uint8 temp_hash[48];
@@ -171,7 +171,7 @@ static uint8 pad_92[48] = {
 
 /* Output a uint32 into a buffer (little-endian) */
 void
-buf_out_uint32(uint8 *buffer, uint32 value)
+buf_out_uint32(uint8 * buffer, uint32 value)
 {
 	buffer[0] = (value) & 0xff;
 	buffer[1] = (value >> 8) & 0xff;
@@ -181,8 +181,8 @@ buf_out_uint32(uint8 *buffer, uint32 value)
 
 /* Generate a signature hash, using a combination of SHA1 and MD5 */
 void
-sec_sign(uint8 *signature, int siglen, uint8 *session_key, int keylen,
-	 uint8 *data, int datalen)
+sec_sign(uint8 * signature, int siglen, uint8 * session_key, int keylen,
+	 uint8 * data, int datalen)
 {
 	uint8 shasig[20];
 	uint8 md5sig[16];
@@ -210,7 +210,7 @@ sec_sign(uint8 *signature, int siglen, uint8 *session_key, int keylen,
 
 /* Update an encryption key - similar to the signing process */
 static void
-sec_update(uint8 *key, uint8 *update_key)
+sec_update(uint8 * key, uint8 * update_key)
 {
 	uint8 shasig[20];
 	SHA_CTX sha;
@@ -238,7 +238,7 @@ sec_update(uint8 *key, uint8 *update_key)
 
 /* Encrypt data using RC4 */
 static void
-sec_encrypt(uint8 *data, int length)
+sec_encrypt(uint8 * data, int length)
 {
 	static int use_count;
 
@@ -255,7 +255,7 @@ sec_encrypt(uint8 *data, int length)
 
 /* Decrypt data using RC4 */
 static void
-sec_decrypt(uint8 *data, int length)
+sec_decrypt(uint8 * data, int length)
 {
 	static int use_count;
 
@@ -271,12 +271,12 @@ sec_decrypt(uint8 *data, int length)
 }
 
 static void
-reverse(uint8 *p, int len)
+reverse(uint8 * p, int len)
 {
 	int i, j;
 	uint8 temp;
 
-	for (i = 0, j = len-1; i < j; i++, j--)
+	for (i = 0, j = len - 1; i < j; i++, j--)
 	{
 		temp = p[i];
 		p[i] = p[j];
@@ -286,8 +286,8 @@ reverse(uint8 *p, int len)
 
 /* Perform an RSA public key encryption operation */
 static void
-sec_rsa_encrypt(uint8 *out, uint8 *in, int len,
-		uint8 *modulus, uint8 *exponent)
+sec_rsa_encrypt(uint8 * out, uint8 * in, int len,
+		uint8 * modulus, uint8 * exponent)
 {
 	BN_CTX ctx;
 	BIGNUM mod, exp, x, y;
@@ -312,7 +312,7 @@ sec_rsa_encrypt(uint8 *out, uint8 *in, int len,
 	outlen = BN_bn2bin(&y, out);
 	reverse(out, outlen);
 	if (outlen < SEC_MODULUS_SIZE)
-		memset(out+outlen, 0, SEC_MODULUS_SIZE-outlen);
+		memset(out + outlen, 0, SEC_MODULUS_SIZE - outlen);
 
 	BN_free(&y);
 	BN_clear_free(&x);
@@ -358,7 +358,8 @@ sec_send(STREAM s, uint32 flags)
 		hexdump(s->p + 8, datalen);
 #endif
 
-		sec_sign(s->p, 8, sec_sign_key, rc4_key_len, s->p + 8, datalen);
+		sec_sign(s->p, 8, sec_sign_key, rc4_key_len, s->p + 8,
+			 datalen);
 		sec_encrypt(s->p + 8, datalen);
 	}
 
@@ -438,7 +439,7 @@ sec_out_mcs_data(STREAM s)
 
 /* Parse a public key structure */
 static BOOL
-sec_parse_public_key(STREAM s, uint8 **modulus, uint8 **exponent)
+sec_parse_public_key(STREAM s, uint8 ** modulus, uint8 ** exponent)
 {
 	uint32 magic, modulus_len;
 
@@ -466,8 +467,9 @@ sec_parse_public_key(STREAM s, uint8 **modulus, uint8 **exponent)
 
 /* Parse a crypto information structure */
 static BOOL
-sec_parse_crypt_info(STREAM s, uint32 *rc4_key_size,
-		     uint8 **server_random, uint8 **modulus, uint8 **exponent)
+sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
+		     uint8 ** server_random, uint8 ** modulus,
+		     uint8 ** exponent)
 {
 	uint32 crypt_level, random_len, rsa_info_len;
 	uint16 tag, length;

@@ -36,7 +36,8 @@ extern int keylayout;
 static uint8 keymap[KEYMAP_SIZE];
 static unsigned int min_keycode;
 
-static BOOL xkeymap_read(char *mapname)
+static BOOL
+xkeymap_read(char *mapname)
 {
 	FILE *fp;
 	char line[PATH_MAX], path[PATH_MAX];
@@ -72,21 +73,23 @@ static BOOL xkeymap_read(char *mapname)
 
 				keysym = XStringToKeysym(keyname);
 				if (keysym == NoSymbol)
-					error("Bad keysym %s in keymap %s\n", keyname, mapname);
+					error("Bad keysym %s in keymap %s\n",
+					      keyname, mapname);
 
 				keymap[keysym & KEYMAP_MASK] = keycode;
 				keyname = p;
 
-			} while (keyname != NULL);
+			}
+			while (keyname != NULL);
 		}
 		else if (strncmp(line, "include ", 8) == 0)
 		{
-			if (!xkeymap_read(line+8))
+			if (!xkeymap_read(line + 8))
 				return False;
 		}
 		else if (strncmp(line, "map ", 4) == 0)
 		{
-			keylayout = strtol(line+4, NULL, 16);
+			keylayout = strtol(line + 4, NULL, 16);
 		}
 		else if (line[0] != '#')
 		{
@@ -98,7 +101,8 @@ static BOOL xkeymap_read(char *mapname)
 	return True;
 }
 
-void xkeymap_init(void)
+void
+xkeymap_init(void)
 {
 	unsigned int max_keycode;
 
@@ -108,7 +112,9 @@ void xkeymap_init(void)
 		xkeymap_read(keymapname);
 }
 
-uint8 xkeymap_translate_key(unsigned int keysym, unsigned int keycode, uint16 *flags)
+uint8
+xkeymap_translate_key(unsigned int keysym, unsigned int keycode,
+		      uint16 * flags)
 {
 	uint8 scancode;
 
@@ -124,7 +130,7 @@ uint8 xkeymap_translate_key(unsigned int keysym, unsigned int keycode, uint16 *f
 	/* not in keymap, try to interpret the raw scancode */
 
 	if ((keycode >= min_keycode) && (keycode <= 0x60))
-		return (uint8)(keycode - min_keycode);
+		return (uint8) (keycode - min_keycode);
 
 	*flags |= KBD_FLAG_EXT;
 
@@ -173,19 +179,20 @@ uint8 xkeymap_translate_key(unsigned int keysym, unsigned int keycode, uint16 *f
 	return 0;
 }
 
-uint16 xkeymap_translate_button(unsigned int button)
+uint16
+xkeymap_translate_button(unsigned int button)
 {
 	switch (button)
 	{
-		case Button1:   /* left */
+		case Button1:	/* left */
 			return MOUSE_FLAG_BUTTON1;
-		case Button2:   /* middle */
+		case Button2:	/* middle */
 			return MOUSE_FLAG_BUTTON3;
-		case Button3:   /* right */
+		case Button3:	/* right */
 			return MOUSE_FLAG_BUTTON2;
-		case Button4:   /* wheel up */
+		case Button4:	/* wheel up */
 			return MOUSE_FLAG_BUTTON4;
-		case Button5:   /* wheel down */
+		case Button5:	/* wheel down */
 			return MOUSE_FLAG_BUTTON5;
 	}
 

@@ -178,7 +178,7 @@ cache_get_desktop(uint32 offset, int cx, int cy, int bytes_per_pixel)
 /* Store desktop data in the cache */
 void
 cache_put_desktop(uint32 offset, int cx, int cy, int scanline,
-		  int bytes_per_pixel, uint8 *data)
+		  int bytes_per_pixel, uint8 * data)
 {
 	int length = cx * cy * bytes_per_pixel;
 
@@ -203,7 +203,8 @@ cache_put_desktop(uint32 offset, int cx, int cy, int scanline,
 static HCURSOR cursorcache[0x20];
 
 /* Retrieve cursor from cache */
-HCURSOR cache_get_cursor(uint16 cache_idx)
+HCURSOR
+cache_get_cursor(uint16 cache_idx)
 {
 	HCURSOR cursor;
 
