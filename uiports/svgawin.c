@@ -1,7 +1,7 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    User interface services - SVGA lib
-   Copyright (C) Jay Sorg 2004
+   Copyright (C) Jay Sorg 2004-2005
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -29,7 +29,6 @@
 #include <pwd.h> // getpwuid
 #include <stdarg.h> // va_list va_start va_end
 
-
 #include <sys/ioctl.h>
 #include <linux/keyboard.h>
 #include <linux/kd.h>
@@ -43,7 +42,8 @@ int g_height = 600;
 int g_width = 800;
 int g_server_bpp = 8;
 int g_encryption = 1;
-int g_desktop_save =1;
+int g_desktop_save = 1;
+int g_polygon_ellipse_orders = 0;
 int g_bitmap_cache = 1;
 int g_bitmap_cache_persist_enable = False;
 int g_bitmap_cache_precache = True;
@@ -129,13 +129,13 @@ typedef struct
 
 myrect* head_rect = 0;
 
+//*****************************************************************************
 // Keyboard stuff - PeterS
-
 static void setled(int mask, int state)
 {
   int fd;
   long int leds;
-  
+
   if (( fd=open("/dev/console", O_NOCTTY)) != -1 )
   {
     if (ioctl (fd, KDGETLED, &leds) != -1)
@@ -144,8 +144,8 @@ static void setled(int mask, int state)
       if (state)
         leds |= mask;
       else
-        leds &= ~mask;	
-      ioctl (fd, KDSETLED, leds);	
+        leds &= ~mask;
+      ioctl (fd, KDSETLED, leds);
     }
     close(fd);
   }

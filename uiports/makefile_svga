@@ -31,6 +31,6 @@ rest: ../tcp.c ../iso.c ../mcs.c ../secure.c ../rdp.c ../rdp5.c ../orders.c ../c
 svgawin.o: svgawin.c
 	$(CC) $(CFLAGS) -c $*.c
 clean:
-	rm svgardesktop
-	rm *.o
-	rm ../*.o
+	rm -f svgardesktop
+	rm -f *.o
+	rm -f ../*.o
