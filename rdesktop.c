@@ -40,7 +40,6 @@ int tcp_port_rdp = TCP_PORT_RDP;
 BOOL bitmap_compression = True;
 BOOL sendmotion = True;
 BOOL orders = True;
-BOOL licence = True;
 BOOL encryption = True;
 BOOL desktop_save = True;
 BOOL fullscreen = False;
@@ -67,7 +66,6 @@ usage(char *program)
 	fprintf(stderr, "   -b: force bitmap updates\n");
 	fprintf(stderr, "   -e: disable encryption (French TS)\n");
 	fprintf(stderr, "   -m: do not send motion events\n");
-	fprintf(stderr, "   -l: do not request licence\n");
 	fprintf(stderr, "   -t: rdp tcp port\n");
 	fprintf(stderr, "   -K: keep window manager key bindings\n");
 	fprintf(stderr, "   -w: window title\n");
@@ -129,7 +127,7 @@ main(int argc, char *argv[])
 	domain[0] = password[0] = shell[0] = directory[0] = 0;
 	strcpy(keymapname, "us");
 
-	while ((c = getopt(argc, argv, "u:d:s:c:p:n:k:g:t:fbemlKw:h?")) != -1)
+	while ((c = getopt(argc, argv, "u:d:s:c:p:n:k:g:t:fbemKw:h?")) != -1)
 	{
 		switch (c)
 		{
@@ -199,10 +197,6 @@ main(int argc, char *argv[])
 
 			case 'm':
 				sendmotion = False;
-				break;
-
-			case 'l':
-				licence = False;
 				break;
 
 			case 't':

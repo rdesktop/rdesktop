@@ -23,7 +23,6 @@
 
 extern char username[16];
 extern char hostname[16];
-extern BOOL licence;
 
 static uint8 licence_key[16];
 static uint8 licence_sign_key[16];
@@ -249,10 +248,6 @@ licence_process_authreq(STREAM s)
 	memcpy(sealed_buffer, decrypt_token, LICENCE_TOKEN_SIZE);
 	memcpy(sealed_buffer + LICENCE_TOKEN_SIZE, hwid, LICENCE_HWID_SIZE);
 	sec_sign(out_sig, 16, licence_sign_key, 16, sealed_buffer, sizeof(sealed_buffer));
-
-	/* Deliberately break signature if licencing disabled */
-	if (!licence)
-		memset(out_sig, 0, sizeof(out_sig));
 
 	/* Now encrypt the HWID */
 	RC4_set_key(&crypt_key, 16, licence_key);
