@@ -62,6 +62,9 @@ static uint32 *colmap;
 static XIM IM = NULL;
 static XIC IC = NULL;
 
+/* Compose support */
+BOOL enable_compose = False;
+
 #define TRANSLATE(col)		( owncolmap ? col : translate_colour(colmap[col]) )
 #define SET_FOREGROUND(col)	XSetForeground(display, gc, TRANSLATE(col));
 #define SET_BACKGROUND(col)	XSetBackground(display, gc, TRANSLATE(col));
@@ -185,7 +188,7 @@ translate_colour(uint32 colour)
 static unsigned long
 init_inputmethod(void)
 {
-	unsigned long filtered_events;
+	unsigned long filtered_events = 0;
 
 	IM = XOpenIM(display, NULL, NULL, NULL);
 	if (IM == NULL)
@@ -248,7 +251,6 @@ ui_create_window(char *title)
 	Screen *screen;
 	uint16 test;
 	int i;
-	unsigned long filtered_events;
 
 	display = XOpenDisplay(NULL);
 
@@ -352,9 +354,10 @@ ui_create_window(char *title)
 	if (ownbackstore)
 		input_mask |= ExposureMask;
 
-	filtered_events = init_inputmethod();
+	if (enable_compose)
+		input_mask |= init_inputmethod();
 
-	XSelectInput(display, wnd, input_mask | filtered_events);
+	XSelectInput(display, wnd, input_mask);
 
 	gc = XCreateGC(display, wnd, 0, NULL);
 
@@ -405,7 +408,7 @@ xwin_process_events()
 
 	while (XCheckMaskEvent(display, ~0, &xevent))
 	{
-		if (XFilterEvent(&xevent, None) == True)
+		if (enable_compose && (XFilterEvent(&xevent, None) == True))
 		{
 			DEBUG_KBD("Filtering event\n");
 			continue;

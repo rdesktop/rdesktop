@@ -42,6 +42,16 @@ X 2d shift
 If flags include "localstate", the modifier to send will be determined
 by the local modifier state. 
 
+
+4) enable_compose
+
+If any line starts with the keyword "enable_compose", rdesktop will
+enable local Compose/Multi_key handling. Enabling this will often make
+it impossible to compose characters with dead keys (on the remote
+side). This is because when local compose support is enabled, dead
+keys will not be sent to the remote side. 
+
+
 Suggested X11 keysym mapping on PCs
 ===================================
 Unfortunately, there is no standard for which keysyms a given key

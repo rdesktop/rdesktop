@@ -35,6 +35,7 @@
 extern Display *display;
 extern char keymapname[16];
 extern int keylayout;
+extern BOOL enable_compose;
 
 static key_translation keymap[KEYMAP_SIZE];
 static unsigned int min_keycode;
@@ -117,6 +118,14 @@ xkeymap_read(char *mapname)
 		{
 			keylayout = strtol(line + 4, NULL, 16);
 			DEBUG_KBD("Keylayout 0x%x\n", keylayout);
+			continue;
+		}
+
+		/* compose */
+		if (strncmp(line, "enable_compose", 15) == 0)
+		{
+			DEBUG_KBD("Enabling compose handling\n");
+			enable_compose = True;
 			continue;
 		}
 
