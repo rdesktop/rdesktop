@@ -184,7 +184,7 @@ translate_colour(uint32 colour)
 }
 
 BOOL
-get_key_state(uint32 keysym, unsigned int state)
+get_key_state(unsigned int state, uint32 keysym)
 {
 	int modifierpos, key, keysymMask = 0;
 	int offset;

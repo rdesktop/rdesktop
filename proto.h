@@ -71,7 +71,7 @@ void ensure_remote_modifiers(uint32 ev_time, key_translation tr);
 void reset_modifier_keys(unsigned int state);
 void rdp_send_scancode(uint32 time, uint16 flags, uint8 scancode);
 /* xwin.c */
-BOOL get_key_state(uint32 keysym, unsigned int state);
+BOOL get_key_state(unsigned int state, uint32 keysym);
 BOOL ui_init(void);
 void ui_deinit(void);
 BOOL ui_create_window(void);
