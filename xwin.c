@@ -62,11 +62,11 @@ static Pixmap backstore;
 #define PROP_MOTIF_WM_HINTS_ELEMENTS    5
 typedef struct
 {
-	unsigned long flags;
-	unsigned long functions;
-	unsigned long decorations;
-	long inputMode;
-	unsigned long status;
+	uint32 flags;
+	uint32 functions;
+	uint32 decorations;
+	sint32 inputMode;
+	uint32 status;
 }
 PropMotifWmHints;
 
