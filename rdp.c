@@ -30,6 +30,10 @@ extern BOOL desktop_save;
 uint8 *next_packet;
 uint32 rdp_shareid;
 
+#if WITH_DEBUG
+static uint32 packetno;
+#endif 
+
 /* Initialise an RDP packet */
 static STREAM
 rdp_init(int maxlen)
@@ -91,7 +95,7 @@ rdp_recv(uint8 * type)
 	*type = pdu_type & 0xf;
 
 #if WITH_DEBUG
-	DEBUG(("RDP packet (type %x):\n", *type));
+	DEBUG(("RDP packet #%d, (type %x):\n", ++packetno, *type));
 	hexdump(next_packet, length);
 #endif /*  */
 
