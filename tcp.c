@@ -28,6 +28,10 @@
 #include <errno.h>		/* errno */
 #include "rdesktop.h"
 
+#ifndef INADDR_NONE
+#define INADDR_NONE ((unsigned long) -1)
+#endif
+
 static int sock;
 static struct stream in;
 static struct stream out;
