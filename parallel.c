@@ -18,19 +18,6 @@ extern int errno;
 
 extern RDPDR_DEVICE g_rdpdr_device[];
 
-static PARALLEL_DEVICE *
-get_parallel_data(NTHANDLE handle)
-{
-	int index;
-
-	for (index = 0; index < RDPDR_MAX_DEVICES; index++)
-	{
-		if (handle == g_rdpdr_device[index].handle)
-			return (PARALLEL_DEVICE *) g_rdpdr_device[index].pdevice_data;
-	}
-	return NULL;
-}
-
 
 /* Enumeration of devices from rdesktop.c        */
 /* returns numer of units found and initialized. */
@@ -126,7 +113,9 @@ parallel_write(NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint
 	int n = write(handle, data, length);
 	if (n < 0)
 	{
+#if defined(LPGETSTATUS)
 		int status;
+#endif
 
 		*result = 0;
 		switch (errno)

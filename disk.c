@@ -925,9 +925,9 @@ static FsInfoType *
 FsVolumeInfo(char *fpath)
 {
 
-	FILE *fdfs;
 	static FsInfoType info;
 #ifdef HAVE_MNTENT_H
+	FILE *fdfs;
 	struct mntent *e;
 #endif
 
