@@ -84,7 +84,7 @@ typedef struct
 } FsInfoType;
 
 
-time_t
+static time_t
 get_create_time(struct stat *st)
 {
 	time_t ret, ret1;
@@ -99,7 +99,7 @@ get_create_time(struct stat *st)
 }
 
 /* Convert seconds since 1970 to a filetime */
-void
+static void
 seconds_since_1970_to_filetime(time_t seconds, uint32 * high, uint32 * low)
 {
 	unsigned long long ticks;
@@ -110,7 +110,7 @@ seconds_since_1970_to_filetime(time_t seconds, uint32 * high, uint32 * low)
 }
 
 /* Convert seconds since 1970 back to filetime */
-time_t
+static time_t
 convert_1970_to_filetime(uint32 high, uint32 low)
 {
 	unsigned long long ticks;
@@ -162,7 +162,7 @@ disk_enum_devices(uint32 * id, char *optarg)
 }
 
 /* Opens or creates a file or directory */
-NTSTATUS
+static NTSTATUS
 disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create_disposition,
 	    uint32 flags_and_attributes, char *filename, HANDLE * phandle)
 {
@@ -319,7 +319,7 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 	return STATUS_SUCCESS;
 }
 
-NTSTATUS
+static NTSTATUS
 disk_close(HANDLE handle)
 {
 	struct fileinfo *pfinfo;
@@ -339,7 +339,7 @@ disk_close(HANDLE handle)
 	return STATUS_SUCCESS;
 }
 
-NTSTATUS
+static NTSTATUS
 disk_read(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
 {
 	int n;
@@ -376,7 +376,7 @@ disk_read(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * re
 	return STATUS_SUCCESS;
 }
 
-NTSTATUS
+static NTSTATUS
 disk_write(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
 {
 	int n;
@@ -668,7 +668,7 @@ disk_set_information(HANDLE handle, uint32 info_class, STREAM in, STREAM out)
 	return STATUS_SUCCESS;
 }
 
-FsInfoType *
+static FsInfoType *
 FsVolumeInfo(char *fpath)
 {
 

@@ -36,7 +36,7 @@
 #include <string.h>
 #include "rdesktop.h"
 
-BOOL
+static BOOL
 printercache_mkdir(char *base, char *printer)
 {
 	char *path;
@@ -72,7 +72,7 @@ printercache_mkdir(char *base, char *printer)
 	return True;
 }
 
-BOOL
+static BOOL
 printercache_unlink_blob(char *printer)
 {
 	char *path;
@@ -109,7 +109,7 @@ printercache_unlink_blob(char *printer)
 }
 
 
-BOOL
+static BOOL
 printercache_rename_blob(char *printer, char *new_printer)
 {
 	char *printer_path;
@@ -190,7 +190,7 @@ printercache_load_blob(char *printer_name, uint8 ** data)
 	return length;
 }
 
-void
+static void
 printercache_save_blob(char *printer_name, uint8 * data, uint32 length)
 {
 	char *home, *path;

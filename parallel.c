@@ -18,7 +18,7 @@ extern int errno;
 
 extern RDPDR_DEVICE g_rdpdr_device[];
 
-PARALLEL_DEVICE *
+static PARALLEL_DEVICE *
 get_parallel_data(HANDLE handle)
 {
 	int index;
@@ -111,7 +111,7 @@ parallel_close(HANDLE handle)
 	return STATUS_SUCCESS;
 }
 
-NTSTATUS
+static NTSTATUS
 parallel_read(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
 {
 	*result = read(handle, data, length);

@@ -2,7 +2,7 @@
 
 extern RDPDR_DEVICE g_rdpdr_device[];
 
-PRINTER *
+static PRINTER *
 get_printer_data(HANDLE handle)
 {
 	int index;
@@ -143,3 +143,4 @@ DEVICE_FNS printer_fns = {
 	printer_write,
 	NULL			/* device_control */
 };
+ 
