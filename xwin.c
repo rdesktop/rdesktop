@@ -311,8 +311,6 @@ translate8to32(uint8 * data, uint8 * out, uint8 * end)
 	}
 }
 
-/* todo the remaining translate function might need some big endian check ?? */
-
 static void
 translate15to16(uint16 * data, uint8 * out, uint8 * end)
 {

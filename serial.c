@@ -72,51 +72,81 @@ get_termios(void)
 	speed = cfgetispeed(&termios);
 	switch (speed)
 	{
+#ifdef B75
 		case B75:
 			baud_rate = 75;
 			break;
+#endif
+#ifdef B110
 		case B110:
 			baud_rate = 110;
 			break;
+#endif
+#ifdef B134
 		case B134:
 			baud_rate = 134;
 			break;
+#endif
+#ifdef B150
 		case B150:
 			baud_rate = 150;
 			break;
+#endif
+#ifdef B300
 		case B300:
 			baud_rate = 300;
 			break;
+#endif
+#ifdef B600
 		case B600:
 			baud_rate = 600;
 			break;
+#endif
+#ifdef B1200
 		case B1200:
 			baud_rate = 1200;
 			break;
+#endif
+#ifdef B1800
 		case B1800:
 			baud_rate = 1800;
 			break;
+#endif
+#ifdef B2400
 		case B2400:
 			baud_rate = 2400;
 			break;
+#endif
+#ifdef B4800
 		case B4800:
 			baud_rate = 4800;
 			break;
+#endif
+#ifdef B9600
 		case B9600:
 			baud_rate = 9600;
 			break;
+#endif
+#ifdef B19200
 		case B19200:
 			baud_rate = 19200;
 			break;
+#endif
+#ifdef B38400
 		case B38400:
 			baud_rate = 38400;
 			break;
+#endif
+#ifdef B57600
 		case B57600:
 			baud_rate = 57600;
 			break;
+#endif
+#ifdef B115200
 		case B115200:
 			baud_rate = 115200;
 			break;
+#endif
 		default:
 			baud_rate = 0;
 			break;
@@ -155,51 +185,81 @@ set_termios(void)
 
 	switch (baud_rate)
 	{
+#ifdef B75
 		case 75:
 			speed = B75;
 			break;
+#endif
+#ifdef B110
 		case 110:
 			speed = B110;
 			break;
+#endif
+#ifdef B134
 		case 134:
 			speed = B134;
 			break;
+#endif
+#ifdef B150
 		case 150:
 			speed = B150;
 			break;
+#endif
+#ifdef B300
 		case 300:
 			speed = B300;
 			break;
+#endif
+#ifdef B600
 		case 600:
 			speed = B600;
 			break;
+#endif
+#ifdef B1200
 		case 1200:
 			speed = B1200;
 			break;
+#endif
+#ifdef B1800
 		case 1800:
 			speed = B1800;
 			break;
+#endif
+#ifdef B2400
 		case 2400:
 			speed = B2400;
 			break;
+#endif
+#ifdef B4800
 		case 4800:
 			speed = B4800;
 			break;
+#endif
+#ifdef B9600
 		case 9600:
 			speed = B9600;
 			break;
+#endif
+#ifdef B19200
 		case 19200:
 			speed = B19200;
 			break;
+#endif
+#ifdef B38400
 		case 38400:
 			speed = B38400;
 			break;
+#endif
+#ifdef B57600
 		case 57600:
 			speed = B57600;
 			break;
+#endif
+#ifdef B115200
 		case 115200:
 			speed = B115200;
 			break;
+#endif
 		default:
 			speed = B0;
 			break;
