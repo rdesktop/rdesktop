@@ -59,6 +59,10 @@ extern RDPCOMP g_mppc_dict;
 static uint32 g_packetno;
 #endif
 
+#ifdef HAVE_ICONV
+static BOOL g_iconv_works = True;
+#endif
+
 /* Receive an RDP packet */
 static STREAM
 rdp_recv(uint8 * type)
@@ -161,49 +165,61 @@ rdp_out_unistr(STREAM s, char *string, int len)
 
 	memset(pout, 0, len + 4);
 
-	if (iconv_h == (iconv_t) - 1)
+	if (g_iconv_works)
 	{
-		size_t i = 1, o = 4;
-		if ((iconv_h = iconv_open(WINDOWS_CODEPAGE, g_codepage)) == (iconv_t) - 1)
+		if (iconv_h == (iconv_t) - 1)
 		{
-			printf("rdp_out_unistr: iconv_open[%s -> %s] fail %d\n",
-			       g_codepage, WINDOWS_CODEPAGE, (int) iconv_h);
-			return;
+			size_t i = 1, o = 4;
+			if ((iconv_h = iconv_open(WINDOWS_CODEPAGE, g_codepage)) == (iconv_t) - 1)
+			{
+				warning("rdp_out_unistr: iconv_open[%s -> %s] fail %d\n",
+					g_codepage, WINDOWS_CODEPAGE, (int) iconv_h);
+
+				g_iconv_works = False;
+				return (rdp_out_unistr(s, string, len));
+			}
+			if (iconv(iconv_h, (ICONV_CONST char **) &pin, &i, &pout, &o) ==
+			    (size_t) - 1)
+			{
+				iconv_close(iconv_h);
+				iconv_h = (iconv_t) - 1;
+				warning("rdp_out_unistr: iconv(1) fail, errno %d\n", errno);
+
+				g_iconv_works = False;
+				return (rdp_out_unistr(s, string, len));
+			}
+			pin = string;
+			pout = (char *) s->p;
 		}
-		if (iconv(iconv_h, (ICONV_CONST char **) &pin, &i, &pout, &o) == (size_t) - 1)
+
+		if (iconv(iconv_h, (ICONV_CONST char **) &pin, &ibl, &pout, &obl) == (size_t) - 1)
 		{
 			iconv_close(iconv_h);
 			iconv_h = (iconv_t) - 1;
-			printf("rdp_out_unistr: iconv(1) fail, errno %d\n", errno);
-			return;
+			warning("rdp_out_unistr: iconv(2) fail, errno %d\n", errno);
+
+			g_iconv_works = False;
+			return (rdp_out_unistr(s, string, len));
 		}
-		pin = string;
-		pout = (char *) s->p;
+
+		s->p += len + 2;
+
 	}
-
-	if (iconv(iconv_h, (ICONV_CONST char **) &pin, &ibl, &pout, &obl) == (size_t) - 1)
-	{
-		iconv_close(iconv_h);
-		iconv_h = (iconv_t) - 1;
-		printf("rdp_out_unistr: iconv(2) fail, errno %d\n", errno);
-		return;
-	}
-
-	s->p += len + 2;
-
-#else /* HAVE_ICONV undef */
-	int i = 0, j = 0;
-
-	len += 2;
-
-	while (i < len)
-	{
-		s->p[i++] = string[j++];
-		s->p[i++] = 0;
-	}
-
-	s->p += len;
+	else
 #endif
+	{
+		int i = 0, j = 0;
+
+		len += 2;
+
+		while (i < len)
+		{
+			s->p[i++] = string[j++];
+			s->p[i++] = 0;
+		}
+
+		s->p += len;
+	}
 }
 
 /* Input a string in Unicode
@@ -218,35 +234,44 @@ rdp_in_unistr(STREAM s, char *string, int uni_len)
 	char *pin = s->p, *pout = string;
 	static iconv_t iconv_h = (iconv_t) - 1;
 
-	if (iconv_h == (iconv_t) - 1)
+	if (g_iconv_works)
 	{
-		if ((iconv_h = iconv_open(g_codepage, WINDOWS_CODEPAGE)) == (iconv_t) - 1)
+		if (iconv_h == (iconv_t) - 1)
 		{
-			printf("rdp_in_unistr: iconv_open[%s -> %s] fail %d\n",
-			       WINDOWS_CODEPAGE, g_codepage, (int) iconv_h);
-			return 0;
+			if ((iconv_h = iconv_open(g_codepage, WINDOWS_CODEPAGE)) == (iconv_t) - 1)
+			{
+				warning("rdp_in_unistr: iconv_open[%s -> %s] fail %d\n",
+					WINDOWS_CODEPAGE, g_codepage, (int) iconv_h);
+
+				g_iconv_works = False;
+				return rdp_in_unistr(s, string, uni_len);
+			}
 		}
-	}
 
-	if (iconv(iconv_h, (ICONV_CONST char **) &pin, &ibl, &pout, &obl) == (size_t) - 1)
-	{
-		iconv_close(iconv_h);
-		iconv_h = (iconv_t) - 1;
-		printf("rdp_in_unistr: iconv fail, errno %d\n", errno);
-		return 0;
-	}
-	return pout - string;
-#else /* HAVE_ICONV undef */
-	int i = 0;
+		if (iconv(iconv_h, (ICONV_CONST char **) &pin, &ibl, &pout, &obl) == (size_t) - 1)
+		{
+			iconv_close(iconv_h);
+			iconv_h = (iconv_t) - 1;
+			warning("rdp_in_unistr: iconv fail, errno %d\n", errno);
 
-	while (i < uni_len / 2)
-	{
-		in_uint8a(s, &string[i++], 1);
-		in_uint8s(s, 1);
+			g_iconv_works = False;
+			return rdp_in_unistr(s, string, uni_len);
+		}
+		return pout - string;
 	}
-
-	return i - 1;
+	else
 #endif
+	{
+		int i = 0;
+
+		while (i < uni_len / 2)
+		{
+			in_uint8a(s, &string[i++], 1);
+			in_uint8s(s, 1);
+		}
+
+		return i - 1;
+	}
 }
 
 
