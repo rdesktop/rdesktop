@@ -169,11 +169,13 @@ void
 rdpdr_send_name(void)
 {
 	uint8 magic[4] = "rDNC";
+	STREAM s;
+	uint32 hostlen;
+
 	if (NULL == g_rdpdr_clientname) {
 	  g_rdpdr_clientname = hostname;
 	}
-	uint32 hostlen = (strlen(g_rdpdr_clientname) + 1) * 2;
-	STREAM s;
+	hostlen = (strlen(g_rdpdr_clientname) + 1) * 2;
 
 	s = channel_init(rdpdr_channel, 16 + hostlen);
 	out_uint8a(s, magic, 4);
