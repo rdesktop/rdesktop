@@ -22,7 +22,7 @@
 
 #define CVAL(p)   (*(p++))
 
-uint32
+static uint32
 cvalx(unsigned char **input, int Bpp)
 {
 	uint32 rv = 0;
@@ -31,14 +31,14 @@ cvalx(unsigned char **input, int Bpp)
 	return rv;
 }
 
-void
+static void
 setli(unsigned char *input, int offset, uint32 value, int Bpp)
 {
 	input += offset * Bpp;
 	memcpy(input, &value, Bpp);
 }
 
-uint32
+static uint32
 getli(unsigned char *input, int offset, int Bpp)
 {
 	uint32 rv = 0;
