@@ -15,10 +15,16 @@ RDPOBJ = rdesktop.o tcp.o iso.o mcs.o secure.o licence.o rdp.o orders.o bitmap.o
 CRYPTOBJ = crypto/rc4_enc.o crypto/rc4_skey.o crypto/md5_dgst.o crypto/sha1dgst.o crypto/arith.o
 
 rdesktop: $(RDPOBJ) $(CRYPTOBJ)
-	@$(CC) $(CFLAGS) -o rdesktop $(LIBS) $(RDPOBJ) $(CRYPTOBJ)
+	$(CC) $(CFLAGS) -o rdesktop $(LIBS) $(RDPOBJ) $(CRYPTOBJ)
 
 proto:
-	@cproto -DMAKE_PROTO -o proto.h *.c
+	cproto -DMAKE_PROTO -o proto.h *.c
 
 clean:
 	rm -f *.o crypto/*.o *~
+
+.SUFFIXES:
+.SUFFIXES: .c .o
+
+.c.o:
+	$(CC) $(CFLAGS) -o $@ -c $<
