@@ -409,7 +409,7 @@ rdp_out_bitmap_caps(STREAM s)
 	out_uint16_le(s, RDP_CAPSET_BITMAP);
 	out_uint16_le(s, RDP_CAPLEN_BITMAP);
 
-	out_uint16_le(s, 8);	/* Preferred BPP */
+	out_uint16_le(s, g_server_bpp);	/* Preferred BPP */
 	out_uint16_le(s, 1);	/* Receive 1 BPP */
 	out_uint16_le(s, 1);	/* Receive 4 BPP */
 	out_uint16_le(s, 1);	/* Receive 8 BPP */
@@ -618,8 +618,34 @@ static void
 process_demand_active(STREAM s)
 {
 	uint8 type;
+	uint16 i;
+	uint16 p_bpp;
 
 	in_uint32_le(s, g_rdp_shareid);
+
+	/* scan for prefered bpp */
+	while (s_check_rem(s, 6))
+	{
+		in_uint16_le(s, i);
+		if (i == RDP_CAPSET_BITMAP)
+		{
+			in_uint16_le(s, i);
+			if (i == RDP_CAPLEN_BITMAP)
+			{
+				in_uint16_le(s, p_bpp);
+				if (p_bpp == 8 || p_bpp == 15 || p_bpp == 16 || p_bpp == 24)
+				{
+					if (p_bpp < g_server_bpp)
+					{
+						warning("Server limited colour depth to %d bits\n", p_bpp);
+						g_server_bpp = p_bpp;
+					}
+					break;
+				}
+			}
+		}
+	}
+
 
 	DEBUG(("DEMAND_ACTIVE(id=0x%x)\n", g_rdp_shareid));
 
@@ -753,13 +779,6 @@ process_bitmap_updates(STREAM s)
 
 		DEBUG(("BITMAP_UPDATE(l=%d,t=%d,r=%d,b=%d,w=%d,h=%d,Bpp=%d,cmp=%d)\n",
 		       left, top, right, bottom, width, height, Bpp, compress));
-
-		/* Server may limit bpp - this is how we find out */
-		if (g_server_bpp != bpp)
-		{
-			warning("Server limited colour depth to %d bits\n", bpp);
-			g_server_bpp = bpp;
-		}
 
 		if (!compress)
 		{
