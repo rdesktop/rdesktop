@@ -55,7 +55,7 @@ rdp_in_present(STREAM s, uint32 * present, uint8 flags, int size)
 
 /* Read a co-ordinate (16-bit, or 8-bit delta) */
 static void
-rdp_in_coord(STREAM s, uint16 * coord, BOOL delta)
+rdp_in_coord(STREAM s, sint16 * coord, BOOL delta)
 {
 	sint8 change;
 

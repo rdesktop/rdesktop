@@ -56,10 +56,10 @@ COLOURMAP;
 
 typedef struct _BOUNDS
 {
-	uint16 left;
-	uint16 top;
-	uint16 right;
-	uint16 bottom;
+	sint16 left;
+	sint16 top;
+	sint16 right;
+	sint16 bottom;
 
 }
 BOUNDS;

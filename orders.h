@@ -51,10 +51,10 @@ enum RDP_SECONDARY_ORDER_TYPE
 
 typedef struct _DESTBLT_ORDER
 {
-	uint16 x;
-	uint16 y;
-	uint16 cx;
-	uint16 cy;
+	sint16 x;
+	sint16 y;
+	sint16 cx;
+	sint16 cy;
 	uint8 opcode;
 
 }
@@ -62,10 +62,10 @@ DESTBLT_ORDER;
 
 typedef struct _PATBLT_ORDER
 {
-	uint16 x;
-	uint16 y;
-	uint16 cx;
-	uint16 cy;
+	sint16 x;
+	sint16 y;
+	sint16 cx;
+	sint16 cy;
 	uint8 opcode;
 	uint32 bgcolour;
 	uint32 fgcolour;
@@ -76,13 +76,13 @@ PATBLT_ORDER;
 
 typedef struct _SCREENBLT_ORDER
 {
-	uint16 x;
-	uint16 y;
-	uint16 cx;
-	uint16 cy;
+	sint16 x;
+	sint16 y;
+	sint16 cx;
+	sint16 cy;
 	uint8 opcode;
-	uint16 srcx;
-	uint16 srcy;
+	sint16 srcx;
+	sint16 srcy;
 
 }
 SCREENBLT_ORDER;
@@ -90,10 +90,10 @@ SCREENBLT_ORDER;
 typedef struct _LINE_ORDER
 {
 	uint16 mixmode;
-	uint16 startx;
-	uint16 starty;
-	uint16 endx;
-	uint16 endy;
+	sint16 startx;
+	sint16 starty;
+	sint16 endx;
+	sint16 endy;
 	uint32 bgcolour;
 	uint8 opcode;
 	PEN pen;
@@ -103,10 +103,10 @@ LINE_ORDER;
 
 typedef struct _RECT_ORDER
 {
-	uint16 x;
-	uint16 y;
-	uint16 cx;
-	uint16 cy;
+	sint16 x;
+	sint16 y;
+	sint16 cx;
+	sint16 cy;
 	uint32 colour;
 
 }
@@ -115,10 +115,10 @@ RECT_ORDER;
 typedef struct _DESKSAVE_ORDER
 {
 	uint32 offset;
-	uint16 left;
-	uint16 top;
-	uint16 right;
-	uint16 bottom;
+	sint16 left;
+	sint16 top;
+	sint16 right;
+	sint16 bottom;
 	uint8 action;
 
 }
@@ -128,13 +128,13 @@ typedef struct _TRIBLT_ORDER
 {
 	uint8 colour_table;
 	uint8 cache_id;
-	uint16 x;
-	uint16 y;
-	uint16 cx;
-	uint16 cy;
+	sint16 x;
+	sint16 y;
+	sint16 cx;
+	sint16 cy;
 	uint8 opcode;
-	uint16 srcx;
-	uint16 srcy;
+	sint16 srcx;
+	sint16 srcy;
 	uint32 bgcolour;
 	uint32 fgcolour;
 	BRUSH brush;
@@ -148,13 +148,13 @@ typedef struct _MEMBLT_ORDER
 {
 	uint8 colour_table;
 	uint8 cache_id;
-	uint16 x;
-	uint16 y;
-	uint16 cx;
-	uint16 cy;
+	sint16 x;
+	sint16 y;
+	sint16 cx;
+	sint16 cy;
 	uint8 opcode;
-	uint16 srcx;
-	uint16 srcy;
+	sint16 srcx;
+	sint16 srcy;
 	uint16 cache_idx;
 
 }
@@ -164,8 +164,8 @@ MEMBLT_ORDER;
 
 typedef struct _POLYLINE_ORDER
 {
-	uint16 x;
-	uint16 y;
+	sint16 x;
+	sint16 y;
 	uint8 opcode;
 	uint32 fgcolour;
 	uint8 lines;
@@ -185,16 +185,16 @@ typedef struct _TEXT2_ORDER
 	uint8 unknown;
 	uint32 fgcolour;
 	uint32 bgcolour;
-	uint16 clipleft;
-	uint16 cliptop;
-	uint16 clipright;
-	uint16 clipbottom;
-	uint16 boxleft;
-	uint16 boxtop;
-	uint16 boxright;
-	uint16 boxbottom;
-	uint16 x;
-	uint16 y;
+	sint16 clipleft;
+	sint16 cliptop;
+	sint16 clipright;
+	sint16 clipbottom;
+	sint16 boxleft;
+	sint16 boxtop;
+	sint16 boxright;
+	sint16 boxbottom;
+	sint16 x;
+	sint16 y;
 	uint8 length;
 	uint8 text[MAX_TEXT];
 
