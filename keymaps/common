@@ -123,12 +123,13 @@ KP_2 0x50 numlock
 KP_Down 0x50
 
 KP_3 0x51 numlock
-KP_Page_Down 0x51
+KP_Next 0x51
 
 KP_4 0x4b numlock
 KP_Left 0x4b
 
 KP_5 0x4c numlock
+KP_Begin 0x4c
 
 KP_6 0x4d numlock
 KP_Right 0x4d
@@ -140,7 +141,7 @@ KP_8 0x48 numlock
 KP_Up 0x48
 
 KP_9 0x49 numlock
-KP_Page_Up 0x49
+KP_Prior 0x49
 
 #
 # Inhibited keys
