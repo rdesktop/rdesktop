@@ -70,7 +70,7 @@ rdp5_process(STREAM s, BOOL encryption)
 				error("error while decompressing packet\n");
 
 			/* allocate memory and copy the uncompressed data into the temporary stream */
-			ns->data = xrealloc(ns->data, rlen);
+			ns->data = (uint8 *) xrealloc(ns->data, rlen);
 
 			memcpy((ns->data), (unsigned char *) (g_mppc_dict.hist + roff), rlen);
 

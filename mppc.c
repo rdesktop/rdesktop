@@ -64,7 +64,7 @@ mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen
 	int match_len;
 	int old_offset, match_bits;
 
-	signed char *dict = &(g_mppc_dict.hist);
+	uint8 *dict = g_mppc_dict.hist;
 
 	if ((ctype & RDP_MPPC_COMPRESSED) == 0)
 	{
@@ -279,7 +279,7 @@ mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen
 
 			match_bits = match_len;
 			match_len =
-				walker >> 32 - match_bits & ~(-1 << match_bits) | 1 << match_bits;
+				((walker >> (32 - match_bits)) & (~(-1 << match_bits))) | (1 << match_bits);
 			walker <<= match_bits;
 			walker_len -= match_bits;
 		}
@@ -288,7 +288,7 @@ mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen
 			return -1;
 		}
 		/* memory areas can overlap - meaning we can't use memXXX functions */
-		k = next_offset - match_off & (RDP_MPPC_DICT_SIZE - 1);
+		k = (next_offset - match_off) & (RDP_MPPC_DICT_SIZE - 1);
 		do
 		{
 			dict[next_offset++] = dict[k++];

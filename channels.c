@@ -161,7 +161,7 @@ channel_process(STREAM s, uint16 mcs_channel)
 		{
 			if (length > in->size)
 			{
-				in->data = xrealloc(in->data, length);
+				in->data = (uint8*)xrealloc(in->data, length);
 				in->size = length;
 			}
 			in->p = in->data;

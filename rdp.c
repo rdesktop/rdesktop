@@ -988,7 +988,7 @@ process_data_pdu(STREAM s, uint32 * ext_disc_reason)
 		//len -= 18;
 
 		/* allocate memory and copy the uncompressed data into the temporary stream */
-		ns->data = xrealloc(ns->data, rlen);
+		ns->data = (uint8 *) xrealloc(ns->data, rlen);
 
 		memcpy((ns->data), (unsigned char *) (g_mppc_dict.hist + roff), rlen);
 
