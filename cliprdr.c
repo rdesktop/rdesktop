@@ -115,7 +115,7 @@ cliprdr_process(STREAM s)
 			return;
 		}
 
-		error("CLIPRDR error (type=%d)\n", type);
+		DEBUG_CLIPBOARD(("CLIPRDR error (type=%d)\n", type));
 		return;
 	}
 
