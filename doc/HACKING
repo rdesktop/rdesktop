@@ -18,8 +18,9 @@ The core protocol stack should be system-independent (i.e. ANSI C
 only) so that it is easy to port. This currently applies to the
 following files:
 
-bitmap.c licence.c orders.c rdp.c cache.c iso.c mcs.c rdesktop.c
-secure.c
+bitmap.c licence.c orders.c rdp.c rdp5.c cache.c iso.c mcs.c
+secure.c mppc.c channels.c
+rdesktop.c
 
 
 RDP resources
