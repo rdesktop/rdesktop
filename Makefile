@@ -88,8 +88,11 @@ dist:
 	rdesktop/keymaps/modifiers \
 	rdesktop/keymaps/convert-map \
 	rdesktop/doc/HACKING \
+	rdesktop/doc/AUTHORS \
 	rdesktop/doc/TODO \
 	rdesktop/doc/keymapping.txt \
+	rdesktop/doc/keymap-names.txt \
+	rdesktop/doc/ipv6.txt \
 	rdesktop/doc/rdesktop.1 \
 	rdesktop/Makefile \
 	rdesktop/configure \
