@@ -54,7 +54,7 @@ printer_enum_devices(int *id, char *optarg)
 		else
 			pprinter_data->default_printer = False;
 
-		pos2 = next_arg(optarg, ':');
+		pos2 = next_arg(optarg, '=');
 		if (*optarg == (char) 0x00)
 			pprinter_data->printer = "mydeskjet";	/* set default */
 		else

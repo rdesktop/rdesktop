@@ -129,7 +129,7 @@ usage(char *program)
 	fprintf(stderr, "             or      LPT1=/dev/lp0,LPT2=/dev/lp1\n");
 	fprintf(stderr, "         '-r printer:mydeskjet': enable printer redirection\n");
 	fprintf(stderr,
-		"             or       mydeskjet:\"HP Laserjet IIIP\" to enter server driver as well\n");
+		"             or       mydeskjet=\"HP LaserJet IIIP\" to enter server driver as well\n");
 	fprintf(stderr, "         '-r sound': enable sound redirection\n");
 	fprintf(stderr, "   -0: attach to console\n");
 	fprintf(stderr, "   -4: use RDP version 4\n");
