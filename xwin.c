@@ -775,7 +775,12 @@ ui_init(void)
 	/*
 	 * Determine desktop size
 	 */
-	if (g_width < 0)
+	if (g_fullscreen)
+	{
+		g_width = WidthOfScreen(g_screen);
+		g_height = HeightOfScreen(g_screen);
+	}
+	else if (g_width < 0)
 	{
 		/* Percent of screen */
 		g_height = HeightOfScreen(g_screen) * (-g_width) / 100;
@@ -797,11 +802,6 @@ ui_init(void)
 			g_width = 800;
 			g_height = 600;
 		}
-	}
-	else if (g_fullscreen)
-	{
-		g_width = WidthOfScreen(g_screen);
-		g_height = HeightOfScreen(g_screen);
 	}
 
 	/* make sure width is a multiple of 4 */

@@ -289,6 +289,7 @@ main(int argc, char *argv[])
 				break;
 
 			case 'g':
+				g_fullscreen = False;
 				if (!strcmp(optarg, "workarea"))
 				{
 					g_width = g_height = 0;
