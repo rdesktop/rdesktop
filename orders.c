@@ -879,16 +879,16 @@ process_secondary_order(STREAM s)
 	/* The length isn't calculated correctly by the server.
 	 * For very compact orders the length becomes negative
 	 * so a signed integer must be used. */
-	sint16 length;
+	uint16 length;
 	uint16 flags;
 	uint8 type;
 	uint8 *next_order;
 
-	in_uint16_le(s, (uint16) length);
+	in_uint16_le(s, length);
 	in_uint16_le(s, flags);		/* used by bmpcache2 */
 	in_uint8(s, type);
 
-	next_order = s->p + length + 7;
+	next_order = s->p + (sint16)length + 7;
 
 	switch (type)
 	{
