@@ -52,7 +52,7 @@
 #define STATFS_T statvfs
 #define F_NAMELEN(buf) ((buf).f_namemax)
 
-#elif (defined(__OpenBSD__) || defined(__NetBSD__) || defined(__FreeBSD__))
+#elif (defined(__OpenBSD__) || defined(__NetBSD__) || defined(__FreeBSD__) || defined(__APPLE__))
 #include <sys/param.h>
 #include <sys/mount.h>
 #define STATFS_FN(path, buf) (statfs(path,buf))
