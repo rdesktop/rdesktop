@@ -78,6 +78,7 @@ class QMyScrollView: public QScrollView
     void timerEvent(QTimerEvent*);
   public:
     int timer_id;
+    int sound_timer_id;
 };
 
 class QMyMainWindow: public QWidget
@@ -95,6 +96,7 @@ class QMyMainWindow: public QWidget
     void timerEvent(QTimerEvent*);
   public slots:
     void dataReceived();
+    void soundSend();
     void MemuClicked(int);
   public:
     QPopupMenu* PopupMenu;

@@ -1,8 +1,7 @@
 /*
    rdesktop: A Remote Desktop Protocol client.
    User interface services - QT Window System
-   Copyright (C) Matthew Chapman 1999-2002
-   qtwin.cpp by Jay Sorg
+   Copyright (C) Jay Sorg 2004
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by

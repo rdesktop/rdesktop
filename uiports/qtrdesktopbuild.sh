@@ -1,9 +1,9 @@
 #!/bin/sh
 # qtrdesktop build script
 
-rm qtrdesktop
-rm *.o
-rm moc_*
+rm -f qtrdesktop
+rm -f *.o
+rm -f moc_*
 
 cc="g++"
 cflags="-DWITH_OPENSSL -DL_ENDIAN -O2 -Wall"

@@ -1,6 +1,6 @@
 /*
    rdesktop: A Remote Desktop Protocol client.
-   User interface services - X Window System
+   User interface services - QT Emb System
    Copyright (C) Jay Sorg 2004
 
    This program is free software; you can redistribute it and/or modify
@@ -41,6 +41,8 @@
 #include <qpopupmenu.h>
 #include <stdlib.h>
 #include <stdarg.h> // va_list va_start va_end
+#include <unistd.h> // gethostname
+#include <pwd.h> // getpwuid
 
 #include "../rdesktop.h"
 #include "qtewin.h"
@@ -49,22 +51,23 @@
 struct QColorMap
 {
   uint32 RGBColors[256];
-  int NumColors;
+  uint32 NumColors;
 };
 
 struct bitmap
 {
   int w;
   int h;
-  uint8* data;
+  uint8 * data;
 };
 
-uint32 g_flags = 0;
-char g_server[64] = "";
-char g_domain[16] = "";
-char g_password[16] = "";
-char g_shell[128] = "";
-char g_directory[32] = "";
+extern int g_tcp_port_rdp;
+extern int g_dsp_fd;
+
+#ifdef WITH_RDPSND
+BOOL g_rdpsnd = True;
+extern int g_dsp_busy;
+#endif
 int g_encryption = 1;
 int g_bitmap_cache = 1;
 int g_bitmap_cache_persist_enable = 0;
@@ -75,36 +78,49 @@ int g_bitmap_compression = 1;
 int g_rdp5_performanceflags = 0;
 int g_console_session = 0;
 int g_keylayout = 0x409; /* Defaults to US keyboard layout */
-
 int g_width = 640;
 int g_height = 480;
 int g_server_bpp = 8;
-int g_fullscreen = 0;
 char g_hostname[16] = "";
 char g_username[100] = "";
-int g_global_sock = 0;
 
-int g_deactivated = 0;
-uint32 g_ext_disc_reason = 0;
+static uint32 g_flags = RDP_LOGON_NORMAL;
+static char g_server[64] = "";
+static char g_domain[16] = "";
+static char g_password[16] = "";
+static char g_shell[128] = "";
+static char g_directory[32] = "";
+static int g_fullscreen = 0;
+static int g_global_sock = 0;
+static int g_deactivated = 0;
+static uint32 g_ext_disc_reason = 0;
 
-QSocketNotifier* g_SocketNotifier = 0;
+static QSocketNotifier * g_SocketNotifier = 0;
+static QSocketNotifier * g_SoundNotifier = 0;
 #ifdef SHARP
-QPEApplication* g_App = 0;
+static QPEApplication * g_App = 0;
 #else
-QApplication* g_App = 0;
+static QApplication * g_App = 0;
 #endif
-static QMyMainWindow *g_MW = 0;
-static QMyScrollView *g_SV = 0;
-static struct QColorMap *g_CM = 0;
-static uint8 *g_BS = 0;
-
+static QMyMainWindow * g_MW = 0;
+static QMyScrollView * g_SV = 0;
+static struct QColorMap * g_CM = 0;
+static uint8 * g_BS = 0; /* the screen data */
 static int g_clipx = 0;
 static int g_clipy = 0;
 static int g_clipcx = 0;
 static int g_clipcy = 0;
 
+#define BPP ((g_server_bpp + 7) / 8)
+#define GETPIXEL8(d, x, y, w) (*(((uint8*)d) + ((y) * (w) + (x))))
+#define GETPIXEL16(d, x, y, w) (*(((uint16*)d) + ((y) * (w) + (x))))
+#define GETPIXEL32(d, x, y, w) (*(((uint32*)d) + ((y) * (w) + (x))))
+#define SETPIXEL8(d, x, y, w, v) *(((uint8*)d) + ((y) * (w) + (x))) = v
+#define SETPIXEL16(d, x, y, w, v) *(((uint16*)d) + ((y) * (w) + (x))) = v
+#define SETPIXEL32(d, x, y, w, v) *(((uint32*)d) + ((y) * (w) + (x))) = v
+
 //*****************************************************************************
-void CleanString(QString* Item)
+void CleanString(QString * Item)
 {
   int i;
 
@@ -118,10 +134,10 @@ void CleanString(QString* Item)
 }
 
 //*****************************************************************************
-QMyDialog::QMyDialog(QWidget* parent) : QDialog(parent, "Settings", true)
+QMyDialog::QMyDialog(QWidget * parent) : QDialog(parent, "Settings", true)
 {
   int i, j;
-  char* home;
+  char * home;
   char Text[256];
   QString Line;
   QString ItemName;
@@ -323,7 +339,7 @@ void QMyDialog::CancelClicked()
 void QMyDialog::AddClicked()
 {
   int i;
-  QMyConnectionItem* Item;
+  QMyConnectionItem * Item;
 
   i = ListBox->count();
   if (i < 10)
@@ -343,7 +359,7 @@ void QMyDialog::AddClicked()
 void QMyDialog::EditClicked()
 {
   int i;
-  QMyConnectionItem* Item;
+  QMyConnectionItem * Item;
 
   i = ListBox->currentItem();
   if (i >= 0)
@@ -369,9 +385,9 @@ void WriteString(QFile* File, QString* Line)
 void QMyDialog::SaveClicked()
 {
   int i, j;
-  QMyConnectionItem* Item;
+  QMyConnectionItem * Item;
   QString Line;
-  char* home;
+  char * home;
   char Text[256];
   QFile* File;
 
@@ -427,8 +443,8 @@ void QMyDialog::SaveClicked()
 void QMyDialog::RemoveClicked()
 {
   int i, j, c;
-  QMyConnectionItem* Item1;
-  QMyConnectionItem* Item2;
+  QMyConnectionItem * Item1;
+  QMyConnectionItem * Item2;
 
   i = ListBox->currentItem();
   if (i >= 0)
@@ -453,7 +469,7 @@ void QMyDialog::RemoveClicked()
 void QMyDialog::ListBoxChanged()
 {
   int i;
-  QMyConnectionItem* Item;
+  QMyConnectionItem * Item;
   char Text[100];
 
   i = ListBox->currentItem();
@@ -477,7 +493,7 @@ void QMyDialog::ListBoxSelected(int /*index*/)
 }
 
 //*****************************************************************************
-void GetScanCode(QKeyEvent* e, int* ScanCode, int* code)
+void GetScanCode(QKeyEvent * e, int * ScanCode, int * code)
 {
   int key;
   int mod;
@@ -709,19 +725,18 @@ void QMyScrollView::polish()
 }
 
 //*****************************************************************************
-void QMyScrollView::timerEvent(QTimerEvent* e)
+void QMyScrollView::timerEvent(QTimerEvent * e)
 {
   QScrollView::timerEvent(e);
   killTimer(timer_id);
-  QMyDialog* d;
-  QWidget* Desktop;
+  QMyDialog * d;
+  QWidget * Desktop;
   int dw;
   int dh;
 
   d = new QMyDialog(this);
   if (d->exec() == 1) // ok clicked
   {
-    g_flags = RDP_LOGON_NORMAL;
     g_width = d->Width;
     g_height = d->Height;
     g_fullscreen = d->FullScreen;
@@ -734,8 +749,8 @@ void QMyScrollView::timerEvent(QTimerEvent* e)
       g_SV->close();
       return;
     }
-    g_BS = (uint8*)xmalloc(g_width * g_height);
-    memset(g_BS, 0, g_width * g_height);
+    g_BS = (uint8*)xmalloc(g_width * g_height * 4);
+    memset(g_BS, 0, g_width * g_height * 4);
     g_clipx = 0;
     g_clipy = 0;
     g_clipcx = g_width;
@@ -789,7 +804,7 @@ QMyMainWindow::~QMyMainWindow()
 }
 
 //*****************************************************************************
-void QMyMainWindow::timerEvent(QTimerEvent* e)
+void QMyMainWindow::timerEvent(QTimerEvent * e)
 {
   QWidget::timerEvent(e);
   if (e->timerId() == timer_id)
@@ -812,7 +827,7 @@ void QMyMainWindow::timerEvent(QTimerEvent* e)
 //*****************************************************************************
 void QMyMainWindow::MemuClicked(int MenuID)
 {
-  QWidget* Desktop;
+  QWidget * Desktop;
   int dw;
   int dh;
 
@@ -913,10 +928,10 @@ void QMyMainWindow::wheelEvent(QWheelEvent* e)
     rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_BUTTON5, e->x(), e->y());
 }
 
-#define NOT(x) (255-(x))
+#define NOT(x) (~x)
 
 //*****************************************************************************
-uint8 rop(int rop, uint8 src, uint8 dst)
+int rop(int rop, int src, int dst)
 {
   switch (rop)
   {
@@ -941,29 +956,64 @@ uint8 rop(int rop, uint8 src, uint8 dst)
 }
 
 /*****************************************************************************/
-uint8 get_pixel(int x, int y)
+int get_pixel(int x, int y)
 {
   if (x >= 0 && x < g_width && y >= 0 && y < g_height)
-    return g_BS[y * g_width + x];
+  {
+    if (g_server_bpp == 8)
+      return g_BS[y * g_width + x];
+    else if (g_server_bpp == 16)
+      return *(((uint16*)g_BS) + (y * g_width + x));
+    else
+      return 0;
+  }
   else
     return 0;
 }
 
 //*****************************************************************************
-void set_pixel(int x, int y, uint8 pixel, int op = 0xc)
+void set_pixel(int x, int y, int pixel, int op = 0xc)
 {
+  uint32 p;
+
   if (x >= g_clipx && x < (g_clipx + g_clipcx) &&
       y >= g_clipy && y < (g_clipy + g_clipcy))
+  {
     if (x >= 0 && x < g_width && y >= 0 && y < g_height)
+    {
       if (op == 0xc)
-        g_BS[y * g_width + x] = pixel;
+      {
+        if (g_server_bpp == 8)
+        {
+          SETPIXEL8(g_BS, x, y, g_width, pixel);
+        }
+        else if (g_server_bpp == 16)
+        {
+          SETPIXEL16(g_BS, x, y, g_width, pixel);
+        }
+      }
       else
-        g_BS[y * g_width + x] = rop(op, pixel, g_BS[y * g_width + x]);
+      {
+        if (g_server_bpp == 8)
+        {
+          p = GETPIXEL8(g_BS, x, y, g_width);
+          p = rop(op, pixel, p);
+          SETPIXEL8(g_BS, x, y, g_width, p);
+        }
+        else if (g_server_bpp == 16)
+        {
+          p = GETPIXEL16(g_BS, x, y, g_width);
+          p = rop(op, pixel, p);
+          SETPIXEL16(g_BS, x, y, g_width, p);
+        }
+      }
+    }
+  }
 }
 
 //******************************************************************************
 // adjust coordinates for cliping rect
-bool WarpCoords(int* x, int* y, int* cx, int* cy, int* srcx, int* srcy)
+bool WarpCoords(int * x, int * y, int * cx, int * cy, int * srcx, int * srcy)
 {
   int dx, dy;
   QRect InRect(*x, *y, *cx, *cy);
@@ -986,43 +1036,71 @@ bool WarpCoords(int* x, int* y, int* cx, int* cy, int* srcx, int* srcy)
 }
 
 //*****************************************************************************
-void QMyMainWindow::paintEvent(QPaintEvent* pe)
+uint32 color16to32(uint32 colour)
 {
-  QImage* Image;
-  QPainter* Painter;
+  uint32 r, g, b;
+  r = ((colour >> 8) & 0xf8) | ((colour >> 13) & 0x7);
+  g = ((colour >> 3) & 0xfc) | ((colour >> 9) & 0x3);
+  b = ((colour << 3) & 0xf8) | ((colour >> 2) & 0x7);
+  return ((r << 16) | (g << 8) | b);
+}
+
+//*****************************************************************************
+void QMyMainWindow::paintEvent(QPaintEvent * pe)
+{
+  QImage * Image;
+  QPainter * Painter;
   QRect Rect;
   int i, j, w, h, l, t;
-  uint8* data;
+  uint8 * data;
 
+  Image = 0;
+  data = 0;
   if (!testWFlags(WRepaintNoErase))
     setWFlags(WRepaintNoErase);
-  if (g_CM != NULL)
+  if (g_CM != NULL || g_server_bpp > 8)
   {
     Rect = pe->rect();
     l = Rect.left();
     t = Rect.top();
     w = Rect.width();
     h = Rect.height();
-    if (w > 0 && h > 0 && g_CM->NumColors > 0)
+    if (w > 0 && h > 0)
     {
-      w = (w + 3) & ~3;
-      data = (uint8*)xmalloc(w * h);
-      for (i = 0; i < h; i++)
-        for (j = 0; j < w; j++)
-          data[i * w + j] = get_pixel(l + j, t + i);
-      Image = new QImage(data, w, h, 8,(QRgb*)g_CM->RGBColors,
-                         g_CM->NumColors, QImage::IgnoreEndian);
-      Painter = new QPainter(this);
-      Painter->drawImage(l, t, *Image, 0, 0, w, h);
+      if (g_server_bpp == 8 && g_CM->NumColors > 0)
+      {
+        w = (w + 3) & ~3;
+        data = (uint8*)xmalloc(w * h);
+        for (i = 0; i < h; i++)
+          for (j = 0; j < w; j++)
+            data[i * w + j] = get_pixel(l + j, t + i);
+        Image = new QImage(data, w, h, 8,(QRgb*)g_CM->RGBColors,
+                           g_CM->NumColors, QImage::IgnoreEndian);
+      }
+      else if (g_server_bpp == 16)
+      {
+        w = (w + 3) & ~3;
+        data = (uint8*)xmalloc(w * h * 4);
+        for (i = 0; i < h; i++)
+          for (j = 0; j < w; j++)
+            *(((uint32*)data) + (i * w + j)) = color16to32(get_pixel(l + j, t + i));
+        Image = new QImage(data, w, h, 32, NULL,
+                           0, QImage::IgnoreEndian);
+      }
+      if (Image != 0)
+      {
+        Painter = new QPainter(this);
+        Painter->drawImage(l, t, *Image, 0, 0, w, h);
+        delete Painter;
+        delete Image;
+      }
       xfree(data);
-      delete Painter;
-      delete Image;
     }
   }
 }
 
 //*****************************************************************************
-void QMyMainWindow::closeEvent(QCloseEvent* e)
+void QMyMainWindow::closeEvent(QCloseEvent * e)
 {
   e->accept();
 }
@@ -1032,6 +1110,34 @@ void QMyMainWindow::dataReceived()
 {
   if (!rdp_loop(&g_deactivated, &g_ext_disc_reason))
     g_SV->close();
+#ifdef WITH_RDPSND
+  if (g_dsp_busy)
+  {
+    if (g_SoundNotifier == 0)
+    {
+      g_SoundNotifier = new QSocketNotifier(g_dsp_fd, QSocketNotifier::Write,
+                                            g_MW);
+      g_MW->connect(g_SoundNotifier, SIGNAL(activated(int)), g_MW,
+                    SLOT(soundSend()));
+    }
+    else
+    {
+      if (!g_SoundNotifier->isEnabled())
+        g_SoundNotifier->setEnabled(true);
+    }
+  }
+#endif
+}
+
+//*****************************************************************************
+void QMyMainWindow::soundSend()
+{
+  g_SoundNotifier->setEnabled(false);
+#ifdef WITH_RDPSND
+  wave_out_play();
+  if (g_dsp_busy)
+    g_SoundNotifier->setEnabled(true);
+#endif
 }
 
 //*****************************************************************************
@@ -1047,7 +1153,8 @@ void redraw(int x, int y, int cx, int cy)
 /* Returns 0 after user quit, 1 otherwise */
 int ui_select(int rdp_socket)
 {
-  g_global_sock = rdp_socket;
+  if (g_global_sock == 0)
+    g_global_sock = rdp_socket;
   return 1;
 }
 
@@ -1064,18 +1171,27 @@ void ui_set_null_cursor(void)
 //*****************************************************************************
 HBITMAP ui_create_bitmap(int width, int height, uint8 * data)
 {
-  struct bitmap* the_bitmap;
-  uint8* bitmap_data;
+  struct bitmap * the_bitmap;
+  uint8 * bitmap_data;
   int i, j;
 
-  bitmap_data = (uint8*)xmalloc(width * height);
+  bitmap_data = (uint8*)xmalloc(width * height * BPP);
   the_bitmap = (struct bitmap*)xmalloc(sizeof(struct bitmap));
   the_bitmap->w = width;
   the_bitmap->h = height;
   the_bitmap->data = bitmap_data;
-  for (i = 0; i < height; i++)
-    for (j = 0; j < width; j++)
-      bitmap_data[i * width + j] = data[i * width + j];
+  if (g_server_bpp == 8)
+  {
+    for (i = 0; i < height; i++)
+      for (j = 0; j < width; j++)
+        bitmap_data[i * width + j] = data[i * width + j];
+  }
+  else if (g_server_bpp == 16)
+  {
+    for (i = 0; i < height; i++)
+      for (j = 0; j < width; j++)
+        *(((uint16*)bitmap_data) + (i * width + j)) = *(((uint16*)data) + (i * width + j));
+  }
   return the_bitmap;
 }
 
@@ -1085,11 +1201,22 @@ void ui_paint_bitmap(int x, int y, int cx, int cy, int width,
 {
   int i, j;
 
-  for (i = 0; i < cy; i++)
-    for (j = 0; j < cx; j++)
-      if (i < height)
-        if (j < width)
-          set_pixel(x + j, y + i, data[i * width + j]);
+  if (g_server_bpp == 8)
+  {
+    for (i = 0; i < cy; i++)
+      for (j = 0; j < cx; j++)
+        if (i < height)
+          if (j < width)
+            set_pixel(x + j, y + i, data[i * width + j]);
+  }
+  else if (g_server_bpp == 16)
+  {
+    for (i = 0; i < cy; i++)
+      for (j = 0; j < cx; j++)
+        if (i < height)
+          if (j < width)
+            set_pixel(x + j, y + i, *(((uint16*)data) + (i * width + j)));
+  }
   redraw(x, y, cx, cy);
 }
 
@@ -1167,9 +1294,9 @@ void ui_destroy_glyph(HGLYPH glyph)
 }
 
 //*****************************************************************************
-HCURSOR ui_create_cursor(unsigned int x, unsigned int y,
-                         int width, int height, uint8 * andmask,
-                         uint8 * xormask)
+HCURSOR ui_create_cursor(uint32 x, uint32 y,
+                         int width, int height,
+                         uint8 * andmask, uint8 * xormask)
 {
   return (void*)1;
 }
@@ -1180,7 +1307,7 @@ void ui_set_cursor(HCURSOR /*cursor*/)
 }
 
 /*****************************************************************************/
-uint16 ui_get_numlock_state(unsigned int state)
+uint16 ui_get_numlock_state(uint32 state)
 {
   return 0;
 }
@@ -1221,12 +1348,12 @@ HCOLOURMAP ui_create_colourmap(COLOURMAP * colours)
 }
 
 //*****************************************************************************
-void ui_destroy_colourmap(HCOLOURMAP /*map*/)
+void ui_set_colourmap(HCOLOURMAP map)
 {
 }
 
 //*****************************************************************************
-void ui_set_colourmap(HCOLOURMAP /*map*/)
+void ui_destroy_colourmap(HCOLOURMAP map)
 {
 }
 
@@ -1281,6 +1408,10 @@ void fill_rect(int x, int y, int cx, int cy, int colour, int opcode = 0xc)
 {
   int i, j;
 
+  if (x + cx > g_width)
+    cx = g_width - x;
+  if (y + cy > g_height)
+    cy = g_height - y;
   for (i = 0; i < cy; i++)
     for (j = 0; j < cx; j++)
       set_pixel(x + j, y + i, colour, opcode);
@@ -1327,13 +1458,25 @@ void ui_screenblt(uint8 opcode, int x, int y, int cx, int cy,
   int i, j;
   uint8* temp;
 
-  temp = (uint8*)xmalloc(cx * cy);
-  for (i = 0; i < cy; i++)
-    for (j = 0; j < cx; j++)
-      temp[i * cx + j] = get_pixel(srcx + j, srcy + i);
-  for (i = 0; i < cy; i++)
-    for (j = 0; j < cx; j++)
-      set_pixel(x + j, y + i, temp[i * cx + j], opcode);
+  temp = (uint8*)xmalloc(cx * cy * BPP);
+  if (g_server_bpp == 8)
+  {
+    for (i = 0; i < cy; i++)
+      for (j = 0; j < cx; j++)
+        temp[i * cx + j] = get_pixel(srcx + j, srcy + i);
+    for (i = 0; i < cy; i++)
+      for (j = 0; j < cx; j++)
+        set_pixel(x + j, y + i, temp[i * cx + j], opcode);
+  }
+  else if (g_server_bpp == 16)
+  {
+    for (i = 0; i < cy; i++)
+      for (j = 0; j < cx; j++)
+        *(((uint16*)temp) + (i * cx + j)) = get_pixel(srcx + j, srcy + i);
+    for (i = 0; i < cy; i++)
+      for (j = 0; j < cx; j++)
+        set_pixel(x + j, y + i, *(((uint16*)temp) + (i * cx + j)), opcode);
+  }
   xfree(temp);
   redraw(x, y, cx, cy);
 }
@@ -1348,12 +1491,24 @@ void ui_memblt(uint8 opcode, int x, int y, int cx, int cy,
   the_bitmap = (struct bitmap*)src;
   if (the_bitmap == NULL)
     return;
-  for (i = 0; i < cy; i++)
-    for (j = 0; j < cx; j++)
-      if ((i + srcy) < the_bitmap->h && (j + srcx) < the_bitmap->w)
-        set_pixel(x + j, y + i,
-                  the_bitmap->data[(i + srcy) * the_bitmap->w + (j + srcx)],
-                  opcode);
+  if (g_server_bpp == 8)
+  {
+    for (i = 0; i < cy; i++)
+      for (j = 0; j < cx; j++)
+        if ((i + srcy) < the_bitmap->h && (j + srcx) < the_bitmap->w)
+          set_pixel(x + j, y + i,
+                    the_bitmap->data[(i + srcy) * the_bitmap->w + (j + srcx)],
+                    opcode);
+  }
+  else if (g_server_bpp == 16)
+  {
+    for (i = 0; i < cy; i++)
+      for (j = 0; j < cx; j++)
+        if ((i + srcy) < the_bitmap->h && (j + srcx) < the_bitmap->w)
+          set_pixel(x + j, y + i,
+                    *(((uint16*)the_bitmap->data) + ((i + srcy) * the_bitmap->w + (j + srcx))),
+                    opcode);
+  }
   redraw(x, y, cx, cy);
 }
 
@@ -1448,7 +1603,7 @@ void ui_line(uint8 opcode, int startx, int starty, int endx,
 //*****************************************************************************
 void draw_glyph (int x, int y, HGLYPH glyph, int fgcolour)
 {
-  struct bitmap* the_glyph;
+  struct bitmap *the_glyph;
   int i, j;
 
   the_glyph = (struct bitmap*)glyph;
@@ -1567,11 +1722,21 @@ void ui_desktop_save(uint32 offset, int x, int y, int cx, int cy)
   uint8* data;
   int i, j;
 
-  data = (uint8*)xmalloc(cx * cy);
-  for (i = 0; i < cy; i++)
-    for (j = 0; j < cx; j++)
-      data[i * cx + j] = get_pixel(x + j, y + i);
-  cache_put_desktop(offset, cx, cy, cx, 1, data);
+  data = (uint8*)xmalloc(cx * cy * BPP);
+  if (g_server_bpp == 8)
+  {
+    for (i = 0; i < cy; i++)
+      for (j = 0; j < cx; j++)
+        data[i * cx + j] = get_pixel(x + j, y + i);
+  }
+  else if (g_server_bpp == 16)
+  {
+    for (i = 0; i < cy; i++)
+      for (j = 0; j < cx; j++)
+        *(((uint16*)data) + (i * cx + j)) = get_pixel(x + j, y + i);
+  }
+  offset *= BPP;
+  cache_put_desktop(offset, cx, cy, cx * BPP, BPP, data);
   xfree(data);
 }
 
@@ -1581,16 +1746,28 @@ void ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy)
   uint8* data;
   int i, j;
 
-  data = cache_get_desktop(offset, cx, cy, 1);
-  for (i = 0; i < cy; i++)
-    for (j = 0; j < cx; j++)
-      set_pixel(x + j, y + i, data[i * cx + j]);
+  offset *= BPP;
+  data = cache_get_desktop(offset, cx, cy, BPP);
+  if (g_server_bpp == 8)
+  {
+    for (i = 0; i < cy; i++)
+      for (j = 0; j < cx; j++)
+        set_pixel(x + j, y + i, data[i * cx + j]);
+  }
+  else if (g_server_bpp == 16)
+  {
+    for (i = 0; i < cy; i++)
+      for (j = 0; j < cx; j++)
+        set_pixel(x + j, y + i, *(((uint16*)data) + (i * cx + j)));
+  }
   redraw(x, y, cx, cy);
 }
 
 /*****************************************************************************/
-void* xrealloc(void* in_val, int size)
+void* xrealloc(void *in_val, int size)
 {
+  if (size < 1)
+    size = 1;
   return realloc(in_val, size);
 }
 
@@ -1601,13 +1778,14 @@ void* xmalloc(int size)
 }
 
 /*****************************************************************************/
-void xfree(void* in_val)
+void xfree(void * in_val)
 {
-  free(in_val);
+  if (in_val != NULL)
+    free(in_val);
 }
 
 /*****************************************************************************/
-void warning(char* format, ...)
+void warning(char * format, ...)
 {
   va_list ap;
 
@@ -1618,7 +1796,7 @@ void warning(char* format, ...)
 }
 
 /*****************************************************************************/
-void unimpl(char* format, ...)
+void unimpl(char * format, ...)
 {
   va_list ap;
 
@@ -1629,7 +1807,7 @@ void unimpl(char* format, ...)
 }
 
 /*****************************************************************************/
-void error(char* format, ...)
+void error(char * format, ...)
 {
   va_list ap;
 
@@ -1646,7 +1824,7 @@ BOOL rd_pstcache_mkdir(void)
 }
 
 /*****************************************************************************/
-int rd_open_file(char *filename)
+int rd_open_file(char * filename)
 {
   return 0;
 }
@@ -1658,13 +1836,13 @@ void rd_close_file(int fd)
 }
 
 /*****************************************************************************/
-int rd_read_file(int fd, void *ptr, int len)
+int rd_read_file(int fd, void * ptr, int len)
 {
   return 0;
 }
 
 /*****************************************************************************/
-int rd_write_file(int fd, void* ptr, int len)
+int rd_write_file(int fd, void * ptr, int len)
 {
   return 0;
 }
@@ -1682,12 +1860,18 @@ BOOL rd_lock_file(int fd, int start, int len)
 }
 
 /*****************************************************************************/
-void save_licence(uint8* data, int length)
+int load_licence(uint8 ** data)
+{
+  return 0;
+}
+
+/*****************************************************************************/
+void save_licence(uint8 * data, int length)
 {
 }
 
 /*****************************************************************************/
-void generate_random(uint8* random)
+void generate_random(uint8 * random)
 {
   QFile File("/dev/random");
   File.open(IO_ReadOnly);
@@ -1698,16 +1882,207 @@ void generate_random(uint8* random)
 }
 
 /*****************************************************************************/
-int load_licence(uint8** data)
+/* produce a hex dump */
+void hexdump(uint8 * p, uint32 len)
 {
+  uint8 * line = p;
+  int i, thisline;
+  uint32 offset = 0;
+
+  while (offset < len)
+  {
+    printf("%04x ", offset);
+    thisline = len - offset;
+    if (thisline > 16)
+      thisline = 16;
+
+    for (i = 0; i < thisline; i++)
+      printf("%02x ", line[i]);
+
+    for (; i < 16; i++)
+      printf("   ");
+
+    for (i = 0; i < thisline; i++)
+      printf("%c", (line[i] >= 0x20 && line[i] < 0x7f) ? line[i] : '.');
+
+    printf("\n");
+    offset += thisline;
+    line += thisline;
+  }
+}
+
+/*****************************************************************************/
+void get_username_and_hostname(void)
+{
+  char fullhostname[64];
+  char* p;
+  struct passwd* pw;
+
+  STRNCPY(g_username, "unknown", sizeof(g_username));
+  STRNCPY(g_hostname, "unknown", sizeof(g_hostname));
+  pw = getpwuid(getuid());
+  if (pw != NULL && pw->pw_name != NULL)
+  {
+    STRNCPY(g_username, pw->pw_name, sizeof(g_username));
+  }
+  if (gethostname(fullhostname, sizeof(fullhostname)) != -1)
+  {
+    p = strchr(fullhostname, '.');
+    if (p != NULL)
+      *p = 0;
+    STRNCPY(g_hostname, fullhostname, sizeof(g_hostname));
+  }
+}
+
+/*****************************************************************************/
+void out_params(void)
+{
+  fprintf(stderr, "qterdesktop: A Remote Desktop Protocol client.\n");
+  fprintf(stderr, "Version " VERSION ". Copyright (C) 1999-2004 Matt Chapman.\n");
+  fprintf(stderr, "See http://www.rdesktop.org/ for more information.\n\n");
+  fprintf(stderr, "Usage: qterdesktop [options] server\n");
+  fprintf(stderr, "   -g: desktop geometry (WxH)\n");
+  fprintf(stderr, "   -4: use RDP version 4\n");
+  fprintf(stderr, "   -5: use RDP version 5 (default)\n");
+  fprintf(stderr, "   -t: tcp port)\n");
+  fprintf(stderr, "   -a: connection colour depth\n");
+
+  fprintf(stderr, "   -u: user name\n");
+  fprintf(stderr, "   -d: domain\n");
+  fprintf(stderr, "   -s: shell\n");
+  fprintf(stderr, "   -c: working directory\n");
+  fprintf(stderr, "   -p: password (- to prompt)\n");
+  fprintf(stderr, "   -n: client hostname\n");
+
+  fprintf(stderr, "\n");
+}
+
+/*****************************************************************************/
+int parse_parameters(int in_argc, char ** in_argv)
+{
+  int i;
+  char * p;
+
+  for (i = 1; i < in_argc; i++)
+  {
+    strcpy(g_server, in_argv[i]);
+    if (strcmp(in_argv[i], "-h") == 0)
+    {
+      out_params();
+      return 0;
+    }
+    else if (strcmp(in_argv[i], "-g") == 0)
+    {
+      g_width = strtol(in_argv[i + 1], &p, 10);
+      if (g_width <= 0)
+      {
+        error("invalid geometry\n");
+        return 0;
+      }
+      if (*p == 'x')
+        g_height = strtol(p + 1, NULL, 10);
+      if (g_height <= 0)
+      {
+        error("invalid geometry\n");
+        return 0;
+      }
+      g_width = (g_width + 3) & ~3;
+    }
+    else if (strcmp(in_argv[i], "-4") == 0)
+      g_use_rdp5 = 0;
+    else if (strcmp(in_argv[i], "-5") == 0)
+      g_use_rdp5 = 1;
+    else if (strcmp(in_argv[i], "-a") == 0)
+    {
+      g_server_bpp = strtol(in_argv[i + 1], &p, 10);
+      if (g_server_bpp != 8 && g_server_bpp != 15 &&
+          g_server_bpp != 16 && g_server_bpp != 24)
+      {
+        error("invalid bpp\n");
+        return 0;
+      }
+    }
+    else if (strcmp(in_argv[i], "-t") == 0)
+      g_tcp_port_rdp = strtol(in_argv[i + 1], &p, 10);
+
+    else if (strcmp(in_argv[i], "-u") == 0)
+    {
+      STRNCPY(g_username, in_argv[i + 1], sizeof(g_username));
+    }
+    else if (strcmp(in_argv[i], "-d") == 0)
+    {
+      STRNCPY(g_domain, in_argv[i + 1], sizeof(g_domain));
+    }
+    else if (strcmp(in_argv[i], "-s") == 0)
+    {
+      STRNCPY(g_shell, in_argv[i + 1], sizeof(g_shell));
+    }
+    else if (strcmp(in_argv[i], "-c") == 0)
+    {
+      STRNCPY(g_directory, in_argv[i + 1], sizeof(g_directory));
+    }
+    else if (strcmp(in_argv[i], "-p") == 0)
+    {
+      STRNCPY(g_password, in_argv[i + 1], sizeof(g_password));
+      g_flags |= RDP_LOGON_AUTO;
+    }
+    else if (strcmp(in_argv[i], "-n") == 0)
+    {
+      STRNCPY(g_hostname, in_argv[i + 1], sizeof(g_hostname));
+    }
+  }
+  return 1;
+}
+
+//*****************************************************************************
+int param_connect(void)
+{
+  QWidget * Desktop;
+  int dw, dh;
+
+#ifdef WITH_RDPSND
+  rdpsnd_init();
+#endif
+  if (rdp_connect(g_server, g_flags, g_domain, g_password, g_shell,
+                  g_directory))
+  {
+    g_BS = (uint8*)xmalloc(g_width * g_height * 4);
+    memset(g_BS, 0, g_width * g_height * 4);
+    g_clipx = 0;
+    g_clipy = 0;
+    g_clipcx = g_width;
+    g_clipcy = g_height;
+    g_CM = (QColorMap*)xmalloc(sizeof(struct QColorMap));
+    memset(g_CM, 0, sizeof(struct QColorMap));
+    g_CM->NumColors = 256;
+    g_MW = new QMyMainWindow();
+    g_MW->resize(g_width, g_height);
+    g_MW->show();
+    g_SV->addChild(g_MW);
+    g_MW->setMouseTracking(true);
+    g_SocketNotifier = new QSocketNotifier(g_global_sock,
+                                           QSocketNotifier::Read,
+                                           g_MW);
+    g_MW->connect(g_SocketNotifier, SIGNAL(activated(int)), g_MW,
+                  SLOT(dataReceived()));
+    if (g_fullscreen)
+    {
+      Desktop = g_App->desktop();
+      dw = Desktop->width();
+      dh = Desktop->height();
+      if (dw == g_width && dh == g_height)
+        g_MW->resize(g_width - 4, g_height - 4);
+      g_SV->showFullScreen();
+    }
+    g_MW->setCursor(BlankCursor);
+    g_App->exec();
+  }
   return 0;
 }
 
 //*****************************************************************************
-int main(int argc, char** argv)
+int main(int argc, char ** argv)
 {
-  g_CM = NULL;
-  g_BS = NULL;
 #ifdef SHARP
   g_App = new QPEApplication(argc, argv);
 #else
@@ -1716,13 +2091,21 @@ int main(int argc, char** argv)
   g_SV = new QMyScrollView();
   g_App->setMainWidget(g_SV);
   g_SV->showMaximized();
-  g_SV->timer_id = g_SV->startTimer(1000);
-  g_App->exec();
+  if (argc > 1)
+  {
+    get_username_and_hostname();
+    if (parse_parameters(argc, argv))
+      param_connect();
+  }
+  else
+  {
+    g_SV->timer_id = g_SV->startTimer(1000); /* one sec delay, then dialog */
+    g_MW->setCursor(BlankCursor);
+    g_App->exec();
+  }
   delete g_SV;
   delete g_App;
-  if (g_CM != NULL)
-    xfree(g_CM);
-  if (g_BS !=NULL)
-    xfree(g_BS);
+  xfree(g_CM);
+  xfree(g_BS);
   return 0;
 }
