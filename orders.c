@@ -56,12 +56,12 @@ rdp_in_present(STREAM s, uint32 * present, uint8 flags, int size)
 static void
 rdp_in_coord(STREAM s, uint16 * coord, BOOL delta)
 {
-	uint8 change;
+	sint8 change;
 
 	if (delta)
 	{
 		in_uint8(s, change);
-		*coord += (signed char) change;
+		*coord += change;
 	}
 	else
 	{

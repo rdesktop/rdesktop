@@ -1216,8 +1216,8 @@ ui_draw_glyph(int mixmode,
     }\
   if (glyph != NULL)\
     {\
-      ui_draw_glyph (mixmode, x + (short) glyph->offset,\
-		     y + (short) glyph->baseline,\
+      ui_draw_glyph (mixmode, x + glyph->offset,\
+		     y + glyph->baseline,\
 		     glyph->width, glyph->height,\
 		     glyph->pixmap, 0, 0, bgcolour, fgcolour);\
       if (flags & TEXT2_IMPLICIT_X)\

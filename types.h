@@ -26,8 +26,11 @@ typedef int BOOL;
 #endif
 
 typedef unsigned char uint8;
+typedef signed char sint8;
 typedef unsigned short uint16;
+typedef signed short sint16;
 typedef unsigned int uint32;
+typedef signed int sint32;
 
 typedef void *HBITMAP;
 typedef void *HGLYPH;
@@ -82,8 +85,8 @@ BRUSH;
 
 typedef struct _FONTGLYPH
 {
-	uint16 offset;
-	uint16 baseline;
+	sint16 offset;
+	sint16 baseline;
 	uint16 width;
 	uint16 height;
 	HBITMAP pixmap;
