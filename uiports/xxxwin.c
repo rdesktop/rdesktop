@@ -11,6 +11,8 @@ int g_server_bpp = 8;
 int g_encryption = 1;
 int g_desktop_save =1;
 int g_bitmap_cache = 1;
+int g_bitmap_cache_persist_enable = False;
+int g_bitmap_cache_precache = True;
 int g_bitmap_compression = 1;
 int g_rdp5_performanceflags = 0;
 int g_console_session = 0;
@@ -237,6 +239,48 @@ void unimpl(char* format, ...)
 /*****************************************************************************/
 void error(char* format, ...)
 {
+}
+
+/*****************************************************************************/
+BOOL rd_pstcache_mkdir(void)
+{
+  return 0;
+}
+
+/*****************************************************************************/
+int rd_open_file(char *filename)
+{
+  return 0;
+}
+
+/*****************************************************************************/
+void rd_close_file(int fd)
+{
+  return;
+}
+
+/*****************************************************************************/
+int rd_read_file(int fd, void *ptr, int len)
+{
+  return 0;
+}
+
+/*****************************************************************************/
+int rd_write_file(int fd, void* ptr, int len)
+{
+  return 0;
+}
+
+/*****************************************************************************/
+int rd_lseek_file(int fd, int offset)
+{
+  return 0;
+}
+
+/*****************************************************************************/
+BOOL rd_lock_file(int fd, int start, int len)
+{
+  return False;
 }
 
 /*****************************************************************************/

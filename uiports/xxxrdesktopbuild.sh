@@ -21,8 +21,9 @@ $cc $cflags -c ../mppc.c -o mppc.o
 $cc $cflags -c ../licence.c -o licence.o
 $cc $cflags -c ../bitmap.c -o bitmap.o
 $cc $cflags -c ../channels.c -o channels.o
+$cc $cflags -c ../pstcache.c -o pstcache.o
 
 # dumby ui file
 $cc $cflags -c xxxwin.c -o xxxwin.o
 
-$cc $lflags -o xxxrdesktop xxxwin.o tcp.o iso.o mcs.o secure.o rdp.o rdp5.o orders.o cache.o mppc.o licence.o bitmap.o channels.o
+$cc $lflags -o xxxrdesktop xxxwin.o tcp.o iso.o mcs.o secure.o rdp.o rdp5.o orders.o cache.o mppc.o licence.o bitmap.o channels.o pstcache.o
