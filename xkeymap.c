@@ -214,6 +214,12 @@ void
 xkeymap_init(void)
 {
 	unsigned int max_keycode;
+	char *mapname_ptr;
+
+	/* Make keymapname lowercase */
+	mapname_ptr = keymapname;
+	while (*mapname_ptr) 
+	    *mapname_ptr++ = tolower(*mapname_ptr);
 
 	if (strcmp(keymapname, "none"))
 	{
