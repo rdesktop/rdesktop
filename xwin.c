@@ -25,11 +25,13 @@
 #define XK_MISCELLANY
 #include <X11/keysymdef.h>
 #include "rdesktop.h"
+#include "scancodes.h"
 
 extern int width;
 extern int height;
 extern BOOL sendmotion;
 extern BOOL fullscreen;
+extern BOOL grab_keyboard;
 
 Display *display = NULL;
 static int x_socket;
@@ -347,7 +349,9 @@ ui_create_window(char *title)
 
 	input_mask =
 		KeyPressMask | KeyReleaseMask | ButtonPressMask |
-		ButtonReleaseMask | EnterWindowMask | LeaveWindowMask;
+		ButtonReleaseMask;
+	if (grab_keyboard)
+		input_mask |= EnterWindowMask | LeaveWindowMask;
 	if (sendmotion)
 		input_mask |= PointerMotionMask;
 
@@ -518,14 +522,27 @@ xwin_process_events()
 					       xevent.xmotion.y);
 				break;
 
+			case FocusIn:
+				/* fall through */
 			case EnterNotify:
-				XGrabKeyboard(display, wnd, True,
-					      GrabModeAsync, GrabModeAsync,
-					      CurrentTime);
+				if (grab_keyboard)
+					XGrabKeyboard(display, wnd, True,
+						      GrabModeAsync, GrabModeAsync,
+						      CurrentTime);
 				break;
 
+			case FocusOut:
+				/* reset keys */
+				rdp_send_input(ev_time, RDP_INPUT_SCANCODE,
+					       KBD_FLAG_DOWN | KBD_FLAG_UP,
+					       SCANCODE_CHAR_LCTRL, 0);
+				rdp_send_input(ev_time, RDP_INPUT_SCANCODE,
+					       KBD_FLAG_DOWN | KBD_FLAG_UP,
+					       SCANCODE_CHAR_LALT, 0);
+				/* fall through */
 			case LeaveNotify:
-				XUngrabKeyboard(display, CurrentTime);
+				if (grab_keyboard)
+					XUngrabKeyboard(display, CurrentTime);
 				break;
 
 			case Expose:

@@ -43,6 +43,7 @@ BOOL licence = True;
 BOOL encryption = True;
 BOOL desktop_save = True;
 BOOL fullscreen = False;
+BOOL grab_keyboard = True;
 
 /* Display usage information */
 static void
@@ -63,6 +64,7 @@ usage(char *program)
 	printf("   -m: do not send motion events\n");
 	printf("   -l: do not request licence\n");
 	printf("   -t: rdp tcp port\n\n");
+	printf("   -K: keep window manager key bindings\n");
 }
 
 /* Client program */
@@ -89,7 +91,7 @@ main(int argc, char *argv[])
 	domain[0] = password[0] = shell[0] = directory[0] = 0;
 	strcpy(keymapname, "us");
 
-	while ((c = getopt(argc, argv, "u:d:s:c:p:n:k:g:t:fbemlh?")) != -1)
+	while ((c = getopt(argc, argv, "u:d:s:c:p:n:k:g:t:fbemlKh?")) != -1)
 	{
 		switch (c)
 		{
@@ -157,6 +159,10 @@ main(int argc, char *argv[])
 
 			case 't':
 				tcp_port_rdp = strtol(optarg, NULL, 10);
+				break;
+
+			case 'K':
+				grab_keyboard = False;
 				break;
 
 			case 'h':
