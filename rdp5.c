@@ -61,7 +61,7 @@ rdp5_process(STREAM s, BOOL encryption, BOOL shortform)
 				in_uint8s(s, 2);	/* uint16 = 2 */
 				process_palette(s);
 				break;
-         		case 3:	/* probably an palette with offset 3. Weird */
+			case 3:	/* probably an palette with offset 3. Weird */
 				break;
 			case 5:
 				process_null_system_pointer_pdu(s);
@@ -81,8 +81,12 @@ rdp5_process(STREAM s, BOOL encryption, BOOL shortform)
 }
 
 void
-rdp5_process_channel(STREAM s, uint16 channel)
+rdp5_process_channel(STREAM s, uint16 channelno)
 {
-	printf("Data on channel %02x:\n", channel);
-	hexdump(s->p, s->end - s->p);
+	rdp5_channel *channel;
+	channel = find_channel_by_channelno(channelno);
+	if (NULL != channel)
+	{
+		channel->channelcallback(s, channelno);
+	}
 }
