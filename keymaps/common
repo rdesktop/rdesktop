@@ -58,6 +58,11 @@ m 0x32 addupper
 
 space 0x39 localstate
 
+less 0x56
+greater 0x56 shift
+bar 0x56 altgr
+brokenbar 0x56 shift altgr
+
 #
 # Esc and Function keys
 #
@@ -149,4 +154,3 @@ KP_Prior 0x49
 Caps_Lock 0x0 inhibit
 Multi_key 0x0 inhibit
 Num_Lock 0x0 inhibit
-KP_Begin 0x0 inhibit
