@@ -1,12 +1,16 @@
 This is the svga ui port
+send any fixes or improvments to me Jay Sorg(j@american-data.com)
 svgalib should be installed
 tested with versions 1.4.3, 1.9.x
 
-svgardesktopbuild.sh can be edited to change file localtions or endianness
-run ./svgardesktopbuild.sh in this directory to compile it
+thanks to
+  Donald Gordon - original work
+  Peter Nikolow - misc fixes
+
+run make -f makefile_svga to compile it
 
 svgareadme.txt - notes, this file
-svgardesktopbuild.sh - script to build
+makefile_svga - makefile
 svgawin.c - ui lib
 
 svgalib has some support for acceleration but most drivers
@@ -15,7 +19,7 @@ The ones that do are Cirus Logic and ATI Mach 32 cards.
 If running on really slow hardware(486), use one of these cards,
 it improves performance alot.
 
-run ./svgardesktop with no parameters to see a list of 
+run ./svgardesktop with no parameters to see a list of
 commnad line options
 
 You will need to modify the libvga.config file most likely.

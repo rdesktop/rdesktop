@@ -30,6 +30,11 @@
 #include <stdarg.h> // va_list va_start va_end
 
 
+#include <sys/ioctl.h>
+#include <linux/keyboard.h>
+#include <linux/kd.h>
+#include <fcntl.h>
+
 extern int g_tcp_port_rdp;
 int g_use_rdp5 = 0;
 char g_hostname[16] = "";
@@ -58,6 +63,11 @@ char g_servername[128] = "";
 static uint32* colmap = 0;
 static uint8* desk_save = 0;
 static int g_server_Bpp = 1;
+
+/* Keyboard LEDS */
+static int numlock;
+static int capslock;
+static int scrolllock;
 
 // this is non null if vgalib has non accel functions available
 // reading from video memory is sooo slow
@@ -118,6 +128,29 @@ typedef struct
 } myrect;
 
 myrect* head_rect = 0;
+
+// Keyboard stuff - PeterS
+
+static void setled(int mask, int state)
+{
+  int fd;
+  long int leds;
+  
+  if (( fd=open("/dev/console", O_NOCTTY)) != -1 )
+  {
+    if (ioctl (fd, KDGETLED, &leds) != -1)
+    {
+      leds &= 7;
+      if (state)
+        leds |= mask;
+      else
+        leds &= ~mask;	
+      ioctl (fd, KDSETLED, leds);	
+    }
+    close(fd);
+  }
+}
+
 
 //*****************************************************************************
 // do a raster op
@@ -734,6 +767,25 @@ void key_event(int scancode, int pressed)
     return;
   rdpkey = scancode;
   ext = 0;
+  
+  // Keyboard LEDS
+  if ((scancode == SCANCODE_CAPSLOCK) && pressed)
+  {
+     capslock = !capslock;
+     setled(LED_CAP, capslock);
+  }
+  if ((scancode == SCANCODE_SCROLLLOCK) && pressed)
+  {
+     scrolllock = !scrolllock;
+     setled(LED_SCR, scrolllock);
+  }
+
+  if ((scancode == SCANCODE_NUMLOCK) && pressed)
+  {
+     numlock = !numlock;
+     setled(LED_NUM, numlock);
+  }
+     
   switch (scancode)
   {
     case SCANCODE_CURSORBLOCKUP:    rdpkey = 0xc8; ext = KBD_FLAG_EXT; break; // up arrow
@@ -750,12 +802,21 @@ void key_event(int scancode, int pressed)
     case SCANCODE_KEYPADENTER:      rdpkey = 0x1c; break; // enter
     case SCANCODE_RIGHTCONTROL:     rdpkey = 0x1d; break; // right ctrl
     case SCANCODE_RIGHTALT:         rdpkey = 0x38; break; // right alt
-    case SCANCODE_LEFTWIN:          rdpkey = 0; break; // left win
-    case SCANCODE_RIGHTWIN:         rdpkey = 0; break; // right win
-    case 127:                       rdpkey = 0; break; // menu key
-    case SCANCODE_PRINTSCREEN:      rdpkey = 0; break; // print screen
-    case SCANCODE_BREAK:            rdpkey = 0; break; // break
-    case SCANCODE_SCROLLLOCK:       rdpkey = 0; break; // scroll lock
+    case SCANCODE_LEFTWIN:          rdpkey = 0x5b; ext = KBD_FLAG_EXT; break; // left win
+    case SCANCODE_RIGHTWIN:         rdpkey = 0x5c; ext = KBD_FLAG_EXT; break; // right win
+    case 127:                       rdpkey = 0x5d; ext = KBD_FLAG_EXT; break; // menu key
+    case SCANCODE_PRINTSCREEN:      rdpkey = 0x37; ext = KBD_FLAG_EXT; break; // print screen
+    case SCANCODE_BREAK:            //rdpkey = 0; break; // break
+    {
+      if (pressed)
+      {
+        ext = KBD_FLAG_EXT;
+        rdp_send_input(0, RDP_INPUT_SCANCODE, RDP_KEYPRESS | ext, 0x46, 0);
+        rdp_send_input(0, RDP_INPUT_SCANCODE, RDP_KEYPRESS | ext, 0xc6, 0);
+      }    
+      rdpkey = 0;
+    }
+    case SCANCODE_SCROLLLOCK:       rdpkey = 0x46; break; // scroll lock
     case 112: // mouse down
     {
       rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_DOWN | MOUSE_FLAG_BUTTON4,
@@ -774,6 +835,7 @@ void key_event(int scancode, int pressed)
     rdp_send_input(0, RDP_INPUT_SCANCODE, RDP_KEYPRESS | ext, rdpkey, 0);
   else
     rdp_send_input(0, RDP_INPUT_SCANCODE, RDP_KEYRELEASE | ext, rdpkey, 0);
+  
 
 }
 
