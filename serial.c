@@ -254,97 +254,42 @@ set_termios(void)
 /* returns numer of units found and initialized. */
 /* optarg looks like ':com1=/dev/ttyS0'           */
 /* when it arrives to this function.              */
-/*  windev u*dev   baud, parity, stop bits, wordlength */
-/* :com1=/dev/ttyS0:9600,0|1|2,0|2,5|6|7|8:dtr */
+/* :com1=/dev/ttyS0,com2=/dev/ttyS1 */
 int
 serial_enum_devices(int *id, char* optarg)
 {
 	SERIAL_DEVICE* pser_inf;
 
-	int argcount=0;
-	char* pos = optarg;
-	char* pos2;
-	char* pos3;
+	char *pos = optarg;
+	char *pos2;
+	int count = 0;
 
-	if(*id<RDPDR_MAX_DEVICES){
+	// skip the first colon
+	optarg++;
+	while ((pos = next_arg(optarg, ',')) && *id < RDPDR_MAX_DEVICES)
+	{
 		// Init data structures for device
 		pser_inf = (SERIAL_DEVICE *) xmalloc(sizeof(SERIAL_DEVICE));
 		pser_inf->ptermios = (struct termios *) xmalloc(sizeof(struct termios));
 		pser_inf->pold_termios = (struct termios *) xmalloc(sizeof(struct termios));
 
-		// skip the first colon
-		optarg++;
-		while( (pos = next_arg( optarg, ':')) ){
+		pos2 = next_arg(optarg, '=');
+		strcpy(g_rdpdr_device[*id].name, optarg);
 
-			switch(argcount){
-				/* com1=/dev/ttyS0 */
-				case 0:
-					pos2 = next_arg(optarg,'=');
-					if( !pos2 || *pos2 == (char)0x00 ){
-						error("-r comport arguments should look like: -r comport:com1=/dev/ttyS0\n");
-						return 0;
-					}
-					/* optarg = com1, pos2 = /dev/ttyS0 */
-					strcpy(g_rdpdr_device[*id].name,optarg);
+		toupper_str(g_rdpdr_device[*id].name);
 
-					toupper_str(g_rdpdr_device[*id].name);
-
-					g_rdpdr_device[*id].local_path = xmalloc( strlen(pos2) + 1 );
-					strcpy(g_rdpdr_device[*id].local_path,pos2);
-					break;
-				/* 9600,0|1|2,O|2,5|6|7|8 */
-				/* TODO: values should be set in serial_create()... ??? */
-				case 1:
-					pos2 = next_arg(optarg,',');
-					/*optarg=9600*/
-					pser_inf->baud_rate = atoi(optarg);
-					if( !pos2 || *pos2 == (char)0x00 )
-						break;
-					pos3 = next_arg(pos2,',');
-					/* pos2 = 0|1|2 */
-					pser_inf->parity = atoi(pos2);
-					/* pos3 = 0|2,5|6|7|8*/
-					pos2 = next_arg(pos3,',');
-					if( !pos3 || *pos3 == (char)0x00 )
-						break;
-				        pser_inf->stop_bits = atoi(pos3);
-					/* pos2 = 5|6|7|8 */
-					if( !pos2 || *pos2 == (char)0x00 )
-						break;
-					pser_inf->word_length = atoi(pos2);
-					break;
-				default:
-					if( (*optarg != (char)0x00) && (strcmp( optarg, "dtr" ) == 0) ){
-						pser_inf->dtr = 1;
-					}
-					/* TODO: add more switches here, like xon, xoff. they will be separated by colon
-					if( (*optarg != (char)0x00) && (strcmp( optarg, "xon" ) == 0) ){
-					}
-					*/
-					break;
-			}
-			argcount++;
-			optarg=pos;
-		}
-
-		printf("SERIAL %s to %s", g_rdpdr_device[*id].name, g_rdpdr_device[*id].local_path );
-		if( pser_inf->baud_rate != 0 ){
-			printf(" with baud: %u, parity: %u, stop bits: %u word length: %u", pser_inf->baud_rate, pser_inf->parity, pser_inf->stop_bits, pser_inf->word_length );
-			if( pser_inf->dtr )
-				printf( " dtr set\n");
-			else
-				printf( "\n" );
-		}else
-			printf("\n");
-
+		g_rdpdr_device[*id].local_path = xmalloc(strlen(pos2) + 1);
+		strcpy(g_rdpdr_device[*id].local_path, pos2);
+		printf("SERIAL %s to %s\n", g_rdpdr_device[*id].name, g_rdpdr_device[*id].local_path);
 		// set device type
 		g_rdpdr_device[*id].device_type = DEVICE_TYPE_SERIAL;
 		g_rdpdr_device[*id].pdevice_data = (void *) pser_inf;
+		count++;
 		(*id)++;
 
-		return 1;
+		optarg = pos;
 	}
-	return 0;
+	return count;
 }
 
 NTSTATUS
@@ -353,7 +298,6 @@ serial_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 disposi
         HANDLE          serial_fd;
         SERIAL_DEVICE   *pser_inf;
         struct termios  *ptermios;
-	SERIAL_DEVICE   tmp_inf;
 
         pser_inf        = (SERIAL_DEVICE *) g_rdpdr_device[device_id].pdevice_data;
         ptermios        = pser_inf->ptermios;
@@ -362,38 +306,21 @@ serial_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 disposi
         if (serial_fd == -1)
                 return STATUS_ACCESS_DENIED;
 
-	// before we clog the user inserted args store them locally
-	//
-	memcpy(&tmp_inf,pser_inf, sizeof(pser_inf) );
-
-        if (!get_termios(pser_inf, serial_fd))
+        if (!get_termios(pser_inf, serial_fd ))
                 return STATUS_ACCESS_DENIED;
 
-        // Store handle for later use
+	// Store handle for later use
         g_rdpdr_device[device_id].handle = serial_fd;
-        tcgetattr(serial_fd, pser_inf->pold_termios);  // Backup original settings
 
-        // Initial configuration.
-        bzero(ptermios, sizeof(ptermios));
-        ptermios->c_cflag = B9600 | CRTSCTS | CS8 | CLOCAL | CREAD;
-        ptermios->c_iflag = IGNPAR;
-        ptermios->c_oflag = 0;
-        ptermios->c_lflag = 0; //non-canonical, no echo
-        ptermios->c_cc[VTIME] = 0;
-        tcsetattr(serial_fd, TCSANOW, ptermios);
+	/* some sane information */
+	printf("INFO: SERIAL %s to %s\nINFO: speed %u baud, stop bits %u, parity %u, word length %u bits, dtr %u\n",
+		g_rdpdr_device[device_id].name, g_rdpdr_device[device_id].local_path,
+		pser_inf->baud_rate, pser_inf->stop_bits, pser_inf->parity, pser_inf->word_length, pser_inf->dtr );
+	printf("INFO: use stty to change settings\n" );
 
-	// overload with user settings
-	// -- if there are any
-	if( tmp_inf.baud_rate != 0 ){
-		dtr = tmp_inf.dtr;
-		baud_rate = tmp_inf.baud_rate;
-		parity = tmp_inf.parity;
-		stop_bits = tmp_inf.stop_bits;
-		word_length = tmp_inf.word_length;
-		set_termios();
-	}
+	//tcgetattr(serial_fd, pser_inf->ptermios);
 
-	*handle = serial_fd;
+	 *handle = serial_fd;
         return STATUS_SUCCESS;
 }
 

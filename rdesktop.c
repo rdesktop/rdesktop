@@ -119,11 +119,11 @@ usage(char *program)
 	fprintf(stderr, "   -a: connection colour depth\n");
 	fprintf(stderr, "   -r: enable specified device redirection (this flag can be repeated)\n");
 	fprintf(stderr,	"         '-r comport:COM1=/dev/ttyS0': enable serial redirection of /dev/ttyS0 to COM1\n");
-	fprintf(stderr, "             or    :COM1=/dev/ttyS0:9600,0|1|2,0|2,5|6|7|8:dtr \n");
+	fprintf(stderr, "             or      COM1=/dev/ttyS0,COM2=/dev/ttyS1\n");
 	fprintf(stderr, "         '-r disk:A=/mnt/floppy': enable redirection of /mnt/floppy to A:\n");
 	fprintf(stderr, "             or   A=/mnt/floppy,D=/mnt/cdrom'\n");
 	fprintf(stderr,	"         '-r lptport:LPT1=/dev/lp0': enable parallel redirection of /dev/lp0 to LPT1\n");
-	fprintf(stderr, "             or       LPT1=/dev/lp0,LPT2=/dev/lp1\n");
+	fprintf(stderr, "             or      LPT1=/dev/lp0,LPT2=/dev/lp1\n");
 	fprintf(stderr, "         '-r printer:mydeskjet': enable printer redirection\n");
 	fprintf(stderr,	"             or       mydeskjet:\"HP Laserjet IIIP\" to enter server driver as well\n");
 	fprintf(stderr, "         '-r sound': enable sound redirection\n");
