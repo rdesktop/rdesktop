@@ -1126,6 +1126,7 @@ ui_rect(
 	FILL_RECTANGLE(x, y, cx, cy);
 }
 
+/* warning, this function only draws on wnd or backstore, not both */
 void
 ui_draw_glyph(int mixmode,
 	      /* dest */ int x, int y, int cx, int cy,
@@ -1140,7 +1141,10 @@ ui_draw_glyph(int mixmode,
 	XSetStipple(display, gc, (Pixmap) glyph);
 	XSetTSOrigin(display, gc, x, y);
 
-	FILL_RECTANGLE(x, y, cx, cy);
+	if (ownbackstore)
+		XFillRectangle(display, backstore, gc, x, y, cx, cy);
+	else
+		XFillRectangle(display, wnd, gc, x, y, cx, cy);
 
 	XSetFillStyle(display, gc, FillSolid);
 }
@@ -1249,8 +1253,15 @@ ui_draw_text(uint8 font, uint8 flags, int mixmode, int x, int y,
 				break;
 		}
 	}
-
-
+	if (ownbackstore)
+	{
+		if (boxcx > 1)
+			XCopyArea(display, backstore, wnd, gc, boxx,
+				  boxy, boxcx, boxcy, boxx, boxy);
+		else
+			XCopyArea(display, backstore, wnd, gc, clipx,
+				  clipy, clipcx, clipcy, clipx, clipy);
+	}
 }
 
 void
