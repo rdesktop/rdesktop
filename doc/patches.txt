@@ -159,9 +159,9 @@ Not applied. I don't think many people will need this.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/norbert_rdp_tcp_port.diff
 Description:
-TDB
+Command line tcp port argument. 
 Status:
-Not yet examined. 
+Applied. 
 
 
 URL:
