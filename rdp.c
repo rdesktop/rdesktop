@@ -25,16 +25,16 @@ extern char g_username[16];
 extern BOOL g_bitmap_compression;
 extern BOOL g_orders;
 extern BOOL g_encryption;
-extern BOOL desktop_save;
-extern BOOL use_rdp5;
-extern uint16 server_rdp_version;
-extern int server_bpp;
+extern BOOL g_desktop_save;
+extern BOOL g_use_rdp5;
+extern uint16 g_server_rdp_version;
+extern int g_server_bpp;
 
-uint8 *next_packet;
-uint32 rdp_shareid;
+uint8 *g_next_packet;
+uint32 g_rdp_shareid;
 
 #if WITH_DEBUG
-static uint32 packetno;
+static uint32 g_packetno;
 #endif
 
 /* Receive an RDP packet */
@@ -44,24 +44,24 @@ rdp_recv(uint8 * type)
 	static STREAM rdp_s;
 	uint16 length, pdu_type;
 
-	if ((rdp_s == NULL) || (next_packet >= rdp_s->end))
+	if ((rdp_s == NULL) || (g_next_packet >= rdp_s->end))
 	{
 		rdp_s = sec_recv();
 		if (rdp_s == NULL)
 			return NULL;
 
-		next_packet = rdp_s->p;
+		g_next_packet = rdp_s->p;
 	}
 	else
 	{
-		rdp_s->p = next_packet;
+		rdp_s->p = g_next_packet;
 	}
 
 	in_uint16_le(rdp_s, length);
 	/* 32k packets are really 8, keepalive fix */
 	if (length == 0x8000)
 	{
-		next_packet += 8;
+		g_next_packet += 8;
 		*type = 0;
 		return rdp_s;
 	}
@@ -70,11 +70,11 @@ rdp_recv(uint8 * type)
 	*type = pdu_type & 0xf;
 
 #if WITH_DEBUG
-	DEBUG(("RDP packet #%d, (type %x)\n", ++packetno, *type));
-	//      hexdump(next_packet, length);
+	DEBUG(("RDP packet #%d, (type %x)\n", ++g_packetno, *type));
+	//      hexdump(g_next_packet, length);
 #endif /*  */
 
-	next_packet += length;
+	g_next_packet += length;
 	return rdp_s;
 }
 
@@ -103,7 +103,7 @@ rdp_send_data(STREAM s, uint8 data_pdu_type)
 	out_uint16_le(s, (RDP_PDU_DATA | 0x10));
 	out_uint16_le(s, (g_mcs_userid + 1001));
 
-	out_uint32_le(s, rdp_shareid);
+	out_uint32_le(s, g_rdp_shareid);
 	out_uint8(s, 0);	/* pad */
 	out_uint8(s, 1);	/* streamid */
 	out_uint16_le(s, (length - 14));
@@ -147,7 +147,7 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 	uint32 sec_flags = g_encryption ? (SEC_LOGON_INFO | SEC_ENCRYPT) : SEC_LOGON_INFO;
 	STREAM s;
 
-	if (!use_rdp5 || 1 == server_rdp_version)
+	if (!g_use_rdp5 || 1 == g_server_rdp_version)
 	{
 		DEBUG_RDP5(("Sending RDP4-style Logon packet\n"));
 
@@ -358,7 +358,7 @@ rdp_out_general_caps(STREAM s)
 	out_uint16_le(s, 0x200);	/* Protocol version */
 	out_uint16(s, 0);	/* Pad */
 	out_uint16(s, 0);	/* Compression types */
-	out_uint16_le(s, use_rdp5 ? 0x40d : 0);
+	out_uint16_le(s, g_use_rdp5 ? 0x40d : 0);
 	/* Pad, according to T.128. 0x40d seems to 
 	   trigger
 	   the server to start sending RDP5 packets. 
@@ -408,7 +408,7 @@ rdp_out_order_caps(STREAM s)
 	order_caps[8] = 1;	/* line */
 	order_caps[9] = 1;	/* line */
 	order_caps[10] = 1;	/* rect */
-	order_caps[11] = (desktop_save == False ? 0 : 1);	/* desksave */
+	order_caps[11] = (g_desktop_save == False ? 0 : 1);	/* desksave */
 	order_caps[13] = 1;	/* memblt */
 	order_caps[14] = 1;	/* triblt */
 	order_caps[22] = 1;	/* polyline */
@@ -426,7 +426,7 @@ rdp_out_order_caps(STREAM s)
 	out_uint8p(s, order_caps, 32);	/* Orders supported */
 	out_uint16_le(s, 0x6a1);	/* Text capability flags */
 	out_uint8s(s, 6);	/* Pad */
-	out_uint32_le(s, desktop_save == False ? 0 : 0x38400);	/* Desktop cache size */
+	out_uint32_le(s, g_desktop_save == False ? 0 : 0x38400);	/* Desktop cache size */
 	out_uint32(s, 0);	/* Unknown */
 	out_uint32_le(s, 0x4e4);	/* Unknown */
 }
@@ -439,7 +439,7 @@ rdp_out_bmpcache_caps(STREAM s)
 	out_uint16_le(s, RDP_CAPSET_BMPCACHE);
 	out_uint16_le(s, RDP_CAPLEN_BMPCACHE);
 
-	Bpp = (server_bpp + 7) / 8;
+	Bpp = (g_server_bpp + 7) / 8;
 	out_uint8s(s, 24);	/* unused */
 	out_uint16_le(s, 0x258);	/* entries */
 	out_uint16_le(s, 0x100 * Bpp);	/* max cell size */
@@ -559,7 +559,7 @@ rdp_send_confirm_active(void)
 	out_uint16_le(s, (RDP_PDU_CONFIRM_ACTIVE | 0x10));	/* Version 1 */
 	out_uint16_le(s, (g_mcs_userid + 1001));
 
-	out_uint32_le(s, rdp_shareid);
+	out_uint32_le(s, g_rdp_shareid);
 	out_uint16_le(s, 0x3ea);	/* userid */
 	out_uint16_le(s, sizeof(RDP_SOURCE));
 	out_uint16_le(s, caplen);
@@ -589,9 +589,9 @@ process_demand_active(STREAM s)
 {
 	uint8 type;
 
-	in_uint32_le(s, rdp_shareid);
+	in_uint32_le(s, g_rdp_shareid);
 
-	DEBUG(("DEMAND_ACTIVE(id=0x%x)\n", rdp_shareid));
+	DEBUG(("DEMAND_ACTIVE(id=0x%x)\n", g_rdp_shareid));
 
 	rdp_send_confirm_active();
 	rdp_send_synchronise();

@@ -27,14 +27,14 @@
 #define CHANNEL_FLAG_LAST		0x02
 #define CHANNEL_FLAG_SHOW_PROTOCOL	0x10
 
-extern BOOL use_rdp5;
+extern BOOL g_use_rdp5;
 extern BOOL g_encryption;
 
 VCHANNEL g_channels[MAX_CHANNELS];
 unsigned int g_num_channels;
 
 /* FIXME: We should use the information in TAG_SRV_CHANNELS to map RDP5
-   channels to MCS channels. 
+   channels to MCS channels.
 
    The format of TAG_SRV_CHANNELS seems to be
 
@@ -48,7 +48,7 @@ channel_register(char *name, uint32 flags, void (*callback) (STREAM))
 {
 	VCHANNEL *channel;
 
-	if (!use_rdp5)
+	if (!g_use_rdp5)
 		return NULL;
 
 	if (g_num_channels >= MAX_CHANNELS)

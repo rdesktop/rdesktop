@@ -32,7 +32,7 @@ extern BOOL fullscreen;
 extern BOOL grab_keyboard;
 extern BOOL hide_decorations;
 extern char title[];
-extern int server_bpp;
+extern int g_server_bpp;
 extern int win_button_size;
 BOOL enable_compose = False;
 BOOL focused;
@@ -105,7 +105,7 @@ BOOL owncolmap = False;
 static Colormap xcolmap;
 static uint32 *colmap;
 
-#define TRANSLATE(col)		( server_bpp != 8 ? translate_colour(col) : owncolmap ? col : translate_colour(colmap[col]) )
+#define TRANSLATE(col)		( g_server_bpp != 8 ? translate_colour(col) : owncolmap ? col : translate_colour(colmap[col]) )
 #define SET_FOREGROUND(col)	XSetForeground(display, gc, TRANSLATE(col));
 #define SET_BACKGROUND(col)	XSetBackground(display, gc, TRANSLATE(col));
 
@@ -218,7 +218,7 @@ make_colour32(PixelColour pc)
 static uint32
 translate_colour(uint32 colour)
 {
-	switch (server_bpp)
+	switch (g_server_bpp)
 	{
 		case 15:
 			switch (bpp)
@@ -419,7 +419,7 @@ translate_image(int width, int height, uint8 * data)
 	uint8 *out = (uint8 *) xmalloc(size);
 	uint8 *end = out + size;
 
-	switch (server_bpp)
+	switch (g_server_bpp)
 	{
 		case 24:
 			switch (bpp)
@@ -616,7 +616,7 @@ ui_init(void)
 	xclip_init();
 
 	/* todo take this out when high colour is done */
-	printf("server bpp %d client bpp %d depth %d\n", server_bpp, bpp, depth);
+	printf("server bpp %d client bpp %d depth %d\n", g_server_bpp, bpp, depth);
 
 	return True;
 }
@@ -1069,7 +1069,7 @@ ui_create_bitmap(int width, int height, uint8 * data)
 	tdata = (owncolmap ? data : translate_image(width, height, data));
 	bitmap = XCreatePixmap(display, wnd, width, height, depth);
 	image = XCreateImage(display, visual, depth, ZPixmap, 0,
-			     (char *) tdata, width, height, server_bpp == 8 ? 8 : bpp, 0);
+			     (char *) tdata, width, height, g_server_bpp == 8 ? 8 : bpp, 0);
 
 	XPutImage(display, bitmap, gc, image, 0, 0, 0, 0, width, height);
 
@@ -1086,7 +1086,7 @@ ui_paint_bitmap(int x, int y, int cx, int cy, int width, int height, uint8 * dat
 	uint8 *tdata;
 	tdata = (owncolmap ? data : translate_image(width, height, data));
 	image = XCreateImage(display, visual, depth, ZPixmap, 0,
-			     (char *) tdata, width, height, server_bpp == 8 ? 8 : bpp, 0);
+			     (char *) tdata, width, height, g_server_bpp == 8 ? 8 : bpp, 0);
 
 	if (ownbackstore)
 	{

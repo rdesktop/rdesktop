@@ -39,8 +39,8 @@ extern int height;
 extern int keylayout;
 extern BOOL g_encryption;
 extern BOOL g_licence_issued;
-extern BOOL use_rdp5;
-extern int server_bpp;
+extern BOOL g_use_rdp5;
+extern int g_server_bpp;
 extern uint16 mcs_userid;
 extern VCHANNEL g_channels[];
 extern unsigned int g_num_channels;
@@ -57,7 +57,7 @@ static uint8 sec_decrypt_update_key[16];
 static uint8 sec_encrypt_update_key[16];
 static uint8 sec_crypted_random[SEC_MODULUS_SIZE];
 
-uint16 server_rdp_version = 0;
+uint16 g_server_rdp_version = 0;
 
 /*
  * General purpose 48-byte transformation, using two 32-byte salts (generally,
@@ -430,7 +430,7 @@ sec_out_mcs_data(STREAM s)
 	/* Client information */
 	out_uint16_le(s, SEC_TAG_CLI_INFO);
 	out_uint16_le(s, 212);	/* length */
-	out_uint16_le(s, use_rdp5 ? 4 : 1);	/* RDP version. 1 == RDP4, 4 == RDP5. */
+	out_uint16_le(s, g_use_rdp5 ? 4 : 1);	/* RDP version. 1 == RDP4, 4 == RDP5. */
 	out_uint16_le(s, 8);
 	out_uint16_le(s, width);
 	out_uint16_le(s, height);
@@ -448,7 +448,7 @@ sec_out_mcs_data(STREAM s)
 	out_uint32_le(s, 12);
 	out_uint8s(s, 64);	/* reserved? 4 + 12 doublewords */
 
-	switch (server_bpp)
+	switch (g_server_bpp)
 	{
 		case 8:
 			out_uint16_le(s, 0xca01);
@@ -466,7 +466,7 @@ sec_out_mcs_data(STREAM s)
 	out_uint16_le(s, 1);
 
 	out_uint32(s, 0);
-	out_uint8(s, server_bpp);
+	out_uint8(s, g_server_bpp);
 	out_uint16_le(s, 0x0700);
 	out_uint8(s, 0);
 	out_uint32_le(s, 1);
@@ -736,10 +736,10 @@ sec_process_crypt_info(STREAM s)
 static void
 sec_process_srv_info(STREAM s)
 {
-	in_uint16_le(s, server_rdp_version);
-	DEBUG_RDP5(("Server RDP version is %d\n", server_rdp_version));
-	if (1 == server_rdp_version)
-		use_rdp5 = 0;
+	in_uint16_le(s, g_server_rdp_version);
+	DEBUG_RDP5(("Server RDP version is %d\n", g_server_rdp_version));
+	if (1 == g_server_rdp_version)
+		g_use_rdp5 = 0;
 }
 
 

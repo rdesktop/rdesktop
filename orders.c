@@ -21,9 +21,9 @@
 #include "rdesktop.h"
 #include "orders.h"
 
-extern uint8 *next_packet;
+extern uint8 *g_next_packet;
 static RDP_ORDER_STATE g_order_state;
-extern BOOL use_rdp5;
+extern BOOL g_use_rdp5;
 
 /* Read field indicating which parameters are present */
 static void
@@ -695,7 +695,7 @@ process_bmpcache(STREAM s)
 	in_uint16_le(s, bufsize);	/* bufsize */
 	in_uint16_le(s, cache_idx);
 
-	if (!use_rdp5)
+	if (!g_use_rdp5)
 	{
 
 		/* Begin compressedBitmapData */
@@ -949,8 +949,8 @@ process_orders(STREAM s, uint16 num_orders)
 		processed++;
 	}
 
-	if (s->p != next_packet)
-		error("%d bytes remaining\n", (int) (next_packet - s->p));
+	if (s->p != g_next_packet)
+		error("%d bytes remaining\n", (int) (g_next_packet - s->p));
 }
 
 /* Reset order state */

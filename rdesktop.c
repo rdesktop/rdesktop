@@ -49,18 +49,18 @@ int width = 800;		/* If width or height are reset to zero, the geometry will
 				   be fetched from _NET_WORKAREA */
 int height = 600;
 int tcp_port_rdp = TCP_PORT_RDP;
-int server_bpp = 8;
+int g_server_bpp = 8;
 int win_button_size = 0;	/* If zero, disable single app mode */
 BOOL g_bitmap_compression = True;
 BOOL sendmotion = True;
 BOOL g_orders = True;
 BOOL g_encryption = True;
 BOOL packet_encryption = True;
-BOOL desktop_save = True;
+BOOL g_desktop_save = True;
 BOOL fullscreen = False;
 BOOL grab_keyboard = True;
 BOOL hide_decorations = False;
-BOOL use_rdp5 = False;
+BOOL g_use_rdp5 = False;
 extern BOOL owncolmap;
 
 #ifdef RDP2VNC
@@ -298,9 +298,9 @@ main(int argc, char *argv[])
 				break;
 
 			case 'a':
-				server_bpp = strtol(optarg, NULL, 10);
-				if (server_bpp != 8 && server_bpp != 16 && server_bpp != 15
-				    && server_bpp != 24)
+				g_server_bpp = strtol(optarg, NULL, 10);
+				if (g_server_bpp != 8 && g_server_bpp != 16 && g_server_bpp != 15
+				    && g_server_bpp != 24)
 				{
 					error("invalid server bpp\n");
 					return 1;
@@ -308,7 +308,7 @@ main(int argc, char *argv[])
 				break;
 
 			case '5':
-				use_rdp5 = True;
+				g_use_rdp5 = True;
 				break;
 			case 'h':
 			case '?':

@@ -21,7 +21,7 @@
 
 #include "rdesktop.h"
 
-extern uint8 *next_packet;
+extern uint8 *g_next_packet;
 
 void
 rdp5_process(STREAM s, BOOL encryption)
@@ -45,7 +45,7 @@ rdp5_process(STREAM s, BOOL encryption)
 	{
 		in_uint8(s, type);
 		in_uint16_le(s, length);
-		next_packet = next = s->p + length;
+		g_next_packet = next = s->p + length;
 
 		switch (type)
 		{
