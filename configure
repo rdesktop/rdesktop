@@ -296,6 +296,33 @@ fi
 
 
 # Platform-specific options
+
+#Endianess
+cat >conftest.$$.c << EOF
+#include <stdlib.h>
+#include <signal.h>
+
+int main(int argc, char **argv)
+{
+	int test = 1;
+
+	return(*(unsigned char*) (&test));
+}
+EOF
+$cc -o conftest.$$ conftest.$$.c
+./conftest.$$
+if [ "$?" = "0" ]; then
+	echo "Architecture is big-endian"
+	echo
+	cflags="$cflags -DB_ENDIAN"
+else
+	echo "Architecture is little-endian"
+	echo
+	cflags="$cflags -DL_ENDIAN"
+fi
+rm conftest.$$ conftest.$$.c
+
+#Alignment
 cat >conftest.$$.c << EOF
 #include <stdlib.h>
 #include <signal.h>
@@ -317,7 +344,7 @@ need_alignment=yes
 if [ "$need_alignment" = "yes" ]; then
 	echo "Architecture needs alignment"
 	echo
-	cflags="$cflags -DNEED_ALIGNMENT"
+	cflags="$cflags -DNEED_ALIGN"
 fi
 rm conftest.$$ conftest.$$.c
 

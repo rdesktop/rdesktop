@@ -59,6 +59,18 @@
 #define MAX(x,y)		(((x) > (y)) ? (x) : (y))
 #endif
 
+/* If configure does not define the endianess, try
+   to find it out */
+#if !defined(L_ENDIAN) && !defined(B_ENDIAN)
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+#define L_ENDIAN
+#elif __BYTE_ORDER == __BIG_ENDIAN
+#define B_ENDIAN
+#else
+#error Unknown endianness. Edit rdesktop.h.
+#endif
+#endif /* B_ENDIAN, L_ENDIAN from configure */
+
 #include "parse.h"
 #include "constants.h"
 #include "types.h"
