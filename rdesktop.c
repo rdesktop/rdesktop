@@ -58,7 +58,7 @@ int g_server_bpp = 8;
 int g_win_button_size = 0;	/* If zero, disable single app mode */
 BOOL g_bitmap_compression = True;
 BOOL g_sendmotion = True;
-BOOL g_orders = True;
+BOOL g_bitmap_cache = True;
 BOOL g_encryption = True;
 BOOL packet_encryption = True;
 BOOL g_desktop_save = True;
@@ -457,7 +457,7 @@ main(int argc, char *argv[])
 				break;
 
 			case 'b':
-				g_orders = False;
+				g_bitmap_cache = False;
 				break;
 
 			case 'B':

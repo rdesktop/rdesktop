@@ -33,6 +33,7 @@ extern uint32 g_rdp5_performanceflags;
 extern int g_server_bpp;
 extern int g_width;
 extern int g_height;
+extern BOOL g_bitmap_cache;
 
 uint8 *g_next_packet;
 uint32 g_rdp_shareid;
@@ -436,7 +437,7 @@ rdp_out_order_caps(STREAM s)
 	order_caps[0] = 1;	/* dest blt */
 	order_caps[1] = 1;	/* pat blt */
 	order_caps[2] = 1;	/* screen blt */
-	order_caps[3] = 1;	/* required for memblt? */
+	order_caps[3] = (g_bitmap_cache ? 1 : 0); /* memblt */
 	order_caps[8] = 1;	/* line */
 	order_caps[9] = 1;	/* line */
 	order_caps[10] = 1;	/* rect */
