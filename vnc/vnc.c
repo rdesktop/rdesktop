@@ -54,7 +54,7 @@
 extern int ListenOnTCPPort(int port);
 extern int rfbClientSocket;
 
-#include <rfbregion.h>
+#include <rfb/rfbregion.h>
 
 #define BITSPERBYTES 8
 #define TOBYTES(bits) ((bits)/BITSPERBYTES)
