@@ -658,6 +658,25 @@ rdpdr_process_irp(STREAM s)
 			result = buffer_len = out.p - out.data;
 			break;
 
+
+		case IRP_MJ_LOCK_CONTROL:
+
+			if (g_rdpdr_device[device].device_type != DEVICE_TYPE_DISK)
+			{
+				status = STATUS_INVALID_HANDLE;
+				break;
+			}
+
+			in_uint32_le(s, info_level);
+
+			out.data = out.p = buffer;
+			out.size = sizeof(buffer);
+			/* FIXME: Perhaps consider actually *do*
+			   something here :-) */
+			status = STATUS_SUCCESS;
+			result = buffer_len = out.p - out.data;
+			break;
+
 		default:
 			unimpl("IRP major=0x%x minor=0x%x\n", major, minor);
 			break;
