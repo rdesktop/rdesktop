@@ -74,6 +74,7 @@ BOOL mcs_io_data(STREAM s, MCS_DATA *dt, BOOL request);
 
 /* RDP layer */
 HCONN rdp_connect(char *server);
+void rdp_main_loop(HCONN conn);
 void process_orders(HCONN conn, RDP_ORDER_STATE *os);
 void rdp_establish_key(HCONN conn);
 void rdp_send_cert(HCONN conn);
@@ -130,4 +131,11 @@ void *xmalloc(int size);
 void *xrealloc(void *oldmem, int size);
 BOOL bitmap_decompress(unsigned char *input, int size,
                        unsigned char *output, int width);
+
+/* User interface routines */
+HWINDOW ui_create_window(int width, int height);
+void ui_destroy_window(HWINDOW wnd);
+HBITMAP ui_create_bitmap(HWINDOW wnd, int width, int height, uint8 *data);
+void ui_destroy_bitmap(HBITMAP bmp);
+void ui_paint_bitmap(HWINDOW wnd, HBITMAP bmp, int x, int y);
 

@@ -39,6 +39,9 @@ typedef struct stream
 /* Connection state */
 typedef struct connection
 {
+	/* User interface */
+	HWINDOW wnd;
+
 	/* Parsing layer */
 	struct stream in;
 	struct stream out;

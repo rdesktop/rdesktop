@@ -1,6 +1,6 @@
 /*
    rdesktop: A Remote Desktop Protocol client.
-   Global include file
+   User interface services - X-Windows
    Copyright (C) Matthew Chapman 1999-2000
    
    This program is free software; you can redistribute it and/or modify
@@ -18,34 +18,15 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include <unistd.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <errno.h>
-#include <time.h>
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
 
-#include <netdb.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
+typedef struct window
+{
+	Display *display;
+	Window wnd;
+	GC gc;
 
-#if 0
-#define False (0)
-#define True  (1)
-#endif
+} *HWINDOW;
 
-typedef int BOOL;
-typedef unsigned char  uint8;
-typedef unsigned short uint16;
-typedef unsigned int   uint32;
-
-#include "xwin.h"
-#include "parse.h"
-#include "tcp.h"
-#include "iso.h"
-#include "mcs.h"
-#include "rdp.h"
-
-#include "proto.h"
+typedef XImage *HBITMAP;

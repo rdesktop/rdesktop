@@ -25,12 +25,7 @@ HCONN rdp_connect(char *server)
 {
 	HCONN conn;
 	RDP_ACTIVE_PDU active;
-	RDP_DATA_HEADER hdr;
-	RDP_UPDATE_PDU update;
-	RDP_ORDER_STATE os;
 	uint8 type;
-
-	memset(&os, 0, sizeof(os));
 
 	if ((conn = mcs_connect(server)) == NULL)
 		return NULL;
@@ -40,7 +35,7 @@ HCONN rdp_connect(char *server)
 	rdp_send_cert(conn);
 	mcs_recv(conn, False);
 
-	if (rdp_recv_pdu(conn, &type) && (type != RDP_PDU_DEMAND_ACTIVE))
+	if (!rdp_recv_pdu(conn, &type) || (type != RDP_PDU_DEMAND_ACTIVE))
 	{
 		fprintf(stderr, "RDP error, expected Demand Active\n");
 		mcs_disconnect(conn);
@@ -59,6 +54,19 @@ HCONN rdp_connect(char *server)
 	rdp_send_fonts(conn, 1);
 	rdp_send_fonts(conn, 2);
 	rdp_recv_pdu(conn, &type); // RDP_PDU_UNKNOWN 0x28
+
+	return conn;
+}
+
+void rdp_main_loop(HCONN conn)
+{
+	RDP_DATA_HEADER hdr;
+	RDP_UPDATE_PDU update;
+	RDP_ORDER_STATE os;
+	uint8 type;
+
+	memset(&os, 0, sizeof(os));
+
 	while (rdp_recv_pdu(conn, &type))
 	{
 		if (type != RDP_PDU_DATA)
@@ -78,8 +86,6 @@ HCONN rdp_connect(char *server)
 			break;
 		}
 	}
-
-	return conn;
 }
 
 void prs_io_coord(STREAM s, uint16 *coord, BOOL delta)
@@ -120,6 +126,30 @@ void process_opaque_rect(HCONN conn, RDP_ORDER_STATE *os, BOOL delta)
 	fprintf(stderr, "Opaque rectangle at %d, %d\n", os->opaque_rect.x, os->opaque_rect.y);
 }
 
+void process_bmpcache(HCONN conn)
+{
+
+	RDP_BITMAP_HEADER rbh;
+	char *bmpdata;
+	HBITMAP bmp;
+	static int x = 0;
+
+	rdp_io_bitmap_header(&conn->in, &rbh);
+	fprintf(stderr, "Decompressing bitmap %d x %d, final size %d\n", rbh.width, rbh.height, rbh.final_size);
+
+	bmpdata = malloc(rbh.width * rbh.height);
+	bitmap_decompress(conn->in.data
+			  + conn->in.offset, rbh.size,
+			  bmpdata, rbh.width);
+	conn->in.offset += rbh.size;
+
+	bmp = ui_create_bitmap(conn->wnd, rbh.width, rbh.height, bmpdata);
+	ui_paint_bitmap(conn->wnd, bmp, x, 0);
+	ui_destroy_bitmap(bmp);
+
+	x += rbh.width;
+}
+
 void process_orders(HCONN conn, RDP_ORDER_STATE *os)
 {
 	uint16 num_orders;
@@ -151,18 +181,8 @@ void process_orders(HCONN conn, RDP_ORDER_STATE *os)
 			switch (rso.type)
 			{
 			case RDP_ORDER_BMPCACHE:
-			{
-				RDP_BITMAP_HEADER rbh;
-				char output[8192];
-
-				rdp_io_bitmap_header(&conn->in, &rbh);
-				fprintf(stderr, "Decompressing bitmap %d x %d, final size %d\n", rbh.width, rbh.height, rbh.final_size);
-				bitmap_decompress(conn->in.data
-						  + conn->in.offset, rbh.size,
-						  output, rbh.width);
-				conn->in.offset += rbh.size;
+				process_bmpcache(conn);
 				break;
-			}
 			default:
 				fprintf(stderr, "Unknown secondary order %d\n",
 					rso.type);

@@ -1,6 +1,6 @@
 /*
    rdesktop: A Remote Desktop Protocol client.
-   Protocol services - ISO layer
+   Entrypoint and utility functions
    Copyright (C) Matthew Chapman 1999-2000
    
    This program is free software; you can redistribute it and/or modify
@@ -39,6 +39,10 @@ int main(int argc, char *argv[])
 
 	fprintf(stderr, "Connection successful.\n");
 
+	conn->wnd = ui_create_window(640, 480);
+	rdp_main_loop(conn);
+
+	ui_destroy_window(conn->wnd);
 	rdp_disconnect(conn);
 
 	return 0;

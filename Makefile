@@ -4,7 +4,13 @@
 # Copyright (C) Matthew Chapman 1999-2000    #
 ##############################################
 
-SOURCES=client.c parse.c tcp.c iso.c mcs.c rdp.c bitmap.c
+CC     = gcc
+CFLAGS = -g -Wall
+LIBS   = -L/usr/X11R6/lib -lX11
+OBJECTS = client.o parse.o tcp.o iso.o mcs.o rdp.o bitmap.o xwin.o
 
-rdesktop: $(SOURCES)
-	@gcc -g -Wall -o rdesktop $(SOURCES)
+rdesktop: $(OBJECTS)
+	@$(CC) $(CFLAGS) -o rdesktop $(LIBS) $(OBJECTS)
+
+clean:
+	rm -f *.o
