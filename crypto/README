@@ -1,0 +1,4 @@
+The files in this directory implement the encryption algorithms used in
+the RDP protocol, and are subject to their respective licenses.
+
+RC4 may also be subject to patent restrictions in some countries.
