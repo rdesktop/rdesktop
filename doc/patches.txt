@@ -1,0 +1,262 @@
+This file documents some of all patches for rdesktop, floating around
+the net, and how they are related to the current (CVS) version of
+rdesktop. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/Makefile.diff
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/assar_19-7-2.hostlen.patch
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/backingstore+privatecolormap-for-19-3-9.patch
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/ben_xwin.c.diff
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/ctrl1nohang.diff
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/downkeypatch.diff
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/fasttext2+nobackpixmap.patch
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/francisco_fix_patblt.html
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/frank_1linerfix.html
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/frank_fasttext.patch.txt
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/hostname-patch
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/hove-19-7-2endian.diff
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/mmihalik_19-7-3-keyfix-4.patch
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/norbert_fullscreen.patch
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/norbert_percent.txt
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/norbert_rdp_tcp_port.diff
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/patch19-7-2.xyPos.emptyPassword.patch
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/rdesktop-1.0.0-19-7-1-mmihalik-3.diff
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/rdesktop-1.0.0-mmihalik-1.diff
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/rdesktop-1.0.0-pl19-7-2-mmihalik-1.diff
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/rdesktop-gmp.patch
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/rdesktop-new_kb.patch
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/rdesktop-openssl.patch
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/rdesktop.vncviewer_patch
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/rdesktop_keymap.patch
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/rdp-srvr-19-6-6.diff
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/scroll-to-death-patch.txt
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/spark-manpage-patch-19.4
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/spark-manpage-patch-19.4-1
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/spark_xinerama-patch2
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/svenni_dis_wmkeybnds.patch
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/svenni_disable_bs_in_x-tiny-patch
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/vincent_19-7-2.license.patch
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/vincent_19-7-2.secure.patch
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/vincent_19-7-3_excel.patch
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/vincent_8bpp.patch
+Description:
+TDB
+Status:
+Not yet examined. 
+
+URL:
+http://bibl4.oru.se/projects/rdesktop/patch19/patches/vpypatch.txt
+Description:
+TDB
+Status:
+Not yet examined. 
