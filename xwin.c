@@ -25,25 +25,25 @@
 
 extern int width;
 extern int height;
-extern BOOL motion;
-extern BOOL grab_keyboard;
+extern BOOL sendmotion;
 extern BOOL fullscreen;
-extern int private_colormap;
 
-static int bpp;
-static int depth;
 static Display *display;
 static Window wnd;
 static GC gc;
 static Visual *visual;
+static int depth;
+static int bpp;
+static BOOL backpixmap;
+
+static BOOL owncolmap;
+static Colormap xcolmap;
+static uint32 white;
 static uint32 *colmap;
 
-#define Ctrans(col) ( private_colormap ? col : colmap[col])
-
-#define L_ENDIAN
-int screen_msbfirst = 0;
-
-static uint8 *translate(int width, int height, uint8 *data);
+#define TRANSLATE(col)		( owncolmap ? col : colmap[col] )
+#define SET_FOREGROUND(col)	XSetForeground(display, gc, TRANSLATE(col));
+#define SET_BACKGROUND(col)	XSetBackground(display, gc, TRANSLATE(col));
 
 static int rop2_map[] = {
 	GXclear,		/* 0 */
@@ -64,30 +64,77 @@ static int rop2_map[] = {
 	GXset			/* 1 */
 };
 
-static void
-xwin_set_function(uint8 rop2)
-{
-	static uint8 last_rop2 = ROP2_COPY;
+#define SET_FUNCTION(rop2)	{ if (rop2 != ROP2_COPY) XSetFunction(display, gc, rop2_map[rop2]); }
+#define RESET_FUNCTION(rop2)	{ if (rop2 != ROP2_COPY) XSetFunction(display, gc, GXcopy); }
 
-	if (last_rop2 != rop2)
+static void
+translate8(uint8 *data, uint8 *out, uint8 *end)
+{
+	while (out < end)
+		*(out++) = (uint8)colmap[*(data++)];
+}
+
+static void
+translate16(uint8 *data, uint16 *out, uint16 *end)
+{
+	while (out < end)
+		*(out++) = (uint16)colmap[*(data++)];
+}
+
+/* XXX endianness */
+static void
+translate24(uint8 *data, uint8 *out, uint8 *end)
+{
+	uint32 value;
+
+	while (out < end)
 	{
-		XSetFunction(display, gc, rop2_map[rop2]);
-		last_rop2 = rop2;
+		value = colmap[*(data++)];
+		*(out++) = value;
+		*(out++) = value >> 8;
+		*(out++) = value >> 16;
 	}
 }
 
 static void
-xwin_grab_keyboard()
+translate32(uint8 *data, uint32 *out, uint32 *end)
 {
-	XGrabKeyboard(display, wnd, True, GrabModeAsync, GrabModeAsync,
-		      CurrentTime);
+	while (out < end)
+		*(out++) = colmap[*(data++)];
 }
 
-static void
-xwin_ungrab_keyboard()
+static uint8 *
+translate(int width, int height, uint8 *data)
 {
-	XUngrabKeyboard(display, CurrentTime);
+	int size = width * height * bpp/8;
+	uint8 *out = xmalloc(size);
+	uint8 *end = out + size;
+
+	switch (bpp)
+	{
+		case 8:
+			translate8(data, out, end);
+			break;
+
+		case 16:
+			translate16(data, (uint16 *)out, (uint16 *)end);
+			break;
+
+		case 24:
+			translate24(data, out, end);
+			break;
+
+		case 32:
+			translate32(data, (uint32 *)out, (uint32 *)end);
+			break;
+	}
+
+	return out;
 }
+
+#define L_ENDIAN
+int screen_msbfirst = 0;
+
 
 BOOL
 ui_create_window(char *title)
@@ -97,7 +144,9 @@ ui_create_window(char *title)
 	XSizeHints *sizehints;
 	unsigned long input_mask;
 	XPixmapFormatValues *pfm;
-	int count;
+	Screen *screen;
+	int i;
+
 
 	display = XOpenDisplay(NULL);
 	if (display == NULL)
@@ -106,17 +155,21 @@ ui_create_window(char *title)
 		return False;
 	}
 
-	visual = DefaultVisual(display, DefaultScreen(display));
-	depth = DefaultDepth(display, DefaultScreen(display));
-	pfm = XListPixmapFormats(display, &count);
+	screen = DefaultScreenOfDisplay(display);
+	visual = DefaultVisualOfScreen(screen);
+	depth = DefaultDepthOfScreen(screen);
+
+	pfm = XListPixmapFormats(display, &i);
 	if (pfm != NULL)
 	{
-		while (count--)
+		/* Use maximum bpp for this depth - this is generally
+		   desirable, e.g. 24 bits->32 bits. */
+		while (i--)
 		{
-			if ((pfm + count)->depth == depth
-			    && (pfm + count)->bits_per_pixel > bpp)
+			if ((pfm[i].depth == depth)
+			    && (pfm[i].bits_per_pixel > bpp))
 			{
-				bpp = (pfm + count)->bits_per_pixel;
+				bpp = pfm[i].bits_per_pixel;
 			}
 		}
 		XFree(pfm);
@@ -129,25 +182,32 @@ ui_create_window(char *title)
 		return False;
 	}
 
-	width &= ~3; /* make width nicely divisible */
+	if (depth <= 8)
+		owncolmap = True;
+	else
+		xcolmap = DefaultColormapOfScreen(screen);
 
-	attribs.background_pixel = BlackPixel(display, DefaultScreen(display));
-	attribs.backing_store = Always;
+	white = WhitePixelOfScreen(screen);
+	attribs.background_pixel = BlackPixelOfScreen(screen);
+	attribs.backing_store = DoesBackingStore(screen);
+
+	if (attribs.backing_store == NotUseful)
+		backpixmap = True;
 
 	if (fullscreen)
 	{
 		attribs.override_redirect = True;
-		width = WidthOfScreen(DefaultScreenOfDisplay(display));
-		height = HeightOfScreen(DefaultScreenOfDisplay(display));
-		XSetInputFocus(display, PointerRoot, RevertToPointerRoot,
-			       CurrentTime);
+		width = WidthOfScreen(screen);
+		height = HeightOfScreen(screen);
 	}
 	else
 	{
 		attribs.override_redirect = False;
 	}
 
-	wnd = XCreateWindow(display, DefaultRootWindow(display),
+	width &= ~3; /* make width a multiple of 32 bits */
+
+	wnd = XCreateWindow(display, RootWindowOfScreen(screen),
 			    0, 0, width, height, 0, CopyFromParent,
 			    InputOutput, CopyFromParent,
 			    CWBackingStore | CWBackPixel | CWOverrideRedirect,
@@ -157,10 +217,8 @@ ui_create_window(char *title)
 
 	classhints = XAllocClassHint();
 	if (classhints != NULL)
-
 	{
-		classhints->res_name = "rdesktop";
-		classhints->res_class = "rdesktop";
+		classhints->res_name = classhints->res_class = "rdesktop";
 		XSetClassHint(display, wnd, classhints);
 		XFree(classhints);
 	}
@@ -168,24 +226,19 @@ ui_create_window(char *title)
 	sizehints = XAllocSizeHints();
 	if (sizehints)
 	{
-		sizehints->flags =
-			PPosition | PSize | PMinSize | PMaxSize | PBaseSize;
-		sizehints->min_width = width;
-		sizehints->max_width = width;
-		sizehints->min_height = height;
-		sizehints->max_height = height;
-		sizehints->base_width = width;
-		sizehints->base_height = height;
+		sizehints->flags = PMinSize | PMaxSize;
+		sizehints->min_width = sizehints->max_width = width;
+		sizehints->min_height = sizehints->max_height = height;
 		XSetWMNormalHints(display, wnd, sizehints);
 		XFree(sizehints);
 	}
 
-	input_mask = KeyPressMask | KeyReleaseMask;
-	input_mask |= ButtonPressMask | ButtonReleaseMask;
-	if (motion)
+	input_mask = KeyPressMask | KeyReleaseMask
+			| ButtonPressMask | ButtonReleaseMask
+			| EnterWindowMask | LeaveWindowMask;
+
+	if (sendmotion)
 		input_mask |= PointerMotionMask;
-	if (grab_keyboard)
-		input_mask |= EnterWindowMask | LeaveWindowMask;
 
 	XSelectInput(display, wnd, input_mask);
 	gc = XCreateGC(display, wnd, 0, NULL);
@@ -338,13 +391,12 @@ ui_process_events()
 				break;
 
 			case EnterNotify:
-				if (grab_keyboard)
-					xwin_grab_keyboard();
+				XGrabKeyboard(display, wnd, True, GrabModeAsync,
+					      GrabModeAsync, CurrentTime);
 				break;
 
 			case LeaveNotify:
-				if (grab_keyboard)
-					xwin_ungrab_keyboard();
+				XUngrabKeyboard(display, CurrentTime);
 				break;
 		}
 	}
@@ -362,18 +414,16 @@ ui_create_bitmap(int width, int height, uint8 *data)
 	XImage *image;
 	Pixmap bitmap;
 	uint8 *tdata;
-	tdata = (private_colormap ? data : translate(width, height, data));
-	bitmap = XCreatePixmap(display, wnd, width, height, depth);
-	image =
-		XCreateImage(display, visual,
-			     depth, ZPixmap,
-			     0, tdata, width, height, BitmapPad(display), 0);
 
-	xwin_set_function(ROP2_COPY);
+	tdata = (owncolmap ? data : translate(width, height, data));
+	bitmap = XCreatePixmap(display, wnd, width, height, depth);
+	image = XCreateImage(display, visual, depth, ZPixmap,
+			     0, tdata, width, height, 8, 0);
+
 	XPutImage(display, bitmap, gc, image, 0, 0, 0, 0, width, height);
 
 	XFree(image);
-	if (!private_colormap)
+	if (!owncolmap)
 		xfree(tdata);
 	return (HBITMAP) bitmap;
 }
@@ -383,146 +433,23 @@ ui_paint_bitmap(int x, int y, int cx, int cy,
 		int width, int height, uint8 *data)
 {
 	XImage *image;
-	uint8 *tdata =
-		(private_colormap ? data : translate(width, height, data));
-	image =
-		XCreateImage(display, visual, depth, ZPixmap, 0, tdata, width,
-			     height, BitmapPad(display), 0);
+	uint8 *tdata;
 
-	xwin_set_function(ROP2_COPY);
+	tdata = (owncolmap ? data : translate(width, height, data));
+	image = XCreateImage(display, visual, depth, ZPixmap,
+			     0, tdata, width, height, 8, 0);
 
-	/* Window */
 	XPutImage(display, wnd, gc, image, 0, 0, x, y, cx, cy);
+
 	XFree(image);
-	if (!private_colormap)
+	if (!owncolmap)
 		xfree(tdata);
 }
 
 void
 ui_destroy_bitmap(HBITMAP bmp)
 {
-	XFreePixmap(display, (Pixmap) bmp);
-}
-
-HCURSOR
-ui_create_cursor(unsigned int x, unsigned int y, int width,
-		 int height, uint8 *mask, uint8 *data)
-{
-	XImage *imagecursor;
-	XImage *imagemask;
-	Pixmap maskbitmap, cursorbitmap;
-	Cursor cursor;
-	XColor bg, fg;
-	GC lgc;
-	int i, x1, y1, scanlinelen;
-	uint8 *cdata, *cmask;
-	uint8 c;
-	cdata = (uint8 *) malloc(sizeof(uint8) * width * height);
-	if (!cdata)
-		return NULL;
-	scanlinelen = (width + 7) >> 3;
-	cmask = (uint8 *) malloc(sizeof(uint8) * scanlinelen * height);
-	if (!cmask)
-	{
-		free(cdata);
-		return NULL;
-	}
-	i = (height - 1) * scanlinelen;
-
-	if (!screen_msbfirst)
-	{
-		while (i >= 0)
-		{
-			for (x1 = 0; x1 < scanlinelen; x1++)
-			{
-				c = *(mask++);
-				cmask[i + x1] =
-					((c & 0x1) << 7) | ((c & 0x2) << 5) |
-					((c & 0x4) << 3) | ((c & 0x8) << 1) |
-					((c & 0x10) >> 1) | ((c & 0x20) >> 3)
-					| ((c & 0x40) >> 5) | ((c & 0x80) >>
-							       7);
-			}
-			i -= scanlinelen;
-		}
-	}
-	else
-	{
-		while (i >= 0)
-		{
-			for (x1 = 0; x1 < scanlinelen; x1++)
-			{
-				cmask[i + x1] = *(mask++);
-			}
-			i -= scanlinelen;
-		}
-	}
-
-
-	fg.red = 0;
-	fg.blue = 0;
-	fg.green = 0;
-	fg.flags = DoRed | DoBlue | DoGreen;
-	bg.red = 65535;
-	bg.blue = 65535;
-	bg.green = 65535;
-	bg.flags = DoRed | DoBlue | DoGreen;
-	maskbitmap = XCreatePixmap(display, wnd, width, height, 1);
-	cursorbitmap = XCreatePixmap(display, wnd, width, height, 1);
-	lgc = XCreateGC(display, maskbitmap, 0, NULL);
-	XSetFunction(display, lgc, GXcopy);
-	imagemask =
-		XCreateImage(display, visual, 1, XYBitmap, 0, cmask, width,
-			     height, 8, 0);
-	imagecursor =
-		XCreateImage(display, visual, 1, XYBitmap, 0, cdata, width,
-			     height, 8, 0);
-	for (y1 = height - 1; y1 >= 0; y1--)
-		for (x1 = 0; x1 < width; x1++)
-		{
-			if (data[0] >= 0x80 || data[1] >= 0x80
-			    || data[2] >= 0x80)
-				if (XGetPixel(imagemask, x1, y1))
-
-				{
-					XPutPixel(imagecursor, x1, y1, 0);
-					XPutPixel(imagemask, x1, y1, 0);	/* mask is blank for text cursor! */
-				}
-
-				else
-					XPutPixel(imagecursor, x1, y1, 1);
-
-			else
-				XPutPixel(imagecursor, x1, y1,
-					  XGetPixel(imagemask, x1, y1));
-			data += 3;
-		}
-	XPutImage(display, maskbitmap, lgc, imagemask, 0, 0, 0, 0, width,
-		  height);
-	XPutImage(display, cursorbitmap, lgc, imagecursor, 0, 0, 0, 0, width,
-		  height); XFree(imagemask);
-	XFree(imagecursor);
-	free(cmask);
-	free(cdata);
-	XFreeGC(display, lgc);
-	cursor =
-		XCreatePixmapCursor(display, cursorbitmap, maskbitmap, &fg,
-				    &bg, x, y);
-	XFreePixmap(display, maskbitmap);
-	XFreePixmap(display, cursorbitmap);
-	return (HCURSOR) cursor;
-}
-
-void
-ui_set_cursor(HCURSOR cursor)
-{
-	XDefineCursor(display, wnd, (Cursor) cursor);
-}
-
-void
-ui_destroy_cursor(HCURSOR cursor)
-{
-	XFreeCursor(display, (Cursor) cursor);
+	XFreePixmap(display, (Pixmap)bmp);
 }
 
 HGLYPH
@@ -544,91 +471,169 @@ ui_create_glyph(int width, int height, uint8 *data)
 	image->bitmap_bit_order = MSBFirst;
 	XInitImage(image);
 
-	XSetFunction(display, gc, GXcopy);
 	XPutImage(display, bitmap, gc, image, 0, 0, 0, 0, width, height);
+
 	XFree(image);
 	XFreeGC(display, gc);
-
-	return (HGLYPH) bitmap;
+	return (HGLYPH)bitmap;
 }
 
 void
 ui_destroy_glyph(HGLYPH glyph)
 {
-	XFreePixmap(display, (Pixmap) glyph);
+	XFreePixmap(display, (Pixmap)glyph);
 }
+
+HCURSOR
+ui_create_cursor(unsigned int x, unsigned int y, int width,
+		 int height, uint8 *andmask, uint8 *xormask)
+{
+	HGLYPH maskglyph, cursorglyph;
+	XColor bg, fg;
+	Cursor xcursor;
+	uint8 *cursor, *pcursor;
+	uint8 *mask, *pmask;
+	uint8 nextbit;
+	int scanline, offset;
+	int i, j;
+
+	scanline = (width + 7) / 8;
+	offset = scanline * height;
+
+	cursor = xmalloc(offset);
+	memset(cursor, 0, offset);
+
+	mask = xmalloc(offset);
+	memset(mask, 0, offset);
+
+	/* approximate AND and XOR masks with a monochrome X pointer */
+	for (i = 0; i < height; i++)
+	{
+		offset -= scanline;
+		pcursor = &cursor[offset];
+		pmask = &mask[offset];
+
+		for (j = 0; j < scanline; j++)
+		{
+			for (nextbit = 0x80; nextbit != 0; nextbit >>= 1)
+			{
+				if (xormask[0] || xormask[1] || xormask[2])
+				{
+					*pcursor |= (~(*andmask) & nextbit);
+					*pmask |= nextbit;
+				}
+				else
+				{
+					*pcursor |= ((*andmask) & nextbit);
+					*pmask |= (~(*andmask) & nextbit);
+				}
+
+				xormask += 3;
+			}
+
+			andmask++;
+			pcursor++;
+			pmask++;
+		}
+	}
+
+	fg.red = fg.blue = fg.green = 0xffff;
+	bg.red = bg.blue = bg.green = 0x0000;
+	fg.flags = bg.flags = DoRed | DoBlue | DoGreen;
+
+	cursorglyph = ui_create_glyph(width, height, cursor);
+	maskglyph = ui_create_glyph(width, height, mask);
+	
+	xcursor = XCreatePixmapCursor(display, (Pixmap)cursorglyph,
+				(Pixmap)maskglyph, &fg, &bg, x, y);
+
+	ui_destroy_glyph(maskglyph);
+	ui_destroy_glyph(cursorglyph);
+	xfree(mask);
+	xfree(cursor);
+	return (HCURSOR)xcursor;
+}
+
+void
+ui_set_cursor(HCURSOR cursor)
+{
+	XDefineCursor(display, wnd, (Cursor)cursor);
+}
+
+void
+ui_destroy_cursor(HCURSOR cursor)
+{
+	XFreeCursor(display, (Cursor)cursor);
+}
+
+#define MAKE_XCOLOR(xc,c) \
+		(xc)->red   = ((c)->red   << 8) | (c)->red; \
+		(xc)->green = ((c)->green << 8) | (c)->green; \
+		(xc)->blue  = ((c)->blue  << 8) | (c)->blue; \
+		(xc)->flags = DoRed | DoGreen | DoBlue;
 
 HCOLOURMAP
 ui_create_colourmap(COLOURMAP *colours)
 {
-	if (!private_colormap)
+	COLOURENTRY *entry;
+	int i, ncolours = colours->ncolours;
+
+	if (owncolmap)
 	{
-		COLOURENTRY *entry;
-		int i, ncolours = colours->ncolours;
-		uint32 *nc = xmalloc(sizeof(*colmap) * ncolours);
-		for (i = 0; i < ncolours; i++)
-		{
-			XColor xc;
-			entry = &colours->colours[i];
-			xc.red = entry->red << 8;
-			xc.green = entry->green << 8;
-			xc.blue = entry->blue << 8;
-			XAllocColor(display,
-				    DefaultColormap(display,
-						    DefaultScreen(display)),
-				    &xc);
-			/* XXX Check return value */
-			nc[i] = xc.pixel;
-		}
-		return nc;
-	}
-	else
-	{
-		COLOURENTRY *entry;
 		XColor *xcolours, *xentry;
 		Colormap map;
-		int i, ncolours = colours->ncolours;
+
 		xcolours = xmalloc(sizeof(XColor) * ncolours);
 		for (i = 0; i < ncolours; i++)
 		{
 			entry = &colours->colours[i];
 			xentry = &xcolours[i];
-
 			xentry->pixel = i;
-			xentry->red = entry->red << 8;
-			xentry->blue = entry->blue << 8;
-			xentry->green = entry->green << 8;
-			xentry->flags = DoRed | DoBlue | DoGreen;
+			MAKE_XCOLOR(xentry, entry);
 		}
 
 		map = XCreateColormap(display, wnd, visual, AllocAll);
 		XStoreColors(display, map, xcolours, ncolours);
 
 		xfree(xcolours);
-		return (HCOLOURMAP) map;
+		return (HCOLOURMAP)map;
+	}
+	else
+	{
+		uint32 *map = xmalloc(sizeof(*colmap) * ncolours);
+		XColor xentry;
+
+		for (i = 0; i < ncolours; i++)
+		{
+			entry = &colours->colours[i];
+			MAKE_XCOLOR(&xentry, entry);
+
+			if (XAllocColor(display, xcolmap, &xentry) != 0)
+				map[i] = xentry.pixel;
+			else
+				map[i] = white;
+		}
+
+		return map;
 	}
 }
 
 void
 ui_destroy_colourmap(HCOLOURMAP map)
 {
-	XFreeColormap(display, (Colormap) map);
+	if (owncolmap)
+		XFreeColormap(display, (Colormap)map);
+	else
+		xfree(map);
 }
 
 void
 ui_set_colourmap(HCOLOURMAP map)
 {
-
-	/* XXX, change values of all pixels on the screen if the new colmap
-	 * doesn't have the same values as the old one? */
-	if (!private_colormap)
-		colmap = map;
+	if (owncolmap)
+		XSetWindowColormap(display, wnd, (Colormap)map);
 	else
-	{
-		XSetWindowColormap(display, wnd, (Colormap) map);
-		if (fullscreen)
-			XInstallColormap(display, (Colormap) map);
-	}
+		colmap = map;
 }
 
 void
@@ -665,9 +670,9 @@ void
 ui_destblt(uint8 opcode,
 	   /* dest */ int x, int y, int cx, int cy)
 {
-	xwin_set_function(opcode);
-
+	SET_FUNCTION(opcode);
 	XFillRectangle(display, wnd, gc, x, y, cx, cy);
+	RESET_FUNCTION(opcode);
 }
 
 void
@@ -675,38 +680,37 @@ ui_patblt(uint8 opcode,
 	  /* dest */ int x, int y, int cx, int cy,
 	  /* brush */ BRUSH *brush, int bgcolour, int fgcolour)
 {
-	Display *dpy = display;
 	Pixmap fill;
-	uint8 i, ipattern[8];
 
-	xwin_set_function(opcode);
+	SET_FUNCTION(opcode);
 
 	switch (brush->style)
 	{
 		case 0:	/* Solid */
-			XSetForeground(dpy, gc, Ctrans(fgcolour));
-			XFillRectangle(dpy, wnd, gc, x, y, cx, cy);
+			SET_FOREGROUND(fgcolour);
+			XFillRectangle(display, wnd, gc, x, y, cx, cy);
 			break;
 
 		case 3:	/* Pattern */
-			for (i = 0; i != 8; i++)
-				ipattern[i] = ~brush->pattern[i];
-			fill = (Pixmap) ui_create_glyph(8, 8, ipattern);
+			fill = (Pixmap)ui_create_glyph(8, 8, brush->pattern);
 
-			XSetForeground(dpy, gc, Ctrans(fgcolour));
-			XSetBackground(dpy, gc, Ctrans(bgcolour));
-			XSetFillStyle(dpy, gc, FillOpaqueStippled);
-			XSetStipple(dpy, gc, fill);
+			SET_FOREGROUND(bgcolour);
+			SET_BACKGROUND(fgcolour);
+			XSetFillStyle(display, gc, FillOpaqueStippled);
+			XSetStipple(display, gc, fill);
+			XSetTSOrigin(display, gc, brush->xorigin, brush->yorigin);
 
-			XFillRectangle(dpy, wnd, gc, x, y, cx, cy);
+			XFillRectangle(display, wnd, gc, x, y, cx, cy);
 
-			XSetFillStyle(dpy, gc, FillSolid);
-			ui_destroy_glyph((HGLYPH) fill);
+			XSetFillStyle(display, gc, FillSolid);
+			ui_destroy_glyph((HGLYPH)fill);
 			break;
 
 		default:
 			NOTIMP("brush %d\n", brush->style);
 	}
+
+	RESET_FUNCTION(opcode);
 }
 
 void
@@ -714,9 +718,9 @@ ui_screenblt(uint8 opcode,
 	     /* dest */ int x, int y, int cx, int cy,
 	     /* src */ int srcx, int srcy)
 {
-	xwin_set_function(opcode);
-
+	SET_FUNCTION(opcode);
 	XCopyArea(display, wnd, wnd, gc, srcx, srcy, cx, cy, x, y);
+	RESET_FUNCTION(opcode);
 }
 
 void
@@ -724,9 +728,9 @@ ui_memblt(uint8 opcode,
 	  /* dest */ int x, int y, int cx, int cy,
 	  /* src */ HBITMAP src, int srcx, int srcy)
 {
-	xwin_set_function(opcode);
-
-	XCopyArea(display, (Pixmap) src, wnd, gc, srcx, srcy, cx, cy, x, y);
+	SET_FUNCTION(opcode);
+	XCopyArea(display, (Pixmap)src, wnd, gc, srcx, srcy, cx, cy, x, y);
+	RESET_FUNCTION(opcode);
 }
 
 void
@@ -754,7 +758,7 @@ ui_triblt(uint8 opcode,
 				  brush, bgcolour, fgcolour);
 			break;
 
-		case 0xc0:
+		case 0xc0:	/* PSa */
 			ui_memblt(ROP2_COPY, x, y, cx, cy, src, srcx, srcy);
 			ui_patblt(ROP2_AND, x, y, cx, cy, brush, bgcolour,
 				  fgcolour);
@@ -771,10 +775,10 @@ ui_line(uint8 opcode,
 	/* dest */ int startx, int starty, int endx, int endy,
 	/* pen */ PEN *pen)
 {
-	xwin_set_function(opcode);
-
-	XSetForeground(display, gc, Ctrans(pen->colour));
+	SET_FUNCTION(opcode);
+	SET_FOREGROUND(pen->colour);
 	XDrawLine(display, wnd, gc, startx, starty, endx, endy);
+	RESET_FUNCTION(opcode);
 }
 
 void
@@ -782,9 +786,7 @@ ui_rect(
 	       /* dest */ int x, int y, int cx, int cy,
 	       /* brush */ int colour)
 {
-	xwin_set_function(ROP2_COPY);
-
-	XSetForeground(display, gc, Ctrans(colour));
+	SET_FOREGROUND(colour);
 	XFillRectangle(display, wnd, gc, x, y, cx, cy);
 }
 
@@ -794,35 +796,17 @@ ui_draw_glyph(int mixmode,
 	      /* src */ HGLYPH glyph, int srcx, int srcy, int bgcolour,
 	      int fgcolour)
 {
-	Pixmap pixmap = (Pixmap) glyph;
+	SET_FOREGROUND(fgcolour);
+	SET_BACKGROUND(bgcolour);
 
-	xwin_set_function(ROP2_COPY);
+	XSetFillStyle(display, gc, (mixmode == MIX_TRANSPARENT)
+		      ? FillStippled : FillOpaqueStippled);
+	XSetStipple(display, gc, (Pixmap)glyph);
+	XSetTSOrigin(display, gc, x, y);
 
+	XFillRectangle(display, wnd, gc, x, y, cx, cy);
 
-	XSetForeground(display, gc, Ctrans(fgcolour));
-	switch (mixmode)
-	{
-		case MIX_TRANSPARENT:
-			XSetStipple(display, gc, pixmap);
-			XSetFillStyle(display, gc, FillStippled);
-			XSetTSOrigin(display, gc, x, y);
-			XFillRectangle(display, wnd, gc, x, y, cx, cy);
-			XSetFillStyle(display, gc, FillSolid);
-			break;
-
-		case MIX_OPAQUE:
-			XSetBackground(display, gc, Ctrans(bgcolour));
-/*      XCopyPlane (display, pixmap, back_pixmap, back_gc, srcx, srcy, cx, cy, x, y, 1); */
-			XSetStipple(display, gc, pixmap);
-			XSetFillStyle(display, gc, FillOpaqueStippled);
-			XSetTSOrigin(display, gc, x, y);
-			XFillRectangle(display, wnd, gc, x, y, cx, cy);
-			XSetFillStyle(display, gc, FillSolid);
-			break;
-
-		default:
-			NOTIMP("mix %d\n", mixmode);
-	}
+	XSetFillStyle(display, gc, FillSolid);
 }
 
 void
@@ -832,10 +816,9 @@ ui_draw_text(uint8 font, uint8 flags, int mixmode, int x, int y,
 	     int bgcolour, int fgcolour, uint8 *text, uint8 length)
 {
 	FONTGLYPH *glyph;
-	int i, xyoffset;
+	int i, offset;
 
-	xwin_set_function(ROP2_COPY);
-	XSetForeground(display, gc, Ctrans(bgcolour));
+	SET_FOREGROUND(bgcolour);
 
 	if (boxcx > 1)
 		XFillRectangle(display, wnd, gc, boxx, boxy, boxcx, boxcy);
@@ -848,25 +831,17 @@ ui_draw_text(uint8 font, uint8 flags, int mixmode, int x, int y,
 		glyph = cache_get_font(font, text[i]);
 
 		if (!(flags & TEXT2_IMPLICIT_X))
-
 		{
-			xyoffset = text[++i];
-			if ((xyoffset & 0x80))
-			{
-				if (flags & 0x04)	/* vertical text */
-					y += text[++i] | (text[++i] << 8);
-				else
-					x += text[++i] | (text[++i] << 8);
-			}
-			else
-			{
-				if (flags & 0x04)	/* vertical text */
-					y += xyoffset;
-				else
-					x += xyoffset;
-			}
+			offset = text[++i];
+			if (offset & 0x80)
+				offset = ((offset & 0x7f) << 8) | text[++i];
 
+			if (flags & TEXT2_VERTICAL)
+				y += offset;
+			else
+				x += offset;
 		}
+
 		if (glyph != NULL)
 		{
 			ui_draw_glyph(mixmode, x + (short) glyph->offset,
@@ -888,9 +863,8 @@ ui_desktop_save(uint32 offset, int x, int y, int cx, int cy)
 	XImage *image;
 
 	pix = XCreatePixmap(display, wnd, cx, cy, depth);
-	xwin_set_function(ROP2_COPY);
-
 	XCopyArea(display, wnd, pix, gc, x, y, cx, cy, 0, 0);
+
 	image = XGetImage(display, pix, 0, 0, cx, cy, AllPlanes, ZPixmap);
 
 	offset *= bpp/8;
@@ -911,403 +885,12 @@ ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy)
 	data = cache_get_desktop(offset, cx, cy, bpp/8);
 	if (data == NULL)
 		return;
-	image =
-		XCreateImage(display, visual,
-			     depth, ZPixmap,
+
+	image = XCreateImage(display, visual, depth, ZPixmap,
 			     0, data, cx, cy, BitmapPad(display),
 			     cx * bpp/8);
-	xwin_set_function(ROP2_COPY);
+
 	XPutImage(display, wnd, gc, image, 0, 0, x, y, cx, cy);
 	XFree(image);
 }
 
-/* unroll defines, used to make the loops a bit more readable... */
-#define unroll8Expr(uexp) uexp uexp uexp uexp uexp uexp uexp uexp
-#define unroll8Lefts(uexp) case 7: uexp \
-	case 6: uexp \
-	case 5: uexp \
-	case 4: uexp \
-	case 3: uexp \
-	case 2: uexp \
-	case 1: uexp
-
-static uint8 *
-translate(int width, int height, uint8 *data)
-{
-	uint32 i;
-	uint32 size = width * height;
-	uint8 *d2 = xmalloc(size * bpp/8);
-	uint8 *d3 = d2;
-	uint32 pix;
-	i = (size & ~0x7);
-
-	/* XXX: where are the bits swapped??? */
-#ifdef L_ENDIAN			/* little-endian */
-	/* big-endian screen */
-	if (screen_msbfirst)
-	{
-		switch (bpp)
-		{
-			case 32:
-				while (i)
-				{
-					unroll8Expr(pix = colmap[*data++];
-						    *d3++ = pix >> 24;
-						    *d3++ = pix >> 16;
-						    *d3++ = pix >> 8;
-						    *d3++ = pix;) i -= 8;
-				}
-				i = (size & 0x7);
-				if (i != 0)
-					switch (i)
-					{
-							unroll8Lefts(pix =
-								     colmap
-								     [*data++];
-								     *d3++ =
-								     pix >>
-								     24;
-								     *d3++ =
-								     pix >>
-								     16;
-								     *d3++ =
-								     pix >> 8;
-								     *d3++ =
-								     pix;)}
-				break;
-			case 24:
-				while (i)
-				{
-					unroll8Expr(pix = colmap[*data++];
-						    *d3++ = pix >> 16;
-						    *d3++ = pix >> 8;
-						    *d3++ = pix;) i -= 8;
-				}
-				i = (size & 0x7);
-				if (i != 0)
-					switch (i)
-					{
-							unroll8Lefts(pix =
-								     colmap
-								     [*data++];
-								     *d3++ =
-								     pix >>
-								     16;
-								     *d3++ =
-								     pix >> 8;
-								     *d3++ =
-								     pix;)}
-				break;
-			case 16:
-				while (i)
-				{
-					unroll8Expr(pix = colmap[*data++];
-						    *d3++ = pix >> 8;
-						    *d3++ = pix;) i -= 8;
-				}
-				i = (size & 0x7);
-				if (i != 0)
-					switch (i)
-					{
-							unroll8Lefts(pix =
-								     colmap
-								     [*data++];
-								     *d3++ =
-								     pix >> 8;
-								     *d3++ =
-								     pix;)}
-				break;
-			case 8:
-				while (i)
-				{
-					unroll8Expr(pix = colmap[*data++];
-						    *d3++ = pix;
-						)i -= 8;
-				}
-				i = (size & 0x7);
-				if (i != 0)
-					switch (i)
-					{
-							unroll8Lefts(pix =
-								     colmap
-								     [*data++];
-								     *d3++ =
-								     pix;)}
-				break;
-		}
-	}
-	else
-	{			/* little-endian screen */
-		switch (bpp)
-		{
-			case 32:
-				while (i)
-				{
-					unroll8Expr(*((uint32 *) d3) =
-						    colmap[*data++];
-						    d3 += sizeof(uint32);
-						)i -= 8;
-				}
-				i = (size & 0x7);
-				if (i != 0)
-					switch (i)
-					{
-							unroll8Lefts(*
-								     ((uint32
-								       *) d3)
-= colmap[*data++];
-d3 += sizeof(uint32);
-					)}
-				break;
-			case 24:
-				while (i)
-				{
-					unroll8Expr(pix = colmap[*data++];
-						    *d3++ = pix;
-						    *d3++ = pix >> 8;
-						    *d3++ = pix >> 16;
-						)i -= 8;
-				}
-				i = (size & 0x7);
-				if (i != 0)
-					switch (i)
-					{
-							unroll8Lefts(pix =
-								     colmap
-								     [*data++];
-								     *d3++ =
-								     pix;
-								     *d3++ =
-								     pix >> 8;
-								     *d3++ =
-								     pix >>
-								     16;)}
-				break;
-			case 16:
-				while (i)
-				{
-					unroll8Expr(pix = colmap[*data++];
-						    *d3++ = pix;
-						    *d3++ = pix >> 8;
-						)i -= 8;
-				}
-				i = (size & 0x7);
-				if (i != 0)
-					switch (i)
-					{
-							unroll8Lefts(pix =
-								     colmap
-								     [*data++];
-								     *d3++ =
-								     pix;
-								     *d3++ =
-								     pix >> 8;
-					)}
-				break;
-			case 8:
-				while (i)
-				{
-					unroll8Expr(pix = colmap[*data++];
-						    *d3++ = pix;
-						)i -= 8;
-				}
-				i = (size & 0x7);
-				if (i != 0)
-					switch (i)
-					{
-							unroll8Lefts(pix =
-								     colmap
-								     [*data++];
-								     *d3++ =
-								     pix;)}
-		}
-	}
-
-#else /* bigendian-compiled */
-	if (screen_msbfirst)
-	{
-		/* big-endian screen */
-		switch (bpp)
-		{
-			case 32:
-				while (i)
-				{
-					unroll8Expr(*((uint32 *) d3) =
-						    colmap[*data++];
-						    d3 += sizeof(uint32);
-						)i -= 8;
-				}
-				i = (size & 0x7);
-				if (i != 0)
-					switch (i)
-					{
-							unroll8Lefts(*
-								     ((uint32
-								       *) d3)
-= colmap[*data++];
-d3 += sizeof(uint32);
-					)}
-				break;
-			case 24:
-				while (i)
-				{
-					unroll8Expr(pix = colmap[*data++];
-						    *d3++ = pix;
-						    *d3++ = pix >> 8;
-						    *d3++ = pix >> 16;
-						)i -= 8;
-				}
-				i = (size & 0x7);
-				if (i != 0)
-					switch (i)
-					{
-							unroll8Lefts(pix =
-								     colmap
-								     [*data++];
-								     *d3++ =
-								     pix;
-								     *d3++ =
-								     pix >> 8;
-								     *d3++ =
-								     pix >>
-								     16;)}
-				break;
-			case 16:
-				while (i)
-				{
-					unroll8Expr(pix = colmap[*data++];
-						    *d3++ = pix;
-						    *d3++ = pix >> 8;
-						)i -= 8;
-				}
-				i = (size & 0x7);
-				if (i != 0)
-					switch (i)
-					{
-							unroll8Lefts(pix =
-								     colmap
-								     [*data++];
-								     *d3++ =
-								     pix;
-								     *d3++ =
-								     pix >> 8;
-					)}
-				break;
-			case 8:
-				while (i)
-				{
-					unroll8Expr(pix = colmap[*data++];
-						    *d3++ = pix;
-						)i -= 8;
-				}
-				i = (size & 0x7);
-				if (i != 0)
-					switch (i)
-					{
-							unroll8Lefts(pix =
-								     colmap
-								     [*data++];
-								     *d3++ =
-								     pix;)}
-		}
-	}
-	else
-	{
-		/* little-endian screen */
-		switch (bpp)
-		{
-			case 32:
-				while (i)
-				{
-					unroll8Expr(pix = colmap[*data++];
-						    *d3++ = pix;
-						    *d3++ = pix >> 8;
-						    *d3++ = pix >> 16;
-						    *d3++ = pix >> 24;
-						)i -= 8;
-				}
-				i = (size & 0x7);
-				if (i != 0)
-					switch (i)
-					{
-							unroll8Lefts(pix =
-								     colmap
-								     [*data++];
-								     *d3++ =
-								     pix;
-								     *d3++ =
-								     pix >> 8;
-								     *d3++ =
-								     pix >>
-								     16;
-								     *d3++ =
-								     pix >>
-								     24;)}
-				break;
-			case 24:
-				while (i)
-				{
-					unroll8Expr(pix = colmap[*data++];
-						    *d3++ = pix;
-						    *d3++ = pix >> 8;
-						    *d3++ = pix >> 16;
-						)i -= 8;
-				}
-				i = (size & 0x7);
-				if (i != 0)
-					switch (i)
-					{
-							unroll8Lefts(pix =
-								     colmap
-								     [*data++];
-								     *d3++ =
-								     pix;
-								     *d3++ =
-								     pix >> 8;
-								     *d3++ =
-								     pix >>
-								     16;)}
-				break;
-			case 16:
-				while (i)
-				{
-					unroll8Expr(pix = colmap[*data++];
-						    *d3++ = pix;
-						    *d3++ = pix >> 8;
-						)i -= 8;
-				}
-				i = (size & 0x7);
-				if (i != 0)
-					switch (i)
-					{
-							unroll8Lefts(pix =
-								     colmap
-								     [*data++];
-								     *d3++ =
-								     pix;
-								     *d3++ =
-								     pix >> 8;
-					)}
-				break;
-			case 8:
-				while (i)
-				{
-					unroll8Expr(pix = colmap[*data++];
-						    *d3++ = pix;
-						)i -= 8;
-				}
-				i = (size & 0x7);
-				if (i != 0)
-					switch (i)
-					{
-							unroll8Lefts(pix =
-								     colmap
-								     [*data++];
-								     *d3++ =
-								     pix;)}
-		}
-	}
-#endif
-
-	return d2;
-}

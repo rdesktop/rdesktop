@@ -33,14 +33,12 @@ int width = 800;
 int height = 600;
 int keylayout = 0x409;
 BOOL bitmap_compression = True;
-BOOL motion = True;
+BOOL sendmotion = True;
 BOOL orders = True;
 BOOL licence = True;
 BOOL use_encryption = True;
 BOOL desktop_save = True;
-BOOL grab_keyboard = True;
 BOOL fullscreen = False;
-int private_colormap = False;
 
 /* Display usage information */
 static void
@@ -83,7 +81,7 @@ main(int argc, char *argv[])
 	flags = RDP_LOGON_NORMAL;
 	domain[0] = password[0] = shell[0] = directory[0] = 0;
 
-	while ((c = getopt(argc, argv, "u:d:s:c:p:n:w:h:k:bml?")) != -1)
+	while ((c = getopt(argc, argv, "u:d:s:c:p:n:g:k:mbleKFVh?")) != -1)
 	{
 		switch (c)
 		{
@@ -134,7 +132,7 @@ main(int argc, char *argv[])
 				break;
 
 			case 'm':
-				motion = False;
+				sendmotion = False;
 				break;
 
 			case 'b':
@@ -148,15 +146,11 @@ main(int argc, char *argv[])
 			case 'e':
 				use_encryption = False;
 				break;
-			case 'K':
-				grab_keyboard = False;
-				break;
+
 			case 'F':
 				fullscreen = True;
 				break;
-			case 'v':
-				private_colormap = True;
-				break;
+
 			case 'h':
 			case '?':
 			default:

@@ -172,7 +172,8 @@ enum RDP_INPUT_DEVICE
 #define MIX_TRANSPARENT	0
 #define MIX_OPAQUE	1
 
-#define TEXT2_IMPLICIT_X 0x20
+#define TEXT2_VERTICAL		0x04
+#define TEXT2_IMPLICIT_X	0x20
 
 /* RDP capabilities */
 #define RDP_CAPSET_GENERAL	1
