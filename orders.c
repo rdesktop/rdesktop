@@ -641,7 +641,7 @@ process_raw_bmpcache(STREAM s)
 {
 	HBITMAP bitmap;
 	uint16 cache_idx, bufsize;
-	uint8 cache_id, width, height, bpp;
+	uint8 cache_id, width, height, bpp, Bpp;
 	uint8 *data, *inverted;
 	int y;
 
@@ -650,17 +650,16 @@ process_raw_bmpcache(STREAM s)
 	in_uint8(s, width);
 	in_uint8(s, height);
 	in_uint8(s, bpp);
+	Bpp = (bpp + 7) / 8;
 	in_uint16_le(s, bufsize);
 	in_uint16_le(s, cache_idx);
 	in_uint8p(s, data, bufsize);
-	if (bpp != 8) /* todo */
-		return;
 
 	DEBUG(("RAW_BMPCACHE(cx=%d,cy=%d,id=%d,idx=%d)\n", width, height, cache_id, cache_idx));
-	inverted = xmalloc(width * height);
+	inverted = xmalloc(width * height * Bpp);
 	for (y = 0; y < height; y++)
 	{
-		memcpy(&inverted[(height - y - 1) * width], &data[y * width], width);
+		memcpy(&inverted[(height - y - 1) * (width * Bpp)], &data[y * (width * Bpp)], width * Bpp);
 	}
 
 	bitmap = ui_create_bitmap(width, height, inverted);
@@ -674,7 +673,7 @@ process_bmpcache(STREAM s)
 {
 	HBITMAP bitmap;
 	uint16 cache_idx, size;
-	uint8 cache_id, width, height, bpp;
+	uint8 cache_id, width, height, bpp, Bpp;
 	uint8 *data, *bmpdata;
 
 	in_uint8(s, cache_id);
@@ -682,20 +681,19 @@ process_bmpcache(STREAM s)
 	in_uint8(s, width);
 	in_uint8(s, height);
 	in_uint8(s, bpp);
+	Bpp = (bpp + 7) / 8;
 	in_uint8s(s, 2);	/* bufsize */
 	in_uint16_le(s, cache_idx);
 	in_uint8s(s, 2);	/* pad */
 	in_uint16_le(s, size);
 	in_uint8s(s, 4);	/* row_size, final_size */
 	in_uint8p(s, data, size);
-	if (bpp != 8) /* todo */
-		return;
 
 	DEBUG(("BMPCACHE(cx=%d,cy=%d,id=%d,idx=%d)\n", width, height, cache_id, cache_idx));
 
-	bmpdata = xmalloc(width * height);
+	bmpdata = xmalloc(width * height * Bpp);
 
-	if (bitmap_decompress(bmpdata, width, height, data, size, bpp))
+	if (bitmap_decompress(bmpdata, width, height, data, size, Bpp))
 	{
 		bitmap = ui_create_bitmap(width, height, bmpdata);
 		cache_put_bitmap(cache_id, cache_idx, bitmap);
