@@ -946,7 +946,7 @@ BOOL
 ui_create_window(void)
 {
 	uint8 null_pointer_mask[1] = { 0x80 };
-	uint8 null_pointer_data[4] = { 0x00, 0x00, 0x00, 0x00 };
+	uint8 null_pointer_data[9] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 	XSetWindowAttributes attribs;
 	XClassHint *classhints;
 	XSizeHints *sizehints;
