@@ -20,18 +20,18 @@ int get_current_workarea(uint32 * x, uint32 * y, uint32 * width, uint32 * height
 STREAM iso_init(int length);
 void iso_send(STREAM s);
 STREAM iso_recv(void);
-BOOL iso_connect(char *server);
+BOOL iso_connect(char *server, char *username);
 void iso_disconnect(void);
 /* licence.c */
 void licence_process(STREAM s);
 /* mcs.c */
 STREAM mcs_init(int length);
 void mcs_send(STREAM s);
-STREAM mcs_recv(void);
-BOOL mcs_connect(char *server, STREAM mcs_data);
+STREAM mcs_recv(uint16 * channel);
+BOOL mcs_connect(char *server, STREAM mcs_data, char *username);
 void mcs_disconnect(void);
 /* orders.c */
-void process_orders(STREAM s);
+void process_orders(STREAM s, uint16 count);
 void reset_order_state(void);
 /* rdesktop.c */
 int main(int argc, char *argv[]);
@@ -49,10 +49,18 @@ void save_licence(unsigned char *data, int length);
 void rdp_out_unistr(STREAM s, char *string, int len);
 void rdp_send_input(uint32 time, uint16 message_type, uint16 device_flags, uint16 param1,
 		    uint16 param2);
+void process_bitmap_updates(STREAM s);
+void process_colour_pointer_pdu(STREAM s);
+void process_cached_pointer_pdu(STREAM s);
+void process_null_system_pointer_pdu(STREAM s);
+void process_palette(STREAM s);
 void rdp_main_loop(void);
 BOOL rdp_connect(char *server, uint32 flags, char *domain, char *password, char *command,
 		 char *directory);
 void rdp_disconnect(void);
+/* rdp5.c */
+void rdp5_process(STREAM s, BOOL encryption, BOOL shortform);
+void rdp5_process_channel(STREAM s, uint16 channel);
 /* secure.c */
 void sec_hash_48(uint8 * out, uint8 * in, uint8 * salt1, uint8 * salt2, uint8 salt);
 void sec_hash_16(uint8 * out, uint8 * in, uint8 * salt1, uint8 * salt2);
@@ -62,8 +70,10 @@ void sec_sign(uint8 * signature, int siglen, uint8 * session_key, int keylen, ui
 STREAM sec_init(uint32 flags, int maxlen);
 void sec_send(STREAM s, uint32 flags);
 STREAM sec_recv(void);
-BOOL sec_connect(char *server);
+BOOL sec_connect(char *server, char *username);
 void sec_disconnect(void);
+void sec_process_mcs_data(STREAM s);
+void sec_decrypt(uint8 * data, int length);
 /* tcp.c */
 STREAM tcp_init(int maxlen);
 void tcp_send(STREAM s);
