@@ -357,21 +357,21 @@ hexdump(unsigned char *p, unsigned int len)
 
 	while (offset < len)
 	{
-		fprintf(stderr, "%04x ", offset);
+		printf("%04x ", offset);
 		thisline = len - offset;
 		if (thisline > 16)
 			thisline = 16;
 
 		for (i = 0; i < thisline; i++)
-			fprintf(stderr, "%02x ", line[i]);
+			printf("%02x ", line[i]);
 
 		for (; i < 16; i++)
-			fprintf(stderr, "   ");
+			printf("   ");
 
 		for (i = 0; i < thisline; i++)
-			fprintf(stderr, "%c", (line[i] >= 0x20 && line[i] < 0x7f) ? line[i] : '.');
+			printf("%c", (line[i] >= 0x20 && line[i] < 0x7f) ? line[i] : '.');
 
-		fprintf(stderr, "\n");
+		printf("\n");
 		offset += thisline;
 		line += thisline;
 	}
