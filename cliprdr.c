@@ -294,8 +294,12 @@ cliprdr_send_format_announce(void)
 	out_uint16_le(s, 0);
 	out_uint32_le(s, number_of_formats*36);
 	
-	out_uint32_le(s, 0xd); // FIXME: This is a rather bogus unicode text description..
+	//	out_uint32_le(s, 0xd); // FIXME: This is a rather bogus unicode text description..
 	//	rdp_out_unistr(s, "", 16);
+	//	out_uint8s(s, 32);
+
+
+	out_uint32_le(s, 1); // FIXME: This is a rather bogus text description..
 	out_uint8s(s, 32);
 
 	out_uint32_le(s, 0); 
@@ -346,6 +350,54 @@ void cliprdr_handle_server_data(uint32 length, STREAM s)
 
 }
 
+void cliprdr_handle_server_data_request(STREAM s) 
+{
+	uint32 remaining_length;
+	uint32 wanted_formatcode, pad;
+	int ret;
+	STREAM out;
+
+	in_uint32_le(s, remaining_length);
+	in_uint32_le(s, wanted_formatcode);
+	in_uint32_le(s, pad);
+
+	/* FIXME: Check that we support this formatcode */
+
+	DEBUG_CLIPBOARD(("Request from server for format %d\n", 
+			 wanted_formatcode));
+
+	out =  sec_init(encryption ? SEC_ENCRYPT : 0, 
+			26);
+	out_uint32_le(out, 18);
+	out_uint32_le(out, 0x13);
+	out_uint16_le(out, 5);
+	out_uint16_le(out, 1);
+	out_uint32_le(out, 6);
+	out_uint8p(out, "fnorp", 6);
+	out_uint32_le(out, 0);
+
+	s_mark_end(out);
+	
+	sec_send_to_channel(out, encryption ? SEC_ENCRYPT : 0, 1005); // FIXME: Don't hardcode channel!   
+
+	/*	
+	if (1 != wanted_formatcode) 
+	{
+		out =  sec_init(encryption ? SEC_ENCRYPT : 0, 
+				20);
+		out_uint32_le(s, 12);
+		out_uint32_le(s, 0x13);
+		out_uint16_le(s, 5);
+		out_uint16_le(s, 2);
+		out_uint32_le(s, 0);
+		out_uint32_le(s, 0);
+		s_mark_end(s);
+		sec_send_to_channel(s, encryption ? SEC_ENCRYPT : 0, 1005); // FIXME: Don't hardcode channel!
+	}
+	*/		
+}
+	
+
 void cliprdr_callback(STREAM s) 
 {
 	uint32 length, flags;
@@ -384,7 +436,11 @@ void cliprdr_callback(STREAM s)
 		} else if (5 == ptype0 && 1 == ptype1) 
 		{
 			cliprdr_handle_server_data(length, s);
+		} else if (4 == ptype0 && 0 == ptype1) 
+		{
+			cliprdr_handle_server_data_request(s);
 		}
+
 		
 	}
 }
