@@ -14,7 +14,7 @@ LDLIBS   = -L/usr/X11R6/lib -lX11 -lXext
 PREFIX   = /usr/local
 EPREFIX  = $(PREFIX)
 BINDIR   = $(EPREFIX)/bin
-MANDIR   = $(PREFIX)/man
+# MANDIR   = $(PREFIX)/man
 SHAREDIR = $(PREFIX)/share/rdesktop
 
 KEYMAP_PATH = $(SHAREDIR)/keymaps/
@@ -39,10 +39,10 @@ installbin: rdesktop
 	strip $(BINDIR)/rdesktop
 	chmod 755 $(BINDIR)/rdesktop
 
-installman: rdesktop.1
-	mkdir -p $(MANDIR)/man1
-	cp rdesktop.1 $(MANDIR)/man1
-	chmod 755 $(MANDIR)/man1/rdesktop.1
+# installman: rdesktop.1
+#	mkdir -p $(MANDIR)/man1
+#	cp rdesktop.1 $(MANDIR)/man1
+#	chmod 755 $(MANDIR)/man1/rdesktop.1
 
 installkeymaps:
 	mkdir -p $(KEYMAP_PATH)
