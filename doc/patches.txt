@@ -110,9 +110,16 @@ From what I can tell, this patch is no longer necessary.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/hostname-patch
 Description:
-TDB
+(From http://mail.rdesktop.org/archive/2001/msg00163.html):
+
+rdesktop uses gethostname to figure out the hostname, but gethostname
+under linux returns an error when the hostname is longer than the
+buffer.  This hack gives gethostname a 64 char buffer and then strips
+the first 16 chars or upto the first '.' and puts the result in
+hostname[16].
+
 Status:
-Not yet examined. 
+Applied in version 1.10 of rdesktop.c. 
 
 
 URL:
