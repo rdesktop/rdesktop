@@ -94,6 +94,7 @@ enum MCS_PDU_TYPE
 #define LICENCE_TAG_AUTHRESP	0x0215
 #define LICENCE_TAG_RESULT	0x02ff
 
+/* RDP5 licensing constants - thanks goes to Steve Fosdick for finding them! */
 #define LICENCE_TAG_DEMAND_5	0x0301
 #define LICENCE_TAG_AUTHREQ_5	0x0302
 #define LICENCE_TAG_ISSUE_5	0x0303
