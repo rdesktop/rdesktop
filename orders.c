@@ -742,7 +742,7 @@ process_colcache(STREAM s)
 	in_uint8(s, cache_id);
 	in_uint16_le(s, map.ncolours);
 
-	map.colours = (COLOURENTRY *) xmalloc(3 * map.ncolours);
+	map.colours = (COLOURENTRY *) xmalloc(sizeof(COLOURENTRY) * map.ncolours);
 
 	for (i = 0; i < map.ncolours; i++)
 	{

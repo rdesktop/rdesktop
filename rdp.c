@@ -765,7 +765,7 @@ process_palette(STREAM s)
 	in_uint16_le(s, map.ncolours);
 	in_uint8s(s, 2);	/* pad */
 
-	map.colours = (COLOURENTRY *) xmalloc(3 * map.ncolours);
+	map.colours = (COLOURENTRY *) xmalloc(sizeof(COLOURENTRY) * map.ncolours);
 
 	DEBUG(("PALETTE(c=%d)\n", map.ncolours));
 
