@@ -595,10 +595,10 @@ xwin_process_events()
 				tr = xkeymap_translate_key(keysym,
 							   xevent.xkey.keycode, xevent.xkey.state);
 
-				ensure_remote_modifiers(ev_time, tr);
-
 				if (tr.scancode == 0)
 					break;
+
+				ensure_remote_modifiers(ev_time, tr);
 
 				rdp_send_scancode(ev_time, RDP_KEYPRESS, tr.scancode);
 				break;

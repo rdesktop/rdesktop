@@ -41,6 +41,8 @@ static key_translation keymap[KEYMAP_SIZE];
 static int min_keycode;
 static uint16 remote_modifier_state = 0;
 
+static void update_modifier_state(uint16 modifiers, BOOL pressed);
+
 static void
 add_to_keymap(char *keyname, uint8 scancode, uint16 modifiers, char *mapname)
 {
@@ -307,6 +309,9 @@ inhibit_key(KeySym keysym)
 		case XK_Multi_key:
 			return True;
 			break;
+		case XK_Num_Lock:
+			return True;
+			break;
 		default:
 			break;
 	}
@@ -372,21 +377,21 @@ ensure_remote_modifiers(uint32 ev_time, key_translation tr)
 	    != MASK_HAS_BITS(remote_modifier_state, MapNumLockMask))
 	{
 		/* The remote modifier state is not correct */
-		DEBUG_KBD(("Remote NumLock state is incorrect. Toggling\n"));
+		uint16 new_remote_state = 0;
+
 		if (MASK_HAS_BITS(tr.modifiers, MapNumLockMask))
 		{
-			/* Needs this modifier. Toggle */
-			rdp_send_scancode(ev_time, RDP_KEYPRESS, SCANCODE_CHAR_NUMLOCK);
-			rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_NUMLOCK);
+			DEBUG_KBD(("Remote NumLock state is incorrect, activating NumLock.\n"));
+			new_remote_state |= KBD_FLAG_NUMLOCK;
 		}
 		else
 		{
-			/* Should not use this modifier. Toggle */
-			rdp_send_scancode(ev_time, RDP_KEYPRESS, SCANCODE_CHAR_NUMLOCK);
-			rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_NUMLOCK);
+			DEBUG_KBD(("Remote NumLock state is incorrect, deactivating NumLock.\n"));
 		}
-	}
 
+		rdp_send_input(0, RDP_INPUT_SYNCHRONIZE, 0, new_remote_state, 0);
+		update_modifier_state(SCANCODE_CHAR_NUMLOCK, True);
+	}
 }
 
 

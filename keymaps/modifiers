@@ -8,8 +8,6 @@ Alt_L 0x38
 Control_R 0x9d
 Control_L 0x1d
 
-Num_Lock 0x45
-
 # Translate Meta, Super and Hyper to Windows key
 # For some reason, these are broken, it seems.
 Meta_L 0xdb
