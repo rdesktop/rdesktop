@@ -109,14 +109,14 @@ printer_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 dispos
 static NTSTATUS
 printer_close(HANDLE handle)
 {
-	PRINTER *pprinter_data;
-
-	pprinter_data = get_printer_data(handle);
-
-	g_rdpdr_device[get_device_index(handle)].handle = 0;
-
-	pclose(pprinter_data->printer_fp);
-
+	int i = get_device_index(handle);
+	if (i >= 0)
+	{
+		PRINTER *pprinter_data = g_rdpdr_device[i].pdevice_data;
+		if (pprinter_data)
+			pclose(pprinter_data->printer_fp);
+		g_rdpdr_device[i].handle = 0;
+	}
 	return STATUS_SUCCESS;
 }
 
