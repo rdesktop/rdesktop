@@ -1,0 +1,74 @@
+
+Future syntax for configuring RDP redirection modules
+=====================================================
+
+General
+-------
+
+All redirection is configured using the -r option. The general syntax
+is:
+
+-r <module>:<string>
+
+<module> is the name of the redirection module. The following names
+are valid: drive, printer, lptport, comport, clipboard, audio. 
+
+<string> is interpreted by each redirection module. 
+
+The redirection modules are described below.
+
+
+drive mapping
+-------------
+Multiple mappings possible: yes
+Default: no drives redirected
+Syntax: -r drive:<driveletter>=<path>
+Example: -r drive:H=/home/johndoe
+
+
+printer mapping
+---------------
+Multiple mappings possible: yes
+Default: no printers redirected
+Syntax: -r printer:<printername>
+Example: -r printer:mydeskjet
+
+
+
+LPT port mapping
+----------------
+Multiple mappings possible: yes
+Default: no LPT ports redirected
+Syntax: -r lptport:<lptport>=<device>
+Example: -r lptport:LPT1=/dev/lp0
+
+
+COM port mapping
+----------------
+Multiple mappings possible: yes
+Default: no COM ports redirected
+Syntax: -r comport:<comport>=<device>
+Example: -r comport:COM1=/dev/ttyS0
+
+
+clipboard mapping
+-----------------
+Multiple mappings possible: no
+Default: yes
+Syntax: -r clipboard:[yes|no]
+Example: -r clipboard:no
+
+
+audio mapping
+-------------
+Multiple mappings possible: no
+Default: local
+Syntax: -r audio:[local|off|remote]
+
+"local" means "Bring to this computer"
+"off" means "Do not play"
+"remote" means "Leave at remote computer"
+
+Example: -r audio:remote
+
+
