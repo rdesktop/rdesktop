@@ -463,7 +463,7 @@ main(int argc, char *argv[])
 		}
 	}
 
-	if (argc - optind < 1)
+	if (argc - optind != 1)
 	{
 		usage(argv[0]);
 		return 1;
