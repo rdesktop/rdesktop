@@ -310,9 +310,10 @@ Not yet examined.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/vincent_19-7-2.secure.patch
 Description:
-TDB
+Fixes a problem during the connection to a French NT4 TSE (a French
+NT4 TSE doesn't use encryptation).
 Status:
-Not yet examined. 
+Applied. 
 
 
 URL:
