@@ -11,19 +11,19 @@ is:
 -r <module>:<string>
 
 <module> is the name of the redirection module. The following names
-are valid: drive, printer, lptport, comport, clipboard, sound. 
+are valid: disk, printer, lptport, comport, clipboard, sound. 
 
 <string> is interpreted by each redirection module. 
 
 The redirection modules are described below.
 
 
-drive mapping
+disk mapping
 -------------
 Multiple mappings possible: yes
-Default: no drives redirected
-Syntax: -r drive:<driveletter>=<path>
-Example: -r drive:H=/home/johndoe
+Default: no disk redirected
+Syntax: -r disk:<driveletter>=<path>
+Example: -r disk:H=/home/johndoe
 
 
 printer mapping
