@@ -60,7 +60,7 @@ extern DEVICE_FNS printer_fns;
 extern DEVICE_FNS parallel_fns;
 extern DEVICE_FNS disk_fns;
 extern FILEINFO g_fileinfo[];
-
+ 
 static VCHANNEL *rdpdr_channel;
 
 /* If select() times out, the request for the device with handle g_min_timeout_fd is aborted */
@@ -112,7 +112,7 @@ convert_to_unix_filename(char *filename)
 	}
 }
 
-BOOL
+static BOOL
 rdpdr_handle_ok(int device, int handle)
 {
 	switch (g_rdpdr_device[device].device_type)
@@ -133,7 +133,7 @@ rdpdr_handle_ok(int device, int handle)
 }
 
 /* Add a new io request to the table containing pending io requests so it won't block rdesktop */
-BOOL
+static BOOL
 add_async_iorequest(uint32 device, uint32 file, uint32 id, uint32 major, uint32 length,
 		    DEVICE_FNS * fns, uint32 total_timeout, uint32 interval_timeout, uint8 * buffer,
 		    uint32 offset)
@@ -179,7 +179,7 @@ add_async_iorequest(uint32 device, uint32 file, uint32 id, uint32 major, uint32 
 	return True;
 }
 
-void
+static void
 rdpdr_send_connect(void)
 {
 	uint8 magic[4] = "rDCC";
@@ -195,7 +195,7 @@ rdpdr_send_connect(void)
 }
 
 
-void
+static void
 rdpdr_send_name(void)
 {
 	uint8 magic[4] = "rDNC";
@@ -220,7 +220,7 @@ rdpdr_send_name(void)
 }
 
 /* Returns the size of the payload of the announce packet */
-int
+static int
 announcedata_size()
 {
 	int size, i;
@@ -247,7 +247,7 @@ announcedata_size()
 	return size;
 }
 
-void
+static void
 rdpdr_send_available(void)
 {
 
@@ -305,7 +305,7 @@ rdpdr_send_available(void)
 	channel_send(s, rdpdr_channel);
 }
 
-void
+static void
 rdpdr_send_completion(uint32 device, uint32 id, uint32 status, uint32 result, uint8 * buffer,
 		      uint32 length)
 {
@@ -691,7 +691,7 @@ rdpdr_process_irp(STREAM s)
 	buffer = NULL;
 }
 
-void
+static void
 rdpdr_send_clientcapabilty(void)
 {
 	uint8 magic[4] = "rDPC";
