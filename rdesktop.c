@@ -234,6 +234,11 @@ main(int argc, char *argv[])
 		width = 800;
 		height = 600;
 	}
+	else
+	{
+		/* make sure width is a multiple of 4 */
+		width = (width + 3) & ~3;
+	}
 
 	strcpy(title, "rdesktop - ");
 	strncat(title, server, sizeof(title) - sizeof("rdesktop - "));

@@ -429,9 +429,6 @@ ui_create_window()
 		attribs.override_redirect = False;
 	}
 
-	width = (width + 3) & ~3;	/* make width a multiple of 32 bits */
-
-
 	input_mask = KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask |
 		VisibilityChangeMask | FocusChangeMask;
 
