@@ -42,7 +42,6 @@ Keyboard layout to emulate.  This requires a corresponding keymap file to be
 installed.  The standard keymaps provided with rdesktop follow the RFC1766
 naming scheme: a language code followed by a country code if necessary - e.g.
 en-us, en-gb, de, fr, sv, etc.  The default is en-us (a US keyboard).
-
 .TP
 .BR "-g <geometry>"
 Desktop geometry (WxH). If geometry is the special word "workarea", the geometry
@@ -58,13 +57,17 @@ toggled at any time using Ctrl-Alt-Enter.
 Force the server to send screen updates as bitmaps rather than using
 higher-level drawing operations.
 .TP
+.BR "-e"
+Disable encryption.  This option is only needed (and will only work) if you
+have a French version of NT TSE.
+.TP
 .BR "-m"
 Do not send mouse motion events.  This saves bandwidth, although some Windows
 applications may rely on receiving mouse motion.
 .TP
-.BR "-e"
-Disable encryption.  This option is only needed (and will only work) if you
-have a French version of NT TSE.
+.BR "-C"
+Use private colourmap.  This will improve colour accuracy on an 8-bit display,
+but rdesktop will appear in false colour when not focused.
 .TP
 .BR "-K"
 Do not override window manager key bindings.  By default rdesktop attempts

@@ -22,7 +22,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define VERSION "1.2beta1"
+#define VERSION "1.2.0"
 
 #ifdef WITH_DEBUG
 #define DEBUG(args)	printf args;
