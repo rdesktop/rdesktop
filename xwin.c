@@ -607,6 +607,9 @@ xwin_process_events(void)
 				break;
 
 			case MotionNotify:
+				if (fullscreen && !focused)
+					XSetInputFocus(display, wnd, RevertToPointerRoot,
+						       CurrentTime);
 				rdp_send_input(time(NULL), RDP_INPUT_MOUSE,
 					       MOUSE_FLAG_MOVE, xevent.xmotion.x, xevent.xmotion.y);
 				break;
