@@ -25,8 +25,9 @@
 extern BOOL encryption;
 extern Display *display;
 extern Window wnd;
-extern Time last_keyrelease;
+extern Time last_gesturetime;
 
+// static Time selection_timestamp;
 static Atom clipboard_atom, primary_atom, targets_atom, timestamp_atom;
 static Atom rdesktop_clipboard_target_atom;
 static cliprdr_dataformat *server_formats = NULL;
@@ -50,10 +51,30 @@ cliprdr_print_server_formats(void)
 	DEBUG_CLIPBOARD(("There were %d server formats.\n", i));
 #endif
 }
+/*
+static void 
+cliprdr_set_selection_timestamp(void)
+{
+	XEvent xev;
+	DEBUG_CLIPBOARD(("Changing a property in order to get a timestamp\n"));
+	fflush(stdout);
+	XChangeProperty(display, wnd, rdesktop_clipboard_target_atom,
+			XA_ATOM, 32, PropModeAppend, 0, 0);
+	DEBUG_CLIPBOARD(("Waiting for PropertyChange on wnd\n"));
+	fflush(stdout);	
+	XWindowEvent(display, wnd, 
+		     PropertyChangeMask, &xev);
+	DEBUG_CLIPBOARD(("Setting selection_timestamp\n"));
+	fflush(stdout);	
+	selection_timestamp = xev.xproperty.time;
+}	
+*/	
 
 static void
 cliprdr_send_format_announce(void) 
 {
+	DEBUG_CLIPBOARD(("Sending format announce\n"));
+
 	STREAM s;
 	int number_of_formats = 1;
 	s = sec_init(encryption ? SEC_ENCRYPT : 0, number_of_formats*36+12+4+4);
@@ -189,6 +210,8 @@ cliprdr_handle_SelectionNotify(XSelectionEvent *event)
 		s_mark_end(out);
 	
 		sec_send_to_channel(out, encryption ? SEC_ENCRYPT : 0, 1005); // FIXME: Don't hardcode channel!   
+
+		cliprdr_send_format_announce();
 		
 	}
 	
@@ -202,41 +225,6 @@ cliprdr_handle_SelectionClear(void)
 	cliprdr_send_format_announce();
 }
 
-void print_X_error(int res) 
-{
-	switch(res) {
-	case Success:
-		DEBUG_CLIPBOARD(("Success\n"));
-		break;
-
-	case BadAtom:
-		DEBUG_CLIPBOARD(("BadAtom\n"));
-		break;
-
-	case BadRequest:
-		DEBUG_CLIPBOARD(("BadRequest\n"));
-		break;
-
-	case BadAlloc:
-		DEBUG_CLIPBOARD(("BadAlloc\n"));
-		break;
-
-	case BadMatch:
-		DEBUG_CLIPBOARD(("BadMatch\n"));
-		break;
-
-	case BadValue:
-		DEBUG_CLIPBOARD(("BadValue\n"));
-		break;
-
-	case BadWindow:
-		DEBUG_CLIPBOARD(("BadWindow\n"));
-		break;
-
-	default:
-		DEBUG_CLIPBOARD(("Unknown X error code %d\n", res));
-	}
-}
 
 static void
 cliprdr_request_clipboard_data(uint32 formatcode) 
@@ -305,8 +293,6 @@ cliprdr_handle_SelectionRequest(XSelectionRequestEvent *xevent)
 				      PropModeAppend,
 				      (unsigned char *)targets,
 				      3);
-		DEBUG_CLIPBOARD(("res after XChangeProperty is "));
-		print_X_error(res);	
 
 		res = XSendEvent(display, 
 				 xevent->requestor, 
@@ -317,14 +303,14 @@ cliprdr_handle_SelectionRequest(XSelectionRequestEvent *xevent)
 	} else if (timestamp_atom == xevent->target) 
 	{
 		DEBUG_CLIPBOARD(("TIMESTAMP requested... sending 0x%x\n",
-				 (unsigned)last_keyrelease));
+				 (unsigned)last_gesturetime));
 		res = XChangeProperty(display, 
 				      xevent->requestor,
 				      xevent->property,
 				      XA_INTEGER,
 				      32,
 				      PropModeAppend,
-				      (unsigned char *)&last_keyrelease,
+				      (unsigned char *)&last_gesturetime,
 				      1);
 		res = XSendEvent(display, 
 				 xevent->requestor, 
@@ -407,12 +393,12 @@ cliprdr_register_server_formats(STREAM s)
 static void
 cliprdr_select_X_clipboards(void) 
 {
-	XSetSelectionOwner(display, primary_atom, wnd, last_keyrelease);
+	XSetSelectionOwner(display, primary_atom, wnd, last_gesturetime);
 	if (wnd != XGetSelectionOwner(display, primary_atom))
 	{
 		warning("Failed to aquire ownership of PRIMARY clipboard\n");
 	}
-	XSetSelectionOwner(display, clipboard_atom, wnd, CurrentTime);
+	XSetSelectionOwner(display, clipboard_atom, wnd, last_gesturetime);
 	if (wnd != XGetSelectionOwner(display, clipboard_atom)) 
 	{
 		warning("Failed to aquire ownership of CLIPBOARD clipboard\n");
@@ -439,29 +425,23 @@ void cliprdr_handle_server_data(uint32 length, STREAM s)
 {
 	uint32 remaining_length;
 	char *data;
-	int res;
 	in_uint32_le(s, remaining_length);
 	data = s->p;
-	res = XChangeProperty(display, 
-			      selection_event.requestor,
-			      selection_event.property,
-			      XInternAtom(display, "STRING", False),
-			      8,
-			      PropModeAppend,
-			      data,
-			      remaining_length);
+	XChangeProperty(display, 
+			selection_event.requestor,
+			selection_event.property,
+			XInternAtom(display, "STRING", False),
+			8,
+			PropModeAppend,
+			data,
+			remaining_length);
 
-	DEBUG_CLIPBOARD(("res after XChangeProperty is "));
-	print_X_error(res);	
+	XSendEvent(display, 
+		   selection_event.requestor, 
+		   False, 
+		   NoEventMask,
+		   (XEvent *)&selection_event);
 	
-	res = XSendEvent(display, 
-			 selection_event.requestor, 
-			 False, 
-			 NoEventMask,
-			 (XEvent *)&selection_event);
-	
-	DEBUG_CLIPBOARD(("res after XSendEvent is "));
-	print_X_error(res);
 
 }
 
