@@ -103,7 +103,9 @@ void xfree(void *mem);
  * be on.  Again this in only really a problem on machines
  * using "long long's", are 32bit, and are not using my assembler code. */
 #if defined(MSDOS) || defined(WINDOWS) || defined(WIN32) || defined(linux)
-#define BN_DIV2W
+# ifndef BN_DIV2W
+#  define BN_DIV2W
+# endif
 #endif
 
 /* assuming long is 64bit - this is the DEC Alpha
@@ -166,7 +168,7 @@ void xfree(void *mem);
 #define BN_BYTES	4
 #define BN_BITS2	32
 #define BN_BITS4	16
-#ifdef WIN32
+#ifdef _MSC_VER
 /* VC++ doesn't like the LL suffix */
 #define BN_MASK		(0xffffffffffffffffL)
 #else
@@ -342,6 +344,7 @@ void	BN_CTX_end(BN_CTX *ctx);
 int     BN_rand(BIGNUM *rnd, int bits, int top,int bottom);
 int     BN_pseudo_rand(BIGNUM *rnd, int bits, int top,int bottom);
 int	BN_rand_range(BIGNUM *rnd, BIGNUM *range);
+int	BN_pseudo_rand_range(BIGNUM *rnd, BIGNUM *range);
 int	BN_num_bits(const BIGNUM *a);
 int	BN_num_bits_word(BN_ULONG);
 BIGNUM *BN_new(void);
@@ -382,8 +385,8 @@ int	BN_mod_exp_mont_word(BIGNUM *r, BN_ULONG a, const BIGNUM *p,
 			const BIGNUM *m, BN_CTX *ctx, BN_MONT_CTX *m_ctx);
 int	BN_mod_exp2_mont(BIGNUM *r, BIGNUM *a1, BIGNUM *p1,BIGNUM *a2,
 		BIGNUM *p2,BIGNUM *m,BN_CTX *ctx,BN_MONT_CTX *m_ctx);
-int	BN_mod_exp_simple(BIGNUM *r, BIGNUM *a, const BIGNUM *p,
-	const BIGNUM *m,BN_CTX *ctx);
+int	BN_mod_exp_simple(BIGNUM *r, BIGNUM *a, BIGNUM *p,
+	BIGNUM *m,BN_CTX *ctx);
 int	BN_mask_bits(BIGNUM *a,int n);
 int	BN_mod_mul(BIGNUM *ret, BIGNUM *a, BIGNUM *b, const BIGNUM *m, BN_CTX *ctx);
 #ifndef NO_FP_API
@@ -416,7 +419,6 @@ int	BN_is_prime(const BIGNUM *p,int nchecks,
 int	BN_is_prime_fasttest(const BIGNUM *p,int nchecks,
 		void (*callback)(int,int,void *),BN_CTX *ctx,void *cb_arg,
 		int do_trial_division);
-void	ERR_load_BN_strings(void );
 
 BN_MONT_CTX *BN_MONT_CTX_new(void );
 void BN_MONT_CTX_init(BN_MONT_CTX *ctx);
@@ -487,4 +489,3 @@ int BN_bntest_rand(BIGNUM *rnd, int bits, int top,int bottom);
 }
 #endif
 #endif
-

@@ -510,7 +510,7 @@ err:
 	}
 #endif
 
-#if MONT_MUL_MOD
+#ifdef MONT_MUL_MOD
 int BN_mod_exp_mont(BIGNUM *rr, BIGNUM *a, const BIGNUM *p,
 		    const BIGNUM *m, BN_CTX *ctx, BN_MONT_CTX *in_mont)
 	{
@@ -795,7 +795,7 @@ err:
 #endif
 
 /* The old fallback, simple version :-) */
-int BN_mod_exp_simple(BIGNUM *r, BIGNUM *a, const BIGNUM *p, const BIGNUM *m,
+int BN_mod_exp_simple(BIGNUM *r, BIGNUM *a, BIGNUM *p, BIGNUM *m,
 	     BN_CTX *ctx)
 	{
 	int i,j,bits,ret=0,wstart,wend,window,wvalue,ts=0;
