@@ -76,6 +76,7 @@ typedef struct _BRUSH
 
 typedef struct _FONTGLYPH
 {
+	uint16 offset;
 	uint16 baseline;
 	uint16 width;
 	uint16 height;

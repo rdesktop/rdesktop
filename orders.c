@@ -722,7 +722,7 @@ static void process_fontcache(STREAM s)
 {
 	HGLYPH bitmap;
 	uint8 font, nglyphs;
-	uint16 character, baseline, width, height;
+	uint16 character, offset, baseline, width, height;
 	uint8 *data, *rev_data, in, out;
 	int i, j, datasize;
 
@@ -734,7 +734,7 @@ static void process_fontcache(STREAM s)
 	for (i = 0; i < nglyphs; i++)
 	{
 		in_uint16_le(s, character);
-		in_uint8s(s, 2); /* unknown */
+		in_uint16_le(s, offset);
 		in_uint16_le(s, baseline);
 		in_uint16_le(s, width);
 		in_uint16_le(s, height);
@@ -763,7 +763,8 @@ static void process_fontcache(STREAM s)
 		bitmap = ui_create_glyph(width, height, rev_data);
 		xfree(rev_data);
 
-		cache_put_font(font, character, baseline, width, height, bitmap);
+		cache_put_font(font, character, offset, baseline,
+				width, height, bitmap);
 	}
 }
 

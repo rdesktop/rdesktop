@@ -85,8 +85,8 @@ FONTGLYPH *cache_get_font(uint8 font, uint16 character)
 }
 
 /* Store a glyph in the font cache */
-void cache_put_font(uint8 font, uint32 character, uint16 baseline,
-		    uint16 width, uint16 height, HGLYPH pixmap)
+void cache_put_font(uint8 font, uint16 character, uint16 offset,
+		uint16 baseline, uint16 width, uint16 height, HGLYPH pixmap)
 {
 	FONTGLYPH *glyph;
 
@@ -97,6 +97,7 @@ void cache_put_font(uint8 font, uint32 character, uint16 baseline,
 		if (glyph->pixmap != NULL)
 			ui_destroy_glyph(glyph->pixmap);
 
+		glyph->offset = offset;
 		glyph->baseline = baseline;
 		glyph->width = width;
 		glyph->height = height;

@@ -60,7 +60,7 @@ BOOL bitmap_decompress(unsigned char *output, int width, int height, unsigned ch
 HBITMAP cache_get_bitmap(uint8 cache_id, uint16 cache_idx);
 void cache_put_bitmap(uint8 cache_id, uint16 cache_idx, HBITMAP bitmap);
 FONTGLYPH *cache_get_font(uint8 font, uint16 character);
-void cache_put_font(uint8 font, uint32 character, uint16 baseline, uint16 width, uint16 height, HGLYPH pixmap);
+void cache_put_font(uint8 font, uint16 character, uint16 offset, uint16 baseline, uint16 width, uint16 height, HGLYPH pixmap);
 DATABLOB *cache_get_text(uint8 cache_id);
 void cache_put_text(uint8 cache_id, void *data, int length);
 uint8 *cache_get_desktop(uint32 offset, int cx, int cy);

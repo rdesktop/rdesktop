@@ -518,7 +518,7 @@ void ui_draw_text(uint8 font, uint8 flags, int mixmode, int x, int y,
 
 		if (glyph != NULL)
 		{
-			ui_draw_glyph(mixmode, x,
+			ui_draw_glyph(mixmode, x + (short)glyph->offset,
 					y + (short)glyph->baseline,
 					glyph->width, glyph->height,
 					glyph->pixmap, 0, 0,
