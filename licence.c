@@ -21,7 +21,7 @@
 #include "rdesktop.h"
 #include <openssl/rc4.h>
 
-extern char g_username[16];
+extern char g_username[64];
 extern char g_hostname[16];
 
 static uint8 g_licence_key[16];

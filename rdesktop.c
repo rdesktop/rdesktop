@@ -30,6 +30,11 @@
 #include <errno.h>
 #include "rdesktop.h"
 
+#ifdef HAVE_ICONV
+#include <locale.h>
+#include <langinfo.h>
+#endif
+
 #ifdef EGD_SOCKET
 #include <sys/socket.h>		/* socket connect */
 #include <sys/un.h>		/* sockaddr_un */
@@ -79,6 +84,10 @@ uint32 g_rdp5_performanceflags =
 BOOL g_rdpsnd = False;
 #endif
 
+#ifdef HAVE_ICONV
+char g_codepage[16] = "";
+#endif
+
 extern RDPDR_DEVICE g_rdpdr_device[];
 extern uint32 g_num_devices;
 extern char *g_rdpdr_clientname;
@@ -113,6 +122,9 @@ usage(char *program)
 	fprintf(stderr, "   -g: desktop geometry (WxH)\n");
 	fprintf(stderr, "   -f: full-screen mode\n");
 	fprintf(stderr, "   -b: force bitmap updates\n");
+#ifdef HAVE_ICONV
+	fprintf(stderr, "   -L: local codepage\n");
+#endif
 	fprintf(stderr, "   -B: use BackingStore of X-server (if available)\n");
 	fprintf(stderr, "   -e: disable encryption (French TS)\n");
 	fprintf(stderr, "   -E: disable encryption from client to server\n");
@@ -367,7 +379,7 @@ main(int argc, char *argv[])
 #endif
 
 	while ((c = getopt(argc, argv,
-			   VNCOPT "u:d:s:c:p:n:k:g:fbBeEmzCDKS:T:NX:a:x:Pr:045h?")) != -1)
+			   VNCOPT "u:L:d:s:c:p:n:k:g:fbBeEmzCDKS:T:NX:a:x:Pr:045h?")) != -1)
 	{
 		switch (c)
 		{
@@ -388,6 +400,14 @@ main(int argc, char *argv[])
 			case 'u':
 				STRNCPY(g_username, optarg, sizeof(g_username));
 				username_option = 1;
+				break;
+
+			case 'L':
+#ifdef HAVE_ICONV
+				STRNCPY(g_codepage, optarg, sizeof(g_codepage));
+#else
+				error("iconv support not available\n");
+#endif
 				break;
 
 			case 'd':
@@ -676,6 +696,20 @@ main(int argc, char *argv[])
 		STRNCPY(g_username, pw->pw_name, sizeof(g_username));
 	}
 
+#ifdef HAVE_ICONV
+	if (g_codepage[0] == 0)
+	{
+		if (setlocale(LC_CTYPE, ""))
+		{
+			STRNCPY(g_codepage, nl_langinfo(CODESET), sizeof(g_codepage));
+		}
+		else
+		{
+			STRNCPY(g_codepage, DEFAULT_CODEPAGE, sizeof(g_codepage));
+		}
+	}
+#endif
+ 
 	if (g_hostname[0] == 0)
 	{
 		if (gethostname(fullhostname, sizeof(fullhostname)) == -1)

@@ -19,10 +19,17 @@
 */
 
 #include <time.h>
+#include <errno.h>
+#include <unistd.h>
 #include "rdesktop.h"
 
+#ifdef HAVE_ICONV_H
+#include <iconv.h>
+#endif
+
 extern uint16 g_mcs_userid;
-extern char g_username[16];
+extern char g_username[64];
+extern char g_codepage[16];
 extern BOOL g_bitmap_compression;
 extern BOOL g_orders;
 extern BOOL g_encryption;
@@ -141,6 +148,54 @@ rdp_send_data(STREAM s, uint8 data_pdu_type)
 void
 rdp_out_unistr(STREAM s, char *string, int len)
 {
+#ifdef	HAVE_ICONV
+	size_t ibl = strlen(string), obl = len + 2;
+	static iconv_t iconv_h = (iconv_t)-1;
+	char   *pin = string, *pout;
+#ifdef	B_ENDIAN
+	char ss[4096];	// FIXME: global MAX_BUF_SIZE macro need
+
+	pout = ss;
+#else
+	pout = s->p;
+#endif
+
+	memset(pout, 0, len + 4);
+
+	if (iconv_h == (iconv_t)-1)
+	{
+		size_t i = 1, o = 4;
+		if ((iconv_h = iconv_open(WINDOWS_CODEPAGE, g_codepage)) == (iconv_t)-1)
+		{
+			printf("rdp_out_unistr: iconv_open[%s -> %s] fail %d\n",
+				g_codepage, WINDOWS_CODEPAGE, (int)iconv_h);
+			return;
+		}
+		if (iconv(iconv_h, (const char**)&pin, &i, &pout, &o) == (size_t)-1)
+		{
+			iconv_close(iconv_h);
+			iconv_h = (iconv_t)-1;
+			printf("rdp_out_unistr: iconv(1) fail, errno %d\n", errno);
+			return;
+		}
+		pin = string; pout = s->p;
+	}
+
+	if (iconv(iconv_h, (const char**)&pin, &ibl, &pout, &obl) == (size_t)-1)
+	{
+		iconv_close(iconv_h);
+		iconv_h = (iconv_t)-1;
+		printf("rdp_out_unistr: iconv(2) fail, errno %d\n", errno);
+		return;
+	}
+
+#ifdef	B_ENDIAN
+	swab(ss, s->p, len + 4);
+#endif
+
+	s->p += len + 2;
+
+#else /*HAVE_ICONV undef*/
 	int i = 0, j = 0;
 
 	len += 2;
@@ -150,8 +205,9 @@ rdp_out_unistr(STREAM s, char *string, int len)
 		s->p[i++] = string[j++];
 		s->p[i++] = 0;
 	}
-
+	
 	s->p += len;
+#endif
 }
 
 /* Input a string in Unicode
@@ -161,6 +217,38 @@ rdp_out_unistr(STREAM s, char *string, int len)
 int
 rdp_in_unistr(STREAM s, char *string, int uni_len)
 {
+#ifdef	HAVE_ICONV
+	size_t ibl = uni_len, obl = uni_len;
+	char *pin, *pout = string;
+	static iconv_t iconv_h = (iconv_t)-1;
+#ifdef	B_ENDIAN
+	char ss[4096];	// FIXME: global MAX_BUF_SIZE macro need
+
+	swab(s->p, ss, uni_len);
+	pin = ss;
+#else
+	pin = s->p;
+#endif
+
+	if (iconv_h == (iconv_t)-1)
+	{
+		if ((iconv_h = iconv_open(g_codepage, WINDOWS_CODEPAGE)) == (iconv_t)-1)
+		{
+			printf("rdp_in_unistr: iconv_open[%s -> %s] fail %d\n",
+				WINDOWS_CODEPAGE, g_codepage, (int)iconv_h);
+			return 0;
+		}
+	}
+
+	if (iconv(iconv_h, (const char**)&pin, &ibl, &pout, &obl) == (size_t)-1)
+	{
+		iconv_close(iconv_h);
+		iconv_h = (iconv_t)-1;
+		printf("rdp_in_unistr: iconv fail, errno %d\n", errno);
+		return 0;
+	}
+	return pout - string;
+#else /* HAVE_ICONV undef */
 	int i = 0;
 
 	while (i < uni_len / 2)
@@ -170,6 +258,7 @@ rdp_in_unistr(STREAM s, char *string, int uni_len)
 	}
 
 	return i - 1;
+#endif
 }
 
 
