@@ -455,7 +455,7 @@ rdp_send_scancode(uint32 time, uint16 flags, uint16 scancode)
 	}
 	else
 	{
-		DEBUG_KBD(("Sending scancode=0x%x, flags=0x%x\n", scancode, flags);
-			  rdp_send_input(time, RDP_INPUT_SCANCODE, flags, scancode, 0));
+		DEBUG_KBD(("Sending scancode=0x%x, flags=0x%x\n", scancode, flags));
+		rdp_send_input(time, RDP_INPUT_SCANCODE, flags, scancode, 0);
 	}
 }
