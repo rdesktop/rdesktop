@@ -58,7 +58,13 @@ rdp_recv(uint8 * type)
 		rdp_s = sec_recv(&rdpver);
 		if (rdp_s == NULL)
 			return NULL;
-		if (rdpver != 3)
+		if (rdpver == 0xff)
+		{
+			g_next_packet = rdp_s->end;
+			*type = 0;
+			return rdp_s;
+		}
+		else if (rdpver != 3)
 		{
 			/* rdp5_process should move g_next_packet ok */
 			rdp5_process(rdp_s);
