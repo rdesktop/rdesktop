@@ -24,7 +24,7 @@
 
 
 /* BITMAP CACHE */
-static HBITMAP bmpcache[3][600];
+static HBITMAP g_bmpcache[3][600];
 
 /* Retrieve a bitmap from the cache */
 HBITMAP
@@ -32,9 +32,9 @@ cache_get_bitmap(uint8 cache_id, uint16 cache_idx)
 {
 	HBITMAP bitmap;
 
-	if ((cache_id < NUM_ELEMENTS(bmpcache)) && (cache_idx < NUM_ELEMENTS(bmpcache[0])))
+	if ((cache_id < NUM_ELEMENTS(g_bmpcache)) && (cache_idx < NUM_ELEMENTS(g_bmpcache[0])))
 	{
-		bitmap = bmpcache[cache_id][cache_idx];
+		bitmap = g_bmpcache[cache_id][cache_idx];
 		if (bitmap != NULL)
 			return bitmap;
 	}
@@ -49,13 +49,13 @@ cache_put_bitmap(uint8 cache_id, uint16 cache_idx, HBITMAP bitmap)
 {
 	HBITMAP old;
 
-	if ((cache_id < NUM_ELEMENTS(bmpcache)) && (cache_idx < NUM_ELEMENTS(bmpcache[0])))
+	if ((cache_id < NUM_ELEMENTS(g_bmpcache)) && (cache_idx < NUM_ELEMENTS(g_bmpcache[0])))
 	{
-		old = bmpcache[cache_id][cache_idx];
+		old = g_bmpcache[cache_id][cache_idx];
 		if (old != NULL)
 			ui_destroy_bitmap(old);
 
-		bmpcache[cache_id][cache_idx] = bitmap;
+		g_bmpcache[cache_id][cache_idx] = bitmap;
 	}
 	else
 	{
@@ -65,7 +65,7 @@ cache_put_bitmap(uint8 cache_id, uint16 cache_idx, HBITMAP bitmap)
 
 
 /* FONT CACHE */
-static FONTGLYPH fontcache[12][256];
+static FONTGLYPH g_fontcache[12][256];
 
 /* Retrieve a glyph from the font cache */
 FONTGLYPH *
@@ -73,9 +73,9 @@ cache_get_font(uint8 font, uint16 character)
 {
 	FONTGLYPH *glyph;
 
-	if ((font < NUM_ELEMENTS(fontcache)) && (character < NUM_ELEMENTS(fontcache[0])))
+	if ((font < NUM_ELEMENTS(g_fontcache)) && (character < NUM_ELEMENTS(g_fontcache[0])))
 	{
-		glyph = &fontcache[font][character];
+		glyph = &g_fontcache[font][character];
 		if (glyph->pixmap != NULL)
 			return glyph;
 	}
@@ -91,9 +91,9 @@ cache_put_font(uint8 font, uint16 character, uint16 offset,
 {
 	FONTGLYPH *glyph;
 
-	if ((font < NUM_ELEMENTS(fontcache)) && (character < NUM_ELEMENTS(fontcache[0])))
+	if ((font < NUM_ELEMENTS(g_fontcache)) && (character < NUM_ELEMENTS(g_fontcache[0])))
 	{
-		glyph = &fontcache[font][character];
+		glyph = &g_fontcache[font][character];
 		if (glyph->pixmap != NULL)
 			ui_destroy_glyph(glyph->pixmap);
 
@@ -111,7 +111,7 @@ cache_put_font(uint8 font, uint16 character, uint16 offset,
 
 
 /* TEXT CACHE */
-static DATABLOB textcache[256];
+static DATABLOB g_textcache[256];
 
 /* Retrieve a text item from the cache */
 DATABLOB *
@@ -119,9 +119,9 @@ cache_get_text(uint8 cache_id)
 {
 	DATABLOB *text;
 
-	if (cache_id < NUM_ELEMENTS(textcache))
+	if (cache_id < NUM_ELEMENTS(g_textcache))
 	{
-		text = &textcache[cache_id];
+		text = &g_textcache[cache_id];
 		if (text->data != NULL)
 			return text;
 	}
@@ -136,9 +136,9 @@ cache_put_text(uint8 cache_id, void *data, int length)
 {
 	DATABLOB *text;
 
-	if (cache_id < NUM_ELEMENTS(textcache))
+	if (cache_id < NUM_ELEMENTS(g_textcache))
 	{
-		text = &textcache[cache_id];
+		text = &g_textcache[cache_id];
 		if (text->data != NULL)
 			xfree(text->data);
 
@@ -154,7 +154,7 @@ cache_put_text(uint8 cache_id, void *data, int length)
 
 
 /* DESKTOP CACHE */
-static uint8 deskcache[0x38400 * 4];
+static uint8 g_deskcache[0x38400 * 4];
 
 /* Retrieve desktop data from the cache */
 uint8 *
@@ -162,9 +162,9 @@ cache_get_desktop(uint32 offset, int cx, int cy, int bytes_per_pixel)
 {
 	int length = cx * cy * bytes_per_pixel;
 
-	if ((offset + length) <= sizeof(deskcache))
+	if ((offset + length) <= sizeof(g_deskcache))
 	{
-		return &deskcache[offset];
+		return &g_deskcache[offset];
 	}
 
 	error("get desktop %d:%d\n", offset, length);
@@ -177,12 +177,12 @@ cache_put_desktop(uint32 offset, int cx, int cy, int scanline, int bytes_per_pix
 {
 	int length = cx * cy * bytes_per_pixel;
 
-	if ((offset + length) <= sizeof(deskcache))
+	if ((offset + length) <= sizeof(g_deskcache))
 	{
 		cx *= bytes_per_pixel;
 		while (cy--)
 		{
-			memcpy(&deskcache[offset], data, cx);
+			memcpy(&g_deskcache[offset], data, cx);
 			data += scanline;
 			offset += cx;
 		}
@@ -195,7 +195,7 @@ cache_put_desktop(uint32 offset, int cx, int cy, int scanline, int bytes_per_pix
 
 
 /* CURSOR CACHE */
-static HCURSOR cursorcache[0x20];
+static HCURSOR g_cursorcache[0x20];
 
 /* Retrieve cursor from cache */
 HCURSOR
@@ -203,9 +203,9 @@ cache_get_cursor(uint16 cache_idx)
 {
 	HCURSOR cursor;
 
-	if (cache_idx < NUM_ELEMENTS(cursorcache))
+	if (cache_idx < NUM_ELEMENTS(g_cursorcache))
 	{
-		cursor = cursorcache[cache_idx];
+		cursor = g_cursorcache[cache_idx];
 		if (cursor != NULL)
 			return cursor;
 	}
@@ -220,13 +220,13 @@ cache_put_cursor(uint16 cache_idx, HCURSOR cursor)
 {
 	HCURSOR old;
 
-	if (cache_idx < NUM_ELEMENTS(cursorcache))
+	if (cache_idx < NUM_ELEMENTS(g_cursorcache))
 	{
-		old = cursorcache[cache_idx];
+		old = g_cursorcache[cache_idx];
 		if (old != NULL)
 			ui_destroy_cursor(old);
 
-		cursorcache[cache_idx] = cursor;
+		g_cursorcache[cache_idx] = cursor;
 	}
 	else
 	{
