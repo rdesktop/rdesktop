@@ -293,7 +293,7 @@ ui_deinit(void)
 	if (IM != NULL)
 		XCloseIM(IM);
 
-	XFreeModifierMap(mod_map);
+	XFreeModifiermap(mod_map);
 
 	if (ownbackstore)
 		XFreePixmap(display, backstore);
@@ -548,7 +548,7 @@ xwin_process_events(void)
 
 				if (xevent.xmapping.request == MappingModifier)
 				{
-					XFreeModifierMap(mod_map);
+					XFreeModifiermap(mod_map);
 					mod_map = XGetModifierMapping(display);
 				}
 				break;
