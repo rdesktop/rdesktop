@@ -71,14 +71,14 @@ usage(char *program)
 	fprintf(stderr, "   -c: working directory\n");
 	fprintf(stderr, "   -p: password (- to prompt)\n");
 	fprintf(stderr, "   -n: client hostname\n");
-	fprintf(stderr, "   -k: keyboard layout on terminal server (us,sv,gr etc.)\n");
+	fprintf(stderr, "   -k: keyboard layout on terminal server (us,sv,gr,etc.)\n");
 	fprintf(stderr, "   -g: desktop geometry (WxH)\n");
 	fprintf(stderr, "   -f: full-screen mode\n");
 	fprintf(stderr, "   -b: force bitmap updates\n");
 	fprintf(stderr, "   -e: disable encryption (French TS)\n");
 	fprintf(stderr, "   -m: do not send motion events\n");
 	fprintf(stderr, "   -K: keep window manager key bindings\n");
-	fprintf(stderr, "   -w: window title\n");
+	fprintf(stderr, "   -T: window title\n");
 }
 
 static BOOL
@@ -138,7 +138,7 @@ main(int argc, char *argv[])
 	domain[0] = password[0] = shell[0] = directory[0] = 0;
 	strcpy(keymapname, "us");
 
-	while ((c = getopt(argc, argv, "u:d:s:c:p:n:k:g:fbemKw:h?")) != -1)
+	while ((c = getopt(argc, argv, "u:d:s:c:p:n:k:g:fbemKT:h?")) != -1)
 	{
 		switch (c)
 		{
@@ -214,7 +214,7 @@ main(int argc, char *argv[])
 				grab_keyboard = False;
 				break;
 
-			case 'w':
+			case 'T':
 				STRNCPY(title, optarg, sizeof(title));
 				break;
 
