@@ -631,6 +631,7 @@ sec_connect(char *server)
 	sec_process_mcs_data(&mcs_data);
 	if (encryption)
 		sec_establish_key();
+	xfree(mcs_data.data);
 	return True;
 }
 
