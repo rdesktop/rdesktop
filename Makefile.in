@@ -82,6 +82,10 @@ proto:
 clean:
 	rm -f *.o *~ vnc/*.o vnc/*~ rdesktop rdp2vnc
 
+.PHONY: distclean
+distclean: clean
+	rm -rf autom4te.cache config.log config.status Makefile
+
 .PHONY: dist
 dist: rdesktop-$(VERSION).tar.gz
 
