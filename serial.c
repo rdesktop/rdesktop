@@ -55,16 +55,8 @@
 
 extern RDPDR_DEVICE g_rdpdr_device[];
 
-int serial_fd;
-struct termios termios;
-
-int dtr;
-uint32 baud_rate;
-uint32 queue_in_size, queue_out_size;
-uint32 wait_mask;
-uint8 stop_bits, parity, word_length;
-
-SERIAL_DEVICE * get_serial_info(HANDLE handle)
+SERIAL_DEVICE *
+get_serial_info(HANDLE handle)
 {
 	int index;
 
@@ -198,11 +190,16 @@ get_termios(SERIAL_DEVICE * pser_inf, HANDLE serial_fd)
 }
 
 static void
-set_termios(void)
+set_termios(SERIAL_DEVICE * pser_inf, HANDLE serial_fd)
 {
 	speed_t speed;
 
-	switch (baud_rate)
+	struct termios *ptermios;
+
+	ptermios = pser_inf->ptermios;
+
+
+	switch (pser_inf->baud_rate)
 	{
 #ifdef B75
 		case 75:
@@ -286,42 +283,42 @@ set_termios(void)
 
 	/* on systems with separate ispeed and ospeed, we can remember the speed
 	   in ispeed while changing DTR with ospeed */
-	cfsetispeed(&termios, speed);
-	cfsetospeed(&termios, dtr ? speed : 0);
+	cfsetispeed(pser_inf->ptermios, speed);
+	cfsetospeed(pser_inf->ptermios, pser_inf->dtr ? speed : 0);
 
-	termios.c_cflag &= ~(CSTOPB | PARENB | PARODD | CSIZE);
-	switch (stop_bits)
+	ptermios->c_cflag &= ~(CSTOPB | PARENB | PARODD | CSIZE);
+	switch (pser_inf->stop_bits)
 	{
 		case STOP_BITS_2:
-			termios.c_cflag |= CSTOPB;
+			ptermios->c_cflag |= CSTOPB;
 			break;
 	}
-	switch (parity)
+	switch (pser_inf->parity)
 	{
 		case EVEN_PARITY:
-			termios.c_cflag |= PARENB;
+			ptermios->c_cflag |= PARENB;
 			break;
 		case ODD_PARITY:
-			termios.c_cflag |= PARENB | PARODD;
+			ptermios->c_cflag |= PARENB | PARODD;
 			break;
 	}
-	switch (word_length)
+	switch (pser_inf->word_length)
 	{
 		case 5:
-			termios.c_cflag |= CS5;
+			ptermios->c_cflag |= CS5;
 			break;
 		case 6:
-			termios.c_cflag |= CS6;
+			ptermios->c_cflag |= CS6;
 			break;
 		case 7:
-			termios.c_cflag |= CS7;
+			ptermios->c_cflag |= CS7;
 			break;
 		default:
-			termios.c_cflag |= CS8;
+			ptermios->c_cflag |= CS8;
 			break;
 	}
 
-	tcsetattr(serial_fd, TCSANOW, &termios);
+	tcsetattr(serial_fd, TCSANOW, ptermios);
 }
 
 /* Enumeration of devices from rdesktop.c        */
@@ -380,7 +377,10 @@ serial_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 disposi
 	serial_fd = open(g_rdpdr_device[device_id].local_path, O_RDWR | O_NOCTTY);
 
 	if (serial_fd == -1)
+	{
+		perror("open");
 		return STATUS_ACCESS_DENIED;
+	}
 
 	if (!get_termios(pser_inf, serial_fd))
 		return STATUS_ACCESS_DENIED;
@@ -392,8 +392,13 @@ serial_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 disposi
 	printf("INFO: SERIAL %s to %s\nINFO: speed %u baud, stop bits %u, parity %u, word length %u bits, dtr %u\n", g_rdpdr_device[device_id].name, g_rdpdr_device[device_id].local_path, pser_inf->baud_rate, pser_inf->stop_bits, pser_inf->parity, pser_inf->word_length, pser_inf->dtr);
 	printf("INFO: use stty to change settings\n");
 
-	//tcgetattr(serial_fd, pser_inf->ptermios);
+/*	ptermios->c_cflag = B115200 | CRTSCTS | CS8 | CLOCAL | CREAD;
+	ptermios->c_cflag |= CREAD;
+	ptermios->c_lflag |= ICANON;
+	ptermios->c_iflag = IGNPAR | ICRNL;
 
+	tcsetattr(serial_fd, TCSANOW, ptermios);
+*/
 	*handle = serial_fd;
 	return STATUS_SUCCESS;
 }
@@ -401,7 +406,8 @@ serial_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 disposi
 static NTSTATUS
 serial_close(HANDLE handle)
 {
-	close(serial_fd);
+	g_rdpdr_device[get_device_index(handle)].handle = 0;
+	close(handle);
 	return STATUS_SUCCESS;
 }
 
@@ -412,10 +418,11 @@ serial_read(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * 
 	SERIAL_DEVICE *pser_inf;
 	struct termios *ptermios;
 
-	timeout = 0;
+//      timeout = 90;
 	pser_inf = get_serial_info(handle);
 	ptermios = pser_inf->ptermios;
 
+#if 0
 	// Set timeouts kind of like the windows serial timeout parameters. Multiply timeout
 	// with requested read size
 	if (pser_inf->read_total_timeout_multiplier | pser_inf->read_total_timeout_constant)
@@ -443,7 +450,7 @@ serial_read(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * 
 		ptermios->c_cc[VMIN] = 1;
 	}
 	tcsetattr(handle, TCSANOW, ptermios);
-
+#endif
 	*result = read(handle, data, length);
 	return STATUS_SUCCESS;
 }
@@ -460,9 +467,14 @@ serial_device_control(HANDLE handle, uint32 request, STREAM in, STREAM out)
 {
 	uint32 result;
 	uint8 immediate;
+	SERIAL_DEVICE *pser_inf;
+	struct termios *ptermios;
 
 	if ((request >> 16) != FILE_DEVICE_SERIAL_PORT)
 		return STATUS_INVALID_PARAMETER;
+
+	pser_inf = get_serial_info(handle);
+	ptermios = pser_inf->ptermios;
 
 	/* extract operation */
 	request >>= 2;
@@ -473,26 +485,26 @@ serial_device_control(HANDLE handle, uint32 request, STREAM in, STREAM out)
 	switch (request)
 	{
 		case SERIAL_SET_BAUD_RATE:
-			in_uint32_le(in, baud_rate);
-			set_termios();
+			in_uint32_le(in, pser_inf->baud_rate);
+			set_termios(pser_inf, handle);
 			break;
 		case SERIAL_GET_BAUD_RATE:
-			out_uint32_le(out, baud_rate);
+			out_uint32_le(out, pser_inf->baud_rate);
 			break;
 		case SERIAL_SET_QUEUE_SIZE:
-			in_uint32_le(in, queue_in_size);
-			in_uint32_le(in, queue_out_size);
+			in_uint32_le(in, pser_inf->queue_in_size);
+			in_uint32_le(in, pser_inf->queue_out_size);
 			break;
 		case SERIAL_SET_LINE_CONTROL:
-			in_uint8(in, stop_bits);
-			in_uint8(in, parity);
-			in_uint8(in, word_length);
-			set_termios();
+			in_uint8(in, pser_inf->stop_bits);
+			in_uint8(in, pser_inf->parity);
+			in_uint8(in, pser_inf->word_length);
+			set_termios(pser_inf, handle);
 			break;
 		case SERIAL_GET_LINE_CONTROL:
-			out_uint8(out, stop_bits);
-			out_uint8(out, parity);
-			out_uint8(out, word_length);
+			out_uint8(out, pser_inf->stop_bits);
+			out_uint8(out, pser_inf->parity);
+			out_uint8(out, pser_inf->word_length);
 			break;
 		case SERIAL_IMMEDIATE_CHAR:
 			in_uint8(in, immediate);
@@ -523,18 +535,18 @@ serial_device_control(HANDLE handle, uint32 request, STREAM in, STREAM out)
 			out_uint8s(out, 20);
 			break;
 		case SERIAL_GET_WAIT_MASK:
-			out_uint32(out, wait_mask);
+			out_uint32(out, pser_inf->wait_mask);
 			break;
 		case SERIAL_SET_WAIT_MASK:
-			in_uint32(in, wait_mask);
+			in_uint32(in, pser_inf->wait_mask);
 			break;
 		case SERIAL_SET_DTR:
-			dtr = 1;
-			set_termios();
+			pser_inf->dtr = 1;
+			set_termios(pser_inf, handle);
 			break;
 		case SERIAL_CLR_DTR:
-			dtr = 0;
-			set_termios();
+			pser_inf->dtr = 0;
+			set_termios(pser_inf, handle);
 			break;
 #if 0
 		case SERIAL_WAIT_ON_MASK:
@@ -579,7 +591,7 @@ serial_device_control(HANDLE handle, uint32 request, STREAM in, STREAM out)
 
 /* Read timeout for a given file descripter (device) when adding fd's to select() */
 BOOL
-serial_get_timeout(uint32 handle, uint32 length, uint32 * timeout, uint32 * itv_timeout)
+serial_get_timeout(HANDLE handle, uint32 length, uint32 * timeout, uint32 * itv_timeout)
 {
 	int index;
 	SERIAL_DEVICE *pser_inf;
