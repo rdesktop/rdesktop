@@ -40,6 +40,7 @@ extern int keylayout;
 extern BOOL g_encryption;
 extern BOOL g_licence_issued;
 extern BOOL g_use_rdp5;
+extern BOOL g_console_session;
 extern int g_server_bpp;
 extern uint16 mcs_userid;
 extern VCHANNEL g_channels[];
@@ -474,7 +475,7 @@ sec_out_mcs_data(STREAM s)
 
 	out_uint16_le(s, SEC_TAG_CLI_4);
 	out_uint16_le(s, 12);
-	out_uint32_le(s, 9);
+	out_uint32_le(s, g_console_session ? 0xb : 9);
 	out_uint32(s, 0);
 
 	/* Client encryption settings */

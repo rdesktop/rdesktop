@@ -61,6 +61,7 @@ BOOL g_fullscreen = False;
 BOOL g_grab_keyboard = True;
 BOOL g_hide_decorations = False;
 BOOL g_use_rdp5 = True;
+BOOL g_console_session = False;
 extern BOOL g_owncolmap;
 
 #ifdef RDP2VNC
@@ -102,8 +103,9 @@ usage(char *program)
 	fprintf(stderr, "   -T: window title\n");
 	fprintf(stderr, "   -D: hide window manager decorations\n");
 	fprintf(stderr, "   -a: server bpp\n");
-	fprintf(stderr, "   -4: Use RDP version 4\n");
-	fprintf(stderr, "   -5: Use RDP version 5 (default)\n");
+	fprintf(stderr, "   -0: attach to console\n");
+	fprintf(stderr, "   -4: use RDP version 4\n");
+	fprintf(stderr, "   -5: use RDP version 5 (default)\n");
 }
 
 static BOOL
@@ -218,7 +220,7 @@ main(int argc, char *argv[])
 #define VNCOPT
 #endif
 
-	while ((c = getopt(argc, argv, VNCOPT "u:d:s:S:c:p:n:k:g:a:fbeEmCKT:Dh?54")) != -1)
+	while ((c = getopt(argc, argv, VNCOPT "u:d:s:S:c:p:n:k:g:a:fbeEmCKT:D045h?")) != -1)
 	{
 		switch (c)
 		{
@@ -354,6 +356,10 @@ main(int argc, char *argv[])
 					error("invalid server bpp\n");
 					return 1;
 				}
+				break;
+
+			case '0':
+				g_console_session = True;
 				break;
 
 			case '4':
