@@ -57,7 +57,8 @@ static BOOL g_mouse_in_wnd;
 /* endianness */
 static BOOL g_host_be;
 static BOOL g_xserver_be;
-static BOOL g_xserver_bgr;
+static int g_red_shift_r, g_blue_shift_r, g_green_shift_r;
+static int g_red_shift_l, g_blue_shift_l, g_green_shift_l;
 
 /* software backing store */
 static BOOL g_ownbackstore;
@@ -113,7 +114,7 @@ BOOL g_owncolmap = False;
 static Colormap g_xcolmap;
 static uint32 *g_colmap = NULL;
 
-#define TRANSLATE(col)		( g_server_bpp != 8 ? translate_colour(col) : g_owncolmap ? col : translate_colour(g_colmap[col]) )
+#define TRANSLATE(col)		( g_server_bpp != 8 ? translate_colour(col) : g_owncolmap ? col : g_colmap[col] )
 #define SET_FOREGROUND(col)	XSetForeground(g_display, g_gc, TRANSLATE(col));
 #define SET_BACKGROUND(col)	XSetBackground(g_display, g_gc, TRANSLATE(col));
 
@@ -198,34 +199,11 @@ split_colour24(uint32 colour)
 }
 
 static uint32
-make_colour16(PixelColour pc)
+make_colour(PixelColour pc)
 {
-	pc.red = (pc.red * 0x1f) / 0xff;
-	pc.green = (pc.green * 0x3f) / 0xff;
-	pc.blue = (pc.blue * 0x1f) / 0xff;
-	if (g_xserver_bgr)
-		return (pc.blue << 11) | (pc.green << 5) | pc.red;
-	else
-		return (pc.red << 11) | (pc.green << 5) | pc.blue;
-		
-}
-
-static uint32
-make_colour24(PixelColour pc)
-{
-	if (g_xserver_bgr)
-		return (pc.blue << 16) | (pc.green << 8) | pc.red;
-	else
-		return (pc.red << 16) | (pc.green << 8) | pc.blue;
-}
-
-static uint32
-make_colour32(PixelColour pc)
-{
-	if (g_xserver_bgr)
-		return (pc.blue << 16) | (pc.green << 8) | pc.red;
-	else
-		return (pc.red << 16) | (pc.green << 8) | pc.blue;
+	return (((pc.red >> g_red_shift_r) << g_red_shift_l)
+		| ((pc.green >> g_green_shift_r) << g_green_shift_l)
+		| ((pc.blue >> g_blue_shift_r) << g_blue_shift_l));
 }
 
 #define BSWAP16(x) { x = (((x & 0xff) << 8) | (x >> 8)); }
@@ -236,51 +214,20 @@ make_colour32(PixelColour pc)
 static uint32
 translate_colour(uint32 colour)
 {
+	PixelColour pc;
 	switch (g_server_bpp)
 	{
 		case 15:
-			switch (g_bpp)
-			{
-				case 16:
-					colour = make_colour16(split_colour15(colour));
-					break;
-				case 24:
-					colour = make_colour24(split_colour15(colour));
-					break;
-				case 32:
-					colour = make_colour32(split_colour15(colour));
-					break;
-			}
+			pc = split_colour15(colour);
 			break;
 		case 16:
-			switch (g_bpp)
-			{
-				case 16:
-					break;
-				case 24:
-					colour = make_colour24(split_colour16(colour));
-					break;
-				case 32:
-					colour = make_colour32(split_colour16(colour));
-					break;
-			}
+			pc = split_colour16(colour);
 			break;
 		case 24:
-			switch (g_bpp)
-			{
-				case 16:
-					colour = make_colour16(split_colour24(colour));
-					break;
-				case 24:
-					colour = make_colour24(split_colour24(colour));
-					break;
-				case 32:
-					colour = make_colour32(split_colour24(colour));
-					break;
-			}
+			pc = split_colour24(colour);
 			break;
 	}
-	return colour;
+	return make_colour(pc);
 }
 
 static void
@@ -380,7 +327,7 @@ translate15to16(uint16 * data, uint8 * out, uint8 * end)
 			BSWAP16(pixel);
 		}
 
-		value = make_colour16(split_colour15(pixel));
+		value = make_colour(split_colour15(pixel));
 
 		if (g_xserver_be)
 		{
@@ -410,7 +357,7 @@ translate15to24(uint16 * data, uint8 * out, uint8 * end)
 			BSWAP16(pixel);
 		}
 
-		value = make_colour24(split_colour15(pixel));
+		value = make_colour(split_colour15(pixel));
 		if (g_xserver_be)
 		{
 			*(out++) = value >> 16;
@@ -441,7 +388,7 @@ translate15to32(uint16 * data, uint8 * out, uint8 * end)
 			BSWAP16(pixel);
 		}
 
-		value = make_colour32(split_colour15(pixel));
+		value = make_colour(split_colour15(pixel));
 
 		if (g_xserver_be)
 		{
@@ -504,7 +451,7 @@ translate16to24(uint16 * data, uint8 * out, uint8 * end)
 			BSWAP16(pixel);
 		}
 
-		value = make_colour24(split_colour16(pixel));
+		value = make_colour(split_colour16(pixel));
 
 		if (g_xserver_be)
 		{
@@ -535,7 +482,7 @@ translate16to32(uint16 * data, uint8 * out, uint8 * end)
 		{
 		BSWAP16(pixel)}
 
-		value = make_colour32(split_colour16(pixel));
+		value = make_colour(split_colour16(pixel));
 
 		if (g_xserver_be)
 		{
@@ -565,7 +512,7 @@ translate24to16(uint8 * data, uint8 * out, uint8 * end)
 		pixel |= *(data++) << 8;
 		pixel |= *(data++);
 
-		value = (uint16) make_colour16(split_colour24(pixel));
+		value = (uint16) make_colour(split_colour24(pixel));
 
 		if (g_xserver_be)
 		{
@@ -709,12 +656,21 @@ get_key_state(unsigned int state, uint32 keysym)
 	return (state & keysymMask) ? True : False;
 }
 
+static void
+calculate_shifts(uint32 mask, int *shift_r, int *shift_l)
+{
+	*shift_l = ffs(mask) - 1;
+	mask >>= *shift_l;
+	*shift_r = 8 - ffs(mask & ~(mask >> 1));
+}
+
 BOOL
 ui_init(void)
 {
+	XVisualInfo vi;
 	XPixmapFormatValues *pfm;
 	uint16 test;
-	int i;
+	int i, screen_num;
 
 	g_display = XOpenDisplay(NULL);
 	if (g_display == NULL)
@@ -723,10 +679,31 @@ ui_init(void)
 		return False;
 	}
 
+	screen_num = DefaultScreen(g_display);
 	g_x_socket = ConnectionNumber(g_display);
-	g_screen = DefaultScreenOfDisplay(g_display);
-	g_visual = DefaultVisualOfScreen(g_screen);
+	g_screen = ScreenOfDisplay(g_display, screen_num);
 	g_depth = DefaultDepthOfScreen(g_screen);
+
+	if (g_server_bpp == 8)
+	{
+		/* we use a colourmap, so any visual should do */
+		g_visual = DefaultVisualOfScreen(g_screen);
+	}
+	else
+	{
+		/* need a truecolour visual */
+		if (!XMatchVisualInfo(g_display, screen_num, g_depth, TrueColor, &vi))
+		{
+			error("The display does not support true colour - high colour support unavailable.\n");
+			return False;
+		}
+
+		g_visual = vi.visual;
+		g_owncolmap = False;
+		calculate_shifts(vi.red_mask,   &g_red_shift_r,   &g_red_shift_l);
+		calculate_shifts(vi.blue_mask,  &g_blue_shift_r,  &g_blue_shift_l);
+		calculate_shifts(vi.green_mask, &g_green_shift_r, &g_green_shift_l);
+	}
 
 	pfm = XListPixmapFormats(g_display, &i);
 	if (pfm != NULL)
@@ -750,10 +727,6 @@ ui_init(void)
 		return False;
 	}
 
-	/* private colour map code only works for 8 bpp */
-	if (g_owncolmap && (g_bpp > 8))
-		g_owncolmap = False;
-
 	if (!g_owncolmap)
 	{
 		g_xcolmap = DefaultColormapOfScreen(g_screen);
@@ -769,7 +742,6 @@ ui_init(void)
 	test = 1;
 	g_host_be = !(BOOL) (*(uint8 *) (&test));
 	g_xserver_be = (ImageByteOrder(g_display) == MSBFirst);
-	g_xserver_bgr = (g_visual->blue_mask > g_visual->red_mask);
 
 	/*
 	 * Determine desktop size
@@ -1574,9 +1546,7 @@ ui_create_colourmap(COLOURMAP * colours)
 
 			}
 
-
-			/* byte swap here to make translate_image faster */
-			map[i] = translate_colour(colour);
+			map[i] = colour;
 		}
 		return map;
 	}
