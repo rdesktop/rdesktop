@@ -26,7 +26,10 @@ typedef struct window
 	Display *display;
 	Window wnd;
 	GC gc;
+	Visual *visual;
 
 } *HWINDOW;
 
 typedef XImage *HBITMAP;
+typedef Colormap HCOLORMAP;
+

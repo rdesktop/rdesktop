@@ -19,245 +19,175 @@
 */
 
 #include "includes.h"
-#include <fcntl.h>
 
-#define BITMAP_DEBUG 1
+#define CVAL(p)   (*(p++))
+#define SVAL(p)   ((*((p++) + 1) << 8) | CVAL(p))
 
-#if BITMAP_DEBUG
-void hexdump(char *filename, unsigned char *data, int length);
-#endif
+#define REPEAT(statement) { while ((count > 0) && (x < width)) { statement; count--; x++; } }
+#define MASK_UPDATE() { maskpix <<= 1; if (maskpix == 0) { mask = CVAL(input); maskpix = 1; } }
 
-#define RCVAL()   (*(input++))
-#define RSVAL()   ((*((input++) + 1) << 8) | RCVAL())
-#define SCVAL(v)  {*(output++) = (v);}
-
-#define FILL()    {while (n-- > 0) { if (output - start < width) { SCVAL(0) } else { SCVAL(*(output-width)); }}}
-#define MIX()     {while (n-- > 0) { if (output - start < width) { SCVAL(mix) } else { SCVAL(*(output-width) ^ mix); }}}
-#define COPY()    {while (n-- > 0) { SCVAL(RCVAL()); }}
-#define COLOR()   {int color = RCVAL(); \
-                   while (n-- > 0) { SCVAL(color); }}
-#define BICOLOR() {int color1 = RCVAL(); int color2 = RCVAL(); \
-                   while (n-- > 0) { SCVAL(color1); SCVAL(color2); }}
-#define SETMIX_MIX() {mix = RCVAL(); MIX();}
-#define COPY_PACKED() {n++; n/=2; while (n-- > 0) \
-                      {unsigned char c = RCVAL(); SCVAL((c & 0xF0) >> 4); \
-                                                  SCVAL(c & 0x0F); }}
-
-BOOL bitmap_decompress(unsigned char *input, int size,
-		       unsigned char *output, int width)
+BOOL bitmap_decompress(unsigned char *output, int width, int height,
+		       unsigned char *input, int size)
 {
-	unsigned char *savedinput = input;
-	unsigned char *start = output;
 	unsigned char *end = input + size;
-	unsigned char code;
-	unsigned char mix = 0xFF;
-	int n, savedn;
+	unsigned char *prevline, *line = NULL;
+	int opcode, count, offset, isfillormix, x = width;
+	uint8 code, mask, maskpix, color1, color2;
+	uint8 mix = 0xff;
 
+	dump_data(input, end-input);
 	while (input < end)
 	{
-		code = RCVAL();
-		switch (code)
-		{
-		case 0x00: // Fill
-			n = RCVAL() + 32;
-			FILL();
-			break;
-		case 0xF0: // Fill
-			n = RSVAL();
-			FILL();
-			break;
-		case 0x20: // Mix
-			n = RCVAL() + 32;
-			MIX();
-			break;
-		case 0xF1: // Mix
-			n = RSVAL();
-			MIX();
-			break;
-		case 0x40: // FillOrMix
-			fprintf(stderr, "FillOrMix unsupported\n");
-			savedn = n = RCVAL() + 1;
-			MIX();
-			input += (savedn+7)/8;
-			break;
-		case 0xF2:
-			fprintf(stderr, "FillOrMix unsupported\n");
-			savedn = n = RSVAL();
-			MIX();
-			input += (savedn+7)/8;
-			break;
-		case 0x60: // Color
-			n = RCVAL() + 32;
-			COLOR();
-			break;
-		case 0xF3:
-			n = RSVAL();
-			fprintf(stderr, "Color %d\n", n);
-			COLOR();
-			break;
-		case 0x80: // Copy
-			n = RCVAL() + 32;
-			COPY();
-			break;
-		case 0xF4:
-			n = RSVAL();
-			COPY();
-			break;
-		case 0xA0: // Copy Packed
-			fprintf(stderr, "CopyPacked 1\n");
-			n = RCVAL() + 32;
-			COPY_PACKED();
-			break;
-		case 0xF5:
-			fprintf(stderr, "CopyPacked 2\n");
-			n = RSVAL();
-			COPY_PACKED();
-			break;
-		case 0xC0: // SetMix_Mix
-			fprintf(stderr, "SetMix_Mix 1\n");
-			n = RCVAL() + 16;
-			SETMIX_MIX();
-			break;
-		case 0xF6:
-			fprintf(stderr, "SetMix_Mix 2\n");
-			n = RSVAL();
-			SETMIX_MIX();
-			break;
-		case 0xD0: // SetMix_FillOrMix
-			fprintf(stderr, "SetMix_FillOrMix unsupported\n");
-			savedn = n = RCVAL() + 1;
-			SETMIX_MIX();
-			input += (savedn+7)/8;
-			break;
-		case 0xF7:
-			fprintf(stderr, "SetMix_FillOrMix unsupported\n");
-			savedn = n = RSVAL();
-			SETMIX_MIX();
-			input += (savedn+7)/8;
-			break;
-		case 0xE0: // Bicolor
-			fprintf(stderr, "Bicolor 1\n");
-			n = RCVAL() + 16;
-			BICOLOR();
-			break;
-		case 0xF8:
-			fprintf(stderr, "Bicolor 2\n");
-			n = RSVAL();
-			BICOLOR();
-			break;
-		case 0xF9: // FillOrMix_1
-			fprintf(stderr, "FillOrMix_1 unsupported\n");
-			return False;
-		case 0xFA: // FillOrMix_2
-			fprintf(stderr, "FillOrMix_2 unsupported\n");
-			return False;
-		case 0xFD: // White
-			SCVAL(0xFF);
-			break;
-		case 0xFE: // Black
-			SCVAL(0);
-			break;
-		default:
-			n = code & 31;
+		fprintf(stderr, "Offset %d from end\n", end-input);
+		code = CVAL(input);
+		opcode = code >> 4;
 
-			if (n == 0)
+		/* Handle different opcode forms */
+		switch (opcode)
+		{
+			case 0xc:
+			case 0xd:
+			case 0xe:
+				opcode -= 6;
+				count = code & 0xf;
+				offset = 16;
+				break;
+
+			case 0xf:
+				opcode = code & 0xf;
+				count = (opcode < 13) ? SVAL(input) : 1;
+				offset = 0;
+				break;
+
+			default:
+				opcode >>= 1;
+				count = code & 0x1f;
+				offset = 32;
+				break;
+		}
+
+		/* Handle strange cases for counts */
+		if (offset != 0)
+		{
+			isfillormix = ((opcode == 2) || (opcode == 7));
+
+			if (count == 0)
 			{
-				fprintf(stderr, "Undefined escape 0x%X\n", code);
-				return False;
+				if (isfillormix)
+					count = CVAL(input) + 1;
+				else
+					count = CVAL(input) + offset;
+			}
+			else if (isfillormix)
+			{
+				count <<= 3;
+			}
+		}
+
+		/* Read preliminary data */
+		maskpix = 0;
+		switch (opcode)
+		{
+			case 3: /* Color */
+				color1 = CVAL(input);
+			case 8: /* Bicolor */
+				color2 = CVAL(input);
+				break;
+			case 6: /* SetMix/Mix */
+			case 7: /* SetMix/FillOrMix */
+				mix = CVAL(input);
+				opcode -= 5;
+				break;
+		}
+
+		/* Output body */
+		while (count > 0)
+		{
+			if (x >= width)
+			{
+				if (height <= 0)
+					return True;
+
+				x = 0;
+				height--;
+
+				prevline = line;
+				line = output + height * width;
 			}
 
-			switch ((code >> 5) & 7)
+			switch (opcode)
 			{
-			case 0: // Fill
-				FILL();
-				break;
-			case 1: // Mix
-				MIX();
-				break;
-			case 2: // FillOrMix
-				fprintf(stderr, "FillOrMix unsupported\n");
-				n *= 8;
-				savedn = n;
-				MIX();
-				input += (savedn+7)/8;
-				break;
-			case 3: // Color
-				COLOR();
-				break;
-			case 4: // Copy
-				COPY();
-				break;
-			case 5: // Copy Packed
-				fprintf(stderr, "CopyPacked 3\n");
-				COPY_PACKED();
-				break;
-			case 6:
-				n = code & 15;
+				case 0: /* Fill */
+					fprintf(stderr, "Fill %d\n", count);
+					if (prevline == NULL)
+						REPEAT(line[x] = 0)
+					else
+						REPEAT(line[x] = prevline[x])
+					break;
 
-				switch ((code >> 4) & 15)
-				{
-				case 0xC:
-					fprintf(stderr, "SetMix_Mix 3\n");
-					SETMIX_MIX();
+				case 1: /* Mix */
+					fprintf(stderr, "Mix %d\n", count);
+					if (prevline == NULL)
+						REPEAT(line[x] = mix)
+					else
+						REPEAT(line[x] = prevline[x] ^ mix)
 					break;
-				case 0xD:
-					fprintf(stderr, "SetMix_FillOrMix unsupported\n");
-					n *= 8;
-					savedn = n;
-					SETMIX_MIX();
-					input += (savedn+7)/8;
+
+#if 0
+				case 2: /* Fill or Mix */
+					REPEAT(line[x] = 0);
 					break;
-				case 0xE:
-					fprintf(stderr, "Bicolor 3\n");
-					BICOLOR();
+					if (prevline == NULL)
+					    REPEAT( 
+						   MASK_UPDATE();
+
+						   if (mask & maskpix)
+							line[x] = mix;
+						   else
+							line[x] = 0;
+					    )
+					else
+					    REPEAT(
+						   MASK_UPDATE();
+
+						   if (mask & maskpix)
+							line[x] = prevline[x] ^ mix;
+						   else
+							line[x] = prevline[x];
+					    )
 					break;
+#endif
+
+				case 3: /* Colour */
+					fprintf(stderr, "Colour %d\n", count);
+					REPEAT(line[x] = color2)
+					break;
+
+				case 4: /* Copy */
+					fprintf(stderr, "Copy %d\n", count);
+					REPEAT(line[x] = CVAL(input))
+					break;
+
+#if 0
+				case 8: /* Bicolor */
+					REPEAT(line[x] = color1; line[++x] = color2)
+					break;
+
+				case 13: /* White */
+					REPEAT(line[x] = 0xff)
+					break;
+
+				case 14: /* Black */
+					REPEAT(line[x] = 0x00)
+					break;
+#endif
+
 				default:
-					fprintf(stderr, "Undefined escape 0x%X\n", code);
+					fprintf(stderr, "Unknown bitmap opcode 0x%x\n", opcode);
 					return False;
-				}
 			}
 		}
 	}
 
-	printf("Uncompressed size: %d\n", output - start);
-#if BITMAP_DEBUG
-	{
-		static int bmpno = 1;
-		char filename[64];
-
-		snprintf(filename, sizeof(filename)-1, "in%d.raw", bmpno);
-		hexdump(filename, savedinput, size);
-
-		snprintf(filename, sizeof(filename)-1, "out%d.raw", bmpno);
-		hexdump(filename, start, output-start);
-
-		bmpno++;
-	}
-#endif
-
 	return True;
 }
-
-
-#if BITMAP_DEBUG
-void hexdump(char *filename, unsigned char *data, int length)
-{
-	/*
-	int i;
-
-	for (i = 0; i < length; i++)
-	{
-		printf("%02X ", data[i]);
-
-		if (i % 16 == 15)
-			printf("\n");
-	}
-	*/
-
-	int fd;
-
-	fd = open(filename, O_WRONLY|O_CREAT, 0600);
-	write(fd, data, length);
-	close(fd);
-}
-#endif

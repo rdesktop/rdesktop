@@ -176,7 +176,16 @@ BOOL mcs_recv(HCONN conn, BOOL request)
 {
 	MCS_DATA data;
 
-	return (iso_recv(conn)) && mcs_io_data(&conn->in, &data, request);
+	if (!iso_recv(conn) || !mcs_io_data(&conn->in, &data, request))
+		return False;
+
+#ifdef MCS_DEBUG
+	fprintf(stderr, "MCS packet\n");
+	dump_data(conn->in.data+conn->in.offset, conn->in.end-conn->in.offset);
+#endif
+
+	conn->in.rdp_offset = conn->in.offset;
+	return True;
 }
 
 /* Initialise a DOMAIN_PARAMS structure */
@@ -243,17 +252,21 @@ BOOL ber_io_header(STREAM s, BOOL islong, int tagval, int *length)
 	BOOL res;
 
 	/* Read/write tag */
-	if (islong) {
+	if (islong)
+	{
 		word_tag = tagval;
 		res = msb_io_uint16(s, &word_tag);
 		tag = word_tag;
-	} else {
+	}
+	else
+	{
 		byte_tag = tagval;
 		res = prs_io_uint8(s, &byte_tag);
 		tag = byte_tag;
 	}
 
-	if (!res || (tag != tagval)) {
+	if (!res || (tag != tagval))
+	{
 		fprintf(stderr, "Invalid ASN.1 tag\n");
 		return False;
 	}
@@ -524,6 +537,7 @@ BOOL mcs_io_data(STREAM s, MCS_DATA *dt, BOOL request)
 {
 	uint8 opcode = (request ? 25 : 26) << 2;
 	uint8 pkt_opcode = opcode;
+	uint8 byte1, byte2;
 	BOOL res;
 
 	res = prs_io_uint8(s, &pkt_opcode);
@@ -538,7 +552,22 @@ BOOL mcs_io_data(STREAM s, MCS_DATA *dt, BOOL request)
 	res = res ? msb_io_uint16(s, &dt->userid) : False;
 	res = res ? msb_io_uint16(s, &dt->chanid) : False;
 	res = res ? prs_io_uint8 (s, &dt->flags ) : False;
-	res = res ? msb_io_uint16(s, &dt->length) : False;
+
+	if (s->marshall)
+	{
+		res = res ? msb_io_uint16(s, &dt->length) : False;
+	}
+	else
+	{
+		res = res ? prs_io_uint8(s, &byte1) : False;
+		if (byte1 & 0x80)
+		{
+			res = res ? prs_io_uint8(s, &byte2) : False;
+			dt->length = ((byte1 & ~0x80) << 8) + byte2;
+		}
+		else dt->length = byte1;
+	}
 
 	return res;
 }
+

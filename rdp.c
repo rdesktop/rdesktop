@@ -34,6 +34,7 @@ HCONN rdp_connect(char *server)
 	mcs_recv(conn, False); /* Server's licensing certificate */
 	rdp_send_cert(conn);
 	mcs_recv(conn, False);
+	mcs_recv(conn, False); /* Demand active */
 
 	if (!rdp_recv_pdu(conn, &type) || (type != RDP_PDU_DEMAND_ACTIVE))
 	{
@@ -61,7 +62,6 @@ HCONN rdp_connect(char *server)
 void rdp_main_loop(HCONN conn)
 {
 	RDP_DATA_HEADER hdr;
-	RDP_UPDATE_PDU update;
 	RDP_ORDER_STATE os;
 	uint8 type;
 
@@ -70,37 +70,75 @@ void rdp_main_loop(HCONN conn)
 	while (rdp_recv_pdu(conn, &type))
 	{
 		if (type != RDP_PDU_DATA)
+		{
+			fprintf(stderr, "Unknown PDU 0x%x\n", type);
 			continue;
+		}
 
 		rdp_io_data_header(&conn->in, &hdr);
 
 		switch (hdr.data_pdu_type)
 		{
-		case RDP_DATA_PDU_UPDATE:
-			rdp_io_update_pdu(&conn->in, &update);
-			if (update.update_type == RDP_UPDATE_ORDERS)
-			{
-				fprintf(stderr, "Received orders\n");
-				process_orders(conn, &os);
-			}
-			break;
+			case RDP_DATA_PDU_UPDATE:
+				process_update(conn, &os);
+				break;
+
+			case RDP_DATA_PDU_POINTER:
+				process_pointer(conn);
+				break;
+
+			default:
+				fprintf(stderr, "Unknown data PDU 0x%x\n",
+						hdr.data_pdu_type);
 		}
 	}
 }
 
-void prs_io_coord(STREAM s, uint16 *coord, BOOL delta)
+void process_memblt(HCONN conn, RDP_ORDER_STATE *os, BOOL delta)
 {
-	uint8 change;
+	HBITMAP hbitmap;
+	uint16 present;
+	lsb_io_uint16(&conn->in, &present);
 
-	if (delta)
+	if (present & 1)
+		prs_io_uint8(&conn->in, &os->memblt.cache_id);
+
+	if (present & 2)
+		rdp_io_coord(&conn->in, &os->memblt.x, delta);
+
+	if (present & 4)
+		rdp_io_coord(&conn->in, &os->memblt.y, delta);
+
+	if (present & 8)
+		rdp_io_coord(&conn->in, &os->memblt.cx, delta);
+
+	if (present & 16)
+		rdp_io_coord(&conn->in, &os->memblt.cy, delta);
+
+	if (present & 32)
+		prs_io_uint8(&conn->in, &os->memblt.opcode);
+
+	if (present & 256)
+		lsb_io_uint16(&conn->in, &os->memblt.cache_idx);
+
+	if (os->memblt.opcode != 0xcc) /* SRCCOPY */
 	{
-		prs_io_uint8(s, &change);
-		*coord += change;
+		fprintf(stderr, "Unsupported raster operation 0x%x\n",
+			os->memblt.opcode);
+		return;
 	}
-	else
+
+	if ((os->memblt.cache_idx > NUM_ELEMENTS(conn->bmpcache))
+	    || ((hbitmap = conn->bmpcache[os->memblt.cache_idx]) == NULL))
 	{
-		lsb_io_uint16(s, coord);
+		fprintf(stderr, "Bitmap %d not found\n", os->memblt.cache_idx);
+		return;
 	}
+
+	fprintf(stderr, "MEMBLT %d:%dx%d\n", os->memblt.cache_idx,
+					os->memblt.x, os->memblt.y);
+
+	ui_paint_bitmap(conn->wnd, hbitmap, os->memblt.x, os->memblt.y);
 }
 
 void process_opaque_rect(HCONN conn, RDP_ORDER_STATE *os, BOOL delta)
@@ -109,45 +147,60 @@ void process_opaque_rect(HCONN conn, RDP_ORDER_STATE *os, BOOL delta)
 	prs_io_uint8(&conn->in, &present);
 
 	if (present & 1)
-		prs_io_coord(&conn->in, &os->opaque_rect.x, delta);
+		rdp_io_coord(&conn->in, &os->opaque_rect.x, delta);
 
 	if (present & 2)
-		prs_io_coord(&conn->in, &os->opaque_rect.y, delta);
+		rdp_io_coord(&conn->in, &os->opaque_rect.y, delta);
 
 	if (present & 4)
-		prs_io_coord(&conn->in, &os->opaque_rect.cx, delta);
+		rdp_io_coord(&conn->in, &os->opaque_rect.cx, delta);
 
 	if (present & 8)
-		prs_io_coord(&conn->in, &os->opaque_rect.cy, delta);
+		rdp_io_coord(&conn->in, &os->opaque_rect.cy, delta);
 
 	if (present & 16)
 		prs_io_uint8(&conn->in, &os->opaque_rect.colour);
 
 	fprintf(stderr, "Opaque rectangle at %d, %d\n", os->opaque_rect.x, os->opaque_rect.y);
+	ui_draw_rectangle(conn->wnd, os->opaque_rect.x, os->opaque_rect.y,
+				os->opaque_rect.cx, os->opaque_rect.cy);
 }
 
 void process_bmpcache(HCONN conn)
 {
-
 	RDP_BITMAP_HEADER rbh;
-	char *bmpdata;
-	HBITMAP bmp;
-	static int x = 0;
+	HBITMAP *entry;
+	char *input, *bmpdata;
 
 	rdp_io_bitmap_header(&conn->in, &rbh);
-	fprintf(stderr, "Decompressing bitmap %d x %d, final size %d\n", rbh.width, rbh.height, rbh.final_size);
+	fprintf(stderr, "BMPCACHE %d:%dx%d\n", rbh.cache_idx,
+				rbh.width, rbh.height);
+
+	input = conn->in.data + conn->in.offset;
+	conn->in.offset += rbh.size;
+//	dump_data(conn->in.data+conn->in.offset, conn->in.rdp_offset-conn->in.offset);
 
 	bmpdata = malloc(rbh.width * rbh.height);
-	bitmap_decompress(conn->in.data
-			  + conn->in.offset, rbh.size,
-			  bmpdata, rbh.width);
-	conn->in.offset += rbh.size;
+	if (!bitmap_decompress(bmpdata, rbh.width, rbh.height, input, rbh.size))
+	{
+		fprintf(stderr, "Decompression failed\n");
+		free(bmpdata);
+		return;
+	}
 
-	bmp = ui_create_bitmap(conn->wnd, rbh.width, rbh.height, bmpdata);
-	ui_paint_bitmap(conn->wnd, bmp, x, 0);
-	ui_destroy_bitmap(bmp);
+	if (rbh.cache_idx > NUM_ELEMENTS(conn->bmpcache))
+	{
+		fprintf(stderr, "Attempted store past end of cache");
+		return;
+	}
 
-	x += rbh.width;
+	entry = &conn->bmpcache[rbh.cache_idx];
+	// if (*entry != NULL)
+	//	ui_destroy_bitmap(conn->wnd, *entry);
+
+	*entry = ui_create_bitmap(conn->wnd, rbh.width, rbh.height, bmpdata);
+	//	ui_paint_bitmap(conn->wnd, bmp, x, 0);
+	//      ui_destroy_bitmap(conn->wnd, bmp);
 }
 
 void process_orders(HCONN conn, RDP_ORDER_STATE *os)
@@ -155,6 +208,7 @@ void process_orders(HCONN conn, RDP_ORDER_STATE *os)
 	uint16 num_orders;
 	int processed = 0;
 	BOOL res = True;
+	BOOL delta;
 	//	unsigned char *p;
 
 	lsb_io_uint16(&conn->in, &num_orders);
@@ -169,6 +223,10 @@ void process_orders(HCONN conn, RDP_ORDER_STATE *os)
 		uint8 order_flags;
 
 		prs_io_uint8(&conn->in, &order_flags);
+		fprintf(stderr, "Order flags: 0x%x\n", order_flags);
+
+		if (order_flags == 0x51) /* ?? */
+			return;
 
 		if (!(order_flags & RDP_ORDER_STANDARD))
 			return;
@@ -188,24 +246,81 @@ void process_orders(HCONN conn, RDP_ORDER_STATE *os)
 					rso.type);
 				return;
 			}
-
-
 		}
-
-		if (order_flags & RDP_ORDER_CHANGE)
-			prs_io_uint8(&conn->in, &os->order_type);
-
-		switch (os->order_type)
+		else
 		{
-		case RDP_ORDER_OPAQUE_RECT:
-			process_opaque_rect(conn, os, order_flags & RDP_ORDER_DELTA);
-			break;
-		default:
-			fprintf(stderr, "Unknown order %d\n", os->order_type);
-			return;
+			if (order_flags & RDP_ORDER_CHANGE)
+				prs_io_uint8(&conn->in, &os->order_type);
+
+			delta = order_flags & RDP_ORDER_DELTA;
+
+			switch (os->order_type)
+			{
+			case RDP_ORDER_OPAQUE_RECT:
+				process_opaque_rect(conn, os, delta);
+				break;
+
+			case RDP_ORDER_MEMBLT:
+				process_memblt(conn, os, delta);
+				break;
+
+			default:
+				fprintf(stderr, "Unknown order %d\n", os->order_type);
+				return;
+			}
 		}
 
 		processed++;
+	}
+}
+
+void process_palette(HCONN conn)
+{
+	HCOLORMAP map;
+	COLORMAP colors;
+
+	rdp_io_colormap(&conn->in, &colors);
+	map = ui_create_colormap(conn->wnd, &colors);
+	ui_set_colormap(conn->wnd, map);
+	// ui_destroy_colormap(map);
+}
+
+void process_update(HCONN conn, RDP_ORDER_STATE *os)
+{
+	RDP_UPDATE_PDU update;
+
+	rdp_io_update_pdu(&conn->in, &update);
+	switch (update.update_type)
+	{
+		case RDP_UPDATE_ORDERS:
+			process_orders(conn, os);
+			break;
+		case RDP_UPDATE_PALETTE:
+			process_palette(conn);
+			break;
+		case RDP_UPDATE_SYNCHRONIZE:
+			break;
+		default:
+			fprintf(stderr, "Unknown update 0x%x\n",
+				update.update_type);
+	}
+
+}
+
+void process_pointer(HCONN conn)
+{
+	RDP_POINTER ptr;
+
+	rdp_io_pointer(&conn->in, &ptr);
+
+	switch (ptr.message)
+	{
+		case RDP_POINTER_MOVE:
+			ui_move_pointer(conn->wnd, ptr.x, ptr.y);
+			break;
+		default:
+			fprintf(stderr, "Unknown pointer message 0x%x\n",
+				ptr.message);
 	}
 }
 
@@ -420,10 +535,25 @@ BOOL rdp_recv_pdu(HCONN conn, uint8 *type)
 {
 	RDP_HEADER hdr;
 
-	if (!mcs_recv(conn, False) || !rdp_io_header(&conn->in, &hdr))
+	conn->in.offset = conn->in.rdp_offset;
+
+	if (conn->in.offset >= conn->in.end)
+	{
+		if (!mcs_recv(conn, False))
+			return False;
+	}
+
+	if (!rdp_io_header(&conn->in, &hdr))
 		return False;
 
+	conn->in.rdp_offset += hdr.length;
 	*type = hdr.pdu_type & 0xf;
+
+#if DEBUG
+	fprintf(stderr, "RDP packet (type %x):\n", *type);
+	dump_data(conn->in.data+conn->in.offset, conn->in.rdp_offset-conn->in.offset);
+#endif
+
 	return True;
 }
 
@@ -623,6 +753,39 @@ BOOL rdp_io_data_header(STREAM s, RDP_DATA_HEADER *hdr)
 	res = res ? lsb_io_uint16(s, &hdr->compress_len ) : False;
 
 	return res;
+}
+
+BOOL rdp_io_coord(STREAM s, uint16 *coord, BOOL delta)
+{
+	uint8 change;
+	BOOL res;
+
+	if (delta)
+	{
+		res = prs_io_uint8(s, &change);
+		*coord += change;
+	}
+	else
+	{
+		res = lsb_io_uint16(s, coord);
+	}
+
+	return res;
+}
+
+BOOL rdp_io_colormap(STREAM s, COLORMAP *colors)
+{
+	int datasize;
+
+	lsb_io_uint16(s, &colors->ncolors);
+	datasize = colors->ncolors * 3;
+
+	if (datasize > sizeof(colors->colors))
+		return False;
+
+	memcpy(colors->colors, s->data + s->offset, datasize);
+	s->offset += datasize;
+	return True;
 }
 
 BOOL rdp_io_general_caps(STREAM s, RDP_GENERAL_CAPS *caps)
@@ -1150,6 +1313,18 @@ BOOL rdp_io_bitmap_header(STREAM s, RDP_BITMAP_HEADER *rdh)
 	res = res ? lsb_io_uint16(s, &rdh->size      ) : False;
 	res = res ? lsb_io_uint16(s, &rdh->row_size  ) : False;
 	res = res ? lsb_io_uint16(s, &rdh->final_size) : False;
+
+	return res;
+}
+
+BOOL rdp_io_pointer(STREAM s, RDP_POINTER *ptr)
+{
+	BOOL res = True;
+
+	res = res ? lsb_io_uint16(s, &ptr->message) : False;
+	res = res ? lsb_io_uint16(s, &ptr->pad    ) : False;
+	res = res ? lsb_io_uint16(s, &ptr->x      ) : False;
+	res = res ? lsb_io_uint16(s, &ptr->y      ) : False;
 
 	return res;
 }

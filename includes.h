@@ -42,6 +42,7 @@ typedef unsigned short uint16;
 typedef unsigned int   uint32;
 
 #include "xwin.h"
+#include "misc.h"
 #include "parse.h"
 #include "tcp.h"
 #include "iso.h"

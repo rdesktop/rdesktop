@@ -305,8 +305,9 @@ typedef struct _RDP_FONT_PDU
 
 } RDP_FONT_PDU;
 
-#define RDP_UPDATE_ORDERS  0
-#define RDP_UPDATE_PALETTE 2
+#define RDP_UPDATE_ORDERS	0
+#define RDP_UPDATE_PALETTE	2
+#define RDP_UPDATE_SYNCHRONIZE	3
 
 typedef struct _OPAQUE_RECT_ORDER
 {
@@ -318,11 +319,24 @@ typedef struct _OPAQUE_RECT_ORDER
 
 } OPAQUE_RECT_ORDER;
 
+typedef struct _MEMBLT_ORDER
+{
+	uint8 cache_id;
+	uint16 x;
+	uint16 y;
+	uint16 cx;
+	uint16 cy;
+	uint8 opcode;
+	uint16 cache_idx;
+
+} MEMBLT_ORDER;
+
 typedef struct _RDP_ORDER_STATE
 {
 	uint8 order_type;
 
 	OPAQUE_RECT_ORDER opaque_rect;
+	MEMBLT_ORDER memblt;
 
 } RDP_ORDER_STATE;
 
@@ -342,7 +356,8 @@ typedef struct _RDP_UPDATE_PDU
 
 enum RDP_ORDER_TYPE
 {
-        RDP_ORDER_OPAQUE_RECT = 10
+        RDP_ORDER_OPAQUE_RECT = 10,
+	RDP_ORDER_MEMBLT = 13
 };
 
 enum RDP_SECONDARY_ORDER_TYPE
@@ -373,3 +388,15 @@ typedef struct _RDP_BITMAP_HEADER
 	uint16 final_size;
 
 } RDP_BITMAP_HEADER;
+
+#define RDP_POINTER_MOVE	3
+
+typedef struct _RDP_POINTER
+{
+	uint16 message;
+	uint16 pad;
+	uint16 x;
+	uint16 y;
+
+} RDP_POINTER;
+

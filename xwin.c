@@ -45,6 +45,8 @@ HWINDOW ui_create_window(int width, int height)
 	wnd->display = display;
 	wnd->wnd = window;
 	wnd->gc = gc;
+        wnd->visual = DefaultVisual(wnd->display, DefaultScreen(wnd->display));
+
 	return wnd;
 }
 
@@ -58,16 +60,14 @@ void ui_destroy_window(HWINDOW wnd)
 HBITMAP ui_create_bitmap(HWINDOW wnd, int width, int height, uint8 *data)
 {
 	XImage *image;
-	Visual *visual;
 
-	visual = DefaultVisual(wnd->display, DefaultScreen(wnd->display));
-	image = XCreateImage(wnd->display, visual, 8, ZPixmap, 0,
+	image = XCreateImage(wnd->display, wnd->visual, 8, ZPixmap, 0,
 				data, width, height, 32, width);
 
 	return (HBITMAP)image;
 }
 
-void ui_destroy_bitmap(HBITMAP bmp)
+void ui_destroy_bitmap(HWINDOW wnd, HBITMAP bmp)
 {
 	XDestroyImage((XImage *)bmp);
 }
@@ -80,4 +80,56 @@ void ui_paint_bitmap(HWINDOW wnd, HBITMAP bmp, int x, int y)
 			0, 0, x, y, image->width, image->height);
 
 	XSync(wnd->display, True);
+}
+
+HCOLORMAP ui_create_colormap(HWINDOW wnd, COLORMAP *colors)
+{
+	COLORENTRY *entry;
+	XColor *xcolors, *xentry;
+	Colormap map;
+	int i, ncolors = colors->ncolors;
+
+	xcolors = malloc(sizeof(XColor) * ncolors);
+	for (i = 0; i < ncolors; i++)
+	{
+		entry = &colors->colors[i];
+		xentry = &xcolors[i];
+
+		xentry->pixel = i;
+		xentry->red = entry->red << 8;
+		xentry->blue = entry->blue << 8;
+		xentry->green = entry->green << 8;
+		xentry->flags = DoRed | DoBlue | DoGreen;
+	}
+
+	map = XCreateColormap(wnd->display, wnd->wnd, wnd->visual, AllocAll);
+	XStoreColors(wnd->display, map, xcolors, ncolors);
+
+	free(xcolors);
+	return (HCOLORMAP)map;
+}
+
+void ui_destroy_colormap(HWINDOW wnd, HCOLORMAP map)
+{
+	XFreeColormap(wnd->display, (Colormap)map);
+}
+
+void ui_set_colormap(HWINDOW wnd, HCOLORMAP map)
+{
+	XSetWindowColormap(wnd->display, wnd->wnd, (Colormap)map);
+}
+
+void ui_draw_rectangle(HWINDOW wnd, int x, int y, int width, int height)
+{
+	static int white = 0;
+
+	XSetForeground(wnd->display, wnd->gc, white);
+	XFillRectangle(wnd->display, wnd->wnd, wnd->gc, x, y, width, height);
+
+	white++;
+}
+
+void ui_move_pointer(HWINDOW wnd, int x, int y)
+{
+	XWarpPointer(wnd->display, wnd->wnd, wnd->wnd, 0, 0, 0, 0, x, y);
 }

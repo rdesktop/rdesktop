@@ -41,6 +41,7 @@ typedef struct connection
 {
 	/* User interface */
 	HWINDOW wnd;
+	HBITMAP bmpcache[8];
 
 	/* Parsing layer */
 	struct stream in;

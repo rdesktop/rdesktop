@@ -75,7 +75,12 @@ BOOL mcs_io_data(STREAM s, MCS_DATA *dt, BOOL request);
 /* RDP layer */
 HCONN rdp_connect(char *server);
 void rdp_main_loop(HCONN conn);
+void process_opaque_rect(HCONN conn, RDP_ORDER_STATE *os, BOOL delta);
+void process_bmpcache(HCONN conn);
 void process_orders(HCONN conn, RDP_ORDER_STATE *os);
+void process_palette(HCONN conn);
+void process_update(HCONN conn, RDP_ORDER_STATE *os);
+void process_pointer(HCONN conn);
 void rdp_establish_key(HCONN conn);
 void rdp_send_cert(HCONN conn);
 void rdp_send_confirm_active(HCONN conn);
@@ -105,6 +110,8 @@ void rdp_make_font_pdu(RDP_FONT_PDU *pdu, uint16 seqno);
 void rdp_make_input_pdu(RDP_INPUT_PDU *pdu);
 BOOL rdp_io_header(STREAM s, RDP_HEADER *hdr);
 BOOL rdp_io_data_header(STREAM s, RDP_DATA_HEADER *hdr);
+BOOL rdp_io_coord(STREAM s, uint16 *coord, BOOL delta);
+BOOL rdp_io_colormap(STREAM s, COLORMAP *colors);
 BOOL rdp_io_general_caps(STREAM s, RDP_GENERAL_CAPS *caps);
 BOOL rdp_io_bitmap_caps(STREAM s, RDP_BITMAP_CAPS *caps);
 BOOL rdp_io_order_caps(STREAM s, RDP_ORDER_CAPS *caps);
@@ -125,17 +132,25 @@ BOOL rdp_io_font_pdu(STREAM s, RDP_FONT_PDU *pdu);
 BOOL rdp_io_update_pdu(STREAM s, RDP_UPDATE_PDU *pdu);
 BOOL rdp_io_secondary_order(STREAM s, RDP_SECONDARY_ORDER *rso);
 BOOL rdp_io_bitmap_header(STREAM s, RDP_BITMAP_HEADER *rdh);
+BOOL rdp_io_pointer(STREAM s, RDP_POINTER *ptr);
+
 
 /* Utility routines */
 void *xmalloc(int size);
 void *xrealloc(void *oldmem, int size);
-BOOL bitmap_decompress(unsigned char *input, int size,
-                       unsigned char *output, int width);
+void dump_data(unsigned char *p, int len);
+BOOL bitmap_decompress(unsigned char *output, int width, int height,
+		       unsigned char *input, int size);
 
 /* User interface routines */
 HWINDOW ui_create_window(int width, int height);
 void ui_destroy_window(HWINDOW wnd);
 HBITMAP ui_create_bitmap(HWINDOW wnd, int width, int height, uint8 *data);
-void ui_destroy_bitmap(HBITMAP bmp);
+void ui_destroy_bitmap(HWINDOW wnd, HBITMAP bmp);
 void ui_paint_bitmap(HWINDOW wnd, HBITMAP bmp, int x, int y);
+HCOLORMAP ui_create_colormap(HWINDOW wnd, COLORMAP *colors);
+void ui_destroy_colormap(HWINDOW wnd, HCOLORMAP map);
+void ui_set_colormap(HWINDOW wnd, HCOLORMAP map);
+void ui_draw_rectangle(HWINDOW wnd, int x, int y, int width, int height);
+void ui_move_pointer(HWINDOW wnd, int x, int y);
 

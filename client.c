@@ -19,7 +19,6 @@
 */
 
 #include "includes.h"
-#include "signal.h"
 
 int main(int argc, char *argv[])
 {
@@ -46,24 +45,4 @@ int main(int argc, char *argv[])
 	rdp_disconnect(conn);
 
 	return 0;
-}
-
-void *xmalloc(int size)
-{
-	void *mem = malloc(size);
-	if (mem == NULL) {
-		fprintf(stderr, "xmalloc: Out of memory.\n");
-		exit(1);
-	}
-	return mem;
-}
-
-void *xrealloc(void *oldmem, int size)
-{
-	void *mem = realloc(oldmem, size);
-	if (mem == NULL) {
-		fprintf(stderr, "xrealloc: Out of memory.\n");
-		exit(1);
-	}
-	return mem;
 }

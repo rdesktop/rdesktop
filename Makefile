@@ -5,9 +5,9 @@
 ##############################################
 
 CC     = gcc
-CFLAGS = -g -Wall
+CFLAGS = -g -Wall -DDEBUG
 LIBS   = -L/usr/X11R6/lib -lX11
-OBJECTS = client.o parse.o tcp.o iso.o mcs.o rdp.o bitmap.o xwin.o
+OBJECTS = client.o parse.o tcp.o iso.o mcs.o rdp.o bitmap.o xwin.o misc.o
 
 rdesktop: $(OBJECTS)
 	@$(CC) $(CFLAGS) -o rdesktop $(LIBS) $(OBJECTS)
