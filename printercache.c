@@ -79,6 +79,8 @@ printercache_load_blob(char *printer_name, uint8 ** data)
 	if (printer_name == NULL)
 		return 0;
 
+	*data = NULL;
+
 	home = getenv("HOME");
 	if (home == NULL)
 		return 0;
@@ -160,7 +162,7 @@ printercache_process(STREAM s)
 			}
 			break;
 
-		/*case 1:*/
+		/*case 1: */
 			// TODO: I think this one just tells us what printer is on LPT? but why?
 
 			//

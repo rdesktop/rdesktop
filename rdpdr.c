@@ -220,7 +220,8 @@ rdpdr_send_available(void)
 				rdp_out_unistr(s, printerinfo->printer, printerlen - 2);
 				out_uint8a(s, printerinfo->blob, bloblen);
 
-				xfree(printerinfo->blob);	/* Blob is sent twice if reconnecting */
+				if (printerinfo->blob)
+					xfree(printerinfo->blob);	/* Blob is sent twice if reconnecting */
 				break;
 			default:
 				out_uint32(s, 0);
