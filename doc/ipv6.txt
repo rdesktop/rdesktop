@@ -1,0 +1,21 @@
+
+IPv6 support in rdesktop
+========================
+The IPv6 support was developed by Mike Dawson <mike@dexy.mine.nu>:
+
+    Attached is a patch to tcp.c to enable IPv6 support.  Build with
+    'IPv6' defined to enable it.  It's so far only been tested on
+    Linux 2.4.21 connecting to Windows XP SP1.
+    
+    Since terminal services doesn't seem to bind to the ipv6 interface
+    on XP I had to run 'netsh interface portproxy add v6tov4
+    listenport=3389 connectport=33 89' from the windows command prompt
+    to get it to work.
+    
+    One problem is that numeric ipv6 addresses on the command line
+    don't work as they conflict with the host:port format for
+    specifying host names.  Fixes for this I can think of include:
+    
+    * have a -6 switch for enabling ipv6 support
+    * change the host:port format to 'host -P port' or something
+    * more complicated parsing of the given host/address
