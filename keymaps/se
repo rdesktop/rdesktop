@@ -1,6 +1,6 @@
-# generated from XKB map se_FI
+# generated from XKB map se_SE
 include common
-map 0x40b
+map 0x41d
 exclam 0x02 shift
 exclamdown 0x02 altgr
 onesuperior 0x02 shift altgr
@@ -121,4 +121,4 @@ minus 0x35
 underscore 0x35 shift
 hyphen 0x35 altgr
 macron 0x35 shift altgr
-nobreakspace 0x39 altgr
+nobreakspace 0x39 shift altgr

@@ -1,6 +1,6 @@
-# generated from XKB map se_FI
+# generated from XKB map dk
 include common
-map 0x40b
+map 0x406
 exclam 0x02 shift
 exclamdown 0x02 altgr
 onesuperior 0x02 shift altgr
@@ -33,12 +33,12 @@ braceright 0x0b altgr
 degree 0x0b shift altgr
 plus 0x0c
 question 0x0c shift
-backslash 0x0c altgr
+plusminus 0x0c altgr
 questiondown 0x0c shift altgr
 dead_acute 0x0d
 dead_grave 0x0d shift
-plusminus 0x0d altgr
-notsign 0x0d shift altgr
+bar 0x0d altgr
+brokenbar 0x0d shift altgr
 at 0x10 altgr
 Greek_OMEGA 0x10 shift altgr
 lstroke 0x11 altgr
@@ -82,21 +82,21 @@ kra 0x25 altgr
 ampersand 0x25 shift altgr
 lstroke 0x26 altgr
 Lstroke 0x26 shift altgr
-odiaeresis 0x27
-Odiaeresis 0x27 shift
-oslash 0x27 altgr
-Ooblique 0x27 shift altgr
-adiaeresis 0x28
-Adiaeresis 0x28 shift
-ae 0x28 altgr
-AE 0x28 shift altgr
-section 0x29
-onehalf 0x29 shift
-paragraph 0x29 altgr
-threequarters 0x29 shift altgr
+ae 0x27
+AE 0x27 shift
+dead_acute 0x27 altgr
+dead_doubleacute 0x27 shift altgr
+oslash 0x28
+Ooblique 0x28 shift
+dead_circumflex 0x28 altgr
+dead_caron 0x28 shift altgr
+onehalf 0x29
+section 0x29 shift
+threequarters 0x29 altgr
+paragraph 0x29 shift altgr
 apostrophe 0x2b
 asterisk 0x2b shift
-acute 0x2b altgr
+dead_doubleacute 0x2b altgr
 multiply 0x2b shift altgr
 guillemotleft 0x2c altgr
 less 0x2c shift altgr
@@ -122,3 +122,5 @@ underscore 0x35 shift
 hyphen 0x35 altgr
 macron 0x35 shift altgr
 nobreakspace 0x39 altgr
+backslash 0x56 altgr
+notsign 0x56 shift altgr
