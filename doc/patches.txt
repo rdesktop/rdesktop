@@ -254,9 +254,9 @@ Not applied.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/scroll-to-death-patch.txt
 Description:
-TDB
+Fixes scroll-to-death problem in Excel and other applications. 
 Status:
-Not yet examined. 
+Not needed; fixed in another way in recent versions of rdesktop. 
 
 
 URL:
