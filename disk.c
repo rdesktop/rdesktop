@@ -105,7 +105,8 @@
 #if (defined(SOLARIS) || defined (__hpux) || defined(__BEOS__))
 #include <sys/statvfs.h>	/* solaris statvfs */
 #include <sys/mntent.h>
-#define HAVE_MNTENT_H
+/* TODO: Fix mntent-handling for solaris */
+#undef HAVE_MNTENT_H
 #define MNTENT_PATH "/etc/mnttab"
 #define STATFS_FN(path, buf) (statvfs(path,buf))
 #define STATFS_T statvfs
