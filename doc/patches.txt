@@ -329,7 +329,7 @@ http://bibl4.oru.se/projects/rdesktop/patch19/patches/vincent_8bpp.patch
 Description:
 Support a 8bpp display (256 colours). 
 Status:
-Applied. Can probably be enhanced, though. 
+An enhanced version is included in rdesktop; this patch is not needed any more. 
 
 
 URL:
