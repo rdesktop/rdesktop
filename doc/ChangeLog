@@ -2,6 +2,7 @@ rdesktop (1.?.?)
    * persistent bitmap cache optimisations
    * support for more RDP-orders (ellipse, polygon)
    * libao sound-driver (for Mac OSX and others)
+   * Unicode support for transmitted strings/filenames
 
 rdesktop (1.4.0)
    * Basic disk-, parallel-, printer- and serial-redirection

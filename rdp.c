@@ -23,8 +23,10 @@
 #include <unistd.h>
 #include "rdesktop.h"
 
+#ifdef HAVE_ICONV
 #ifdef HAVE_ICONV_H
 #include <iconv.h>
+#endif
 #endif
 
 extern uint16 g_mcs_userid;
@@ -148,11 +150,11 @@ rdp_send_data(STREAM s, uint8 data_pdu_type)
 void
 rdp_out_unistr(STREAM s, char *string, int len)
 {
-#ifdef	HAVE_ICONV
+#ifdef HAVE_ICONV
 	size_t ibl = strlen(string), obl = len + 2;
 	static iconv_t iconv_h = (iconv_t)-1;
 	char   *pin = string, *pout;
-#ifdef	B_ENDIAN
+#ifdef B_ENDIAN
 	char ss[4096];	// FIXME: global MAX_BUF_SIZE macro need
 
 	pout = ss;
@@ -189,7 +191,7 @@ rdp_out_unistr(STREAM s, char *string, int len)
 		return;
 	}
 
-#ifdef	B_ENDIAN
+#ifdef B_ENDIAN
 	swab(ss, s->p, len + 4);
 #endif
 
@@ -217,11 +219,11 @@ rdp_out_unistr(STREAM s, char *string, int len)
 int
 rdp_in_unistr(STREAM s, char *string, int uni_len)
 {
-#ifdef	HAVE_ICONV
+#ifdef HAVE_ICONV
 	size_t ibl = uni_len, obl = uni_len;
 	char *pin, *pout = string;
 	static iconv_t iconv_h = (iconv_t)-1;
-#ifdef	B_ENDIAN
+#ifdef B_ENDIAN
 	char ss[4096];	// FIXME: global MAX_BUF_SIZE macro need
 
 	swab(s->p, ss, uni_len);
