@@ -245,7 +245,7 @@ translate8to16(uint8 * data, uint8 * out, uint8 * end)
 	while (out < end)
 	{
 		value = (uint16) g_colmap[*(data++)];
-		
+
 		if (g_xserver_be)
 		{
 			*(out++) = value >> 8;
@@ -268,7 +268,7 @@ translate8to24(uint8 * data, uint8 * out, uint8 * end)
 	while (out < end)
 	{
 		value = g_colmap[*(data++)];
-		
+
 		if (g_xserver_be)
 		{
 			*(out++) = value >> 16;
@@ -700,8 +700,8 @@ ui_init(void)
 
 		g_visual = vi.visual;
 		g_owncolmap = False;
-		calculate_shifts(vi.red_mask,   &g_red_shift_r,   &g_red_shift_l);
-		calculate_shifts(vi.blue_mask,  &g_blue_shift_r,  &g_blue_shift_l);
+		calculate_shifts(vi.red_mask, &g_red_shift_r, &g_red_shift_l);
+		calculate_shifts(vi.blue_mask, &g_blue_shift_r, &g_blue_shift_l);
 		calculate_shifts(vi.green_mask, &g_green_shift_r, &g_green_shift_l);
 	}
 
@@ -821,7 +821,7 @@ ui_deinit(void)
 
 #define NULL_POINTER_MASK	"\x80"
 #define NULL_POINTER_DATA	"\x0\x0\x0"
-	
+
 BOOL
 ui_create_window(void)
 {
@@ -916,7 +916,7 @@ void
 ui_destroy_window(void)
 {
 	ui_destroy_cursor(g_null_cursor);
-	
+
 	if (g_IC != NULL)
 		XDestroyIC(g_IC);
 

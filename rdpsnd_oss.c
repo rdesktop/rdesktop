@@ -135,7 +135,7 @@ wave_out_volume(uint16 left, uint16 right)
 
 	if (use_dev_mixer)
 	{
-		if ((fd_mix = open( "/dev/mixer", O_RDWR|O_NONBLOCK )) == -1 )
+		if ((fd_mix = open("/dev/mixer", O_RDWR | O_NONBLOCK)) == -1)
 		{
 			perror("open /dev/mixer");
 			return;
@@ -228,16 +228,12 @@ wave_out_play(void)
 		{
 			long long duration;
 			long elapsed;
-			
-			gettimeofday(&tv, NULL);
-			duration = 
-				(out->size * (1000000 / 
-				(g_samplewidth * g_snd_rate)));
-			elapsed =
-				(tv.tv_sec - startedat_s) * 1000000 +
-				(tv.tv_usec - startedat_us);
 
-			if ( elapsed >= (duration * 7) / 10 )
+			gettimeofday(&tv, NULL);
+			duration = (out->size * (1000000 / (g_samplewidth * g_snd_rate)));
+			elapsed = (tv.tv_sec - startedat_s) * 1000000 + (tv.tv_usec - startedat_us);
+
+			if (elapsed >= (duration * 7) / 10)
 			{
 				rdpsnd_send_completion(packet->tick, packet->index);
 				free(out->data);

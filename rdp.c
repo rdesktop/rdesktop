@@ -725,7 +725,8 @@ process_bitmap_updates(STREAM s)
 		       left, top, right, bottom, width, height, Bpp, compress));
 
 		/* Server may limit bpp - this is how we find out */
-		if (g_server_bpp != bpp) {
+		if (g_server_bpp != bpp)
+		{
 			warning("Server limited colour depth to %d bits\n", bpp);
 			g_server_bpp = bpp;
 		}
