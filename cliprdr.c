@@ -560,7 +560,7 @@ void cliprdr_handle_server_data(uint32 length, uint32 flags, STREAM s)
 		   NoEventMask,
 		   (XEvent *)&selection_event);
 
-	if (flags & 0x12)
+	if (2 == flags)
 		xfree(data);
 
 }
