@@ -8,14 +8,14 @@ Description:
 Makefile changes which makes it possible to compile rdesktop on SunOS
 and OSF1.
 Status:
-Adopted. 
+Applied (slightly modified)
 
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/assar_19-7-2.hostlen.patch
 Description:
-TDB
+Fix for hostnames longer than 30 chars. 
 Status:
-Not yet examined. 
+Applied (revision 1.11 of secure.c) 
 
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/backingstore+privatecolormap-for-19-3-9.patch
