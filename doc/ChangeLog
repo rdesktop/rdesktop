@@ -3,6 +3,7 @@ rdesktop (1.?.?)
    * support for more RDP-orders (ellipse, polygon)
    * libao sound-driver (for Mac OSX and others)
    * Unicode support for transmitted strings/filenames
+   * Added korean keymap
 
 rdesktop (1.4.0)
    * Basic disk-, parallel-, printer- and serial-redirection
