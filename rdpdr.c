@@ -5,12 +5,6 @@
 #include <time.h>
 #include "rdesktop.h"
 
-#define IRP_MJ_CREATE		0x00
-#define IRP_MJ_CLOSE		0x02
-#define IRP_MJ_READ		0x03
-#define IRP_MJ_WRITE		0x04
-#define IRP_MJ_DEVICE_CONTROL	0x0e
-
 #define IRP_MJ_CREATE			0x00
 #define IRP_MJ_CLOSE			0x02
 #define IRP_MJ_READ			0x03
@@ -20,6 +14,7 @@
 #define IRP_MJ_QUERY_VOLUME_INFORMATION	0x0a
 #define IRP_MJ_DIRECTORY_CONTROL	0x0c
 #define IRP_MJ_DEVICE_CONTROL		0x0e
+#define IRP_MJ_LOCK_CONTROL             0x11
 
 #define IRP_MN_QUERY_DIRECTORY          0x01
 #define IRP_MN_NOTIFY_CHANGE_DIRECTORY  0x02
