@@ -108,3 +108,13 @@ typedef struct _key_translation
 	uint16 modifiers;
 }
 key_translation;
+
+struct _cliprdr_dataformat;
+
+typedef struct _cliprdr_dataformat
+{
+	uint32 identifier;
+	uint8 textual_description[32];
+	struct _cliprdr_dataformat *next;
+}
+cliprdr_dataformat;
