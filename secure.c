@@ -41,6 +41,7 @@ extern BOOL encryption;
 extern BOOL g_licence_issued;
 extern BOOL use_rdp5;
 extern int server_bpp;
+extern uint16 mcs_userid;
 
 static int rc4_key_len;
 static RC4_KEY rc4_decrypt_key;
@@ -340,9 +341,9 @@ sec_init(uint32 flags, int maxlen)
 	return s;
 }
 
-/* Transmit secure transport packet */
+/* Transmit secure transport packet over specified channel */
 void
-sec_send(STREAM s, uint32 flags)
+sec_send_to_channel(STREAM s, uint32 flags, uint16 channel)
 {
 	int datalen;
 
@@ -364,8 +365,17 @@ sec_send(STREAM s, uint32 flags)
 		sec_encrypt(s->p + 8, datalen);
 	}
 
-	mcs_send(s);
+	mcs_send_to_channel(s, channel);
 }
+
+/* Transmit secure transport packet */
+
+void
+sec_send(STREAM s, uint32 flags)
+{
+	sec_send_to_channel(s, flags, MCS_GLOBAL_CHANNEL);
+}
+
 
 /* Transfer the client random to the server */
 static void
@@ -389,8 +399,16 @@ sec_establish_key(void)
 static void
 sec_out_mcs_data(STREAM s)
 {
+	uint16 num_channels = get_num_channels();
 	int hostlen = 2 * strlen(hostname);
-	int length = 158 + 76 + 12 + 4 + 20;
+	int length = 158 + 76 + 12 + 4 + (CHANNEL_TAGDATA_SIZE * num_channels);
+	uint16 i;
+	rdp5_channel *channel;
+
+	if (0 < num_channels)
+	{
+		length += +4 + 4;
+	}
 
 	if (hostlen > 30)
 		hostlen = 30;
@@ -467,12 +485,20 @@ sec_out_mcs_data(STREAM s)
 	out_uint32_le(s, encryption ? 0x3 : 0);	/* encryption supported, 128-bit supported */
 	out_uint32(s, 0);	/* Unknown */
 
-	out_uint16_le(s, SEC_TAG_CLI_CHANNELS);
-	out_uint16_le(s, 20);	/* length */
-	out_uint32_le(s, 1);	/* number of virtual channels */
-	out_uint8p(s, "cliprdr", 8);	/* name padded to 8(?) */
-	out_uint16(s, 0);
-	out_uint16_le(s, 0xc0a0);	/* Flags. Rumours tell this is documented in MSDN. */
+	DEBUG_RDP5(("num_channels is %d\n", num_channels));
+	if (0 < num_channels)
+	{
+		out_uint16_le(s, SEC_TAG_CLI_CHANNELS);
+		out_uint16_le(s, num_channels * CHANNEL_TAGDATA_SIZE + 4 + 4);	/* length */
+		out_uint32_le(s, num_channels);	/* number of virtual channels */
+		for (i = 0; i < num_channels; i++)
+		{
+			channel = find_channel_by_num(i);
+			DEBUG_RDP5(("Requesting channel %s\n", channel->name));
+			out_uint8p(s, channel->name, 8);
+			out_uint32_be(s, channel->channelflags);
+		}
+	}
 
 	s_mark_end(s);
 }
@@ -563,7 +589,7 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 	if (end > s->end)
 		return False;
 
-	in_uint32_le(s, flags); /* 1 = RDP4-style, 0x80000002 = X.509 */
+	in_uint32_le(s, flags);	/* 1 = RDP4-style, 0x80000002 = X.509 */
 	if (flags & 1)
 	{
 		DEBUG_RDP5(("We're going for the RDP4-style encryption\n"));
@@ -673,15 +699,16 @@ sec_process_crypt_info(STREAM s)
 	}
 
 	DEBUG(("Generating client random\n"));
+	/* Generate a client random, and hence determine encryption keys */
 	// This is what the MS client do:
 	memset(inr, 0, SEC_RANDOM_SIZE);
 	/*  *ARIGL!* Plaintext attack, anyone?
-	    I tried doing:
-	    generate_random(inr);
-	    ..but that generates connection errors now and then (yes, 
-	    "now and then". Something like 0 to 3 attempts needed before a 
-	    successful connection. Nice. Not! 
-	*/
+	   I tried doing:
+	   generate_random(inr);
+	   ..but that generates connection errors now and then (yes, 
+	   "now and then". Something like 0 to 3 attempts needed before a 
+	   successful connection. Nice. Not! 
+	 */
 
 	generate_random(client_random);
 	if (NULL != server_public_key)
@@ -775,7 +802,8 @@ sec_recv(void)
 
 			if (sec_flags & SEC_LICENCE_NEG)
 			{
-				if (sec_flags & SEC_ENCRYPT) {
+				if (sec_flags & SEC_ENCRYPT)
+				{
 					DEBUG_RDP5(("Encrypted license detected\n"));
 				}
 				licence_process(s);
@@ -809,7 +837,7 @@ sec_connect(char *server, char *username)
 
 	/* We exchange some RDP data during the MCS-Connect */
 	mcs_data.size = 512;
-	mcs_data.p = mcs_data.data = (uint8*)xmalloc(mcs_data.size);
+	mcs_data.p = mcs_data.data = (uint8 *) xmalloc(mcs_data.size);
 	sec_out_mcs_data(&mcs_data);
 
 	if (!mcs_connect(server, &mcs_data, username))
