@@ -320,6 +320,8 @@ enum RDP_INPUT_DEVICE
 #define STATUS_NO_SUCH_FILE             0xc000000f
 #define STATUS_NO_MORE_FILES            0x80000006
 #define STATUS_INVALID_HANDLE           0xc0000008
+#define STATUS_DISK_FULL                0xc000007f
+#define STATUS_FILE_IS_A_DIRECTORY      0xc00000ba
 #define STATUS_NOT_SUPPORTED            0xc00000bb
 #define STATUS_PENDING                  0x00000103
 #define STATUS_CANCELLED                0xc0000120
@@ -334,3 +336,5 @@ enum RDP_INPUT_DEVICE
 #define DEVICE_TYPE_SCARD               0x20
 
 #define FILE_DIRECTORY_FILE             0x00000001
+#define FILE_NON_DIRECTORY_FILE         0x00000040
+#define FILE_OPEN_FOR_FREE_SPACE_QUERY  0x00800000
