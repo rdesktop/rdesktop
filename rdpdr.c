@@ -49,7 +49,9 @@ struct async_iorequest
 	DEVICE_FNS *fns;
 
 	struct async_iorequest *next;	/* next element in list */
-} g_iorequest;
+};
+
+struct async_iorequest *g_iorequest;
 
 /* Return device_id for a given handle */
 int
@@ -83,42 +85,27 @@ add_async_iorequest(uint32 device, uint32 file, uint32 id, uint32 major, uint32 
 {
 	struct async_iorequest *iorq;
 
-	iorq = &g_iorequest;
+	if (g_iorequest == NULL)
+	{
+		g_iorequest = (struct async_iorequest *) xmalloc(sizeof(struct async_iorequest));
+		g_iorequest->fd = 0;
+		g_iorequest->next = NULL;
+	}
+
+	iorq = g_iorequest;
+
 	while (iorq->fd != 0)
 	{
 		// create new element if needed
 		if (iorq->next == NULL)
+		{
 			iorq->next =
 				(struct async_iorequest *) xmalloc(sizeof(struct async_iorequest));
-
+			iorq->next->fd = 0;
+			iorq->next->next = NULL;
+		}
 		iorq = iorq->next;
 	}
-
-	/* first element is special since it doesn't get deleted */
-	/* don't want to get io out of order */
-	if (g_iorequest.fd == 0)
-	{
-		iorq = &g_iorequest;
-		/* look for first occurrence of fd */
-		while (iorq->next != NULL)
-		{
-			if (iorq->fd == file)
-				break;
-			iorq = iorq->next;
-		}
-		/* if same create new link at end of chain instead */
-		if (iorq->fd == file)
-		{
-			while (iorq->next != NULL)
-				iorq = iorq->next;
-			iorq->next =
-				(struct async_iorequest *) xmalloc(sizeof(struct async_iorequest));
-			iorq = iorq->next;
-		}
-		else
-			iorq = &g_iorequest;	/* didn't find fs use first entry */
-	}
-
 	iorq->device = device;
 	iorq->fd = file;
 	iorq->id = id;
@@ -329,8 +316,8 @@ rdpdr_process_irp(STREAM s)
 
 		case DEVICE_TYPE_DISK:
 
-			/*rw_blocking = False; */
 			fns = &disk_fns;
+			/*rw_blocking = False; */
 			break;
 
 		case DEVICE_TYPE_SCARD:
@@ -702,7 +689,7 @@ rdpdr_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv, BOOL * t
 	long select_timeout = 0;	// Timeout value to be used for select() (in millisecons).
 	struct async_iorequest *iorq;
 
-	iorq = &g_iorequest;
+	iorq = g_iorequest;
 	while (iorq != NULL)
 	{
 		if (iorq->fd != 0)
@@ -756,7 +743,7 @@ rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
 		return;
 	}
 
-	iorq = &g_iorequest;
+	iorq = g_iorequest;
 	prev = NULL;
 	while (iorq != NULL)
 	{
@@ -770,10 +757,16 @@ rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
 					{
 						/* Read the data */
 						fns = iorq->fns;
+
+						/* never read larger chunks than 8k - chances are that it will block */
 						status = fns->read(iorq->fd,
 								   iorq->buffer + iorq->partial_len,
-								   iorq->length - iorq->partial_len,
-								   0, &result);
+								   (iorq->length -
+								    iorq->partial_len) >
+								   8192 ? 8192 : (iorq->length -
+										  iorq->
+										  partial_len), 0,
+								   &result);
 						iorq->partial_len += result;
 #if WITH_DEBUG_RDP5
 						DEBUG(("RDPDR: %d bytes of data read\n", result));
@@ -795,6 +788,12 @@ rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
 								prev->next = iorq->next;
 								xfree(iorq);
 							}
+							else
+							{
+								// Even if NULL
+								g_iorequest = iorq->next;
+								xfree(iorq);
+							}
 						}
 					}
 					break;
@@ -803,11 +802,17 @@ rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
 					{
 						/* Write data. */
 						fns = iorq->fns;
+
+						/* never write larger chunks than 8k - chances are that it will block */
 						status = fns->write(iorq->fd,
 								    iorq->buffer +
 								    iorq->partial_len,
-								    iorq->length -
-								    iorq->partial_len, 0, &result);
+								    (iorq->length -
+								     iorq->partial_len) >
+								    8192 ? 8192 : (iorq->length -
+										   iorq->
+										   partial_len), 0,
+								    &result);
 						iorq->partial_len += result;
 #if WITH_DEBUG_RDP5
 						DEBUG(("RDPDR: %d bytes of data written\n",
@@ -827,6 +832,12 @@ rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
 							if (prev != NULL)
 							{
 								prev->next = iorq->next;
+								xfree(iorq);
+							}
+							else
+							{
+								// Even if NULL
+								g_iorequest = iorq->next;
 								xfree(iorq);
 							}
 						}
@@ -864,6 +875,12 @@ rdpdr_abort_io(uint32 fd, uint32 major, NTSTATUS status)
 			if (prev != NULL)
 			{
 				prev->next = iorq->next;
+				xfree(iorq);
+			}
+			else
+			{
+				// Even if NULL
+				g_iorequest = iorq->next;
 				xfree(iorq);
 			}
 			return True;
