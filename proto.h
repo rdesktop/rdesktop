@@ -26,6 +26,12 @@ void cliprdr_send_native_format_announce(uint8 * data, uint32 length);
 void cliprdr_send_data_request(uint32 format);
 void cliprdr_send_data(uint8 * data, uint32 length);
 BOOL cliprdr_init(void);
+/* disk.c */
+NTSTATUS disk_query_information(HANDLE handle, uint32 info_class, STREAM out);
+NTSTATUS disk_set_information(HANDLE handle, uint32 info_class, STREAM in, STREAM out);
+NTSTATUS disk_query_volume_information(HANDLE handle, uint32 info_class, STREAM out);
+NTSTATUS disk_query_directory(HANDLE handle, uint32 info_class, char *pattern, STREAM out);
+int disk_enum_devices(int *id, char *optarg);
 /* ewmhints.c */
 int get_current_workarea(uint32 * x, uint32 * y, uint32 * width, uint32 * height);
 /* iso.c */
@@ -46,7 +52,13 @@ void mcs_disconnect(void);
 /* orders.c */
 void process_orders(STREAM s, uint16 num_orders);
 void reset_order_state(void);
+/* parallel.c */
+int parallel_enum_devices(int *id, char *optarg);
 /* printer.c */
+int printer_enum_devices(int *id, char *optarg);
+/* printercache.c */
+int printercache_load_blob(char *printer_name, uint8 ** data);
+void printercache_process(STREAM s);
 /* rdesktop.c */
 int main(int argc, char *argv[]);
 void generate_random(uint8 * random);
@@ -56,13 +68,17 @@ void xfree(void *mem);
 void error(char *format, ...);
 void warning(char *format, ...);
 void unimpl(char *format, ...);
-void hexdump(unsigned char *p, int len);
+void hexdump(unsigned char *p, unsigned int len);
+char *toupper(char* p);
+char *ltoa(long N, int base);
 int load_licence(unsigned char **data);
 void save_licence(unsigned char *data, int length);
+char *next_arg(char *src, char needle);
 /* rdp5.c */
 void rdp5_process(STREAM s, BOOL encryption);
 /* rdp.c */
 void rdp_out_unistr(STREAM s, char *string, int len);
+int rdp_in_unistr(STREAM s, char *string, int uni_len);
 void rdp_send_input(uint32 time, uint16 message_type, uint16 device_flags, uint16 param1,
 		    uint16 param2);
 void process_colour_pointer_pdu(STREAM s);
@@ -75,12 +91,15 @@ BOOL rdp_connect(char *server, uint32 flags, char *domain, char *password, char 
 		 char *directory);
 void rdp_disconnect(void);
 /* rdpdr.c */
+void convert_to_unix_filename(char *filename);
 void rdpdr_send_connect(void);
 void rdpdr_send_name(void);
 void rdpdr_send_available(void);
 void rdpdr_send_completion(uint32 device, uint32 id, uint32 status, uint32 result, uint8 * buffer,
 			   uint32 length);
-BOOL rdpdr_init(void);
+BOOL rdpdr_init();
+int get_device_index(HANDLE handle);
+BOOL rdpdr_abort_io(uint32 fd, uint32 major, NTSTATUS status);
 /* rdpsnd.c */
 STREAM rdpsnd_init_packet(uint16 type, uint16 size);
 void rdpsnd_send(STREAM s);
@@ -112,6 +131,8 @@ STREAM sec_recv(void);
 BOOL sec_connect(char *server, char *username);
 void sec_disconnect(void);
 /* serial.c */
+BOOL serial_get_timeout(uint32 handle, uint32 length, uint32 * timeout, uint32 * itv_timeout);
+int serial_enum_devices(int *id, char *optarg);
 /* tcp.c */
 STREAM tcp_init(uint32 maxlen);
 void tcp_send(STREAM s);

@@ -132,6 +132,25 @@ rdp_out_unistr(STREAM s, char *string, int len)
 	s->p += len;
 }
 
+/* Input a string in Unicode
+ *
+ * Returns str_len of string
+ */
+int
+rdp_in_unistr(STREAM s, char *string, int uni_len)
+{
+	int i = 0;
+
+	while (i < uni_len / 2)
+	{
+		in_uint8a(s, &string[i++], 1);
+		in_uint8s(s, 1);
+	}
+
+	return i - 1;
+}
+
+
 /* Parse a logon info packet */
 static void
 rdp_send_logon_info(uint32 flags, char *domain, char *user,

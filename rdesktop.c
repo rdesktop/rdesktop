@@ -1,7 +1,7 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    Entrypoint and utility functions
-   Copyright (C) Matthew Chapman 1999-2004
+   Copyright (C) Matthew Chapman 1999-2003
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -73,6 +73,9 @@ extern BOOL g_owncolmap;
 BOOL g_rdpsnd = False;
 #endif
 
+extern RDPDR_DEVICE g_rdpdr_device[];
+extern uint32 g_num_devices;
+
 #ifdef RDP2VNC
 extern int rfb_port;
 extern int defer_time;
@@ -111,9 +114,18 @@ usage(char *program)
 	fprintf(stderr, "   -K: keep window manager key bindings\n");
 	fprintf(stderr, "   -S: caption button size (single application mode)\n");
 	fprintf(stderr, "   -T: window title\n");
-	fprintf(stderr, "   -N: enable numlock synchronisation\n");
+	fprintf(stderr, "   -N: enable numlock syncronization\n");
 	fprintf(stderr, "   -a: connection colour depth\n");
-	fprintf(stderr, "   -r: enable specified device redirection (currently: sound)\n");
+	fprintf(stderr, "   -r: enable specified device redirection (this flag can be repeated)\n");
+	fprintf(stderr,	"         '-r comport:COM1=/dev/ttyS0': enable serial redirection of /dev/ttyS0 to COM1\n");
+	fprintf(stderr, "             or    :COM1=/dev/ttyS0:9600,0|1|2,0|2,5|6|7|8:dtr \n");
+	fprintf(stderr, "         '-r disk:A=/mnt/floppy': enable redirection of /mnt/floppy to A:\n");
+	fprintf(stderr, "             or   A=/mnt/floppy,D=/mnt/cdrom'\n");
+	fprintf(stderr,	"         '-r lptport:LPT1=/dev/lp0': enable parallel redirection of /dev/lp0 to LPT1\n");
+	fprintf(stderr, "             or       LPT1=/dev/lp0,LPT2=/dev/lp1\n");
+	fprintf(stderr, "         '-r printer:mydeskjet': enable printer redirection\n");
+	fprintf(stderr,	"             or       mydeskjet:\"HP Laserjet IIIP\" to enter server driver as well\n");
+	fprintf(stderr, "         '-r sound': enable sound redirection\n");
 	fprintf(stderr, "   -0: attach to console\n");
 	fprintf(stderr, "   -4: use RDP version 4\n");
 	fprintf(stderr, "   -5: use RDP version 5 (default)\n");
@@ -218,12 +230,15 @@ main(int argc, char *argv[])
 	uint32 flags;
 	char *p;
 	int c;
+
 	int username_option = 0;
 
 	flags = RDP_LOGON_NORMAL;
 	prompt_password = False;
 	domain[0] = password[0] = shell[0] = directory[0] = 0;
 	strcpy(keymapname, "en-us");
+
+	g_num_devices = 0;
 
 #ifdef RDP2VNC
 #define VNCOPT "V:Q:"
@@ -385,12 +400,36 @@ main(int argc, char *argv[])
 				break;
 
 			case 'r':
-				if (!strcmp(optarg, "sound"))
+
+				if (strncmp("sound", optarg, 5) == 0)
+				{
 #ifdef WITH_RDPSND
 					g_rdpsnd = True;
 #else
 					warning("Not compiled with sound support");
 #endif
+				}
+				else if (strncmp("disk", optarg, 4) == 0)
+				{
+					/* -r disk:h:=/mnt/floppy */
+					disk_enum_devices(&g_num_devices, optarg + 4);
+				}
+				else if (strncmp("comport", optarg, 7) == 0)
+				{
+					serial_enum_devices(&g_num_devices, optarg + 7);
+				}
+				else if (strncmp("lptport", optarg, 7) == 0)
+				{
+					parallel_enum_devices(&g_num_devices, optarg + 7);
+				}
+				else if (strncmp("printer", optarg, 7) == 0)
+				{
+					printer_enum_devices(&g_num_devices, optarg + 7);
+				}
+				else
+				{
+					warning("Unknown -r argument\n\n\tPossible arguments are: comport, disk, lptport, printer, sound\n");
+				}
 				break;
 
 			case '0':
@@ -470,7 +509,7 @@ main(int argc, char *argv[])
 	if (g_rdpsnd)
 		rdpsnd_init();
 #endif
-	/* rdpdr_init(); */
+	rdpdr_init();
 
 	if (!rdp_connect(server, flags, domain, password, shell, directory))
 		return 1;
@@ -660,7 +699,7 @@ unimpl(char *format, ...)
 
 /* produce a hex dump */
 void
-hexdump(unsigned char *p, int len)
+hexdump(unsigned char *p, unsigned int len)
 {
 	unsigned char *line = p;
 	int i, thisline, offset = 0;
@@ -685,6 +724,102 @@ hexdump(unsigned char *p, int len)
 		offset += thisline;
 		line += thisline;
 	}
+}
+
+/*
+  input: src is the string we look in for needle
+  return value: returns next src pointer, for
+  	succesive executions, like in a while loop
+	if retval is 0, then there are no more args.
+  pitfalls:
+  	src is modified. 0x00 chars are inserted to
+	terminate strings.
+	return val, points on the next val chr after ins
+	0x00
+
+	example usage:
+	while( (pos = next_arg( optarg, ',')) ){
+		printf("%s\n",optarg);
+		optarg=pos;
+	}
+
+*/
+char *
+next_arg(char *src, char needle)
+{
+	char *nextval;
+
+	// EOS
+	if (*src == (char) 0x00)
+		return 0;
+
+	// more args available.
+	nextval = strchr(src, needle);
+	if (nextval)
+	{
+		*nextval = (char) 0x00;
+		return ++nextval;
+	}
+
+	// no more args after this, jump to EOS
+	nextval = src + strlen(src);
+	return nextval;
+}
+
+
+char *
+toupper(char* p)
+{
+	while( *p ){
+		if( (*p >= 'a') && (*p <= 'z') )
+			*p = *p - 32;
+		p++;
+	}
+}
+
+
+/* not all clibs got ltoa */
+#define LTOA_BUFSIZE (sizeof(long) * 8 + 1)
+
+char *
+ltoa(long N, int base)
+{
+	static char ret[LTOA_BUFSIZE];
+
+	register int i = 2;
+	long uarg;
+	char *tail, *head = ret, buf[LTOA_BUFSIZE];
+
+	if (36 < base || 2 > base)
+		base = 10;
+
+	tail = &buf[LTOA_BUFSIZE - 1];
+	*tail-- = '\0';
+
+	if (10 == base && N < 0L)
+	{
+		*head++ = '-';
+		uarg = -N;
+	}
+	else
+		uarg = N;
+
+	if (uarg)
+	{
+		for (i = 1; uarg; ++i)
+		{
+			register ldiv_t r;
+
+			r = ldiv(uarg, base);
+			*tail-- = (char) (r.rem + ((9L < r.rem) ? ('A' - 10L) : '0'));
+			uarg = r.quot;
+		}
+	}
+	else
+		*tail-- = '0';
+
+	memcpy(head, ++tail, i);
+	return ret;
 }
 
 

@@ -7,7 +7,7 @@
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation; either version 2 of the License, or
    (at your option) any later version.
-   
+
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -317,3 +317,20 @@ enum RDP_INPUT_DEVICE
 #define STATUS_INVALID_PARAMETER	0xc000000d
 #define STATUS_INVALID_DEVICE_REQUEST	0xc0000010
 #define STATUS_ACCESS_DENIED		0xc0000022
+#define STATUS_NO_SUCH_FILE             0xc000000f
+#define STATUS_NO_MORE_FILES            0x80000006
+#define STATUS_INVALID_HANDLE           0xc0000008
+#define STATUS_NOT_SUPPORTED            0xc00000bb
+#define STATUS_PENDING                  0x00000103
+#define STATUS_CANCELLED                0xc0000120
+#define STATUS_TIMEOUT                  0xc0000102
+
+/* RDPDR constants */
+#define RDPDR_MAX_DEVICES               0x10
+#define DEVICE_TYPE_SERIAL              0x01
+#define DEVICE_TYPE_PARALLEL            0x02
+#define DEVICE_TYPE_PRINTER             0x04
+#define DEVICE_TYPE_DISK                0x08
+#define DEVICE_TYPE_SCARD               0x20
+
+#define FILE_DIRECTORY_FILE             0x00000001
