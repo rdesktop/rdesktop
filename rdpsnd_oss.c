@@ -23,6 +23,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <sys/time.h>
 #include <sys/ioctl.h>
 #include <sys/soundcard.h>
 
@@ -30,6 +31,8 @@
 
 int g_dsp_fd;
 BOOL g_dsp_busy = False;
+static int g_snd_rate;
+static short g_samplewidth;
 
 static struct audio_packet
 {
@@ -77,7 +80,7 @@ wave_out_format_supported(WAVEFORMATEX * pwfx)
 BOOL
 wave_out_set_format(WAVEFORMATEX * pwfx)
 {
-	int speed, channels, format;
+	int channels, format;
 
 	ioctl(g_dsp_fd, SNDCTL_DSP_RESET, NULL);
 	ioctl(g_dsp_fd, SNDCTL_DSP_SYNC, NULL);
@@ -86,6 +89,8 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 		format = AFMT_U8;
 	else if (pwfx->wBitsPerSample == 16)
 		format = AFMT_S16_LE;
+
+	g_samplewidth = pwfx->wBitsPerSample / 8;
 
 	if (ioctl(g_dsp_fd, SNDCTL_DSP_SETFMT, &format) == -1)
 	{
@@ -102,8 +107,13 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 		return False;
 	}
 
-	speed = pwfx->nSamplesPerSec;
-	if (ioctl(g_dsp_fd, SNDCTL_DSP_SPEED, &speed) == -1)
+	if (channels == 2)
+	{
+		g_samplewidth *= 2;
+	}
+
+	g_snd_rate = pwfx->nSamplesPerSec;
+	if (ioctl(g_dsp_fd, SNDCTL_DSP_SPEED, &g_snd_rate) == -1)
 	{
 		perror("SNDCTL_DSP_SPEED");
 		close(g_dsp_fd);
@@ -180,6 +190,10 @@ wave_out_play(void)
 	struct audio_packet *packet;
 	ssize_t len;
 	STREAM out;
+	static long startedat_us;
+	static long startedat_s;
+	static BOOL started = False;
+	struct timeval tv;
 
 	while (1)
 	{
@@ -191,6 +205,14 @@ wave_out_play(void)
 
 		packet = &packet_queue[queue_lo];
 		out = &packet->s;
+
+		if (!started)
+		{
+			gettimeofday(&tv, NULL);
+			startedat_us = tv.tv_usec;
+			startedat_s = tv.tv_sec;
+			started = True;
+		}
 
 		len = write(g_dsp_fd, out->p, out->end - out->p);
 		if (len == -1)
@@ -204,10 +226,29 @@ wave_out_play(void)
 		out->p += len;
 		if (out->p == out->end)
 		{
-			rdpsnd_send_completion(packet->tick, packet->index);
-			free(out->data);
-			queue_lo = (queue_lo + 1) % MAX_QUEUE;
+			long long duration;
+			long elapsed;
+			
+			gettimeofday(&tv, NULL);
+			duration = 
+				(out->size * (1000000 / 
+				(g_samplewidth * g_snd_rate)));
+			elapsed =
+				(tv.tv_sec - startedat_s) * 1000000 +
+				(tv.tv_usec - startedat_us);
+
+			if ( elapsed >= (duration * 7) / 10 )
+			{
+				rdpsnd_send_completion(packet->tick, packet->index);
+				free(out->data);
+				queue_lo = (queue_lo + 1) % MAX_QUEUE;
+				started = False;
+			}
+			else
+			{
+				g_dsp_busy = 1;
+				return;
+			}
 		}
 	}
-
 }

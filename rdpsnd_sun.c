@@ -32,9 +32,9 @@
 
 int g_dsp_fd;
 BOOL g_dsp_busy = False;
-static BOOL reopened;
-static BOOL swapaudio;
-static short samplewidth;
+static BOOL g_reopened;
+static BOOL g_swapaudio;
+static short g_samplewidth;
 
 static struct audio_packet
 {
@@ -64,7 +64,7 @@ wave_out_open(void)
 	fcntl(g_dsp_fd, F_SETFL, fcntl(g_dsp_fd, F_GETFL) | O_NONBLOCK);
 
 	queue_lo = queue_hi = 0;
-	reopened = True;
+	g_reopened = True;
 
 	return True;
 }
@@ -105,7 +105,7 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 	int test = 1;
 
 	ioctl(g_dsp_fd, AUDIO_DRAIN, 0);
-	swapaudio = False;
+	g_swapaudio = False;
 	AUDIO_INITINFO(&info);
 
 
@@ -117,10 +117,10 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 	{
 		info.play.encoding = AUDIO_ENCODING_LINEAR;
 		/* Do we need to swap the 16bit values? (Are we BigEndian) */
-		swapaudio = !(*(uint8 *) (&test));
+		g_swapaudio = !(*(uint8 *) (&test));
 	}
 
-	samplewidth = pwfx->wBitsPerSample / 8;
+	g_samplewidth = pwfx->wBitsPerSample / 8;
 
 	if (pwfx->nChannels == 1)
 	{
@@ -129,7 +129,7 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 	else if (pwfx->nChannels == 2)
 	{
 		info.play.channels = AUDIO_CHANNELS_STEREO;
-		samplewidth *= 2;
+		g_samplewidth *= 2;
 	}
 
 	info.play.sample_rate = pwfx->nSamplesPerSec;
@@ -137,7 +137,7 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 	info.play.samples = 0;
 	info.play.eof = 0;
 	info.play.error = 0;
-	reopened = True;
+	g_reopened = True;
 
 	if (ioctl(g_dsp_fd, AUDIO_SETINFO, &info) == -1)
 	{
@@ -227,13 +227,13 @@ wave_out_play(void)
 
 	while (1)
 	{
-		if (reopened)
+		if (g_reopened)
 		{
 			/* Device was just (re)openend */
 			samplecnt = 0;
 			swapped = False;
 			sentcompletion = True;
-			reopened = False;
+			g_reopened = False;
 		}
 
 		if (queue_lo == queue_hi)
@@ -246,7 +246,7 @@ wave_out_play(void)
 		out = &packet->s;
 
 		/* Swap the current packet, but only once */
-		if (swapaudio && !swapped)
+		if (g_swapaudio && !swapped)
 		{
 			for (i = 0; i < out->end - out->p; i += 2)
 			{
@@ -260,7 +260,7 @@ wave_out_play(void)
 		if (sentcompletion)
 		{
 			sentcompletion = False;
-			numsamples = (out->end - out->p) / samplewidth;
+			numsamples = (out->end - out->p) / g_samplewidth;
 		}
 
 		len = 0;
