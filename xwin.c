@@ -345,7 +345,7 @@ ui_create_window(void)
 	}
 
 	input_mask = KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask |
-		StructureNotifyMask | FocusChangeMask;
+		VisibilityChangeMask | FocusChangeMask;
 
 	if (sendmotion)
 		input_mask |= PointerMotionMask;
@@ -365,12 +365,12 @@ ui_create_window(void)
 	XSelectInput(display, wnd, input_mask);
 	XMapWindow(display, wnd);
 
-	/* wait for MapNotify */
+	/* wait for VisibilityNotify */
 	do
 	{
-		XMaskEvent(display, StructureNotifyMask, &xevent);
+		XMaskEvent(display, VisibilityChangeMask, &xevent);
 	}
-	while (xevent.type != MapNotify);
+	while (xevent.type != VisibilityNotify);
 
 	if (fullscreen)
 		XSetInputFocus(display, wnd, RevertToPointerRoot, CurrentTime);
