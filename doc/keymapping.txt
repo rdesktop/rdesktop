@@ -34,10 +34,8 @@ Composing/Multi_key is supported. For more information, see:
 
 
 Keymap files
-=============
-The keymap-files have two-letter names. These follows ISO 639
-(2-letter codes). ISO639 can be found at
-http://www.w3.org/WAI/ER/IG/ert/iso639.htm
+============
+The names of the keymaps follows RFC1766. 
 
 (You can find a translation from Windows keyboard layout numbers to
 keymap names by looking at
@@ -126,3 +124,23 @@ mod2        Num_Lock (0x4d)
 mod3        Mode_switch (0x71)
 mod4        Hyper_L (0x73),  Hyper_R (0x74)
 mod5        Scroll_Lock (0x4e)
+
+
+Updating / writing keymap files
+===============================
+When writing new or updating keymap files, please use comments and
+blanks, to increase readability. The "sv" keymap is a good template. 
+
+When you need to add a translation to a keymap file, do:
+
+    1. Get the "key number" for this key, by looking at keynums.png. 
+
+    2. Take a look at scancodes.h, and look for
+    SCANCODE_KEY_<my-key-number>. The scancode value is at the end of
+    the line. If the line contains (SCANCODE_EXTENDED | 0xsomething),
+    then you should OR 0x80 to this value. For example, you can do:
+    
+    python -c "print hex(0x80 | 0xsomething)"
+
+    3. Put the scancode (from step 2) and keysym name (found in the
+    error message) into the keymap file. 
