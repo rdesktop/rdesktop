@@ -59,7 +59,8 @@ int main(int argc, char *argv[])
 	int c;
 
 	STATUS("rdesktop: A Remote Desktop Protocol client.\n");
-	STATUS("Version "VERSION". Copyright (C) 1999-2000 Matt Chapman.\n\n");
+	STATUS("Version "VERSION". Copyright (C) 1999-2000 Matt Chapman.\n");
+	STATUS("See http://www.rdesktop.org/ for more information.\n\n");
 
 	while ((c = getopt(argc, argv, "u:n:w:h:k:mbl?")) != -1)
 	{

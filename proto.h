@@ -90,6 +90,6 @@ void ui_triblt(uint8 opcode, int x, int y, int cx, int cy, HBITMAP src, int srcx
 void ui_line(uint8 opcode, int startx, int starty, int endx, int endy, PEN *pen);
 void ui_rect(int x, int y, int cx, int cy, int colour);
 void ui_draw_glyph(int mixmode, int x, int y, int cx, int cy, HGLYPH glyph, int srcx, int srcy, int bgcolour, int fgcolour);
-void ui_draw_text(uint8 font, uint8 flags, int mixmode, int x, int y, int boxx, int boxy, int boxcx, int boxcy, int bgcolour, int fgcolour, uint8 *text, uint8 length);
+void ui_draw_text(uint8 font, uint8 flags, int mixmode, int x, int y, int clipx, int clipy, int clipcx, int clipcy, int boxx, int boxy, int boxcx, int boxcy, int bgcolour, int fgcolour, uint8 *text, uint8 length);
 void ui_desktop_save(uint32 offset, int x, int y, int cx, int cy);
 void ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy);

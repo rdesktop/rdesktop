@@ -618,8 +618,11 @@ static void process_text2(STREAM s, TEXT2_ORDER *os, uint32 present, BOOL delta)
 		cache_put_text(os->text[os->length+1], os->text, os->length);
 	}
 
-	ui_draw_text(os->font, os->flags, os->mixmode,
-			os->x, os->y, os->boxleft, os->boxtop,
+	ui_draw_text(os->font, os->flags, os->mixmode, os->x, os->y,
+			os->clipleft, os->cliptop,
+			os->clipright - os->clipleft,
+			os->clipbottom - os->cliptop,
+			os->boxleft, os->boxtop,
 			os->boxright - os->boxleft,
 			os->boxbottom - os->boxtop,
 			os->bgcolour, os->fgcolour, os->text, os->length);

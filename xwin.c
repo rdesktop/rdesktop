@@ -491,8 +491,9 @@ void ui_draw_glyph(int mixmode,
 	}
 }
 
-void ui_draw_text(uint8 font, uint8 flags, int mixmode, int x,
-			int y, int boxx, int boxy, int boxcx, int boxcy,
+void ui_draw_text(uint8 font, uint8 flags, int mixmode, int x, int y,
+			int clipx, int clipy, int clipcx, int clipcy,
+			int boxx, int boxy, int boxcx, int boxcy,
 			int bgcolour, int fgcolour, uint8 *text, uint8 length)
 {
 	FONTGLYPH *glyph;
@@ -502,11 +503,18 @@ void ui_draw_text(uint8 font, uint8 flags, int mixmode, int x,
 	{
 		ui_rect(boxx, boxy, boxcx, boxcy, bgcolour);
 	}
+	else if (mixmode == MIX_OPAQUE)
+	{
+		ui_rect(clipx, clipy, clipcx, clipcy, bgcolour);
+	}
 
 	/* Paint text, character by character */
 	for (i = 0; i < length; i++)
 	{
 		glyph = cache_get_font(font, text[i]);
+
+		if (!(flags & TEXT2_IMPLICIT_X))
+			x += text[++i];
 
 		if (glyph != NULL)
 		{
@@ -518,8 +526,6 @@ void ui_draw_text(uint8 font, uint8 flags, int mixmode, int x,
 
 			if (flags & TEXT2_IMPLICIT_X)
 				x += glyph->width;
-			else
-				x += text[++i];
 		}
 	}
 }
