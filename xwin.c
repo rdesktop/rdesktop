@@ -29,6 +29,7 @@ extern int height;
 extern BOOL sendmotion;
 extern BOOL fullscreen;
 extern BOOL grab_keyboard;
+extern BOOL hide_decorations;
 extern char title[];
 BOOL enable_compose = False;
 BOOL focused;
@@ -54,6 +55,20 @@ static BOOL xserver_be;
 /* software backing store */
 static BOOL ownbackstore;
 static Pixmap backstore;
+
+/* MWM decorations */
+#define MWM_HINTS_DECORATIONS   (1L << 1)
+#define PROP_MOTIF_WM_HINTS_ELEMENTS    5
+typedef struct
+{
+	unsigned long flags;
+	unsigned long functions;
+	unsigned long decorations;
+	long inputMode;
+	unsigned long status;
+}
+PropMotifWmHints;
+
 
 #define FILL_RECTANGLE(x,y,cx,cy)\
 { \
@@ -90,6 +105,28 @@ static int rop2_map[] = {
 
 #define SET_FUNCTION(rop2)	{ if (rop2 != ROP2_COPY) XSetFunction(display, gc, rop2_map[rop2]); }
 #define RESET_FUNCTION(rop2)	{ if (rop2 != ROP2_COPY) XSetFunction(display, gc, GXcopy); }
+
+void
+mwm_hide_decorations(void)
+{
+	PropMotifWmHints motif_hints;
+	Atom hintsatom;
+
+	/* setup the property */
+	motif_hints.flags = MWM_HINTS_DECORATIONS;
+	motif_hints.decorations = 0;
+
+	/* get the atom for the property */
+	hintsatom = XInternAtom(display, "_MOTIF_WM_HINTS", False);
+	if (!hintsatom)
+	{
+		error("Failed to get atom _MOTIF_WM_HINTS\n");
+		return;
+	}
+
+	XChangeProperty(display, wnd, hintsatom, hintsatom, 32, PropModeReplace,
+			(unsigned char *) &motif_hints, PROP_MOTIF_WM_HINTS_ELEMENTS);
+}
 
 static void
 translate8(uint8 * data, uint8 * out, uint8 * end)
@@ -327,6 +364,9 @@ ui_create_window(void)
 			    CWBackPixel | CWBackingStore | CWOverrideRedirect, &attribs);
 
 	XStoreName(display, wnd, title);
+
+	if (hide_decorations)
+		mwm_hide_decorations();
 
 	classhints = XAllocClassHint();
 	if (classhints != NULL)

@@ -55,6 +55,7 @@ BOOL encryption = True;
 BOOL desktop_save = True;
 BOOL fullscreen = False;
 BOOL grab_keyboard = True;
+BOOL hide_decorations = False;
 
 /* Display usage information */
 static void
@@ -79,6 +80,7 @@ usage(char *program)
 	fprintf(stderr, "   -m: do not send motion events\n");
 	fprintf(stderr, "   -K: keep window manager key bindings\n");
 	fprintf(stderr, "   -T: window title\n");
+	fprintf(stderr, "   -D: hide window manager decorations\n");
 }
 
 static BOOL
@@ -138,7 +140,7 @@ main(int argc, char *argv[])
 	domain[0] = password[0] = shell[0] = directory[0] = 0;
 	strcpy(keymapname, "en-us");
 
-	while ((c = getopt(argc, argv, "u:d:s:c:p:n:k:g:fbemKT:h?")) != -1)
+	while ((c = getopt(argc, argv, "u:d:s:c:p:n:k:g:fbemKT:Dh?")) != -1)
 	{
 		switch (c)
 		{
@@ -216,6 +218,10 @@ main(int argc, char *argv[])
 
 			case 'T':
 				STRNCPY(title, optarg, sizeof(title));
+				break;
+
+			case 'D':
+				hide_decorations = True;
 				break;
 
 			case 'h':
