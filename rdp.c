@@ -270,9 +270,8 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 		out_uint16_le(s, len_dll + 2);
 		rdp_out_unistr(s, "C:\\WINNT\\System32\\mstscax.dll", len_dll);
 
-		tzone = (mktime(localtime(&t)) - mktime(gmtime(&t))) / 60;
-		out_uint16_le(s, tzone);
-		out_uint16_le(s, 0x0000);
+		tzone = (mktime(gmtime(&t)) - mktime(localtime(&t))) / 60;
+		out_uint32_le(s, tzone);
 
 		rdp_out_unistr(s, "GTB, normaltid", 2 * strlen("GTB, normaltid"));
 		out_uint8s(s, 62 - 2 * strlen("GTB, normaltid"));
