@@ -2,6 +2,7 @@
 #include <fcntl.h>
 #include <termios.h>
 #include <strings.h>
+#include <sys/ioctl.h>
 #include "rdesktop.h"
 
 #define FILE_DEVICE_SERIAL_PORT		0x1b
@@ -72,6 +73,12 @@
 #define SERIAL_EV_RX80FULL         0x0400	// Receive buffer is 80 percent full
 #define SERIAL_EV_EVENT1           0x0800	// Provider specific event 1
 #define SERIAL_EV_EVENT2           0x1000	// Provider specific event 2
+
+/* Modem Status */
+#define SERIAL_MS_CTS 0x10
+#define SERIAL_MS_DSR 0x20
+#define SERIAL_MS_RNG 0x40
+#define SERIAL_MS_CAR 0x80
 
 #ifndef CRTSCTS
 #define CRTSCTS 0
@@ -519,7 +526,7 @@ serial_device_control(HANDLE handle, uint32 request, STREAM in, STREAM out)
 #if 0
 	int flush_mask, purge_mask;
 #endif
-	uint32 result;
+	uint32 result, modemstate;
 	uint8 immediate;
 	SERIAL_DEVICE *pser_inf;
 	struct termios *ptermios;
@@ -611,7 +618,19 @@ serial_device_control(HANDLE handle, uint32 request, STREAM in, STREAM out)
 			set_termios(pser_inf, handle);
 			break;
 		case SERIAL_GET_MODEMSTATUS:
-			out_uint32_le(out, 0);	/* Errors */
+			modemstate = 0;
+#ifdef TIOCMGET
+			ioctl(handle, TIOCMGET, &result);
+			if (result & TIOCM_CTS)
+				modemstate |= SERIAL_MS_CTS;
+			if (result & TIOCM_DSR)
+				modemstate |= SERIAL_MS_DSR;
+			if (result & TIOCM_RNG)
+				modemstate |= SERIAL_MS_RNG;
+			if (result & TIOCM_CAR)
+				modemstate |= SERIAL_MS_CAR;
+#endif
+			out_uint32_le(out, modemstate);
 			break;
 		case SERIAL_GET_COMMSTATUS:
 			out_uint32_le(out, 0);	/* Errors */
