@@ -457,7 +457,7 @@ xwin_toggle_fullscreen()
 	int newwidth, newheight;
 
 	fullscreen = !fullscreen;
-	newwidth  = fullscreen ? WidthOfScreen(screen) : width;
+	newwidth = fullscreen ? WidthOfScreen(screen) : width;
 	newheight = fullscreen ? HeightOfScreen(screen) : height;
 
 	XUnmapWindow(display, wnd);
