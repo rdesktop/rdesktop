@@ -31,7 +31,15 @@
 #include "rdesktop.h"
 
 #define CVAL(p)   (*(p++))
-#define CVAL2(p)   (*(((uint16*)p)++)) /* for 16 bit */
+#ifdef NEED_ALIGN
+#ifdef L_ENDIAN
+#define CVAL2(p, v) { v = (*(p++)); v |= (*(p++)) << 8; }
+#else
+#define CVAL2(p, v) { v = (*(p++)) << 8; v |= (*(p++)); }
+#endif /* L_ENDIAN */
+#else
+#define CVAL2(p, v) v = (*(((uint16*)p)++));
+#endif /* NEED_ALIGN */
 
 #define UNROLL8(exp) { exp exp exp exp exp exp exp exp }
 
@@ -330,25 +338,13 @@ bitmap_decompress2(uint8 * output, int width, int height, uint8 * input, int siz
 					insertmix = True;
 				break;
 			case 8:	/* Bicolour */
-#ifdef NEED_ALIGNMENT
-				memcpy(&colour1,&CVAL2(input),2);
-#else
-				colour1 = CVAL2(input);
-#endif
+				CVAL2(input, colour1);
 			case 3:	/* Colour */
-#ifdef NEED_ALIGNMENT
-				memcpy(&colour2,&CVAL2(input),2);
-#else
-				colour2 = CVAL2(input);
-#endif
+				CVAL2(input, colour2);
 				break;
 			case 6:	/* SetMix/Mix */
 			case 7:	/* SetMix/FillOrMix */
-#ifdef NEED_ALIGNMENT
-				memcpy(&mix,&CVAL2(input),2);
-#else
-				mix = CVAL2(input);
-#endif
+				CVAL2(input, mix);
 				opcode -= 5;
 				break;
 			case 9:	/* FillOrMix_1 */
@@ -436,11 +432,7 @@ bitmap_decompress2(uint8 * output, int width, int height, uint8 * input, int siz
 					REPEAT(line[x] = colour2)
 					break;
 				case 4:	/* Copy */
-#ifdef NEED_ALIGNMENT
-					REPEAT(memcpy(&line[x],&CVAL2(input),2))
-#else
-					REPEAT(line[x] = CVAL2(input))
-#endif
+					REPEAT(CVAL2(input, line[x]))
 					break;
 				case 8:	/* Bicolour */
 					REPEAT
