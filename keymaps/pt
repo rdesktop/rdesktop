@@ -37,7 +37,6 @@ guillemotleft 0x0d
 guillemotright 0x0d shift
 dead_cedilla 0x0d altgr
 dead_ogonek 0x0d shift altgr
-at 0x10 altgr
 Greek_OMEGA 0x10 shift altgr
 lstroke 0x11 altgr
 Lstroke 0x11 shift altgr
@@ -68,7 +67,6 @@ dead_macron 0x1b shift altgr
 ae 0x1e altgr
 AE 0x1e shift altgr
 ssharp 0x1f altgr
-section 0x1f shift altgr
 eth 0x20 altgr
 ETH 0x20 shift altgr
 dstroke 0x21 altgr
@@ -78,12 +76,10 @@ ENG 0x22 shift altgr
 hstroke 0x23 altgr
 Hstroke 0x23 shift altgr
 kra 0x25 altgr
-ampersand 0x25 shift altgr
 lstroke 0x26 altgr
 Lstroke 0x26 shift altgr
 ccedilla 0x27
 Ccedilla 0x27 shift
-dead_acute 0x27 altgr
 dead_doubleacute 0x27 shift altgr
 masculine 0x28
 ordfeminine 0x28 shift
@@ -94,20 +90,15 @@ bar 0x29 shift
 notsign 0x29 altgr
 dead_tilde 0x2b
 dead_circumflex 0x2b shift
-dead_grave 0x2b altgr
 dead_breve 0x2b shift altgr
-guillemotleft 0x2c altgr
-less 0x2c shift altgr
-guillemotright 0x2d altgr
-greater 0x2d shift altgr
+less 0x56
+greater 0x56 shift
 cent 0x2e altgr
 copyright 0x2e shift altgr
 leftdoublequotemark 0x2f altgr
 grave 0x2f shift altgr
 rightdoublequotemark 0x30 altgr
-apostrophe 0x30 shift altgr
 mu 0x32 altgr
-masculine 0x32 shift altgr
 comma 0x33
 semicolon 0x33 shift
 horizconnector 0x33 altgr
