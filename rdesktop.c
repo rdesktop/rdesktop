@@ -68,6 +68,10 @@ BOOL g_use_rdp5 = True;
 BOOL g_console_session = False;
 extern BOOL g_owncolmap;
 
+#ifdef WITH_RDPSND
+BOOL g_rdpsnd = True;
+#endif
+
 #ifdef RDP2VNC
 extern int rfb_port;
 extern int defer_time;
@@ -106,6 +110,9 @@ usage(char *program)
 	fprintf(stderr, "   -K: keep window manager key bindings\n");
 	fprintf(stderr, "   -T: window title\n");
 	fprintf(stderr, "   -D: hide window manager decorations\n");
+#ifdef WITH_RDPSND
+	fprintf(stderr, "   -A: disable audio-redirection\n");
+#endif
 	fprintf(stderr, "   -a: server bpp\n");
 	fprintf(stderr, "   -0: attach to console\n");
 	fprintf(stderr, "   -4: use RDP version 4\n");
@@ -224,7 +231,7 @@ main(int argc, char *argv[])
 #define VNCOPT
 #endif
 
-	while ((c = getopt(argc, argv, VNCOPT "u:d:s:S:c:p:n:k:g:a:fbeEmCKT:D045h?")) != -1)
+	while ((c = getopt(argc, argv, VNCOPT "u:d:s:S:c:p:n:k:g:a:fbeEmCKT:AD045h?")) != -1)
 	{
 		switch (c)
 		{
@@ -372,6 +379,11 @@ main(int argc, char *argv[])
 				}
 				break;
 
+#ifdef WITH_RDPSND
+			case 'A':
+				g_rdpsnd = False;
+				break;
+#endif
 			case '0':
 				g_console_session = True;
 				break;
@@ -446,7 +458,10 @@ main(int argc, char *argv[])
 		return 1;
 
 #ifdef WITH_RDPSND
-	rdpsnd_init();
+	if (g_rdpsnd)
+	{
+		rdpsnd_init();
+	}
 #endif
 	/* rdpdr_init(); */
 

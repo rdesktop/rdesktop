@@ -69,6 +69,7 @@ static int g_move_y_offset = 0;
 #ifdef WITH_RDPSND
 extern int g_dsp_fd;
 extern BOOL g_dsp_busy;
+extern BOOL g_rdpsnd;
 #endif
 
 /* MWM decorations */
@@ -1203,7 +1204,7 @@ ui_select(int rdp_socket)
 
 #ifdef WITH_RDPSND
 		/* FIXME: there should be an API for registering fds */
-		if (g_dsp_busy)
+		if (g_rdpsnd && g_dsp_busy)
 		{
 			FD_SET(g_dsp_fd, &wfds);
 			n = (g_dsp_fd + 1 > n) ? g_dsp_fd + 1 : n;
@@ -1223,7 +1224,7 @@ ui_select(int rdp_socket)
 			return 1;
 
 #ifdef WITH_RDPSND
-		if (g_dsp_busy && FD_ISSET(g_dsp_fd, &wfds))
+		if (g_rdpsnd && g_dsp_busy && FD_ISSET(g_dsp_fd, &wfds))
 			wave_out_play();
 #endif
 	}
