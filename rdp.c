@@ -120,7 +120,7 @@ rdp_send_data(STREAM s, uint8 data_pdu_type)
 	out_uint32_le(s, rdp_shareid);
 	out_uint8(s, 0);	/* pad */
 	out_uint8(s, 1);	/* streamid */
-	out_uint16(s, (length - 14));
+	out_uint16_le(s, (length - 14));
 	out_uint8(s, data_pdu_type);
 	out_uint8(s, 0);	/* compress_type */
 	out_uint16(s, 0);	/* compress_len */
@@ -274,8 +274,8 @@ rdp_out_bitmap_caps(STREAM s)
 	out_uint16_le(s, RDP_CAPLEN_BITMAP);
 
 	out_uint16_le(s, 8);	/* Preferred BPP */
-	out_uint16(s, 1);	/* Receive 1 BPP */
-	out_uint16(s, 1);	/* Receive 4 BPP */
+	out_uint16_le(s, 1);	/* Receive 1 BPP */
+	out_uint16_le(s, 1);	/* Receive 4 BPP */
 	out_uint16_le(s, 1);	/* Receive 8 BPP */
 	out_uint16_le(s, 800);	/* Desktop width */
 	out_uint16_le(s, 600);	/* Desktop height */
@@ -320,9 +320,9 @@ rdp_out_order_caps(STREAM s)
 	out_uint8p(s, order_caps, 32);	/* Orders supported */
 	out_uint16_le(s, 0x6a1);	/* Text capability flags */
 	out_uint8s(s, 6);	/* Pad */
-	out_uint32(s, desktop_save == False ? 0 : 0x38400);	/* Desktop cache size */
+	out_uint32_le(s, desktop_save == False ? 0 : 0x38400);	/* Desktop cache size */
 	out_uint32(s, 0);	/* Unknown */
-	out_uint32(s, 0x4e4);	/* Unknown */
+	out_uint32_le(s, 0x4e4);	/* Unknown */
 }
 
 /* Output bitmap cache capability set */

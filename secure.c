@@ -425,12 +425,12 @@ sec_out_mcs_data(STREAM s)
 	out_uint32_le(s, 12);
 	out_uint8s(s, 64);	/* reserved? 4 + 12 doublewords */
 
-	out_uint16(s, 0xca01);
+	out_uint16_le(s, 0xca01);
 	out_uint16(s, 0);
 
 	/* Client encryption settings */
 	out_uint16_le(s, SEC_TAG_CLI_CRYPT);
-	out_uint16(s, 8);	/* length */
+	out_uint16_le(s, 8);	/* length */
 	out_uint32_le(s, encryption ? 0x3 : 0);	/* encryption supported, 128-bit supported */
 	s_mark_end(s);
 }
