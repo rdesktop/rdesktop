@@ -714,9 +714,9 @@ ui_create_colourmap(COLOURMAP *colours)
 			MAKE_XCOLOR(&xentry, entry);
 
 			if (XAllocColor(display, xcolmap, &xentry) != 0)
-				colour = translate_colour(xentry.pixel);
+				colour = xentry.pixel;
 			else
-				colour = translate_colour(white);
+				colour = white;
 
 			/* byte swap here to make translate_image faster */
 			map[i] = translate_colour(colour);
