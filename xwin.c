@@ -79,11 +79,13 @@ PropMotifWmHints;
 }
 
 /* colour maps */
+BOOL owncolmap = False;
 static Colormap xcolmap;
 static uint32 *colmap;
 
-#define SET_FOREGROUND(col)	XSetForeground(display, gc, translate_colour(colmap[col]));
-#define SET_BACKGROUND(col)	XSetBackground(display, gc, translate_colour(colmap[col]));
+#define TRANSLATE(col)		( owncolmap ? col : translate_colour(colmap[col]) )
+#define SET_FOREGROUND(col)	XSetForeground(display, gc, TRANSLATE(col));
+#define SET_BACKGROUND(col)	XSetBackground(display, gc, TRANSLATE(col));
 
 static int rop2_map[] = {
 	GXclear,		/* 0 */
@@ -289,7 +291,16 @@ ui_init(void)
 		return False;
 	}
 
-	xcolmap = DefaultColormapOfScreen(screen);
+	if (owncolmap != True)
+	{
+		xcolmap = DefaultColormapOfScreen(screen);
+		if (depth <= 8)
+		{
+			printf("You're using a screen depth of 8-bits or lower\n");
+			printf("If you get scewed colours, try the -C switch\n");
+		}
+	}
+
 	gc = XCreateGC(display, RootWindowOfScreen(screen), 0, NULL);
 
 	if (DoesBackingStore(screen) != Always)
@@ -711,7 +722,7 @@ ui_create_bitmap(int width, int height, uint8 * data)
 	Pixmap bitmap;
 	uint8 *tdata;
 
-	tdata = translate_image(width, height, data);
+	tdata = (owncolmap ? data : translate_image(width, height, data));
 	bitmap = XCreatePixmap(display, wnd, width, height, depth);
 	image = XCreateImage(display, visual, depth, ZPixmap, 0,
 			     (char *) tdata, width, height, 8, 0);
@@ -719,7 +730,8 @@ ui_create_bitmap(int width, int height, uint8 * data)
 	XPutImage(display, bitmap, gc, image, 0, 0, 0, 0, width, height);
 
 	XFree(image);
-	xfree(tdata);
+	if (!owncolmap)
+		xfree(tdata);
 	return (HBITMAP) bitmap;
 }
 
@@ -729,7 +741,7 @@ ui_paint_bitmap(int x, int y, int cx, int cy, int width, int height, uint8 * dat
 	XImage *image;
 	uint8 *tdata;
 
-	tdata = translate_image(width, height, data);
+	tdata = (owncolmap ? data : translate_image(width, height, data));
 	image = XCreateImage(display, visual, depth, ZPixmap, 0,
 			     (char *) tdata, width, height, 8, 0);
 
@@ -744,7 +756,8 @@ ui_paint_bitmap(int x, int y, int cx, int cy, int width, int height, uint8 * dat
 	}
 
 	XFree(image);
-	xfree(tdata);
+	if (!owncolmap)
+		xfree(tdata);
 }
 
 void
@@ -875,95 +888,125 @@ ui_destroy_cursor(HCURSOR cursor)
 		(xc)->blue  = ((c)->blue  << 8) | (c)->blue; \
 		(xc)->flags = DoRed | DoGreen | DoBlue;
 
+
 HCOLOURMAP
 ui_create_colourmap(COLOURMAP * colours)
 {
 	COLOURENTRY *entry;
 	int i, ncolours = colours->ncolours;
-	uint32 *map = xmalloc(sizeof(*colmap) * ncolours);
-	XColor xentry;
-	XColor xc_cache[256];
-	uint32 colour;
-	int colLookup = 256;
-	for (i = 0; i < ncolours; i++)
+	if (!owncolmap)
 	{
-		entry = &colours->colours[i];
-		MAKE_XCOLOR(&xentry, entry);
-
-		if (XAllocColor(display, xcolmap, &xentry) == 0)
+		uint32 *map = xmalloc(sizeof(*colmap) * ncolours);
+		XColor xentry;
+		XColor xc_cache[256];
+		uint32 colour;
+		int colLookup = 256;
+		for (i = 0; i < ncolours; i++)
 		{
-			/* Allocation failed, find closest match. */
-			int j = 256;
-			int nMinDist = 3 * 256 * 256;
-			long nDist = nMinDist;
+			entry = &colours->colours[i];
+			MAKE_XCOLOR(&xentry, entry);
 
-			/* only get the colors once */
-			while (colLookup--)
+			if (XAllocColor(display, xcolmap, &xentry) == 0)
 			{
-				xc_cache[colLookup].pixel = colLookup;
-				xc_cache[colLookup].red = xc_cache[colLookup].green =
-					xc_cache[colLookup].blue = 0;
-				xc_cache[colLookup].flags = 0;
-				XQueryColor(display,
-					    DefaultColormap(display, DefaultScreen(display)),
-					    &xc_cache[colLookup]);
-			}
-			colLookup = 0;
+				/* Allocation failed, find closest match. */
+				int j = 256;
+				int nMinDist = 3 * 256 * 256;
+				long nDist = nMinDist;
 
-			/* approximate the pixel */
-			while (j--)
+				/* only get the colors once */
+				while (colLookup--)
+				{
+					xc_cache[colLookup].pixel = colLookup;
+					xc_cache[colLookup].red = xc_cache[colLookup].green =
+						xc_cache[colLookup].blue = 0;
+					xc_cache[colLookup].flags = 0;
+					XQueryColor(display,
+						    DefaultColormap(display,
+								    DefaultScreen(display)),
+						    &xc_cache[colLookup]);
+				}
+				colLookup = 0;
+
+				/* approximate the pixel */
+				while (j--)
+				{
+					if (xc_cache[j].flags)
+					{
+						nDist = ((long) (xc_cache[j].red >> 8) -
+							 (long) (xentry.red >> 8)) *
+							((long) (xc_cache[j].red >> 8) -
+							 (long) (xentry.red >> 8)) +
+							((long) (xc_cache[j].green >> 8) -
+							 (long) (xentry.green >> 8)) *
+							((long) (xc_cache[j].green >> 8) -
+							 (long) (xentry.green >> 8)) +
+							((long) (xc_cache[j].blue >> 8) -
+							 (long) (xentry.blue >> 8)) *
+							((long) (xc_cache[j].blue >> 8) -
+							 (long) (xentry.blue >> 8));
+					}
+					if (nDist < nMinDist)
+					{
+						nMinDist = nDist;
+						xentry.pixel = j;
+					}
+				}
+			}
+			colour = xentry.pixel;
+
+			/* update our cache */
+			if (xentry.pixel < 256)
 			{
-				if (xc_cache[j].flags)
-				{
-					nDist = ((long) (xc_cache[j].red >> 8) -
-						 (long) (xentry.red >> 8)) *
-						((long) (xc_cache[j].red >> 8) -
-						 (long) (xentry.red >> 8)) +
-						((long) (xc_cache[j].green >> 8) -
-						 (long) (xentry.green >> 8)) *
-						((long) (xc_cache[j].green >> 8) -
-						 (long) (xentry.green >> 8)) +
-						((long) (xc_cache[j].blue >> 8) -
-						 (long) (xentry.blue >> 8)) *
-						((long) (xc_cache[j].blue >> 8) -
-						 (long) (xentry.blue >> 8));
-				}
-				if (nDist < nMinDist)
-				{
-					nMinDist = nDist;
-					xentry.pixel = j;
-				}
+				xc_cache[xentry.pixel].red = xentry.red;
+				xc_cache[xentry.pixel].green = xentry.green;
+				xc_cache[xentry.pixel].blue = xentry.blue;
+
 			}
+
+
+			/* byte swap here to make translate_image faster */
+			map[i] = translate_colour(colour);
 		}
-		colour = xentry.pixel;
-
-		/* update our cache */
-		if (xentry.pixel < 256)
-		{
-			xc_cache[xentry.pixel].red = xentry.red;
-			xc_cache[xentry.pixel].green = xentry.green;
-			xc_cache[xentry.pixel].blue = xentry.blue;
-
-		}
-
-
-		/* byte swap here to make translate_image faster */
-		map[i] = translate_colour(colour);
+		return map;
 	}
+	else
+	{
+		XColor *xcolours, *xentry;
+		Colormap map;
 
-	return map;
+		xcolours = xmalloc(sizeof(XColor) * ncolours);
+		for (i = 0; i < ncolours; i++)
+		{
+			entry = &colours->colours[i];
+			xentry = &xcolours[i];
+			xentry->pixel = i;
+			MAKE_XCOLOR(xentry, entry);
+		}
+
+		map = XCreateColormap(display, wnd, visual, AllocAll);
+		XStoreColors(display, map, xcolours, ncolours);
+
+		xfree(xcolours);
+		return (HCOLOURMAP) map;
+	}
 }
 
 void
 ui_destroy_colourmap(HCOLOURMAP map)
 {
-	xfree(map);
+	if (!owncolmap)
+		xfree(map);
+	else
+		XFreeColormap(display, (Colormap) map);
 }
 
 void
 ui_set_colourmap(HCOLOURMAP map)
 {
-	colmap = map;
+	if (!owncolmap)
+		colmap = map;
+	else
+		XSetWindowColormap(display, wnd, (Colormap) map);
 }
 
 void

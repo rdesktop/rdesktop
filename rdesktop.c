@@ -57,6 +57,7 @@ BOOL desktop_save = True;
 BOOL fullscreen = False;
 BOOL grab_keyboard = True;
 BOOL hide_decorations = False;
+extern BOOL owncolmap;
 
 /* Display usage information */
 static void
@@ -79,6 +80,7 @@ usage(char *program)
 	fprintf(stderr, "   -b: force bitmap updates\n");
 	fprintf(stderr, "   -e: disable encryption (French TS)\n");
 	fprintf(stderr, "   -m: do not send motion events\n");
+	fprintf(stderr, "   -C: use private colour map\n");
 	fprintf(stderr, "   -K: keep window manager key bindings\n");
 	fprintf(stderr, "   -T: window title\n");
 	fprintf(stderr, "   -D: hide window manager decorations\n");
@@ -141,7 +143,7 @@ main(int argc, char *argv[])
 	domain[0] = password[0] = shell[0] = directory[0] = 0;
 	strcpy(keymapname, "en-us");
 
-	while ((c = getopt(argc, argv, "u:d:s:c:p:n:k:g:fbemKT:Dh?")) != -1)
+	while ((c = getopt(argc, argv, "u:d:s:c:p:n:k:g:fbemCKT:Dh?")) != -1)
 	{
 		switch (c)
 		{
@@ -217,6 +219,10 @@ main(int argc, char *argv[])
 
 			case 'm':
 				sendmotion = False;
+				break;
+
+			case 'C':
+				owncolmap = True;
 				break;
 
 			case 'K':
