@@ -122,15 +122,16 @@ VCHANNEL;
 #define MAX_CBSIZE 256
 
 /* RDPSND */
-typedef struct {
-    uint16 wFormatTag;
-    uint16 nChannels;
-    uint32 nSamplesPerSec;
-    uint32 nAvgBytesPerSec;
-    uint16 nBlockAlign;
-    uint16 wBitsPerSample;
-    uint16 cbSize;
-    uint8  cb[MAX_CBSIZE];
+typedef struct
+{
+	uint16 wFormatTag;
+	uint16 nChannels;
+	uint32 nSamplesPerSec;
+	uint32 nAvgBytesPerSec;
+	uint16 nBlockAlign;
+	uint16 wBitsPerSample;
+	uint16 cbSize;
+	uint8 cb[MAX_CBSIZE];
 } WAVEFORMATEX;
 
 /* RDPDR */

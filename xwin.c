@@ -333,8 +333,7 @@ translate15to16(uint16 * data, uint8 * out, uint8 * end)
 
 		if (g_host_be)
 		{
-			BSWAP16(pixel)
-		}
+		BSWAP16(pixel)}
 
 		value = make_colour16(split_colour15(pixel));
 
@@ -363,8 +362,7 @@ translate15to24(uint16 * data, uint8 * out, uint8 * end)
 
 		if (g_host_be)
 		{
-			BSWAP16(pixel)
-		}
+		BSWAP16(pixel)}
 
 		value = make_colour24(split_colour15(pixel));
 		if (g_xserver_be)
@@ -457,8 +455,7 @@ translate16to24(uint16 * data, uint8 * out, uint8 * end)
 
 		if (g_host_be)
 		{
-			BSWAP16(pixel)
-		}
+		BSWAP16(pixel)}
 
 		value = make_colour24(split_colour16(pixel));
 
@@ -489,8 +486,7 @@ translate16to32(uint16 * data, uint8 * out, uint8 * end)
 
 		if (g_host_be)
 		{
-			BSWAP16(pixel)
-		}
+		BSWAP16(pixel)}
 
 		value = make_colour32(split_colour16(pixel));
 
@@ -500,15 +496,15 @@ translate16to32(uint16 * data, uint8 * out, uint8 * end)
 			*(out++) = value >> 16;
 			*(out++) = value >> 8;
 			*(out++) = value;
- 		}
- 		else
- 		{
+		}
+		else
+		{
 			*(out++) = value;
 			*(out++) = value >> 8;
 			*(out++) = value >> 16;
 			*(out++) = value >> 24;
- 		}
- 	}
+		}
+	}
 }
 
 static void
@@ -1203,7 +1199,7 @@ ui_select(int rdp_socket)
 		{
 			FD_SET(g_dsp_fd, &wfds);
 			n = (g_dsp_fd + 1 > n) ? g_dsp_fd + 1 : n;
-                }
+		}
 #endif
 
 		switch (select(n, &rfds, &wfds, NULL, NULL))

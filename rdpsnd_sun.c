@@ -36,7 +36,8 @@ static BOOL reopened;
 static BOOL swapaudio;
 static short samplewidth;
 
-static struct audio_packet {
+static struct audio_packet
+{
 	struct stream s;
 	uint16 tick;
 	uint8 index;
@@ -48,23 +49,23 @@ wave_out_open(void)
 {
 	char *dsp_dev = getenv("AUDIODEV");
 
-	if ( dsp_dev == NULL )
+	if (dsp_dev == NULL)
 	{
-		dsp_dev="/dev/audio";
+		dsp_dev = "/dev/audio";
 	}
 
-	if ((g_dsp_fd = open(dsp_dev, O_WRONLY|O_NONBLOCK)) == -1)
+	if ((g_dsp_fd = open(dsp_dev, O_WRONLY | O_NONBLOCK)) == -1)
 	{
 		perror(dsp_dev);
 		return False;
 	}
 
 	/* Non-blocking so that user interface is responsive */
-	fcntl(g_dsp_fd, F_SETFL, fcntl(g_dsp_fd, F_GETFL)|O_NONBLOCK);
-	
+	fcntl(g_dsp_fd, F_SETFL, fcntl(g_dsp_fd, F_GETFL) | O_NONBLOCK);
+
 	queue_lo = queue_hi = 0;
 	reopened = True;
-	
+
 	return True;
 }
 
@@ -72,7 +73,7 @@ void
 wave_out_close(void)
 {
 	/* Ack all remaining packets */
-	while ( queue_lo != queue_hi )
+	while (queue_lo != queue_hi)
 	{
 		rdpsnd_send_completion(packet_queue[queue_lo].tick, packet_queue[queue_lo].index);
 		free(packet_queue[queue_lo].s.data);
@@ -80,12 +81,12 @@ wave_out_close(void)
 	}
 
 	/* Flush the audiobuffer */
-	ioctl(g_dsp_fd,I_FLUSH,FLUSHW);
+	ioctl(g_dsp_fd, I_FLUSH, FLUSHW);
 	close(g_dsp_fd);
 }
 
 BOOL
-wave_out_format_supported(WAVEFORMATEX *pwfx)
+wave_out_format_supported(WAVEFORMATEX * pwfx)
 {
 	if (pwfx->wFormatTag != WAVE_FORMAT_PCM)
 		return False;
@@ -98,7 +99,7 @@ wave_out_format_supported(WAVEFORMATEX *pwfx)
 }
 
 BOOL
-wave_out_set_format(WAVEFORMATEX *pwfx)
+wave_out_set_format(WAVEFORMATEX * pwfx)
 {
 	audio_info_t info;
 	int test = 1;
@@ -119,13 +120,13 @@ wave_out_set_format(WAVEFORMATEX *pwfx)
 		swapaudio = !(*(uint8 *) (&test));
 	}
 
-	samplewidth = pwfx->wBitsPerSample/8;
+	samplewidth = pwfx->wBitsPerSample / 8;
 
-	if (pwfx->nChannels == 1 )
-	{	
+	if (pwfx->nChannels == 1)
+	{
 		info.play.channels = AUDIO_CHANNELS_MONO;
 	}
-	else if (pwfx->nChannels == 2 )
+	else if (pwfx->nChannels == 2)
 	{
 		info.play.channels = AUDIO_CHANNELS_STEREO;
 		samplewidth *= 2;
@@ -163,16 +164,18 @@ wave_out_volume(uint16 left, uint16 right)
 
 	volume = (left > right) ? left : right;
 
-	if ( volume/AUDIO_MID_BALANCE != 0 )
+	if (volume / AUDIO_MID_BALANCE != 0)
 	{
-		balance = AUDIO_MID_BALANCE - (left/(volume/AUDIO_MID_BALANCE)) + (right/(volume/AUDIO_MID_BALANCE));
+		balance =
+			AUDIO_MID_BALANCE - (left / (volume / AUDIO_MID_BALANCE)) +
+			(right / (volume / AUDIO_MID_BALANCE));
 	}
 	else
 	{
 		balance = AUDIO_MID_BALANCE;
 	}
 
-	info.play.gain = volume/(65536/AUDIO_MAX_GAIN);
+	info.play.gain = volume / (65536 / AUDIO_MAX_GAIN);
 	info.play.balance = balance;
 
 	if (ioctl(g_dsp_fd, AUDIO_SETINFO, &info) == -1)
@@ -193,7 +196,7 @@ wave_out_write(STREAM s, uint16 tick, uint8 index)
 		error("No space to queue audio packet\n");
 		return;
 	}
-	
+
 	queue_hi = next_hi;
 
 	packet->s = *s;
@@ -224,7 +227,7 @@ wave_out_play(void)
 
 	while (1)
 	{
-		if ( reopened )
+		if (reopened)
 		{
 			/* Device was just (re)openend */
 			samplecnt = 0;
@@ -243,9 +246,9 @@ wave_out_play(void)
 		out = &packet->s;
 
 		/* Swap the current packet, but only once */
-		if ( swapaudio && ! swapped )
+		if (swapaudio && !swapped)
 		{
-			for ( i = 0; i < out->end - out->p; i += 2 )
+			for (i = 0; i < out->end - out->p; i += 2)
 			{
 				swap = *(out->p + i);
 				*(out->p + i) = *(out->p + i + 1);
@@ -254,15 +257,15 @@ wave_out_play(void)
 			swapped = True;
 		}
 
-		if ( sentcompletion )
+		if (sentcompletion)
 		{
 			sentcompletion = False;
-			numsamples = (out->end - out->p)/samplewidth;
+			numsamples = (out->end - out->p) / samplewidth;
 		}
 
-		len=0;
+		len = 0;
 
-		if ( out->end != out->p )
+		if (out->end != out->p)
 		{
 			len = write(g_dsp_fd, out->p, out->end - out->p);
 			if (len == -1)
@@ -284,7 +287,7 @@ wave_out_play(void)
 			}
 
 			/* Ack the packet, if we have played at least 70% */
-			if ( info.play.samples >= samplecnt+((numsamples*7)/10) )
+			if (info.play.samples >= samplecnt + ((numsamples * 7) / 10))
 			{
 				samplecnt += numsamples;
 				rdpsnd_send_completion(packet->tick, packet->index);

@@ -31,7 +31,8 @@
 int g_dsp_fd;
 BOOL g_dsp_busy;
 
-static struct audio_packet {
+static struct audio_packet
+{
 	struct stream s;
 	uint16 tick;
 	uint8 index;
@@ -43,14 +44,14 @@ wave_out_open(void)
 {
 	char *dsp_dev = "/dev/dsp";
 
-	if ((g_dsp_fd = open(dsp_dev, O_WRONLY|O_NONBLOCK)) == -1)
+	if ((g_dsp_fd = open(dsp_dev, O_WRONLY | O_NONBLOCK)) == -1)
 	{
 		perror(dsp_dev);
 		return False;
 	}
 
 	/* Non-blocking so that user interface is responsive */
-	fcntl(g_dsp_fd, F_SETFL, fcntl(g_dsp_fd, F_GETFL)|O_NONBLOCK);
+	fcntl(g_dsp_fd, F_SETFL, fcntl(g_dsp_fd, F_GETFL) | O_NONBLOCK);
 	return True;
 }
 
@@ -61,7 +62,7 @@ wave_out_close(void)
 }
 
 BOOL
-wave_out_format_supported(WAVEFORMATEX *pwfx)
+wave_out_format_supported(WAVEFORMATEX * pwfx)
 {
 	if (pwfx->wFormatTag != WAVE_FORMAT_PCM)
 		return False;
@@ -74,7 +75,7 @@ wave_out_format_supported(WAVEFORMATEX *pwfx)
 }
 
 BOOL
-wave_out_set_format(WAVEFORMATEX *pwfx)
+wave_out_set_format(WAVEFORMATEX * pwfx)
 {
 	int speed, channels, format;
 
@@ -117,8 +118,8 @@ wave_out_volume(uint16 left, uint16 right)
 {
 	uint32 volume;
 
-	volume = left/(65536/100);
-	volume |= right/(65536/100) << 8;
+	volume = left / (65536 / 100);
+	volume |= right / (65536 / 100) << 8;
 	if (ioctl(g_dsp_fd, MIXER_WRITE(SOUND_MIXER_PCM), &volume) == -1)
 	{
 		perror("MIXER_WRITE(SOUND_MIXER_PCM)");
@@ -170,7 +171,7 @@ wave_out_play(void)
 		packet = &packet_queue[queue_lo];
 		out = &packet->s;
 
-		len = write(g_dsp_fd, out->p, out->end-out->p);
+		len = write(g_dsp_fd, out->p, out->end - out->p);
 		if (len == -1)
 		{
 			if (errno != EWOULDBLOCK)

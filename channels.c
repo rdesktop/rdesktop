@@ -89,7 +89,7 @@ channel_send(STREAM s, VCHANNEL * channel)
 
 	DEBUG_CLIPBOARD(("channel_send, length = %d\n", length));
 
-	thislength = MIN(length, CHANNEL_CHUNK_LENGTH);  
+	thislength = MIN(length, CHANNEL_CHUNK_LENGTH);
 /* Note: In the original clipboard implementation, this number was
    1592, not 1600. However, I don't remember the reason and 1600 seems
    to work so.. This applies only to *this* length, not the length of

@@ -43,7 +43,7 @@ rdpsnd_init_packet(uint16 type, uint16 size)
 {
 	STREAM s;
 
-	s = channel_init(rdpsnd_channel, size+4);
+	s = channel_init(rdpsnd_channel, size + 4);
 	out_uint16_le(s, type);
 	out_uint16_le(s, size);
 	return s;
@@ -54,18 +54,19 @@ rdpsnd_send(STREAM s)
 {
 #ifdef RDPSND_DEBUG
 	printf("RDPSND send:\n");
-	hexdump(s->channel_hdr+8, s->end-s->channel_hdr-8);
+	hexdump(s->channel_hdr + 8, s->end - s->channel_hdr - 8);
 #endif
 
 	channel_send(s, rdpsnd_channel);
 }
 
-void rdpsnd_send_completion(uint16 tick, uint8 packet_index)
+void
+rdpsnd_send_completion(uint16 tick, uint8 packet_index)
 {
 	STREAM s;
 
 	s = rdpsnd_init_packet(RDPSND_COMPLETION, 4);
-	out_uint16_le(s, tick+50);
+	out_uint16_le(s, tick + 50);
 	out_uint8(s, packet_index);
 	out_uint8(s, 0);
 	s_mark_end(s);
@@ -93,7 +94,7 @@ rdpsnd_process_negotiate(STREAM in)
 	}
 
 	format_count = 0;
-	if (s_check_rem(in, 18*in_format_count))
+	if (s_check_rem(in, 18 * in_format_count))
 	{
 		for (i = 0; i < in_format_count; i++)
 		{
@@ -111,7 +112,8 @@ rdpsnd_process_negotiate(STREAM in)
 			discardcnt = 0;
 			if (format->cbSize > MAX_CBSIZE)
 			{
-				fprintf(stderr, "cbSize too large for buffer: %d\n", format->cbSize);
+				fprintf(stderr, "cbSize too large for buffer: %d\n",
+					format->cbSize);
 				readcnt = MAX_CBSIZE;
 				discardcnt = format->cbSize - MAX_CBSIZE;
 			}
@@ -127,16 +129,16 @@ rdpsnd_process_negotiate(STREAM in)
 		}
 	}
 
-	out = rdpsnd_init_packet(RDPSND_NEGOTIATE | 0x200, 20 + 18*format_count);
-	out_uint32_le(out, 3);		/* flags */
+	out = rdpsnd_init_packet(RDPSND_NEGOTIATE | 0x200, 20 + 18 * format_count);
+	out_uint32_le(out, 3);	/* flags */
 	out_uint32(out, 0xffffffff);	/* volume */
-	out_uint32(out, 0);		/* pitch */
-	out_uint16(out, 0);		/* UDP port */
+	out_uint32(out, 0);	/* pitch */
+	out_uint16(out, 0);	/* UDP port */
 
 	out_uint16_le(out, format_count);
-	out_uint8(out, 0x95);		/* pad? */
-	out_uint16_le(out, 2);		/* status */
-	out_uint8(out, 0x77);		/* pad? */
+	out_uint8(out, 0x95);	/* pad? */
+	out_uint16_le(out, 2);	/* status */
+	out_uint8(out, 0x77);	/* pad? */
 
 	for (i = 0; i < format_count; i++)
 	{
@@ -147,7 +149,7 @@ rdpsnd_process_negotiate(STREAM in)
 		out_uint32_le(out, format->nAvgBytesPerSec);
 		out_uint16_le(out, format->nBlockAlign);
 		out_uint16_le(out, format->wBitsPerSample);
-		out_uint16(out, 0); /* cbSize */
+		out_uint16(out, 0);	/* cbSize */
 	}
 
 	s_mark_end(out);
@@ -183,7 +185,7 @@ rdpsnd_process(STREAM s)
 
 #ifdef RDPSND_DEBUG
 	printf("RDPSND recv:\n");
-	hexdump(s->p, s->end-s->p);
+	hexdump(s->p, s->end - s->p);
 #endif
 
 	if (awaiting_data_packet)
@@ -218,37 +220,37 @@ rdpsnd_process(STREAM s)
 	}
 
 	in_uint8(s, type);
-	in_uint8s(s, 1); /* unknown? */
+	in_uint8s(s, 1);	/* unknown? */
 	in_uint16_le(s, datalen);
 
 	switch (type)
 	{
-	case RDPSND_WRITE:
-		in_uint16_le(s, tick);
-		in_uint16_le(s, format);
-		in_uint8(s, packet_index);
-		awaiting_data_packet = True;
-		break;
-	case RDPSND_CLOSE:
-		wave_out_close();
-		device_open = False;
-		break;
-	case RDPSND_NEGOTIATE:
-		rdpsnd_process_negotiate(s);
-		break;
-	case RDPSND_UNKNOWN6:
-		rdpsnd_process_unknown6(s);
-		break;
-	case RDPSND_SET_VOLUME:
-		in_uint32(s, volume);
-		if ( device_open )
-		{
-			wave_out_volume((volume & 0xffff), (volume & 0xffff0000) >> 16);
-		}
-		break;
-	default:
-		unimpl("RDPSND packet type %d\n", type);
-		break;
+		case RDPSND_WRITE:
+			in_uint16_le(s, tick);
+			in_uint16_le(s, format);
+			in_uint8(s, packet_index);
+			awaiting_data_packet = True;
+			break;
+		case RDPSND_CLOSE:
+			wave_out_close();
+			device_open = False;
+			break;
+		case RDPSND_NEGOTIATE:
+			rdpsnd_process_negotiate(s);
+			break;
+		case RDPSND_UNKNOWN6:
+			rdpsnd_process_unknown6(s);
+			break;
+		case RDPSND_SET_VOLUME:
+			in_uint32(s, volume);
+			if (device_open)
+			{
+				wave_out_volume((volume & 0xffff), (volume & 0xffff0000) >> 16);
+			}
+			break;
+		default:
+			unimpl("RDPSND packet type %d\n", type);
+			break;
 	}
 }
 
