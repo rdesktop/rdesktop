@@ -28,6 +28,7 @@ extern Window wnd;
 extern Time last_keyrelease;
 
 static Atom clipboard_atom, primary_atom, targets_atom, timestamp_atom;
+static Atom rdesktop_clipboard_target_atom;
 static cliprdr_dataformat *server_formats = NULL;
 static uint16 num_server_formats = 0;
 static XSelectionEvent selection_event;
@@ -50,10 +51,121 @@ cliprdr_print_server_formats(void)
 #endif
 }
 
-void 
-cliprdr_handle_SelectionNotify(void)
+static void
+cliprdr_send_empty_datapacket(void)
 {
+	STREAM out;
+	out =  sec_init(encryption ? SEC_ENCRYPT : 0, 
+			20);
+	out_uint32_le(out, 12);
+	out_uint32_le(out, 0x13);
+	out_uint16_le(out, 5);
+	out_uint16_le(out, 1);
+	out_uint32_le(out, 0);
+	/* Insert null string here? */
+	out_uint32_le(out, 0);
+	s_mark_end(out);
+	
+	sec_send_to_channel(out, encryption ? SEC_ENCRYPT : 0, 1005); // FIXME: Don't hardcode channel!   
+}
+
+
+void 
+cliprdr_handle_SelectionNotify(XSelectionEvent *event)
+{
+
+	unsigned char	*data;
+	unsigned long	nitems, bytes_left;
+	int res;
+
+	int format;
+	Atom type_return;
+	Atom best_target;
+
+	STREAM out;
+	
 	DEBUG_CLIPBOARD(("cliprdr_handle_SelectionNotify\n"));
+
+	if (None == event->property) {
+		cliprdr_send_empty_datapacket();
+		return; /* Selection failed */
+	} 
+
+	DEBUG_CLIPBOARD(("selection: %s, target: %s, property: %s\n",
+			 XGetAtomName(display, event->selection),
+			 XGetAtomName(display, event->target),
+			 XGetAtomName(display, event->property)));
+
+	if (targets_atom == event->target) {
+		/* Response to TARGETS request. Let's find the target
+		   we want and request that */
+		res = XGetWindowProperty(display, wnd, 
+					 rdesktop_clipboard_target_atom,
+					 0L, 4096L, False, AnyPropertyType, 
+					 &type_return,
+					 &format, &nitems, &bytes_left, &data);
+
+		if (Success != res) 
+		{
+			DEBUG_CLIPBOARD(("XGetWindowProperty failed!\n"));
+			cliprdr_send_empty_datapacket();
+			return;
+		}
+
+		if (None == type_return) 
+			/* The owner might no support TARGETS. Just try
+			   STRING */
+			best_target = XA_STRING;
+		else 
+		{
+			/* FIXME: We should choose format here based
+			   on what the server wanted */
+			best_target = XInternAtom(display, "TEXT", False);
+			
+			
+		}
+
+		XConvertSelection(display, primary_atom, 
+				  best_target,
+				  rdesktop_clipboard_target_atom, 
+				  wnd, event->time);
+
+	} 
+	else  /* Other clipboard data */
+	{
+		
+		res = XGetWindowProperty(display, wnd, 
+					 rdesktop_clipboard_target_atom,
+					 0L, 4096L, False, AnyPropertyType, 
+					 &type_return,
+					 &format, &nitems, &bytes_left, &data);
+
+		if (Success != res) 
+		{
+			DEBUG_CLIPBOARD(("XGetWindowProperty failed!\n"));
+			cliprdr_send_empty_datapacket();
+			return;
+		}
+
+		/* We need to handle INCR as well */
+
+		out =  sec_init(encryption ? SEC_ENCRYPT : 0, 
+				20+nitems);
+		out_uint32_le(out, 12+nitems);
+		out_uint32_le(out, 0x13);
+		out_uint16_le(out, 5);
+		out_uint16_le(out, 1);
+		out_uint32_le(out, nitems);
+		out_uint8p(out, data, nitems);
+		/* Insert null string here? */
+		out_uint32_le(out, 0);
+		s_mark_end(out);
+	
+		sec_send_to_channel(out, encryption ? SEC_ENCRYPT : 0, 1005); // FIXME: Don't hardcode channel!   
+		
+	}
+	
+	
 }
 
 void
@@ -352,10 +464,9 @@ void cliprdr_handle_server_data(uint32 length, STREAM s)
 
 void cliprdr_handle_server_data_request(STREAM s) 
 {
+	Window selectionowner;
 	uint32 remaining_length;
 	uint32 wanted_formatcode, pad;
-	int ret;
-	STREAM out;
 
 	in_uint32_le(s, remaining_length);
 	in_uint32_le(s, wanted_formatcode);
@@ -366,35 +477,29 @@ void cliprdr_handle_server_data_request(STREAM s)
 	DEBUG_CLIPBOARD(("Request from server for format %d\n", 
 			 wanted_formatcode));
 
-	out =  sec_init(encryption ? SEC_ENCRYPT : 0, 
-			26);
-	out_uint32_le(out, 18);
-	out_uint32_le(out, 0x13);
-	out_uint16_le(out, 5);
-	out_uint16_le(out, 1);
-	out_uint32_le(out, 6);
-	out_uint8p(out, "fnorp", 6);
-	out_uint32_le(out, 0);
+	selectionowner = XGetSelectionOwner(display, primary_atom);
 
-	s_mark_end(out);
-	
-	sec_send_to_channel(out, encryption ? SEC_ENCRYPT : 0, 1005); // FIXME: Don't hardcode channel!   
-
-	/*	
-	if (1 != wanted_formatcode) 
+	if (None != selectionowner) 
 	{
-		out =  sec_init(encryption ? SEC_ENCRYPT : 0, 
-				20);
-		out_uint32_le(s, 12);
-		out_uint32_le(s, 0x13);
-		out_uint16_le(s, 5);
-		out_uint16_le(s, 2);
-		out_uint32_le(s, 0);
-		out_uint32_le(s, 0);
-		s_mark_end(s);
-		sec_send_to_channel(s, encryption ? SEC_ENCRYPT : 0, 1005); // FIXME: Don't hardcode channel!
+	
+		/* FIXME: Perhaps we should check if we are the owner? */
+
+		XConvertSelection(display, primary_atom, 
+				  targets_atom,
+				  rdesktop_clipboard_target_atom, 
+				  wnd, CurrentTime);
+
+		/* The rest of the transfer is handled in 
+		   cliprdr_handle_SelectionNotify */
+
+	} else 
+	{
+		DEBUG_CLIPBOARD(("There were no owner for PRIMARY, sending empty string\n")); // FIXME: Should we always send an empty string?
+
+		cliprdr_send_empty_datapacket();
 	}
-	*/		
+
+
 }
 	
 
@@ -450,6 +555,7 @@ void cliprdr_init(void)
 {
 	primary_atom = XInternAtom(display, "PRIMARY", False);
 	clipboard_atom = XInternAtom(display, "CLIPBOARD", False);
-	targets_atom = XInternAtom(display, "TARGETS", True);
-	timestamp_atom = XInternAtom(display, "TIMESTAMP", True);
+	targets_atom = XInternAtom(display, "TARGETS", False);
+	timestamp_atom = XInternAtom(display, "TIMESTAMP", False);
+	rdesktop_clipboard_target_atom = XInternAtom(display, "_RDESKTOP_CLIPBOARD_TARGET", False);
 }
