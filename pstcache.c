@@ -22,7 +22,7 @@
 
 #define MAX_CELL_SIZE		0x1000	/* pixels */
 
-#define IS_PERSISTENT(id) (g_pstcache_fd[id] > 0)
+#define IS_PERSISTENT(id) (id < 8 && g_pstcache_fd[id] > 0)
 
 extern int g_server_bpp;
 extern uint32 g_stamp;
@@ -42,7 +42,7 @@ pstcache_touch_bitmap(uint8 cache_id, uint16 cache_idx, uint32 stamp)
 {
 	int fd;
 
-	if (!IS_PERSISTENT(cache_id))
+	if (!IS_PERSISTENT(cache_id) || cache_idx >= BMPCACHE2_NUM_PSTCELLS)
 		return;
 
 	fd = g_pstcache_fd[cache_id];
@@ -59,7 +59,10 @@ pstcache_load_bitmap(uint8 cache_id, uint16 cache_idx)
 	CELLHEADER cellhdr;
 	HBITMAP bitmap;
 
-	if (!(g_bitmap_cache_persist_enable && IS_PERSISTENT(cache_id)))
+	if (!g_bitmap_cache_persist_enable)
+		return False;
+
+	if (!IS_PERSISTENT(cache_id) || cache_idx >= BMPCACHE2_NUM_PSTCELLS)
 		return False;
 
 	fd = g_pstcache_fd[cache_id];
@@ -85,7 +88,7 @@ pstcache_put_bitmap(uint8 cache_id, uint16 cache_idx, uint8 * bitmap_id,
 	int fd;
 	CELLHEADER cellhdr;
 
-	if (!IS_PERSISTENT(cache_id))
+	if (!IS_PERSISTENT(cache_id) || cache_idx >= BMPCACHE2_NUM_PSTCELLS)
 		return False;
 
 	memcpy(cellhdr.bitmap_id, bitmap_id, sizeof(BITMAP_ID));
