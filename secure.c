@@ -134,12 +134,12 @@ sec_generate_keys(uint8 * client_random, uint8 * server_random, int rc4_key_size
 	uint8 key_block[48];
 
 	/* Construct pre-master secret */
-	memcpy(pre_master_secret,      client_random, 24);
+	memcpy(pre_master_secret, client_random, 24);
 	memcpy(pre_master_secret + 24, server_random, 24);
 
 	/* Generate master secret and then key material */
 	sec_hash_48(master_secret, pre_master_secret, client_random, server_random, 'A');
-	sec_hash_48(key_block,     master_secret,     client_random, server_random, 'X');
+	sec_hash_48(key_block, master_secret, client_random, server_random, 'X');
 
 	/* First 16 bytes of key material is MAC secret */
 	memcpy(sec_sign_key, key_block, 16);

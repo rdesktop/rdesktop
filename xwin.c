@@ -172,9 +172,9 @@ static PixelColour
 split_colour15(uint32 colour)
 {
 	PixelColour rv;
-	rv.red = ((colour >> 7 ) & 0xf8) | ((colour >> 12) & 0x7);
+	rv.red = ((colour >> 7) & 0xf8) | ((colour >> 12) & 0x7);
 	rv.green = ((colour >> 2) & 0xf8) | ((colour >> 8) & 0x7);
-	rv.blue = ((colour << 3) & 0xf8) | ((colour >> 2)  & 0x7);
+	rv.blue = ((colour << 3) & 0xf8) | ((colour >> 2) & 0x7);
 	return rv;
 }
 
@@ -182,9 +182,9 @@ static PixelColour
 split_colour16(uint32 colour)
 {
 	PixelColour rv;
-	rv.red = ((colour >> 8 ) & 0xf8) | ((colour >> 13) & 0x7);
+	rv.red = ((colour >> 8) & 0xf8) | ((colour >> 13) & 0x7);
 	rv.green = ((colour >> 3) & 0xfc) | ((colour >> 9) & 0x3);
-	rv.blue = ((colour << 3) & 0xf8) | ((colour >> 2)  & 0x7);
+	rv.blue = ((colour << 3) & 0xf8) | ((colour >> 2) & 0x7);
 	return rv;
 }
 
@@ -252,8 +252,8 @@ translate8to16(uint8 * data, uint8 * out, uint8 * end)
 	uint16 value;
 
 	if (g_arch_match)
-		REPEAT(*((uint16 *) out) = g_colmap[*(data++)]; out += 2;
-		)
+		REPEAT(*((uint16 *) out) = g_colmap[*(data++)];
+		       out += 2;)
 	else
 if (g_xserver_be)
 {
@@ -309,8 +309,8 @@ translate8to32(uint8 * data, uint8 * out, uint8 * end)
 	uint32 value;
 
 	if (g_arch_match)
-		REPEAT(*((uint32 *) out) = g_colmap[*(data++)]; out += 4;
-		)
+		REPEAT(*((uint32 *) out) = g_colmap[*(data++)];
+		       out += 4;)
 	else
 if (g_xserver_be)
 {

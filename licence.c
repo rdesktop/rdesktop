@@ -43,7 +43,7 @@ licence_generate_keys(uint8 * client_random, uint8 * server_random, uint8 * pre_
 
 	/* Generate master secret and then key material */
 	sec_hash_48(master_secret, pre_master_secret, client_random, server_random, 'A');
-	sec_hash_48(key_block,     master_secret,     server_random, client_random, 'A');
+	sec_hash_48(key_block, master_secret, server_random, client_random, 'A');
 
 	/* Store first 16 bytes of session key as MAC secret */
 	memcpy(g_licence_sign_key, key_block, 16);
