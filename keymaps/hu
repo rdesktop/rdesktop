@@ -1,15 +1,14 @@
-# rdesktop hungarian keymap
-# Irta: Ragasits Csaba 2003.05.15.
-# Bogarak:
-# - A numbill-en a / nem mukodik
-# /Ha ezt probalod, akkor mar a shift+6-on se fog mukodni/
-# - A shift+nyilak nem mukodnek
+# rdesktop hungarian keymap v0.2
+# Irta: Ragasits Csaba 2003.05.23
+# Bogarak
+# - A numbill-en a / nem mukodik	- Javitva: Bistey Csaba 2003.05.20
+# - A shift+nyilak nem mukodnek		- Javitva: Bistey Csaba 2003.05.20
+# 
+# Ha a fenti hibakat tudod orvosolni (vagy azokat miket nem vettem eszte),
+# kerlek kuld el a javitast nekem is! (ragasits@sofa.hu)
 #
-# Ha a fenti hibakat tudod orvosolni (vagy azokat miket nem vettem eszre),
-# kerlek kuld el a javitast nekem is! (ragasits@sofa.hu)   
-
+include common
 map 0x40e
-
 #
 # TOP row
 #
@@ -116,6 +115,9 @@ dollar 0x27 altgr
 aacute 0x28
 Aacute 0x28 shift
 ssharp 0x28 altgr
+#û - 42
+udoubleacute 0x2b
+Udoubleacute 0x2b shift
 
 #
 # QWERTZ third row
@@ -156,29 +158,29 @@ asterisk 0x35 altgr
 #
 # Insert - PgDown
 #Insert - 75
-Insert 0x52
+#Insert 0x52
 #Delete - 76
-Delete 0x53
+#Delete 0x53
 #Home - 80 
-Home 0x47
+#Home 0x47
 #End - 81
-End 0x4f
+#End 0x4f
 #Prior - 85
-Prior 0x49
+#Prior 0x49
 #Next - 86
-Next 0x51
+#Next 0x51
  
 #
 # Arrow keys
 #
 #Left - 79
-Left 0x4b
+#Left 0x4b
 #Right - 89
-Right 0x4d
+#Right 0x4d
 #Up - 83
-Up 0x48
+#Up 0x48
 #Down - 84
-Down 0x50
+#Down 0x50
 
 #
 # Numpad
@@ -214,14 +216,19 @@ KP_9 0x49 numlock
 KP_Prior 0x49
 
 #/ - 95
-KP_Divide 0x35
+#KP_Divide 0x35
 #KP_Multiply 0x35
 #slash 0x35
 #Enter - 108
-KP_Enter 0x1c
+#KP_Enter 0x1c
 
 #
 # ETC
 #
 #Control_R - 64
 Control_R 0x1d
+#Shift_L
+Shift_L 0x2a
+#Shift_R
+Shift_R 0x36
+
