@@ -2,17 +2,17 @@
    rdesktop: A Remote Desktop Protocol client.
    User interface services - X Window System
    Copyright (C) Matthew Chapman 1999-2001
-   
+
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation; either version 2 of the License, or
    (at your option) any later version.
-   
+
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
-   
+
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -20,6 +20,7 @@
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <X11/XKBlib.h>
 #include <time.h>
 #include <errno.h>
 #include "rdesktop.h"
@@ -32,6 +33,7 @@ extern BOOL sendmotion;
 extern BOOL fullscreen;
 
 Display *display;
+XkbDescPtr xkb;
 static int x_socket;
 static Window wnd;
 static GC gc;
@@ -46,6 +48,17 @@ static BOOL xserver_be;
 /* software backing store */
 static BOOL ownbackstore;
 static Pixmap backstore;
+
+/* needed to keep track of the modifiers */
+static unsigned int key_modifier_state = 0;
+static unsigned int key_down_state = 0;
+
+#define DShift1Mask   (1<<0)
+#define DShift2Mask   (1<<1)
+#define DControl1Mask (1<<2)
+#define DControl2Mask (1<<3)
+#define DMod1Mask     (1<<4)
+#define DMod2Mask     (1<<5)
 
 #define FILL_RECTANGLE(x,y,cx,cy)\
 { \
@@ -85,6 +98,9 @@ static int rop2_map[] = {
 
 #define SET_FUNCTION(rop2)	{ if (rop2 != ROP2_COPY) XSetFunction(display, gc, rop2_map[rop2]); }
 #define RESET_FUNCTION(rop2)	{ if (rop2 != ROP2_COPY) XSetFunction(display, gc, GXcopy); }
+
+void xwin_release_modifiers(XKeyEvent* ev, uint32 ev_time, uint32 scancode);
+void xwin_press_modifiers(XKeyEvent* ev, uint32 ev_time, uint32 scancode);
 
 static void
 translate8(uint8 *data, uint8 *out, uint8 *end)
@@ -191,8 +207,44 @@ ui_create_window(char *title)
 	Screen *screen;
 	uint16 test;
 	int i;
+	
+	int xkb_minor, xkb_major;
+	int xkb_event, xkb_error, xkb_reason;
 
-	display = XOpenDisplay(NULL);
+	/* compare compiletime libs with runtime libs. */
+	xkb_major = XkbMajorVersion;
+	xkb_minor = XkbMinorVersion;
+	if( XkbLibraryVersion( &xkb_major, &xkb_minor ) == False )
+	{
+		error("please re-compile rdesktop\ncompile time version of xkb is not compatible with\nyour runtime version of the library\n");
+		return False;
+	}
+
+
+	/* XKB is the 'new' keyboard handler in x.. ( the xkb code in Xfree86 originates from SGI, years 1993 and 1995 from what I could tell. )
+	 * it makes it possible for people with disabilities to use rdesktop, stickykeys, bouncekeys etc. VERY MUCH useful.
+	 * XFree86 has had support for it since it's earliest incarnation. I believe it is a reasonable dependency.
+	 */
+	display = XkbOpenDisplay( NULL, &xkb_event, &xkb_error, &xkb_major, &xkb_minor, &xkb_reason );
+	switch(xkb_reason)
+	{
+		case XkbOD_BadLibraryVersion:
+			error("XkbOD_BadLibraryVersion: XKB extensions in server and the library rdesktop is linked against aren't compatible with each other.\n");
+			break;
+		case XkbOD_ConnectionRefused:
+			error("XkbOD_ConnectionRefused\n");
+			break;
+		case XkbOD_BadServerVersion:
+			error("XkbOD_BadServerVersion\n");
+			break;
+		case XkbOD_NonXkbServer:
+			error("XkbOD_NonXkbServer: XKB extension not present in server\nupdate your X server.\n");
+			break;
+		case XkbOD_Success:
+			DEBUG("XkbOD_Success: Connection established with display\n");
+			break;
+	}
+
 	if (display == NULL)
 	{
 		error("Failed to open display\n");
@@ -203,7 +255,7 @@ ui_create_window(char *title)
 	screen = DefaultScreenOfDisplay(display);
 	visual = DefaultVisualOfScreen(screen);
 	depth = DefaultDepthOfScreen(screen);
-
+	
 	pfm = XListPixmapFormats(display, &i);
 	if (pfm != NULL)
 	{
@@ -284,10 +336,9 @@ ui_create_window(char *title)
 
 	xkeymap_init();
 
-	input_mask = KeyPressMask | KeyReleaseMask
-			| ButtonPressMask | ButtonReleaseMask
-			| EnterWindowMask | LeaveWindowMask;
-
+	input_mask = KeyPressMask | KeyReleaseMask |
+			 ButtonPressMask | ButtonReleaseMask |
+			 EnterWindowMask | LeaveWindowMask | KeymapStateMask;
 	if (sendmotion)
 		input_mask |= PointerMotionMask;
 
@@ -301,12 +352,31 @@ ui_create_window(char *title)
 		backstore = XCreatePixmap(display, wnd, width, height, depth);
 
 	XMapWindow(display, wnd);
+
+	/* TODO: error texts... make them friendly. */
+	xkb = XkbGetKeyboard(display, XkbAllComponentsMask, XkbUseCoreKbd);
+	if ((int)xkb == BadAlloc || xkb == NULL)
+      	{
+        		error( "XkbGetKeyboard failed.\n");
+        		exit(0);
+      	}
+
+	/* TODO: error texts... make them friendly. */
+	if( XkbSelectEvents(display, xkb->device_spec, XkbAllEventsMask, XkbAllEventsMask) == False )
+	{
+			error( "XkbSelectEvents failed.\n");
+			exit(0);
+	}
+
 	return True;
 }
 
 void
 ui_destroy_window()
 {
+	if( xkb != NULL )
+		XkbFreeKeyboard(xkb, XkbAllControlsMask, True);
+
 	if (ownbackstore)
 		XFreePixmap(display, backstore);
 
@@ -319,33 +389,54 @@ ui_destroy_window()
 static void
 xwin_process_events()
 {
-	XEvent event;
+	XkbEvent xkbevent;
+	
 	KeySym keysym;
 	uint8 scancode;
 	uint16 button, flags;
 	uint32 ev_time;
+	uint32 tmpmods;
 
 	if (display == NULL)
 		return;
 
-	while (XCheckMaskEvent(display, ~0, &event))
+	while (XCheckMaskEvent(display, ~0, &xkbevent.core))
 	{
 		ev_time = time(NULL);
 		flags = 0;
 
-		switch (event.type)
+		switch (xkbevent.type)
 		{
+			case KeymapNotify:
+				/* TODO:
+				 * read modifier status at focus in, and update the local masks, and the other end as well..
+				 * if not, we may get out of sync.
+				 * xkbevent.core.xkeymap.key_vector
+				 * char key_vector[32]; 
+				 */
+				break;
+
 			case KeyRelease:
 				flags = KBD_FLAG_DOWN | KBD_FLAG_UP;
 				/* fall through */
 
 			case KeyPress:
-				keysym = XKeycodeToKeysym(display, event.xkey.keycode, 0);
-				scancode = xkeymap_translate_key(keysym, event.xkey.keycode, &flags);
-				if (scancode == 0)
+				if( XkbTranslateKeyCode(xkb, xkbevent.core.xkey.keycode, xkbevent.core.xkey.state, &tmpmods, &keysym) == False )
+					break;
+				scancode = xkeymap_translate_key(keysym, xkbevent.core.xkey.keycode, &flags);
+
+				if (scancode == 0 )
 					break;
 
+				/* keep track of the modifiers -- needed for stickykeys... */
+				if( xkbevent.type == KeyPress )
+					xwin_press_modifiers( &xkbevent.core.xkey, ev_time, scancode );
+
 				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, flags, scancode, 0);
+
+				if( xkbevent.type == KeyRelease )
+					xwin_release_modifiers( &xkbevent.core.xkey, ev_time, scancode );
+
 				break;
 
 			case ButtonPress:
@@ -353,21 +444,21 @@ xwin_process_events()
 				/* fall through */
 
 			case ButtonRelease:
-				button = xkeymap_translate_button(event.xbutton.button);
+				button = xkeymap_translate_button(xkbevent.core.xbutton.button);
 				if (button == 0)
 					break;
 
 				rdp_send_input(ev_time, RDP_INPUT_MOUSE,
 					       flags | button,
-					       event.xbutton.x,
-					       event.xbutton.y);
+					       xkbevent.core.xbutton.x,
+					       xkbevent.core.xbutton.y);
 				break;
 
 			case MotionNotify:
 				rdp_send_input(ev_time, RDP_INPUT_MOUSE,
 					       MOUSE_FLAG_MOVE,
-					       event.xmotion.x,
-					       event.xmotion.y);
+					       xkbevent.core.xmotion.x,
+					       xkbevent.core.xmotion.y);
 				break;
 
 			case EnterNotify:
@@ -381,11 +472,119 @@ xwin_process_events()
 
 			case Expose:
 				XCopyArea(display, backstore, wnd, gc,
-					  event.xexpose.x, event.xexpose.y,
-					  event.xexpose.width, event.xexpose.height,
-					  event.xexpose.x, event.xexpose.y);
+					  xkbevent.core.xexpose.x, xkbevent.core.xexpose.y,
+					  xkbevent.core.xexpose.width, xkbevent.core.xexpose.height,
+					  xkbevent.core.xexpose.x, xkbevent.core.xexpose.y);
 				break;
 		}
+	}
+}
+
+void
+xwin_release_modifiers(XKeyEvent* ev, uint32 ev_time, uint32 scancode)
+{
+	switch (scancode) {
+	case 0x2a:
+		key_down_state &= ~DShift1Mask;
+		break;
+	case 0x36:
+		key_down_state &= ~DShift2Mask;
+		break;
+	case 0x1d:
+		key_down_state &= ~DControl1Mask;
+		break;
+	case 0x9d:
+		key_down_state &= ~DControl2Mask;
+		break;
+	case 0x38:
+		key_down_state &= ~DMod1Mask;
+		break;
+	case 0xb8:
+		key_down_state &= ~DMod2Mask;
+		break;
+	}
+
+	if( !(ShiftMask & ev->state) && (key_down_state & DShift1Mask))
+	{
+		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, KBD_FLAG_UP, 0x2a, 0);
+		key_down_state &= ~DShift1Mask;
+
+	}
+
+	if( !(ControlMask & ev->state) && (key_down_state & DControl1Mask))
+	{
+		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, KBD_FLAG_UP, 0x1d, 0);
+		key_down_state &= ~DControl1Mask;
+
+	}
+	
+	if( !(Mod1Mask & ev->state) && (key_down_state & DMod1Mask))
+	{
+		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, KBD_FLAG_UP, 0x38, 0);
+		key_down_state &= ~DMod1Mask;
+
+	}
+	
+	if( !(Mod2Mask & ev->state) && (key_down_state & DMod2Mask))
+	{
+		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, KBD_FLAG_UP, 0xb8, 0);
+		key_down_state &= ~DMod2Mask;
+	}
+}
+
+
+void
+xwin_press_modifiers(XKeyEvent* ev, uint32 ev_time, uint32 scancode)
+{
+	key_modifier_state = ev->state;
+
+	switch (scancode) {
+	case 0x2a:
+		key_down_state |= DShift1Mask;
+		break;
+	case 0x36:
+		key_down_state |= DShift2Mask;
+		break;
+	case 0x1d:
+		key_down_state |= DControl1Mask;
+		break;
+	case 0x9d:
+		key_down_state |= DControl2Mask;
+		break;
+	case 0x38:
+		key_down_state |= DMod1Mask;
+		break;
+	case 0xb8:
+		key_down_state |= DMod2Mask;
+		break;
+	}
+
+	if( (ShiftMask & ev->state) && !((key_down_state & DShift1Mask) || (key_down_state & DShift2Mask)))
+	{
+		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, KBD_FLAG_DOWN, 0x2a, 0);
+		key_down_state |= DShift1Mask;
+
+	}
+
+	if( (ControlMask & ev->state) && !((key_down_state & DControl1Mask) || (key_down_state & DControl2Mask)))
+	{
+		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, KBD_FLAG_DOWN, 0x1d, 0);
+		key_down_state |= DControl1Mask;
+
+	}
+
+	if( (Mod1Mask & ev->state) && !(key_down_state & DMod1Mask))
+	{
+		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, KBD_FLAG_DOWN, 0x38, 0);
+		key_down_state |= DMod1Mask;
+
+	}
+
+	if( (Mod2Mask & ev->state) && !(key_down_state & DMod2Mask))
+	{
+		rdp_send_input(ev_time, RDP_INPUT_SCANCODE, KBD_FLAG_DOWN, 0xb8, 0);
+		key_down_state |= DMod2Mask;
+
 	}
 }
 
@@ -923,7 +1122,7 @@ ui_draw_text(uint8 font, uint8 flags, int mixmode, int x, int y,
 			if (entry != NULL) {
 				if ((((uint8 *) (entry->data))[1] == 0)
 				    && (!(flags & TEXT2_IMPLICIT_X))) {
-					if (flags & TEXT2_VERTICAL)      
+					if (flags & TEXT2_VERTICAL)
 						y += text[i + 2];
 					else
 					    	x += text[i + 2];
@@ -932,7 +1131,7 @@ ui_draw_text(uint8 font, uint8 flags, int mixmode, int x, int y,
 					i += 3;
 				else
 				    	i += 2;
-				length -= i;   
+				length -= i;
 				/* this will move pointer from start to first character after FE command */
 				text = &(text[i]);
 				i = 0;
