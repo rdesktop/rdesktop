@@ -38,6 +38,7 @@
 #include <sys/time.h>
 #include <dirent.h>		/* opendir, closedir, readdir */
 #include <time.h>
+#include <errno.h>
 #include "rdesktop.h"
 
 #define IRP_MJ_CREATE			0x00
@@ -824,7 +825,7 @@ rdpdr_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv, BOOL * t
 					   reconnecting. FIXME: Real
 					   support for reconnects. */
 
-					if (read(iorq->fd, &c, 0) != 0)
+					if ((read(iorq->fd, &c, 0) != 0) && (errno == EBADF))
 						break;
 
 					FD_SET(iorq->fd, rfds);
@@ -847,7 +848,7 @@ rdpdr_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv, BOOL * t
 
 				case IRP_MJ_WRITE:
 					/* FD still valid? See above. */
-					if (write(iorq->fd, &c, 0) != 0)
+					if ((write(iorq->fd, &c, 0) != 0) && (errno == EBADF))
 						break;
 
 					FD_SET(iorq->fd, wfds);
