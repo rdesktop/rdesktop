@@ -1,8 +1,8 @@
 # rdesktop Swiss-German (de-sg)  keymap file 
 # 3.6.2003 by noldi@tristar.ch 
 #
-map 0x00000807
 include common
+map 0x00000807
 #
 # Scan Code 1
 section 0x29
