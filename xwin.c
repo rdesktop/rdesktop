@@ -240,17 +240,20 @@ translate8to16(uint8 * data, uint8 * out, uint8 * end)
 {
 	uint16 value;
 
-	while (out < end)
+	if (g_xserver_be)
 	{
-		value = (uint16) g_colmap[*(data++)];
-
-		if (g_xserver_be)
+		while (out < end)
 		{
+			value = (uint16) g_colmap[*(data++)];
 			*(out++) = value >> 8;
 			*(out++) = value;
 		}
-		else
+	}
+	else
+	{
+		while (out < end)
 		{
+			value = (uint16) g_colmap[*(data++)];
 			*(out++) = value;
 			*(out++) = value >> 8;
 		}
@@ -263,18 +266,21 @@ translate8to24(uint8 * data, uint8 * out, uint8 * end)
 {
 	uint32 value;
 
-	while (out < end)
+	if (g_xserver_be)
 	{
-		value = g_colmap[*(data++)];
-
-		if (g_xserver_be)
+		while (out < end)
 		{
+			value = g_colmap[*(data++)];
 			*(out++) = value >> 16;
 			*(out++) = value >> 8;
 			*(out++) = value;
 		}
-		else
+	}
+	else
+	{
+		while (out < end)
 		{
+			value = g_colmap[*(data++)];
 			*(out++) = value;
 			*(out++) = value >> 8;
 			*(out++) = value >> 16;
@@ -287,19 +293,22 @@ translate8to32(uint8 * data, uint8 * out, uint8 * end)
 {
 	uint32 value;
 
-	while (out < end)
+	if (g_xserver_be)
 	{
-		value = g_colmap[*(data++)];
-
-		if (g_xserver_be)
+		while (out < end)
 		{
+			value = g_colmap[*(data++)];
 			*(out++) = value >> 24;
 			*(out++) = value >> 16;
 			*(out++) = value >> 8;
 			*(out++) = value;
 		}
-		else
+	}
+	else
+	{
+		while (out < end)
 		{
+			value = g_colmap[*(data++)];
 			*(out++) = value;
 			*(out++) = value >> 8;
 			*(out++) = value >> 16;
