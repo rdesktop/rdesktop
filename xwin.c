@@ -21,6 +21,7 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <unistd.h>
+#include <sys/time.h>
 #include <time.h>
 #include <errno.h>
 #include <strings.h>
@@ -63,7 +64,7 @@ static int g_red_shift_r, g_blue_shift_r, g_green_shift_r;
 static int g_red_shift_l, g_blue_shift_l, g_green_shift_l;
 
 /* software backing store */
-static BOOL g_ownbackstore;
+BOOL g_ownbackstore = True;	/* We can't rely on external BackingStore */
 static Pixmap g_backstore = 0;
 
 /* Moving in single app mode */
@@ -791,8 +792,11 @@ ui_init(void)
 			warning("Screen depth is 8 bits or lower: you may want to use -C for a private colourmap\n");
 	}
 
-	if (DoesBackingStore(g_screen) != Always)
+	if ((!g_ownbackstore) && (DoesBackingStore(g_screen) != Always))
+	{
+		warning("External BackingStore not available, using internal\n");
 		g_ownbackstore = True;
+	}
 
 	test = 1;
 	g_host_be = !(BOOL) (*(uint8 *) (&test));
@@ -1779,9 +1783,15 @@ ui_screenblt(uint8 opcode,
 	     /* src */ int srcx, int srcy)
 {
 	SET_FUNCTION(opcode);
-	XCopyArea(g_display, g_wnd, g_wnd, g_gc, srcx, srcy, cx, cy, x, y);
 	if (g_ownbackstore)
+	{
+		XCopyArea(g_display, g_backstore, g_wnd, g_gc, srcx, srcy, cx, cy, x, y);
 		XCopyArea(g_display, g_backstore, g_backstore, g_gc, srcx, srcy, cx, cy, x, y);
+	}
+	else
+	{
+		XCopyArea(g_display, g_wnd, g_wnd, g_gc, srcx, srcy, cx, cy, x, y);
+	}
 	RESET_FUNCTION(opcode);
 }
 

@@ -69,6 +69,7 @@ BOOL g_use_rdp5 = True;
 BOOL g_console_session = False;
 BOOL g_numlock_sync = False;
 extern BOOL g_owncolmap;
+extern BOOL g_ownbackstore;
 
 #ifdef WITH_RDPSND
 BOOL g_rdpsnd = False;
@@ -107,6 +108,7 @@ usage(char *program)
 	fprintf(stderr, "   -g: desktop geometry (WxH)\n");
 	fprintf(stderr, "   -f: full-screen mode\n");
 	fprintf(stderr, "   -b: force bitmap updates\n");
+	fprintf(stderr, "   -B: use BackingStore of X-server (if available)\n");
 	fprintf(stderr, "   -e: disable encryption (French TS)\n");
 	fprintf(stderr, "   -E: disable encryption from client to server\n");
 	fprintf(stderr, "   -m: do not send motion events\n");
@@ -251,7 +253,7 @@ main(int argc, char *argv[])
 #define VNCOPT
 #endif
 
-	while ((c = getopt(argc, argv, VNCOPT "u:d:s:c:p:n:k:g:fbeEmCDKS:T:Na:r:045h?")) != -1)
+	while ((c = getopt(argc, argv, VNCOPT "u:d:s:c:p:n:k:g:fbBeEmCDKS:T:Na:r:045h?")) != -1)
 	{
 		switch (c)
 		{
@@ -345,6 +347,10 @@ main(int argc, char *argv[])
 
 			case 'b':
 				g_orders = False;
+				break;
+
+			case 'B':
+				g_ownbackstore = False;
 				break;
 
 			case 'e':
