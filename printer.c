@@ -143,4 +143,3 @@ DEVICE_FNS printer_fns = {
 	printer_write,
 	NULL			/* device_control */
 };
- 
