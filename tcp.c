@@ -129,9 +129,48 @@ tcp_recv(STREAM s, uint32 length)
 BOOL
 tcp_connect(char *server)
 {
+	int true_value = 1;
+
+#ifdef IPv6
+
+	int n;
+	struct addrinfo hints, *res, *ressave;
+	char tcp_port_rdp_s[10];
+
+	snprintf(tcp_port_rdp_s, 10, "%d", tcp_port_rdp);
+
+	memset(&hints, 0, sizeof(struct addrinfo));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+
+	n = getaddrinfo(server, tcp_port_rdp_s, &hints, &res);
+
+	if (n < 0)
+	{
+		error("getaddrinfo error:: [%s]\n", gai_strerror(n));
+		return False;
+	}
+
+	ressave = res;
+	sock = -1;
+	while (res)
+	{
+		sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+		if (!(sock < 0))
+		{
+			if (connect(sock, res->ai_addr, res->ai_addrlen) == 0)
+				break;
+			close(sock);
+			sock = -1;
+		}
+		res = res->ai_next;
+	}
+	freeaddrinfo(ressave);
+
+#else /* no IPv6 support */
+
 	struct hostent *nslookup;
 	struct sockaddr_in servaddr;
-	int true_value = 1;
 
 	if ((nslookup = gethostbyname(server)) != NULL)
 	{
@@ -158,6 +197,8 @@ tcp_connect(char *server)
 		close(sock);
 		return False;
 	}
+
+#endif /* IPv6 */
 
 	setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (void *) &true_value, sizeof(true_value));
 
