@@ -33,6 +33,7 @@ static Atom rdesktop_clipboard_target_atom;
 static cliprdr_dataformat *server_formats = NULL;
 static uint16 num_server_formats = 0;
 static XSelectionEvent selection_event;
+static uint16 clipboard_channelno;
 
 static void
 cliprdr_print_server_formats(void) 
@@ -95,7 +96,8 @@ cliprdr_send_format_announce(void)
 	out_uint32_le(s, 0); 
 
 	s_mark_end(s);
-	sec_send_to_channel(s, encryption ? SEC_ENCRYPT : 0, 1005); // FIXME: Don't hardcode channel!
+	sec_send_to_channel(s, encryption ? SEC_ENCRYPT : 0, 
+			    clipboard_channelno); 
 }
 
 
@@ -114,7 +116,8 @@ cliprdr_send_empty_datapacket(void)
 	out_uint32_le(out, 0);
 	s_mark_end(out);
 	
-	sec_send_to_channel(out, encryption ? SEC_ENCRYPT : 0, 1005); // FIXME: Don't hardcode channel!   
+	sec_send_to_channel(out, encryption ? SEC_ENCRYPT : 0, 
+			    clipboard_channelno); 
 }
 
 
@@ -209,7 +212,8 @@ cliprdr_handle_SelectionNotify(XSelectionEvent *event)
 		out_uint32_le(out, 0);
 		s_mark_end(out);
 	
-		sec_send_to_channel(out, encryption ? SEC_ENCRYPT : 0, 1005); // FIXME: Don't hardcode channel!   
+		sec_send_to_channel(out, encryption ? SEC_ENCRYPT : 0, 
+				    clipboard_channelno); 
 
 		cliprdr_send_format_announce();
 		
@@ -241,7 +245,8 @@ cliprdr_request_clipboard_data(uint32 formatcode)
 
 	s_mark_end(s);
 
-	sec_send_to_channel(s, encryption ? SEC_ENCRYPT : 0, 1005); // FIXME: Don't hardcode channel!
+	sec_send_to_channel(s, encryption ? SEC_ENCRYPT : 0, 
+			    clipboard_channelno); 
 }
 
 
@@ -341,7 +346,8 @@ cliprdr_ack_format_list(void)
 
 	s_mark_end(s);
 
-	sec_send_to_channel(s, encryption ? SEC_ENCRYPT : 0, 1005); // FIXME: Don't hardcode channel!
+	sec_send_to_channel(s, encryption ? SEC_ENCRYPT : 0, 
+			    clipboard_channelno); 
 }
 
 		
@@ -486,13 +492,14 @@ void cliprdr_handle_server_data_request(STREAM s)
 }
 	
 
-void cliprdr_callback(STREAM s) 
+void cliprdr_callback(STREAM s, uint16 channelno) 
 {
 	static int failed_clipboard_acks = 0;
 	struct timeval timeval;
 	uint32 length, flags;
 	uint16 ptype0, ptype1;
-	DEBUG_CLIPBOARD(("cliprdr_callback called, clipboard data:\n"));
+	clipboard_channelno = channelno;
+	DEBUG_CLIPBOARD(("cliprdr_callback called with channelno %d, clipboard data:\n", channelno));
 #ifdef WITH_DEBUG_CLIPBOARD
 	hexdump(s->p, s->end - s->p);
 #endif
