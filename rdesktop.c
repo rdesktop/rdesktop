@@ -185,6 +185,7 @@ int main(int argc, char *argv[])
 void generate_random(uint8 *random)
 {
 	struct stat st;
+	struct tms tmsbuf;
 	uint32 *r = (uint32 *)random;
 	int fd;
 
@@ -199,7 +200,7 @@ void generate_random(uint8 *random)
 	/* Otherwise use whatever entropy we can gather - ideas welcome. */
 	r[0] = (getpid()) | (getppid() << 16);
 	r[1] = (getuid()) | (getgid() << 16);
-	r[2] = times(NULL); /* system uptime (clocks) */
+	r[2] = times(&tmsbuf); /* system uptime (clocks) */
 	gettimeofday((struct timeval *)&r[3], NULL); /* sec and usec */
 	stat("/tmp", &st);
 	r[5] = st.st_atime;
