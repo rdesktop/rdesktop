@@ -1,4 +1,4 @@
-/*
+/* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    User interface services - X Window System
    Copyright (C) Matthew Chapman 1999-2002
@@ -23,6 +23,7 @@
 #include <time.h>
 #include <errno.h>
 #include "rdesktop.h"
+#include "xproto.h"
 
 extern int width;
 extern int height;
@@ -38,9 +39,10 @@ BOOL focused;
 BOOL mouse_in_wnd;
 
 Display *display;
+Time last_gesturetime;
 static int x_socket;
 static Screen *screen;
-static Window wnd;
+Window wnd;
 static GC gc;
 static Visual *visual;
 static int depth;
@@ -50,6 +52,9 @@ static XIC IC;
 static XModifierKeymap *mod_map;
 static Cursor current_cursor;
 static Atom protocol_atom, kill_atom;
+static long input_mask;		/* Needs to be global since we access it in 
+				   both ui_create_window and the PropertyNotify
+				   callback functions */
 
 /* endianness */
 static BOOL host_be;
@@ -84,6 +89,21 @@ typedef struct
 	uint32 blue;
 }
 PixelColour;
+
+struct _PropNotifyCb;
+
+typedef struct _PropNotifyCb
+{
+	Window wnd;
+	Atom atom;
+	void (*callback) (XPropertyEvent *);
+	struct _PropNotifyCb *next;
+}
+PropNotifyCb;
+
+
+static PropNotifyCb *propnotify_callbacks = NULL;
+
 
 #define FILL_RECTANGLE(x,y,cx,cy)\
 { \
@@ -413,7 +433,7 @@ static uint8 *
 translate_image(int width, int height, uint8 * data)
 {
 	int size = width * height * bpp / 8;
-	uint8 *out = (uint8*)xmalloc(size);
+	uint8 *out = (uint8 *) xmalloc(size);
 	uint8 *end = out + size;
 
 	switch (server_bpp)
@@ -614,6 +634,8 @@ ui_init(void)
 	/* todo take this out when high colour is done */
 	printf("server bpp %d client bpp %d depth %d\n", server_bpp, bpp, depth);
 
+
+
 	return True;
 }
 
@@ -640,7 +662,7 @@ ui_create_window(void)
 	XClassHint *classhints;
 	XSizeHints *sizehints;
 	int wndwidth, wndheight;
-	long input_mask, ic_input_mask;
+	long ic_input_mask;
 	XEvent xevent;
 
 	wndwidth = fullscreen ? WidthOfScreen(screen) : width;
@@ -754,6 +776,21 @@ xwin_toggle_fullscreen(void)
 	}
 }
 
+static void
+xwin_process_propertynotify(XPropertyEvent * xev)
+{
+	PropNotifyCb *this = propnotify_callbacks;
+	while (NULL != this)
+	{
+		if (xev->window == this->wnd && xev->atom == this->atom)
+		{
+			this->callback(xev);
+		}
+		this = this->next;
+	}
+}
+
+
 /* Process all events in Xlib queue 
    Returns 0 after user quit, 1 otherwise */
 static int
@@ -787,12 +824,13 @@ xwin_process_events(void)
 			case ClientMessage:
 				/* the window manager told us to quit */
 				if ((xevent.xclient.message_type == protocol_atom)
-				    && ((Atom)xevent.xclient.data.l[0] == kill_atom))
+				    && ((Atom) xevent.xclient.data.l[0] == kill_atom))
 					/* Quit */
 					return 0;
 				break;
 
 			case KeyPress:
+				last_gesturetime = ((XKeyEvent *) & xevent)->time;
 				if (IC != NULL)
 					/* Multi_key compatible version */
 				{
@@ -833,6 +871,7 @@ xwin_process_events(void)
 				break;
 
 			case KeyRelease:
+				last_gesturetime = ((XKeyEvent *) & xevent)->time;
 				XLookupString((XKeyEvent *) & xevent, str,
 					      sizeof(str), &keysym, NULL);
 
@@ -853,10 +892,12 @@ xwin_process_events(void)
 				break;
 
 			case ButtonPress:
+				last_gesturetime = ((XButtonEvent *) & xevent)->time;
 				flags = MOUSE_FLAG_DOWN;
 				/* fall through */
 
 			case ButtonRelease:
+				last_gesturetime = ((XButtonEvent *) & xevent)->time;
 				button = xkeymap_translate_button(xevent.xbutton.button);
 				if (button == 0)
 					break;
@@ -992,6 +1033,22 @@ xwin_process_events(void)
 					mod_map = XGetModifierMapping(display);
 				}
 				break;
+				/* Clipboard stuff */
+			case SelectionClear:
+				cliprdr_handle_SelectionClear();
+				break;
+			case SelectionNotify:
+				cliprdr_handle_SelectionNotify((XSelectionEvent *) & xevent);
+				break;
+			case SelectionRequest:
+				cliprdr_handle_SelectionRequest((XSelectionRequestEvent *) &
+								xevent);
+				break;
+
+			case PropertyNotify:
+				xwin_process_propertynotify((XPropertyEvent *) & xevent);
+				break;
+
 
 		}
 	}
@@ -1137,10 +1194,10 @@ ui_create_cursor(unsigned int x, unsigned int y, int width, int height,
 	scanline = (width + 7) / 8;
 	offset = scanline * height;
 
-	cursor = (uint8*)xmalloc(offset);
+	cursor = (uint8 *) xmalloc(offset);
 	memset(cursor, 0, offset);
 
-	mask = (uint8*)xmalloc(offset);
+	mask = (uint8 *) xmalloc(offset);
 	memset(mask, 0, offset);
 
 	/* approximate AND and XOR masks with a monochrome X pointer */
@@ -1219,7 +1276,7 @@ ui_create_colourmap(COLOURMAP * colours)
 	int i, ncolours = colours->ncolours;
 	if (!owncolmap)
 	{
-		uint32 *map = (uint32*)xmalloc(sizeof(*colmap) * ncolours);
+		uint32 *map = (uint32 *) xmalloc(sizeof(*colmap) * ncolours);
 		XColor xentry;
 		XColor xc_cache[256];
 		uint32 colour;
@@ -1297,7 +1354,7 @@ ui_create_colourmap(COLOURMAP * colours)
 		XColor *xcolours, *xentry;
 		Colormap map;
 
-		xcolours = (XColor*)xmalloc(sizeof(XColor) * ncolours);
+		xcolours = (XColor *) xmalloc(sizeof(XColor) * ncolours);
 		for (i = 0; i < ncolours; i++)
 		{
 			entry = &colours->colours[i];
@@ -1327,7 +1384,7 @@ void
 ui_set_colourmap(HCOLOURMAP map)
 {
 	if (!owncolmap)
-		colmap = (uint32*)map;
+		colmap = (uint32 *) map;
 	else
 		XSetWindowColormap(display, wnd, (Colormap) map);
 }
@@ -1372,12 +1429,12 @@ ui_destblt(uint8 opcode,
 }
 
 static uint8 hatch_patterns[] = {
-	0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0x00, /* 0 - bsHorizontal */
-	0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0x08, /* 1 - bsVertical */
-	0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01, /* 2 - bsFDiagonal */
-	0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, /* 3 - bsBDiagonal */
-	0x08, 0x08, 0x08, 0xff, 0x08, 0x08, 0x08, 0x08, /* 4 - bsCross */
-	0x81, 0x42, 0x24, 0x18, 0x18, 0x24, 0x42, 0x81  /* 5 - bsDiagCross */
+	0x00, 0x00, 0x00, 0xff, 0x00, 0x00, 0x00, 0x00,	/* 0 - bsHorizontal */
+	0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0x08,	/* 1 - bsVertical */
+	0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01,	/* 2 - bsFDiagonal */
+	0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80,	/* 3 - bsBDiagonal */
+	0x08, 0x08, 0x08, 0xff, 0x08, 0x08, 0x08, 0x08,	/* 4 - bsCross */
+	0x81, 0x42, 0x24, 0x18, 0x18, 0x24, 0x42, 0x81	/* 5 - bsDiagCross */
 };
 
 void
@@ -1398,7 +1455,8 @@ ui_patblt(uint8 opcode,
 			break;
 
 		case 2:	/* Hatch */
-			fill = (Pixmap) ui_create_glyph(8, 8, hatch_patterns + brush->pattern[0] * 8);
+			fill = (Pixmap) ui_create_glyph(8, 8,
+							hatch_patterns + brush->pattern[0] * 8);
 			SET_FOREGROUND(bgcolour);
 			SET_BACKGROUND(fgcolour);
 			XSetFillStyle(display, gc, FillOpaqueStippled);
@@ -1698,4 +1756,100 @@ ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy)
 	}
 
 	XFree(image);
+}
+
+
+void
+xwin_register_propertynotify(Window event_wnd, Atom atom,
+			     void (*propertycallback) (XPropertyEvent *))
+{
+	PropNotifyCb *this;
+	int window_already_registrered = 0;
+	if (NULL != propnotify_callbacks)
+	{
+		this = propnotify_callbacks;
+		if (event_wnd == this->wnd)
+		{
+			window_already_registrered = 1;
+			if (atom == this->atom)
+				return;
+		}
+		while (NULL != this->next)
+		{
+			if (event_wnd == this->wnd)
+			{
+				window_already_registrered = 1;
+				if (atom == this->atom)
+					return;
+				/* Find last entry in list */
+			}
+			this = this->next;
+		}
+		this->next = xmalloc(sizeof(PropNotifyCb));
+		this->next->next = NULL;
+		this = this->next;
+
+	}
+	else
+	{
+		this = xmalloc(sizeof(PropNotifyCb));
+		this->next = NULL;
+		propnotify_callbacks = this;
+	}
+	if (!window_already_registrered)
+	{
+		if (wnd == event_wnd)
+			XSelectInput(display, wnd, input_mask | PropertyChangeMask);
+		else
+			XSelectInput(display, event_wnd, PropertyChangeMask);
+	}
+	this->wnd = event_wnd;
+	this->atom = atom;
+	this->callback = propertycallback;
+}
+
+
+void
+xwin_deregister_propertynotify(Window event_wnd, Atom atom)
+{
+	PropNotifyCb *this = propnotify_callbacks;
+	PropNotifyCb *prev;
+	int window_needed = 0;
+	prev = this;
+	while (NULL != this)
+	{
+		if (event_wnd == this->wnd)
+		{
+			if (atom == this->atom)
+			{
+				if (prev == this)
+				{
+					propnotify_callbacks = this->next;
+				}
+				else
+				{
+					prev->next = this->next;
+				}
+				xfree(this);
+				continue;
+			}
+			else
+			{
+				window_needed = 1;
+			}
+		}
+		prev = this;
+		this = this->next;
+	}
+	if (!window_needed)
+	{
+		if (wnd != event_wnd)
+		{
+			XSelectInput(display, event_wnd, NoEventMask);
+		}
+		else
+		{
+			XSelectInput(display, wnd, input_mask);
+		}
+	}
 }
