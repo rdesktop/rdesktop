@@ -124,6 +124,9 @@
 #ifndef TIOCINQ
 #define TIOCINQ FIONREAD
 #endif
+#ifndef TIOCOUTQ
+#define TIOCOUTQ FIONWRITE
+#endif
 
 extern RDPDR_DEVICE g_rdpdr_device[];
 
@@ -565,7 +568,7 @@ serial_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 disposi
 	pser_inf->ptermios->c_iflag &=
 		~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
 	pser_inf->ptermios->c_oflag &= ~OPOST;
-	pser_inf->ptermios->c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN | XCASE);
+	pser_inf->ptermios->c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
 	pser_inf->ptermios->c_cflag &= ~(CSIZE | PARENB);
 	pser_inf->ptermios->c_cflag |= CS8;
 
