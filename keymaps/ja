@@ -69,7 +69,6 @@ colon 0x28
 asterisk 0x28 shift
 kana_KE 0x28 altgr
 Zenkaku_Hankaku 0x29
-Kanji 0x29 shift
 bracketright 0x2b
 braceright 0x2b shift
 kana_MU 0x2b altgr
@@ -96,3 +95,9 @@ kana_ME 0x35 altgr
 kana_conjunctive 0x35 shift altgr
 Eisu_toggle 0x3a shift
 Execute 0x54 shift
+Kanji 0x70
+backslash 0x73
+underscore 0x73 shift
+Henkan_Mode 0x79
+Katakana 0x70
+Muhenkan 0x7b
