@@ -64,14 +64,32 @@
 
 #define	MAX_OPEN_FILES	0x100
 
+#if (defined(sun) && (defined(__svr4__) || defined(__SVR4)))
+#define SOLARIS
+#endif
+
+#ifdef SOLARIS
+#define DIRFD(a) ((a)->dd_fd)
+#else
+#define DIRFD(a) (dirfd(a))
+#endif
+
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/vfs.h>		/* linux statfs */
 #include <unistd.h>
 #include <fcntl.h>		/* open, close */
 #include <dirent.h>		/* opendir, closedir, readdir */
 #include <fnmatch.h>
 #include <errno.h>		/* errno */
+
+#ifdef SOLARIS
+#include <sys/statvfs.h>	/* solaris statvfs */
+#define HAVE_STATVFS
+#else
+#include <sys/vfs.h>		/* linux statfs */
+#define HAVE_STATFS
+#endif
+
 #include "rdesktop.h"
 
 extern RDPDR_DEVICE g_rdpdr_device[];
@@ -86,6 +104,11 @@ struct fileinfo
 	BOOL delete_on_close;
 }
 g_fileinfo[MAX_OPEN_FILES];
+
+struct fsinfo
+{
+	uint32 f_blocks, f_bfree, f_bsize, f_namelen;
+};
 
 /* Convert seconds since 1970 to a filetime */
 void
@@ -212,7 +235,7 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 					return STATUS_NO_SUCH_FILE;
 			}
 		}
-		handle = dirfd(dirp); /* FIXME: dirfd is not portable */
+		handle = DIRFD(dirp);
 	}
 	else
 	{
@@ -472,18 +495,44 @@ disk_set_information(HANDLE handle, uint32 info_class, STREAM in, STREAM out)
 	return STATUS_SUCCESS;
 }
 
+int fsstat(const char *path, struct fsinfo *buf)
+{
+	int ret;
+#if defined(HAVE_STATFS)
+	struct statfs statbuf;
+#elif defined(HAVE_STATVFS)
+	struct statvfs statbuf;
+#endif
+
+#if defined(HAVE_STATFS)
+	ret = statfs(path, &statbuf);
+	buf->f_namelen = statbuf.f_namelen;
+#elif defined(HAVE_STATVFS)
+	ret = statvfs(path, &statbuf);
+	buf->f_namelen = statbuf.f_namemax;
+#else
+	ret=-1;
+#endif
+
+	buf->f_blocks = statbuf.f_blocks;
+	buf->f_bfree = statbuf.f_bfree;
+	buf->f_bsize = statbuf.f_bsize;
+
+	return ret;
+}
+
 NTSTATUS
 disk_query_volume_information(HANDLE handle, uint32 info_class, STREAM out)
 {
 	char *volume, *fs_type;
-	struct statfs stat_fs;
+	struct fsinfo stat_fs;
 	struct fileinfo *pfinfo;
 
 	pfinfo = &(g_fileinfo[handle]);
 	volume = "RDESKTOP";
 	fs_type = "RDPFS";
 
-	if (statfs(pfinfo->path, &stat_fs) != 0)	/* FIXME: statfs is not portable */
+	if (fsstat(pfinfo->path, &stat_fs) != 0)	/* FIXME: statfs is not portable */
 	{
 		perror("statfs");
 		return STATUS_ACCESS_DENIED;
