@@ -1,0 +1,227 @@
+# rdesktop hungarian keymap
+# Irta: Ragasits Csaba 2003.05.15.
+# Bogarak:
+# - A numbill-en a / nem mukodik
+# /Ha ezt probalod, akkor mar a shift+6-on se fog mukodni/
+# - A shift+nyilak nem mukodnek
+#
+# Ha a fenti hibakat tudod orvosolni (vagy azokat miket nem vettem eszre),
+# kerlek kuld el a javitast nekem is! (ragasits@sofa.hu)   
+
+map 0x40e
+
+#
+# TOP row
+#
+#0 - 1
+0 0x29
+section 0x29 shift
+#1 - 2
+apostrophe 0x2 shift  
+asciitilde 0x2 altgr
+#2 - 3
+quotedbl 0x3 shift
+dead_caron 0x3 altgr
+#3 - 4
+plus 0x4 shift
+#dead_circumflex 0x4 altgr
+asciicircum 0x4 altgr
+#4 - 5
+exclam 0x5 shift 
+dead_breve 0x5 altgr
+#5 - 6
+percent 0x6 shift
+degree 0x6 altgr
+#6 - 7 
+slash 0x7 shift
+dead_ogonek 0x7 altgr
+#7 - 8
+equal 0x8 shift 
+dead_grave 0x8 altgr
+#8 - 9
+parenleft 0x9 shift
+dead_abovedot 0x9 altgr
+#9 - 10
+parenright 0xa shift
+dead_acute 0xa altgr
+#ö - 11
+odiaeresis 0xb 
+Odiaeresis 0xb shift
+dead_doubleacute 0xb altgr
+#ü - 12
+udiaeresis 0xc
+Udiaeresis 0xc shift
+dead_diaeresis 0xc altgr
+#ó - 13
+oacute 0xd
+Oacute 0xd shift
+dead_cedilla 0xd altgr
+#Backspace - 15 BackSpace Delete
+
+#
+# QWERTZ firstrow
+#
+#TAB - 16 Tab Tab
+#q - 17
+backslash 0x10 altgr
+#w - 18
+bar 0x11 altgr
+#e - 19
+currency 0x12 altgr
+#r - 20 
+#t - 21 
+#z - 22
+z 0x15 
+Z 0x15 shift
+#u - 23
+EuroSign 0x16 altgr
+#i - 24
+Iacute 0x17 altgr 
+#o - 25
+#p - 26 
+#õ - 27
+odoubleacute 0x1a
+Odoubleacute 0x1a shift
+division 0x1a altgr
+#ú - 28
+uacute 0x1b 
+Uacute 0x1b shift
+#????×????
+
+#
+# QWERTZ second row
+#
+#Caps Lock - 30
+#a - 31
+#s - 32
+dstroke 0x1f altgr
+#d - 33
+Dstroke 0x20 altgr
+#f - 34
+bracketleft 0x21 altgr
+#g - 35
+bracketright 0x22 altgr
+#h - 36
+#j - 37
+iacute 0x24 altgr
+#k - 38
+lstroke 0x25 altgr
+#l - 39
+Lstroke 0x26 altgr
+#é - 40
+eacute 0x27 
+Eacute 0x27 shift
+dollar 0x27 altgr
+#á - 41
+aacute 0x28
+Aacute 0x28 shift
+ssharp 0x28 altgr
+
+#
+# QWERTZ third row
+#
+#Shift_L - 44 
+#í - 45
+iacute 0x56
+Iacute 0x56 shift
+less 0x56 altgr
+#y - 46
+y 0x2c
+Y 0x2c shift
+greater 0x2c altgr
+#x - 47
+numbersign 0x2d altgr
+#c - 48
+ampersand 0x2e altgr 
+#v - 49
+at 0x2f altgr
+#b - 50
+braceleft 0x30 altgr
+#n - 51
+braceright 0x31 altgr
+#m - 52
+#, - 53
+comma 0x33
+question 0x33 shift
+semicolon 0x33 altgr
+#. - 54
+period 0x34
+colon 0x34 shift
+Multi_key 0x34
+#- - 55
+minus 0x35
+underscore 0x35 shift
+asterisk 0x35 altgr
+
+#
+# Insert - PgDown
+#Insert - 75
+Insert 0x52
+#Delete - 76
+Delete 0x53
+#Home - 80 
+Home 0x47
+#End - 81
+End 0x4f
+#Prior - 85
+Prior 0x49
+#Next - 86
+Next 0x51
+ 
+#
+# Arrow keys
+#
+#Left - 79
+Left 0x4b
+#Right - 89
+Right 0x4d
+#Up - 83
+Up 0x48
+#Down - 84
+Down 0x50
+
+#
+# Numpad
+#
+#0 - 99
+KP_0 0x52 numlock
+KP_Insert 0x52
+#1 - 93
+KP_1 0x4f numlock
+KP_End 0x4f
+#2 - 98
+KP_2 0x50 numlock
+KP_Down 0x50
+#3 - 103
+KP_3 0x51 numlock
+KP_Next 0x51
+#4 - 92
+KP_4 0x4b numlock
+KP_Left 0x4b
+#5 - 97
+KP_5 0x4c numlock
+#6 - 102
+KP_6 0x4d numlock
+KP_Right 0x4d
+#7 - 91
+KP_7 0x47 numlock
+KP_Home 0x47
+#8 - 96
+KP_8 0x48 numlock
+KP_Up 0x48
+#9 - 101
+KP_9 0x49 numlock
+KP_Prior 0x49
+
+#/ - 95
+KP_Divide 0x35
+#KP_Multiply 0x35
+#slash 0x35
+#Enter - 108
+KP_Enter 0x1c
+
+#
+# ETC
+#
+#Control_R - 64
+Control_R 0x1d
