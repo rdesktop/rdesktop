@@ -858,12 +858,9 @@ xwin_process_events(void)
 				/* If win_button_size is nonzero, enable single app mode */
 				if (xevent.xbutton.y < win_button_size)
 				{
-					if (xevent.xbutton.x < win_button_size)
-					{
-						/* The system menu, do not send to server */
-						break;
-					}
-					else if (xevent.xbutton.x >= width - win_button_size)
+					/* Check from right to left: */
+
+					if (xevent.xbutton.x >= width - win_button_size)
 					{
 						/* The close button, continue */
 						;
@@ -881,6 +878,13 @@ xwin_process_events(void)
 						/* The minimize button. Iconify window. */
 						XIconifyWindow(display, wnd,
 							       DefaultScreen(display));
+						break;
+					}
+					else
+					{
+						/* Ignore clicks to the rest of the border. This includes 
+						   the system menu, but also inhibits double clicks on the 
+						   border itself. */
 						break;
 					}
 				}
