@@ -283,34 +283,27 @@ licence_process_issue(STREAM s)
 void
 licence_process(STREAM s)
 {
-	uint16 tag;
+	uint8 tag;
 
-	in_uint16_le(s, tag);
-	in_uint8s(s, 2);	/* length */
+	in_uint8(s, tag);
+	in_uint8s(s, 3);	/* version, length */
 
 	switch (tag)
 	{
 		case LICENCE_TAG_DEMAND:
-        	case LICENCE_TAG_DEMAND_5:
 			licence_process_demand(s);
 			break;
 
 		case LICENCE_TAG_AUTHREQ:
-		case LICENCE_TAG_AUTHREQ_5:
 			licence_process_authreq(s);
 			break;
 
 		case LICENCE_TAG_ISSUE:
-		case LICENCE_TAG_ISSUE_5:
 			licence_process_issue(s);
 			break;
 
 		case LICENCE_TAG_REISSUE:
-		case LICENCE_TAG_REISSUE_5:
-			break;
-
 		case LICENCE_TAG_RESULT:
-	        case LICENCE_TAG_RESULT_5:
 			break;
 
 		default:
