@@ -122,7 +122,7 @@ static int rop2_map[] = {
 #define SET_FUNCTION(rop2)	{ if (rop2 != ROP2_COPY) XSetFunction(display, gc, rop2_map[rop2]); }
 #define RESET_FUNCTION(rop2)	{ if (rop2 != ROP2_COPY) XSetFunction(display, gc, GXcopy); }
 
-void
+static void
 mwm_hide_decorations(void)
 {
 	PropMotifWmHints motif_hints;
@@ -144,7 +144,7 @@ mwm_hide_decorations(void)
 			(unsigned char *) &motif_hints, PROP_MOTIF_WM_HINTS_ELEMENTS);
 }
 
-PixelColour
+static PixelColour
 split_colour15(uint32 colour)
 {
 	PixelColour rv;
@@ -157,7 +157,7 @@ split_colour15(uint32 colour)
 	return rv;
 }
 
-PixelColour
+static PixelColour
 split_colour16(uint32 colour)
 {
 	PixelColour rv;
@@ -170,7 +170,7 @@ split_colour16(uint32 colour)
 	return rv;
 }
 
-PixelColour
+static PixelColour
 split_colour24(uint32 colour)
 {
 	PixelColour rv;
@@ -180,7 +180,7 @@ split_colour24(uint32 colour)
 	return rv;
 }
 
-uint32
+static uint32
 make_colour16(PixelColour pc)
 {
 	pc.red = (pc.red * 0x1f) / 0xff;
@@ -189,13 +189,13 @@ make_colour16(PixelColour pc)
 	return (pc.red << 11) | (pc.green << 5) | pc.blue;
 }
 
-uint32
+static uint32
 make_colour24(PixelColour pc)
 {
 	return (pc.red << 16) | (pc.green << 8) | pc.blue;
 }
 
-uint32
+static uint32
 make_colour32(PixelColour pc)
 {
 	return (pc.red << 16) | (pc.green << 8) | pc.blue;
