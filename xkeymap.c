@@ -393,9 +393,12 @@ ensure_remote_modifiers(uint32 ev_time, key_translation tr)
 static void
 update_modifier_state(uint16 modifiers, BOOL pressed)
 {
+#ifdef WITH_DEBUG_KBD
+	uint16 old_modifier_state;
 
-	DEBUG_KBD(("Before updating modifier_state:0x%x, pressed=0x%x\n",
-		   remote_modifier_state, pressed));
+	old_modifier_state = remote_modifier_state;
+#endif
+
 	switch (modifiers)
 	{
 		case SCANCODE_CHAR_LSHIFT:
@@ -436,7 +439,15 @@ update_modifier_state(uint16 modifiers, BOOL pressed)
 			}
 			break;
 	}
-	DEBUG_KBD(("After updating modifier_state:0x%x\n", remote_modifier_state));
+
+#ifdef WITH_DEBUG_KBD
+	if (old_modifier_state != remote_modifier_state)
+	{
+		DEBUG_KBD(("Before updating modifier_state:0x%x, pressed=0x%x\n",
+			   old_modifier_state, pressed));
+		DEBUG_KBD(("After updating modifier_state:0x%x\n", remote_modifier_state));
+	}
+#endif
 
 }
 
