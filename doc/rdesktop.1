@@ -3,7 +3,7 @@
 .I rdesktop
 \- Remote Desktop Protocol client
 .SH SYNOPSIS
-.B rdesktop [options] server
+.B rdesktop [options] server[:port]
 .br
 .SH DESCRIPTION
 .I rdesktop
@@ -62,14 +62,11 @@ applications may rely on receiving mouse motion.
 Disable encryption.  This option is only needed (and will only work) if you
 have a French version of NT TSE.
 .TP
-.BR "-t <port>"
-Connect to the specified TCP port instead of 3389.
-.TP
 .BR "-K"
 Do not override window manager key bindings.  By default rdesktop attempts
 to grab all keyboard input when it is in focus.
 .TP
-.BR "-w <title>"
+.BR "-T <title>"
 Window title.
 
 .PP
