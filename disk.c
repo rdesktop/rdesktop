@@ -31,7 +31,7 @@
 #include <utime.h>
 #include <time.h>		/* ctime */
 
-#if (defined(HAVE_DIRFD) || defined(HAVE_DECL_DIRFD))
+#if (defined(HAVE_DIRFD) || (HAVE_DECL_DIRFD == 1))
 #define DIRFD(a) (dirfd(a))
 #else
 #define DIRFD(a) ((a)->DIR_FD_MEMBER_NAME)
