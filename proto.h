@@ -37,6 +37,8 @@ void xfree(void *mem);
 void error(char *format, ...);
 void unimpl(char *format, ...);
 void hexdump(unsigned char *p, unsigned int len);
+int load_licence(unsigned char **data);
+void save_licence(unsigned char *data, int length);
 /* rdp.c */
 void rdp_out_unistr(STREAM s, char *string, int len);
 void rdp_send_input(uint32 time, uint16 message_type, uint16 device_flags, uint16 param1, uint16 param2);
@@ -59,6 +61,10 @@ void tcp_send(STREAM s);
 STREAM tcp_recv(int length);
 BOOL tcp_connect(char *server);
 void tcp_disconnect(void);
+/* xkeymap.c */
+void xkeymap_init(void);
+uint8 xkeymap_translate_key(unsigned int keysym, unsigned int keycode, uint16 *flags);
+uint16 xkeymap_translate_button(unsigned int button);
 /* xwin.c */
 BOOL ui_create_window(char *title);
 void ui_destroy_window(void);
@@ -67,11 +73,11 @@ void ui_move_pointer(int x, int y);
 HBITMAP ui_create_bitmap(int width, int height, uint8 *data);
 void ui_paint_bitmap(int x, int y, int cx, int cy, int width, int height, uint8 *data);
 void ui_destroy_bitmap(HBITMAP bmp);
-HCURSOR ui_create_cursor(unsigned int x, unsigned int y, int width, int height, uint8 *mask, uint8 *data);
-void ui_set_cursor(HCURSOR cursor);
-void ui_destroy_cursor(HCURSOR cursor);
 HGLYPH ui_create_glyph(int width, int height, uint8 *data);
 void ui_destroy_glyph(HGLYPH glyph);
+HCURSOR ui_create_cursor(unsigned int x, unsigned int y, int width, int height, uint8 *andmask, uint8 *xormask);
+void ui_set_cursor(HCURSOR cursor);
+void ui_destroy_cursor(HCURSOR cursor);
 HCOLOURMAP ui_create_colourmap(COLOURMAP *colours);
 void ui_destroy_colourmap(HCOLOURMAP map);
 void ui_set_colourmap(HCOLOURMAP map);
@@ -89,5 +95,3 @@ void ui_draw_glyph(int mixmode, int x, int y, int cx, int cy, HGLYPH glyph, int 
 void ui_draw_text(uint8 font, uint8 flags, int mixmode, int x, int y, int clipx, int clipy, int clipcx, int clipcy, int boxx, int boxy, int boxcx, int boxcy, int bgcolour, int fgcolour, uint8 *text, uint8 length);
 void ui_desktop_save(uint32 offset, int x, int y, int cx, int cy);
 void ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy);
-void ui_grab_keyboard(void);
-void ui_ungrab_keyboard(void);

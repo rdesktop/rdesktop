@@ -31,7 +31,7 @@ extern int height;
 extern BOOL sendmotion;
 extern BOOL fullscreen;
 
-static Display *display;
+Display *display;
 static int x_socket;
 static Window wnd;
 static GC gc;
@@ -282,7 +282,7 @@ ui_create_window(char *title)
 		XFree(sizehints);
 	}
 
-	xkeymap_init(display);
+	xkeymap_init();
 
 	input_mask = KeyPressMask | KeyReleaseMask
 			| ButtonPressMask | ButtonReleaseMask
@@ -322,7 +322,7 @@ xwin_process_events()
 	XEvent event;
 	KeySym keysym;
 	uint8 scancode;
-	uint16 button;
+	uint16 button, flags;
 	uint32 ev_time;
 
 	if (display == NULL)
@@ -331,40 +331,26 @@ xwin_process_events()
 	while (XCheckMaskEvent(display, ~0, &event))
 	{
 		ev_time = time(NULL);
+		flags = 0;
 
 		switch (event.type)
 		{
+			case KeyRelease:
+				flags = KBD_FLAG_DOWN | KBD_FLAG_UP;
+				/* fall through */
+
 			case KeyPress:
 				keysym = XKeycodeToKeysym(display, event.xkey.keycode, 0);
-				scancode = xkeymap_translate_key(keysym, event.xkey.keycode);
+				scancode = xkeymap_translate_key(keysym, event.xkey.keycode, &flags);
 				if (scancode == 0)
 					break;
 
-				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, 0,
-					       scancode, 0);
-				break;
-
-			case KeyRelease:
-				keysym = XKeycodeToKeysym(display, event.xkey.keycode, 0);
-				scancode = xkeymap_translate_key(keysym, event.xkey.keycode);
-				if (scancode == 0)
-					break;
-
-				rdp_send_input(ev_time, RDP_INPUT_SCANCODE,
-					       KBD_FLAG_DOWN | KBD_FLAG_UP,
-					       scancode, 0);
+				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, flags, scancode, 0);
 				break;
 
 			case ButtonPress:
-				button = xkeymap_translate_button(event.xbutton.button);
-				if (button == 0)
-					break;
-
-				rdp_send_input(ev_time, RDP_INPUT_MOUSE,
-					       button | MOUSE_FLAG_DOWN,
-					       event.xbutton.x,
-					       event.xbutton.y);
-				break;
+				flags = MOUSE_FLAG_DOWN;
+				/* fall through */
 
 			case ButtonRelease:
 				button = xkeymap_translate_button(event.xbutton.button);
@@ -372,7 +358,7 @@ xwin_process_events()
 					break;
 
 				rdp_send_input(ev_time, RDP_INPUT_MOUSE,
-					       button,
+					       flags | button,
 					       event.xbutton.x,
 					       event.xbutton.y);
 				break;
