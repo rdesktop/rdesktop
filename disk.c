@@ -98,6 +98,10 @@
 #include <fnmatch.h>
 #include <errno.h>		/* errno */
 
+#include <utime.h>
+#include <time.h>		/* ctime */
+
+
 #if defined(SOLARIS)
 #include <sys/statvfs.h>	/* solaris statvfs */
 #define STATFS_FN(path, buf) (statvfs(path,buf))
@@ -133,6 +137,21 @@ struct fileinfo
 }
 g_fileinfo[MAX_OPEN_FILES];
 
+
+time_t
+get_create_time(struct stat *st)
+{
+	time_t ret, ret1;
+
+	ret = MIN(st->st_ctime, st->st_mtime);
+	ret1 = MIN(ret, st->st_atime);
+
+	if (ret1 != (time_t) 0)
+		return ret1;
+
+	return ret;
+}
+
 /* Convert seconds since 1970 to a filetime */
 void
 seconds_since_1970_to_filetime(time_t seconds, uint32 * high, uint32 * low)
@@ -143,6 +162,23 @@ seconds_since_1970_to_filetime(time_t seconds, uint32 * high, uint32 * low)
 	*low = (uint32) ticks;
 	*high = (uint32) (ticks >> 32);
 }
+
+/* Convert seconds since 1970 back to filetime */
+time_t
+convert_1970_to_filetime(uint32 high, uint32 low)
+{
+	unsigned long long ticks;
+	time_t val;
+
+	ticks = low + (((unsigned long long) high) << 32);
+	ticks /= 10000000;
+	ticks -= 11644473600LL;
+
+	val = (time_t) ticks;
+	return (val);
+
+}
+
 
 /* Enumeration of devices from rdesktop.c        */
 /* returns numer of units found and initialized. */
@@ -188,11 +224,13 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 	DIR *dirp;
 	int flags, mode;
 	char path[256];
+	struct stat filestat;
 
 	handle = 0;
 	dirp = NULL;
 	flags = 0;
 	mode = S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
+
 
 	if (filename[strlen(filename) - 1] == '/')
 		filename[strlen(filename) - 1] = 0;
@@ -233,13 +271,14 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 
 	//printf("Open: \"%s\"  flags: %u, accessmask: %u sharemode: %u create disp: %u\n", path, flags_and_attributes, accessmask, sharemode, create_disposition);
 
-	/* since we can't trust the FILE_DIRECTORY_FILE flag */
-	/* we need to double check that the file isn't a dir */
-	struct stat filestat;
-
 	// Get information about file and set that flag ourselfs
 	if ((stat(path, &filestat) == 0) && (S_ISDIR(filestat.st_mode)))
-		flags_and_attributes |= FILE_DIRECTORY_FILE;
+	{
+		if (flags_and_attributes & FILE_NON_DIRECTORY_FILE)
+			return STATUS_FILE_IS_A_DIRECTORY;
+		else
+			flags_and_attributes |= FILE_DIRECTORY_FILE;
+	}
 
 	if (flags_and_attributes & FILE_DIRECTORY_FILE)
 	{
@@ -291,6 +330,10 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 		{
 			switch (errno)
 			{
+				case EISDIR:
+
+					return STATUS_FILE_IS_A_DIRECTORY;
+
 				case EACCES:
 
 					return STATUS_ACCESS_DENIED;
@@ -352,6 +395,7 @@ disk_read(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * re
 {
 	int n;
 
+#if 0
 	/* browsing dir ????        */
 	/* each request is 24 bytes */
 	if (g_fileinfo[handle].flags_and_attributes & FILE_DIRECTORY_FILE)
@@ -359,6 +403,7 @@ disk_read(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * re
 		*result = 0;
 		return STATUS_SUCCESS;
 	}
+#endif
 
 	if (offset)
 		lseek(handle, offset, SEEK_SET);
@@ -366,9 +411,15 @@ disk_read(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * re
 
 	if (n < 0)
 	{
-		perror("read");
 		*result = 0;
-		return STATUS_INVALID_PARAMETER;
+		switch (errno)
+		{
+			case EISDIR:
+				return STATUS_FILE_IS_A_DIRECTORY;
+			default:
+				perror("read");
+				return STATUS_INVALID_PARAMETER;
+		}
 	}
 
 	*result = n;
@@ -390,7 +441,13 @@ disk_write(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * r
 	{
 		perror("write");
 		*result = 0;
-		return STATUS_ACCESS_DENIED;
+		switch (errno)
+		{
+			case ENOSPC:
+				return STATUS_DISK_FULL;
+			default:
+				return STATUS_ACCESS_DENIED;
+		}
 	}
 
 	*result = n;
@@ -418,21 +475,26 @@ disk_query_information(HANDLE handle, uint32 info_class, STREAM out)
 	// Set file attributes
 	file_attributes = 0;
 	if (S_ISDIR(filestat.st_mode))
-	{
 		file_attributes |= FILE_ATTRIBUTE_DIRECTORY;
-	}
+
 	filename = 1 + strrchr(path, '/');
 	if (filename && filename[0] == '.')
-	{
 		file_attributes |= FILE_ATTRIBUTE_HIDDEN;
-	}
+
+	if (!file_attributes)
+		file_attributes |= FILE_ATTRIBUTE_NORMAL;
+
+	if (!(filestat.st_mode & S_IWUSR))
+		file_attributes |= FILE_ATTRIBUTE_READONLY;
 
 	// Return requested data
 	switch (info_class)
 	{
 		case 4:	/* FileBasicInformation */
-
-			out_uint8s(out, 8);	//create_time not available;
+			seconds_since_1970_to_filetime(get_create_time(&filestat), &ft_high,
+						       &ft_low);
+			out_uint32_le(out, ft_low);	//create_access_time
+			out_uint32_le(out, ft_high);
 
 			seconds_since_1970_to_filetime(filestat.st_atime, &ft_high, &ft_low);
 			out_uint32_le(out, ft_low);	//last_access_time
@@ -442,7 +504,10 @@ disk_query_information(HANDLE handle, uint32 info_class, STREAM out)
 			out_uint32_le(out, ft_low);	//last_write_time
 			out_uint32_le(out, ft_high);
 
-			out_uint8s(out, 8);	//unknown zero
+			seconds_since_1970_to_filetime(filestat.st_ctime, &ft_high, &ft_low);
+			out_uint32_le(out, ft_low);	//last_change_time
+			out_uint32_le(out, ft_high);
+
 			out_uint32_le(out, file_attributes);
 			break;
 
@@ -478,13 +543,92 @@ disk_set_information(HANDLE handle, uint32 info_class, STREAM in, STREAM out)
 	char newname[256], fullpath[256];
 	struct fileinfo *pfinfo;
 
+	int mode;
+	struct stat filestat;
+	time_t write_time, change_time, access_time, mod_time;
+	struct utimbuf tvs;
+
 	pfinfo = &(g_fileinfo[handle]);
 
 	switch (info_class)
 	{
 		case 4:	/* FileBasicInformation */
+			write_time = change_time = access_time = 0;
 
-			// Probably safe to ignore
+			in_uint8s(in, 4);	/* Handle of root dir? */
+			in_uint8s(in, 24);	/* unknown */
+
+			// CreationTime
+			in_uint32_le(in, ft_low);
+			in_uint32_le(in, ft_high);
+
+			// AccessTime
+			in_uint32_le(in, ft_low);
+			in_uint32_le(in, ft_high);
+			if (ft_low || ft_high)
+				access_time = convert_1970_to_filetime(ft_high, ft_low);
+
+			// WriteTime
+			in_uint32_le(in, ft_low);
+			in_uint32_le(in, ft_high);
+			if (ft_low || ft_high)
+				write_time = convert_1970_to_filetime(ft_high, ft_low);
+
+			// ChangeTime
+			in_uint32_le(in, ft_low);
+			in_uint32_le(in, ft_high);
+			if (ft_low || ft_high)
+				change_time = convert_1970_to_filetime(ft_high, ft_low);
+
+			in_uint32_le(in, file_attributes);
+
+			if (fstat(handle, &filestat))
+				return STATUS_ACCESS_DENIED;
+
+			tvs.modtime = filestat.st_mtime;
+			tvs.actime = filestat.st_atime;
+			if (access_time)
+				tvs.actime = access_time;
+
+
+			if (write_time || change_time)
+				mod_time = MIN(write_time, change_time);
+			else
+				mod_time = write_time ? write_time : change_time;
+
+			if (mod_time)
+				tvs.modtime = mod_time;
+
+
+			if (access_time || write_time || change_time)
+			{
+#if WITH_DEBUG_RDP5
+				printf("FileBasicInformation access       time %s",
+				       ctime(&tvs.actime));
+				printf("FileBasicInformation modification time %s",
+				       ctime(&tvs.modtime));
+#endif
+				if (utime(pfinfo->path, &tvs))
+					return STATUS_ACCESS_DENIED;
+			}
+
+			if (!file_attributes)
+				break;	// not valid
+
+			mode = filestat.st_mode;
+
+			if (file_attributes & FILE_ATTRIBUTE_READONLY)
+				mode &= ~(S_IWUSR | S_IWGRP | S_IWOTH);
+			else
+				mode |= S_IWUSR;
+
+			mode &= 0777;
+#if WITH_DEBUG_RDP5
+			printf("FileBasicInformation set access mode 0%o", mode);
+#endif
+
+			if (fchmod(handle, mode))
+				return STATUS_ACCESS_DENIED;
 			break;
 
 		case 10:	/* FileRenameInformation */
@@ -527,10 +671,14 @@ disk_set_information(HANDLE handle, uint32 info_class, STREAM in, STREAM out)
 			break;
 
 		case 20:	/* FileEndOfFileInformation */
+			in_uint8s(in, 28);	/* unknown */
+			in_uint32_le(in, length);	/* file size */
+
+			printf("FileEndOfFileInformation length = %d\n", length);
+			// ????????????
 
 			unimpl("IRP Set File Information class: FileEndOfFileInformation\n");
 			break;
-
 		default:
 
 			unimpl("IRP Set File Information class: 0x%x\n", info_class);
@@ -550,7 +698,7 @@ disk_query_volume_information(HANDLE handle, uint32 info_class, STREAM out)
 	volume = "RDESKTOP";
 	fs_type = "RDPFS";
 
-	if (STATFS_FN(pfinfo->path, &stat_fs) != 0)	/* FIXME: statfs is not portable */
+	if (STATFS_FN(pfinfo->path, &stat_fs) != 0)
 	{
 		perror("statfs");
 		return STATUS_ACCESS_DENIED;
@@ -629,17 +777,14 @@ disk_query_directory(HANDLE handle, uint32 info_class, char *pattern, STREAM out
 			// find next dirent matching pattern
 			pdirent = readdir(pdir);
 			while (pdirent && fnmatch(pfinfo->pattern, pdirent->d_name, 0) != 0)
-			{
 				pdirent = readdir(pdir);
-			}
 
 			if (pdirent == NULL)
-			{
 				return STATUS_NO_MORE_FILES;
-			}
 
 			// Get information for directory entry
 			sprintf(fullpath, "%s/%s", dirname, pdirent->d_name);
+
 			/* JIF
 			   printf("Stat: %s\n", fullpath); */
 			if (stat(fullpath, &fstat))
@@ -653,10 +798,17 @@ disk_query_directory(HANDLE handle, uint32 info_class, char *pattern, STREAM out
 				file_attributes |= FILE_ATTRIBUTE_DIRECTORY;
 			if (pdirent->d_name[0] == '.')
 				file_attributes |= FILE_ATTRIBUTE_HIDDEN;
+			if (!file_attributes)
+				file_attributes |= FILE_ATTRIBUTE_NORMAL;
+			if (!(fstat.st_mode & S_IWUSR))
+				file_attributes |= FILE_ATTRIBUTE_READONLY;
 
 			// Return requested information
 			out_uint8s(out, 8);	//unknown zero
-			out_uint8s(out, 8);	//create_time not available in posix;
+
+			seconds_since_1970_to_filetime(get_create_time(&fstat), &ft_high, &ft_low);
+			out_uint32_le(out, ft_low);	// create time
+			out_uint32_le(out, ft_high);
 
 			seconds_since_1970_to_filetime(fstat.st_atime, &ft_high, &ft_low);
 			out_uint32_le(out, ft_low);	//last_access_time
@@ -666,7 +818,10 @@ disk_query_directory(HANDLE handle, uint32 info_class, char *pattern, STREAM out
 			out_uint32_le(out, ft_low);	//last_write_time
 			out_uint32_le(out, ft_high);
 
-			out_uint8s(out, 8);	//unknown zero
+			seconds_since_1970_to_filetime(fstat.st_ctime, &ft_high, &ft_low);
+			out_uint32_le(out, ft_low);	//change_write_time
+			out_uint32_le(out, ft_high);
+
 			out_uint32_le(out, fstat.st_size);	//filesize low
 			out_uint32_le(out, 0);	//filesize high
 			out_uint32_le(out, fstat.st_size);	//filesize low
@@ -688,10 +843,38 @@ disk_query_directory(HANDLE handle, uint32 info_class, char *pattern, STREAM out
 	return STATUS_SUCCESS;
 }
 
+
+
+static NTSTATUS
+disk_device_control(HANDLE handle, uint32 request, STREAM in, STREAM out)
+{
+	uint32 result;
+
+	if (((request >> 16) != 20) || ((request >> 16) != 9))
+		return STATUS_INVALID_PARAMETER;
+
+	/* extract operation */
+	request >>= 2;
+	request &= 0xfff;
+
+	printf("DISK IOCTL %d\n", request);
+
+	switch (request)
+	{
+		case 25:	// ?
+		case 42:	// ?
+		default:
+			unimpl("DISK IOCTL %d\n", request);
+			return STATUS_INVALID_PARAMETER;
+	}
+
+	return STATUS_SUCCESS;
+}
+
 DEVICE_FNS disk_fns = {
 	disk_create,
 	disk_close,
 	disk_read,
 	disk_write,
-	NULL			/* device_control */
+	disk_device_control	/* device_control */
 };
