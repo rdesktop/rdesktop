@@ -218,13 +218,28 @@ handle_special_keys(uint32 keysym, uint32 ev_time, BOOL pressed)
 {
 	switch (keysym)
 	{
-		case XK_Break:	/* toggle full screen */
+		case XK_Break:
 			if (get_key_state(XK_Alt_L) || get_key_state(XK_Alt_R))
 			{
+				/* toggle full screen */
 				if (pressed)
 					xwin_toggle_fullscreen();
-				return True;
+
 			}
+			else
+			{
+				/* Send Break sequence E0 46 E0 C6 */
+				if (pressed)
+				{
+					rdp_send_scancode(ev_time, RDP_KEYPRESS,
+							  (SCANCODE_EXTENDED | 0x46));
+					rdp_send_scancode(ev_time, RDP_KEYPRESS,
+							  (SCANCODE_EXTENDED | 0xc6));
+				}
+				/* No break sequence */
+			}
+
+			return True;
 			break;
 
 		case XK_Pause:
