@@ -73,6 +73,10 @@
 #define SERIAL_EV_EVENT1           0x0800	// Provider specific event 1
 #define SERIAL_EV_EVENT2           0x1000	// Provider specific event 2
 
+#ifndef CRTSCTS
+#define CRTSCTS 0
+#endif
+
 
 extern RDPDR_DEVICE g_rdpdr_device[];
 
