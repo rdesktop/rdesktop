@@ -1071,7 +1071,6 @@ process_data_pdu(STREAM s, uint32 * ext_disc_reason)
 	uint8 ctype;
 	uint16 clen;
 	uint32 len;
-	static int max_size;
 
 	uint32 roff, rlen;
 

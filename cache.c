@@ -28,8 +28,8 @@ extern int g_pstcache_fd[];
 extern BOOL g_use_rdp5;
 
 uint32 g_stamp;
-int g_num_bitmaps_in_memory[3];
 
+static int g_num_bitmaps_in_memory[3];
 
 /* BITMAP CACHE */
 static BMPCACHEENTRY g_bmpcache[3][0xa00];
@@ -41,7 +41,7 @@ cache_remove_lru_bitmap(uint8 cache_id)
 {
 	int i;
 	uint16 cache_idx = 0;
-	uint32 m = (uint32) - 1;
+	uint32 m = 0xffffffff;
 	BMPCACHEENTRY *pbce;
 
 	for (i = 0; i < NUM_ELEMENTS(g_bmpcache[cache_id]); i++)
