@@ -270,7 +270,7 @@ elif [ -f /usr/include/sys/audioio.h ]; then
     echo "SOUNDOBJ    = rdpsnd.o rdpsnd_sun.o" >>Makeconf
     cflags="$cflags -DWITH_RDPSND"
 else
-    echo "WARNING: sound support disabled (no /usr/include/sys/soundcard.h or /usr/include/sys/audio.h)"
+    echo "WARNING: sound support disabled (no /usr/include/sys/soundcard.h or /usr/include/sys/audioio.h)"
     echo "Currently supported systems are Open Sound System and Sun"
     echo
 fi

@@ -44,7 +44,7 @@ printer_enum_devices(uint32 *id, char *optarg)
 		pprinter_data = (PRINTER *) xmalloc(sizeof(PRINTER));
 
 		strcpy(g_rdpdr_device[*id].name, "PRN");
-		strcat(g_rdpdr_device[*id].name, ltoa(already + count + 1, 10));
+		strcat(g_rdpdr_device[*id].name, l_to_a(already + count + 1, 10));
 
 		/* first printer is set as default printer */
 		if ((already + count) == 0)

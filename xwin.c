@@ -23,6 +23,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <errno.h>
+#include <strings.h>
 #include "rdesktop.h"
 #include "xproto.h"
 
@@ -63,7 +64,7 @@ static int g_red_shift_l, g_blue_shift_l, g_green_shift_l;
 
 /* software backing store */
 static BOOL g_ownbackstore;
-static Pixmap g_backstore = NULL;
+static Pixmap g_backstore = 0;
 
 /* Moving in single app mode */
 static BOOL g_moving_wnd;
@@ -894,7 +895,7 @@ ui_create_window(void)
 	if (g_gc == NULL)
 		g_gc = XCreateGC(g_display, g_wnd, 0, NULL);
 
-	if ((g_ownbackstore) && (g_backstore == NULL))
+	if ((g_ownbackstore) && (g_backstore == 0))
 	{
 		g_backstore = XCreatePixmap(g_display, g_wnd, g_width, g_height, g_depth);
 

@@ -70,7 +70,7 @@ void warning(char *format, ...);
 void unimpl(char *format, ...);
 void hexdump(unsigned char *p, unsigned int len);
 void toupper_str(char *p);
-char *ltoa(long N, int base);
+char *l_to_a(long N, int base);
 int load_licence(unsigned char **data);
 void save_licence(unsigned char *data, int length);
 char *next_arg(char *src, char needle);

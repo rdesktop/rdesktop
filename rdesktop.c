@@ -812,7 +812,7 @@ toupper_str(char *p)
 #define LTOA_BUFSIZE (sizeof(long) * 8 + 1)
 
 char *
-ltoa(long N, int base)
+l_to_a(long N, int base)
 {
 	static char ret[LTOA_BUFSIZE];
 

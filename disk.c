@@ -84,7 +84,7 @@
 #define SOLARIS
 #endif
 
-#ifdef SOLARIS
+#if (defined(SOLARIS) || defined(__hpux))
 #define DIRFD(a) ((a)->dd_fd)
 #else
 #define DIRFD(a) (dirfd(a))
@@ -102,7 +102,7 @@
 #include <time.h>		/* ctime */
 
 
-#if defined(SOLARIS)
+#if (defined(SOLARIS) || defined (__hpux) || defined(__BEOS__))
 #include <sys/statvfs.h>	/* solaris statvfs */
 #define STATFS_FN(path, buf) (statvfs(path,buf))
 #define STATFS_T statvfs
