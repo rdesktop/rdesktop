@@ -32,7 +32,7 @@ BOOL bitmap_decompress(unsigned char *output, int width, int height,
 	unsigned char *end = input + size;
 	unsigned char *prevline = NULL, *line = NULL;
 	int opcode, count, offset, isfillormix, x = width;
-	int lastopcode = -1, insertmix = False;
+	int lastopcode = -1, insertmix = False, bicolour = False;
 	uint8 code, colour1 = 0, colour2 = 0;
 	uint8 mixmask, mask = 0, mix = 0xff;
 
@@ -178,7 +178,19 @@ BOOL bitmap_decompress(unsigned char *output, int width, int height,
 					break;
 
 				case 8: /* Bicolour */
-					REPEAT(line[x] = colour1; line[++x] = colour2)
+					REPEAT(
+						if (bicolour)
+						{
+							line[x] = colour2;
+							bicolour = False;
+						}
+						else
+						{
+							line[x] = colour1;
+							bicolour = True;
+							count++;
+						}
+					)
 					break;
 
 				case 13: /* White */
