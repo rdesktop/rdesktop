@@ -262,7 +262,7 @@ rdp2vnc_connect(char *server, uint32 flags, char *domain, char *password,
 					BOOL deactivated;
 					uint32_t ext_disc_reason;
 					printf("Connection successful.\n");
-					rdp_main_loop(&deactivated,&ext_disc_reason);
+					rdp_main_loop(&deactivated, &ext_disc_reason);
 					printf("Disconnecting...\n");
 					rdp_disconnect();
 					ui_destroy_window();
@@ -467,7 +467,7 @@ ui_create_cursor(unsigned int x, unsigned int y, int width, int height, uint8 * 
 	cursor->mask = (char *) d0;
 	cursor->source = 0;
 	cursor->richSource = cdata;
-	cursor->cleanup = 0; // workaround: this produces a memleak
+	cursor->cleanup = 0;	// workaround: this produces a memleak
 
 	cursor->backRed = cursor->backGreen = cursor->backBlue = 0xffff;
 	cursor->foreRed = cursor->foreGreen = cursor->foreBlue = 0;
@@ -1366,12 +1366,11 @@ ui_resize_window()
 	server->frameBuffer = (char *) realloc(server->frameBuffer, g_width * g_height);
 	server->paddedWidthInBytes = g_width;
 
-	iter=rfbGetClientIterator(server);
-	while((cl=rfbClientIteratorNext(iter)))
-		if(cl->useNewFBSize)
+	iter = rfbGetClientIterator(server);
+	while ((cl = rfbClientIteratorNext(iter)))
+		if (cl->useNewFBSize)
 			cl->newFBSizePending = TRUE;
 		else
-			rfbLog("Warning: Client %s does not support NewFBSize!\n ",cl->host);
+			rfbLog("Warning: Client %s does not support NewFBSize!\n ", cl->host);
 	rfbReleaseClientIterator(iter);
 }
-

@@ -61,7 +61,7 @@ rdp5_process(STREAM s)
 		if (ctype & RDP_MPPC_COMPRESSED)
 		{
 			if (length > RDP_MPPC_DICT_SIZE)
-			  error("error decompressed packet size exceeds max\n");
+				error("error decompressed packet size exceeds max\n");
 			if (mppc_expand(s->p, length, ctype, &roff, &rlen) == -1)
 				error("error while decompressing packet\n");
 

@@ -445,10 +445,11 @@ serial_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 disposi
 
 	tcsetattr(serial_fd, TCSANOW, ptermios);
 */
-	pser_inf->ptermios->c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL|IXON);
+	pser_inf->ptermios->c_iflag &=
+		~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
 	pser_inf->ptermios->c_oflag &= ~OPOST;
-	pser_inf->ptermios->c_lflag &= ~(ECHO|ECHONL|ICANON|ISIG|IEXTEN);
-	pser_inf->ptermios->c_cflag &= ~(CSIZE|PARENB);
+	pser_inf->ptermios->c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
+	pser_inf->ptermios->c_cflag &= ~(CSIZE | PARENB);
 	pser_inf->ptermios->c_cflag |= CS8;
 	tcsetattr(serial_fd, TCSANOW, pser_inf->ptermios);
 

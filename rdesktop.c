@@ -852,7 +852,7 @@ xmalloc(int size)
 void *
 xrealloc(void *oldmem, int size)
 {
-	void * mem;
+	void *mem;
 
 	if (size < 1)
 		size = 1;
