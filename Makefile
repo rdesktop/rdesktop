@@ -59,6 +59,29 @@ proto:
 clean:
 	rm -f *.o crypto/*.o *~ rdesktop
 
+dist:
+	mkdir -p /tmp/rdesktop-make-dist-dir
+	ln -sf `pwd` /tmp/rdesktop-make-dist-dir/rdesktop
+	(cd /tmp/rdesktop-make-dist-dir; \
+	tar zcvf rdesktop/rdesktop.tgz \
+	rdesktop/COPYING \
+	rdesktop/crypto/README \
+	rdesktop/crypto/*.c \
+	rdesktop/crypto/*.h \
+	rdesktop/*.c \
+	rdesktop/*.h \
+	rdesktop/keymaps/common \
+	rdesktop/keymaps/?? \
+	rdesktop/keymaps/modifiers \
+	rdesktop/keymaps/convert-map \
+	rdesktop/keymaps/README \
+	rdesktop/doc/HACKING \
+	rdesktop/doc/TODO \
+	rdesktop/Makefile \
+	rdesktop/configure \
+	rdesktop/rdesktop.spec)	
+	rm -rf /tmp/rdesktop-make-dist-dir
+
 .SUFFIXES:
 .SUFFIXES: .c .o
 
