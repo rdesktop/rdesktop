@@ -265,7 +265,7 @@ if [ -f /usr/include/sys/soundcard.h ]; then
     echo "SOUNDOBJ    = rdpsnd.o rdpsnd_oss.o" >>Makeconf
     cflags="$cflags -DWITH_RDPSND"
 elif [ -f /usr/include/sys/audioio.h ]; then
-    echo Sound support enabled: Sun
+    echo Sound support enabled: Sun/BSD
     echo
     echo "SOUNDOBJ    = rdpsnd.o rdpsnd_sun.o" >>Makeconf
     cflags="$cflags -DWITH_RDPSND"

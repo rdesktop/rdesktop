@@ -27,6 +27,10 @@
 #include <sys/ioctl.h>
 #include <sys/audioio.h>
 
+#if (defined(sun) && (defined(__svr4__) || defined(__SVR4)))
+#include <stropts.h>
+#endif
+
 #define MAX_QUEUE	10
 
 int g_dsp_fd;
