@@ -253,6 +253,10 @@ xkeymap_translate_button(unsigned int button)
 			return MOUSE_FLAG_BUTTON3;
 		case Button3:	/* right */
 			return MOUSE_FLAG_BUTTON2;
+		case Button4:	/* wheel up */
+			return MOUSE_FLAG_BUTTON4;
+		case Button5:	/* wheel down */
+			return MOUSE_FLAG_BUTTON5;
 	}
 
 	return 0;
