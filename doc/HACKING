@@ -1,5 +1,11 @@
 
-The source code is indented with:
+Code style / indentation
+------------------------
+The file indent-all.sh contains information about the current code
+style.  Run this script before commits.
 
-indent -bli0 -i8 -cli8 -npcs
-
+Variable argument macros
+------------------------
+Variable argument macros are non-portable in general, and should be
+avoided.  Either use a second set of parentheses like DEBUG, or create
+a variable argument function like error.
