@@ -5,7 +5,8 @@ rdesktop.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/Makefile.diff
 Description:
-TDB
+Makefile changes which makes it possible to compile rdesktop on SunOS
+and OSF1.
 Status:
 Adopted. 
 
