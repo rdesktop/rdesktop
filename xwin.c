@@ -1596,8 +1596,8 @@ ui_patblt(uint8 opcode,
 		case 2:	/* Hatch */
 			fill = (Pixmap) ui_create_glyph(8, 8,
 							hatch_patterns + brush->pattern[0] * 8);
-			SET_FOREGROUND(bgcolour);
-			SET_BACKGROUND(fgcolour);
+			SET_FOREGROUND(fgcolour);
+			SET_BACKGROUND(bgcolour);
 			XSetFillStyle(g_display, g_gc, FillOpaqueStippled);
 			XSetStipple(g_display, g_gc, fill);
 			XSetTSOrigin(g_display, g_gc, brush->xorigin, brush->yorigin);
