@@ -408,33 +408,34 @@ translate15to32(uint16 * data, uint8 * out, uint8 * end)
 }
 
 static void
-translate16to16(uint16 * data, uint16 * out, uint16 * end)
+translate16to16(uint16 * data, uint8 * out, uint8 * end)
 {
+	uint16 pixel;
 	uint16 value;
 
-	if (g_xserver_be)
+	while (out < end)
 	{
-		while (out < end)
+		pixel = *(data++);
+
+		if (g_host_be)
 		{
-			value = *data;
-			BSWAP16(value);
-			*out = value;
-			data++;
-			out++;
+			BSWAP16(pixel);
 		}
 
-	}
-	else
-	{
-		while (out < end)
+		value = make_colour(split_colour16(pixel));
+
+		if (g_xserver_be)
 		{
-			*out = *data;
-			out++;
-			data++;
+			*(out++) = value >> 8;
+			*(out++) = value;
+		}
+		else
+		{
+			*(out++) = value;
+			*(out++) = value >> 8;
 		}
 	}
 }
-
 
 static void
 translate16to24(uint16 * data, uint8 * out, uint8 * end)
@@ -591,8 +592,7 @@ translate_image(int width, int height, uint8 * data)
 					translate16to24((uint16 *) data, out, end);
 					break;
 				case 16:
-					translate16to16((uint16 *) data, (uint16 *) out,
-							(uint16 *) end);
+					translate16to16((uint16 *) data, out, end);
 					break;
 			}
 			break;
