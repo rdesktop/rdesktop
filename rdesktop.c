@@ -558,7 +558,7 @@ main(int argc, char *argv[])
 				break;
 
 			case 'X':
-				g_embed_wnd = strtol(optarg, NULL, 10);
+				g_embed_wnd = strtol(optarg, NULL, 0);
 				break;
 
 			case 'a':
