@@ -43,7 +43,7 @@ h 0x23 addupper
 j 0x24 addupper
 k 0x25 addupper
 l 0x26 addupper
-Return 0x1c
+Return 0x1c localstate
 
 #
 # QWERTY third row
