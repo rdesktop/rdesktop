@@ -156,13 +156,13 @@ channel_process(STREAM s, uint16 mcs_channel)
 			in->p = in->data;
 		}
 
-		thislength = s->end - s->p;
+		thislength = MIN(s->end - s->p, in->data + in->size - in->p);
 		memcpy(in->p, s->p, thislength);
-		s->p += thislength;
-		s->end += thislength;
+		in->p += thislength;
 
 		if (flags & CHANNEL_FLAG_LAST)
 		{
+			in->end = in->p;
 			in->p = in->data;
 			channel->process(in);
 		}
