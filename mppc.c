@@ -1,3 +1,23 @@
+/* -*- c-basic-offset: 8 -*-
+   rdesktop: A Remote Desktop Protocol client.
+   Protocol services - RDP decompression
+   Copyright (C) Matthew Chapman 1999-2004
+
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*/
+
 #include <stdio.h>
 #include <string.h>
 
@@ -6,24 +26,31 @@
 /* mppc decompression                       */
 /* http://www.faqs.org/rfcs/rfc2118.html    */
 
-/* TODO: research the below statements      */
+/* Contacts:                                */
 
-/* there exists one or more patents         */
-/* related to compression algorithms        */
+/* hifn contact mentioned in the faq is     */
+/* Robert Friend rfriend at hifn dot com    */
 
-/* since we are only decompressing I        */
-/* think the end-user is safe.              */
+/* if you have questions regarding MPPC     */
+/* our contact is                           */
+/* Guus Dhaeze  GDhaeze at hifn dot com     */
 
-/* even if that isn't true, aren't you      */
-/* already paying royalties                 */
-/* through the CAL licenses?                */
+/* Licensing:                               */
+
+/* decompression is alright as long as we   */
+/* don't compress data                      */
+
+/* Algorithm: */
 
 /* as the rfc states the algorithm seems to */
 /* be LZ77 with a sliding buffer            */
 /* that is empty at init.                   */
 
-/* as of my limited knowledge these patents */
-/* has expired.                             */
+/* the algorithm is called LZS and is       */
+/* patented for another couple of years.    */
+
+/* more information is available in         */
+/* http://www.ietf.org/ietf/IPR/hifn-ipr-draft-friend-tls-lzs-compression.txt */
 
 
 RDPCOMP g_mppc_dict;
