@@ -141,6 +141,54 @@ read_password(char *password, int size)
 	return ret;
 }
 
+static void
+parse_server_and_port(char *server)
+{
+	char *p;
+#ifdef IPv6
+	int addr_colons;
+#endif
+
+#ifdef IPv6
+	p = server;
+	addr_colons = 0;
+	while (*p)
+		if (*p++ == ':')
+			addr_colons++;
+	if (addr_colons >= 2)
+	{
+		/* numeric IPv6 style address format - [1:2:3::4]:port */
+		p = strchr(server, ']');
+		if (*server == '[' && p != NULL)
+		{
+			if (*(p + 1) == ':' && *(p + 2) != '\0')
+				tcp_port_rdp = strtol(p + 2, NULL, 10);
+			/* remove the port number and brackets from the address */
+			*p = '\0';
+			strncpy(server, server + 1, strlen(server));
+		}
+	}
+	else
+	{
+		/* dns name or IPv4 style address format - server.example.com:port or 1.2.3.4:port */
+		p = strchr(server, ':');
+		if (p != NULL)
+		{
+			tcp_port_rdp = strtol(p + 1, NULL, 10);
+			*p = 0;
+		}
+	}
+#else /* no IPv6 support */
+	p = strchr(server, ':');
+	if (p != NULL)
+	{
+		tcp_port_rdp = strtol(p + 1, NULL, 10);
+		*p = 0;
+	}
+#endif /* IPv6 */
+
+}
+
 /* Client program */
 int
 main(int argc, char *argv[])
@@ -325,12 +373,7 @@ main(int argc, char *argv[])
 	}
 
 	STRNCPY(server, argv[optind], sizeof(server));
-	p = strchr(server, ':');
-	if (p != NULL)
-	{
-		tcp_port_rdp = strtol(p + 1, NULL, 10);
-		*p = 0;
-	}
+	parse_server_and_port(server);
 
 	if (!username_option)
 	{
