@@ -275,6 +275,7 @@ translate_colour(uint32 colour)
 					colour = make_colour16(split_colour24(colour));
 					break;
 				case 24:
+					colour = make_colour24(split_colour24(colour));
 					break;
 				case 32:
 					colour = make_colour32(split_colour24(colour));
@@ -293,10 +294,25 @@ translate8to8(uint8 * data, uint8 * out, uint8 * end)
 }
 
 static void
-translate8to16(uint8 * data, uint16 * out, uint16 * end)
+translate8to16(uint8 * data, uint8 * out, uint8 * end)
 {
+	uint16 value;
+
 	while (out < end)
-		*(out++) = (uint16) g_colmap[*(data++)];
+	{
+		value = (uint16) g_colmap[*(data++)];
+		
+		if (g_xserver_be)
+		{
+			*(out++) = value >> 8;
+			*(out++) = value;
+		}
+		else
+		{
+			*(out++) = value;
+			*(out++) = value >> 8;
+		}
+	}
 }
 
 /* little endian - conversion happens when colourmap is built */
@@ -308,17 +324,46 @@ translate8to24(uint8 * data, uint8 * out, uint8 * end)
 	while (out < end)
 	{
 		value = g_colmap[*(data++)];
-		*(out++) = value;
-		*(out++) = value >> 8;
-		*(out++) = value >> 16;
+		
+		if (g_xserver_be)
+		{
+			*(out++) = value >> 16;
+			*(out++) = value >> 8;
+			*(out++) = value;
+		}
+		else
+		{
+			*(out++) = value;
+			*(out++) = value >> 8;
+			*(out++) = value >> 16;
+		}
 	}
 }
 
 static void
-translate8to32(uint8 * data, uint32 * out, uint32 * end)
+translate8to32(uint8 * data, uint8 * out, uint8 * end)
 {
+	uint32 value;
+
 	while (out < end)
-		*(out++) = g_colmap[*(data++)];
+	{
+		value = g_colmap[*(data++)];
+
+		if (g_xserver_be)
+		{
+			*(out++) = value >> 24;
+			*(out++) = value >> 16;
+			*(out++) = value >> 8;
+			*(out++) = value;
+		}
+		else
+		{
+			*(out++) = value;
+			*(out++) = value >> 8;
+			*(out++) = value >> 16;
+			*(out++) = value >> 24;
+		}
+	}
 }
 
 /* todo the remaining translate function might need some big endian check ?? */
@@ -335,7 +380,8 @@ translate15to16(uint16 * data, uint8 * out, uint8 * end)
 
 		if (g_host_be)
 		{
-		BSWAP16(pixel)}
+			BSWAP16(pixel);
+		}
 
 		value = make_colour16(split_colour15(pixel));
 
@@ -364,7 +410,8 @@ translate15to24(uint16 * data, uint8 * out, uint8 * end)
 
 		if (g_host_be)
 		{
-		BSWAP16(pixel)}
+			BSWAP16(pixel);
+		}
 
 		value = make_colour24(split_colour15(pixel));
 		if (g_xserver_be)
@@ -457,7 +504,8 @@ translate16to24(uint16 * data, uint8 * out, uint8 * end)
 
 		if (g_host_be)
 		{
-		BSWAP16(pixel)}
+			BSWAP16(pixel);
+		}
 
 		value = make_colour24(split_colour16(pixel));
 
@@ -625,13 +673,13 @@ translate_image(int width, int height, uint8 * data)
 					translate8to8(data, out, end);
 					break;
 				case 16:
-					translate8to16(data, (uint16 *) out, (uint16 *) end);
+					translate8to16(data, out, end);
 					break;
 				case 24:
 					translate8to24(data, out, end);
 					break;
 				case 32:
-					translate8to32(data, (uint32 *) out, (uint32 *) end);
+					translate8to32(data, out, end);
 					break;
 			}
 			break;
@@ -1254,11 +1302,24 @@ ui_create_bitmap(int width, int height, uint8 * data)
 	XImage *image;
 	Pixmap bitmap;
 	uint8 *tdata;
+	int bitmap_pad;
+
+	if (g_server_bpp == 8)
+	{
+		bitmap_pad = 8;
+	}
+	else
+	{
+		bitmap_pad = g_bpp;
+
+		if (g_bpp == 24)
+			bitmap_pad = 32;
+	}
 
 	tdata = (g_owncolmap ? data : translate_image(width, height, data));
 	bitmap = XCreatePixmap(g_display, g_wnd, width, height, g_depth);
 	image = XCreateImage(g_display, g_visual, g_depth, ZPixmap, 0,
-			     (char *) tdata, width, height, g_server_bpp == 8 ? 8 : g_bpp, 0);
+			     (char *) tdata, width, height, bitmap_pad, 0);
 
 	XPutImage(g_display, bitmap, g_gc, image, 0, 0, 0, 0, width, height);
 
@@ -1273,9 +1334,23 @@ ui_paint_bitmap(int x, int y, int cx, int cy, int width, int height, uint8 * dat
 {
 	XImage *image;
 	uint8 *tdata;
+	int bitmap_pad;
+
+	if (g_server_bpp == 8)
+	{
+		bitmap_pad = 8;
+	}
+	else
+	{
+		bitmap_pad = g_bpp;
+
+		if (g_bpp == 24)
+			bitmap_pad = 32;
+	}
+
 	tdata = (g_owncolmap ? data : translate_image(width, height, data));
 	image = XCreateImage(g_display, g_visual, g_depth, ZPixmap, 0,
-			     (char *) tdata, width, height, g_server_bpp == 8 ? 8 : g_bpp, 0);
+			     (char *) tdata, width, height, bitmap_pad, 0);
 
 	if (g_ownbackstore)
 	{
