@@ -66,7 +66,7 @@ installkeymaps:
 	chmod 644 $(DESTDIR)/$(KEYMAP_PATH)/*
 
 proto:
-	cproto -DMAKE_PROTO -o proto.h *.c
+	cproto -DMAKE_PROTO -DWITH_OPENSSL -o proto.h *.c
 
 clean:
 	rm -f *.o crypto/*.o *~ vnc/*.o vnc/*~ rdesktop rdp2vnc
