@@ -38,9 +38,11 @@ Client hostname.  Normally rdesktop automatically obtains the hostname of the
 client.
 .TP
 .BR "-k <layout>"
-Keyboard layout on terminal server (us,sv,gr,etc.).  This requires a
-corresponding keymap file to be installed (normally the keymaps are found in
-/usr/share/rdesktop/keymaps/ or /usr/local/share/rdesktop/keymaps/).
+Keyboard layout to emulate.  This requires a corresponding keymap file to be
+installed.  The standard keymaps provided with rdesktop follow the RFC1766
+naming scheme: a language code followed by a country code if necessary - e.g.
+en-us, en-gb, de, fr, sv, etc.  The default is en-us (a US keyboard).
+
 .TP
 .BR "-g <geometry>"
 Desktop geometry (WxH). 
