@@ -38,9 +38,9 @@ Not needed anymore, with the new keyboard mapping implementation.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/ctrl1nohang.diff
 Description:
-TDB
+Fixes problem with ctrl1 hangs. 
 Status:
-Not yet examined. 
+Not needed anymore, with the new keyboard mapping implementation. 
 
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/downkeypatch.diff
