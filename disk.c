@@ -163,7 +163,7 @@ disk_enum_devices(int *id, char *optarg)
 	return count;
 }
 
-/* Opens of creates a file or directory */
+/* Opens or creates a file or directory */
 NTSTATUS
 disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create_disposition,
 	    uint32 flags_and_attributes, char *filename, HANDLE * phandle)
@@ -181,7 +181,6 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 	if (filename[strlen(filename) - 1] == '/')
 		filename[strlen(filename) - 1] = 0;
 	sprintf(path, "%s%s", g_rdpdr_device[device_id].local_path, filename);
-	//printf("Open: %s\n", path);
 
 	switch (create_disposition)
 	{
@@ -216,35 +215,9 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 			break;
 	}
 
-	if (flags_and_attributes & FILE_DIRECTORY_FILE)
-	{
-		if (flags & O_CREAT)
-		{
-			mkdir(path, mode);
-		}
-
-		dirp = opendir(path);
-		if (!dirp)
-		{
-			switch (errno)
-			{
-				case EACCES:
-
-					return STATUS_ACCESS_DENIED;
-
-				case ENOENT:
-
-					return STATUS_NO_SUCH_FILE;
-
-				default:
-
-					perror("opendir");
-					return STATUS_NO_SUCH_FILE;
-			}
-		}
-		handle = DIRFD(dirp);
-	}
-	else
+	/* the sad part is that we can't trust this flag   */
+	/* directories aren't always marked                */
+	if (flags_and_attributes ^ FILE_DIRECTORY_FILE)
 	{
 		if (accessmask & GENERIC_ALL
 		    || (accessmask & GENERIC_READ && accessmask & GENERIC_WRITE))
@@ -279,6 +252,56 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 					return STATUS_NO_SUCH_FILE;
 			}
 		}
+
+		/* all read and writes of files should be non blocking */
+		if (fcntl(handle, F_SETFL, O_NONBLOCK) == -1)
+			perror("fcntl");
+	}
+
+	/* since we can't trust the FILE_DIRECTORY_FILE flag */
+	/* we need to double check that the file isn't a dir */
+	if (handle != 0)
+	{
+		/* Must check if this file isn't actually a directory */
+		struct stat filestat;
+
+		// Get information about file and set that flag ourselfs
+		if ((fstat(handle, &filestat) == 0) && (S_ISDIR(filestat.st_mode)))
+		{
+			flags_and_attributes |= FILE_DIRECTORY_FILE;
+			close(handle);
+			handle = 0;
+		}
+	}
+
+
+	if (flags_and_attributes & FILE_DIRECTORY_FILE)
+	{
+		if (flags & O_CREAT)
+		{
+			mkdir(path, mode);
+		}
+
+		dirp = opendir(path);
+		if (!dirp)
+		{
+			switch (errno)
+			{
+				case EACCES:
+
+					return STATUS_ACCESS_DENIED;
+
+				case ENOENT:
+
+					return STATUS_NO_SUCH_FILE;
+
+				default:
+
+					perror("opendir");
+					return STATUS_NO_SUCH_FILE;
+			}
+		}
+		handle = DIRFD(dirp);
 	}
 
 	if (handle >= MAX_OPEN_FILES)
@@ -292,6 +315,7 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 		g_fileinfo[handle].pdir = dirp;
 	g_fileinfo[handle].device_id = device_id;
 	g_fileinfo[handle].flags_and_attributes = flags_and_attributes;
+//      printf("create: attrib: %u handle %u\n", g_fileinfo[handle].flags_and_attributes, handle );
 	strncpy(g_fileinfo[handle].path, path, 255);
 
 	*phandle = handle;
@@ -322,6 +346,14 @@ NTSTATUS
 disk_read(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
 {
 	int n;
+
+	/* browsing dir ????        */
+	/* each request is 24 bytes */
+	if (g_fileinfo[handle].flags_and_attributes & FILE_DIRECTORY_FILE)
+	{
+		*result = 0;
+		return STATUS_SUCCESS;
+	}
 
 	if (offset)
 		lseek(handle, offset, SEEK_SET);
@@ -603,7 +635,7 @@ disk_query_directory(HANDLE handle, uint32 info_class, char *pattern, STREAM out
 
 			// Get information for directory entry
 			sprintf(fullpath, "%s/%s", dirname, pdirent->d_name);
-			/* JIF 
+			/* JIF
 			   printf("Stat: %s\n", fullpath); */
 			if (stat(fullpath, &fstat))
 			{
