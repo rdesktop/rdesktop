@@ -84,7 +84,7 @@ void ui_deinit(void);
 BOOL ui_create_window(void);
 void ui_destroy_window(void);
 void xwin_toggle_fullscreen(void);
-void ui_select(int rdp_socket);
+int ui_select(int rdp_socket);
 void ui_move_pointer(int x, int y);
 HBITMAP ui_create_bitmap(int width, int height, uint8 * data);
 void ui_paint_bitmap(int x, int y, int cx, int cy, int width, int height, uint8 * data);

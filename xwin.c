@@ -47,6 +47,7 @@ static XIM IM;
 static XIC IC;
 static XModifierKeymap *mod_map;
 static Cursor current_cursor;
+static Atom protocol_atom, kill_atom;
 
 /* endianness */
 static BOOL host_be;
@@ -436,6 +437,11 @@ ui_create_window(void)
 	focused = False;
 	mouse_in_wnd = False;
 
+	/* handle the WM_DELETE_WINDOW protocol */
+	protocol_atom = XInternAtom(display, "WM_PROTOCOLS", True);
+	kill_atom = XInternAtom(display, "WM_DELETE_WINDOW", True);
+	XSetWMProtocols(display, wnd, &kill_atom, 1);
+
 	return True;
 }
 
@@ -473,8 +479,9 @@ xwin_toggle_fullscreen(void)
 	}
 }
 
-/* Process all events in Xlib queue */
-static void
+/* Process all events in Xlib queue 
+   Returns 0 after user quit, 1 otherwise */
+static int
 xwin_process_events(void)
 {
 	XEvent xevent;
@@ -502,6 +509,14 @@ xwin_process_events(void)
 
 		switch (xevent.type)
 		{
+			case ClientMessage:
+				/* the window manager told us to quit */
+				if ((xevent.xclient.message_type == protocol_atom)
+				    && (xevent.xclient.data.l[0] == kill_atom))
+					/* Quit */
+					return 0;
+				break;
+
 			case KeyPress:
 				if (IC != NULL)
 					/* Multi_key compatible version */
@@ -645,9 +660,12 @@ xwin_process_events(void)
 
 		}
 	}
+	/* Keep going */
+	return 1;
 }
 
-void
+/* Returns 0 after user quit, 1 otherwise */
+int
 ui_select(int rdp_socket)
 {
 	int n = (rdp_socket > x_socket) ? rdp_socket + 1 : x_socket + 1;
@@ -658,7 +676,9 @@ ui_select(int rdp_socket)
 	while (True)
 	{
 		/* Process any events already waiting */
-		xwin_process_events();
+		if (!xwin_process_events())
+			/* User quit */
+			return 0;
 
 		FD_ZERO(&rfds);
 		FD_SET(rdp_socket, &rfds);
@@ -674,7 +694,7 @@ ui_select(int rdp_socket)
 		}
 
 		if (FD_ISSET(rdp_socket, &rfds))
-			return;
+			return 1;
 	}
 }
 

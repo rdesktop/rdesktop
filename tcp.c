@@ -84,7 +84,9 @@ tcp_recv(int length)
 
 	while (length > 0)
 	{
-		ui_select(sock);
+		if (!ui_select(sock))
+			/* User quit */
+			return NULL;
 
 		rcvd = recv(sock, in.end, length, 0);
 		if (rcvd == -1)
