@@ -162,6 +162,9 @@ cache_get_desktop(uint32 offset, int cx, int cy, int bytes_per_pixel)
 {
 	int length = cx * cy * bytes_per_pixel;
 
+	if (offset > sizeof(g_deskcache))
+		offset = 0;
+
 	if ((offset + length) <= sizeof(g_deskcache))
 	{
 		return &g_deskcache[offset];
@@ -176,6 +179,9 @@ void
 cache_put_desktop(uint32 offset, int cx, int cy, int scanline, int bytes_per_pixel, uint8 * data)
 {
 	int length = cx * cy * bytes_per_pixel;
+
+	if (offset > sizeof(g_deskcache))
+		offset = 0;
 
 	if ((offset + length) <= sizeof(g_deskcache))
 	{
