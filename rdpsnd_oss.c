@@ -1,4 +1,4 @@
-/* 
+/*
    rdesktop: A Remote Desktop Protocol client.
    Sound Channel Process Functions - Open Sound System
    Copyright (C) Matthew Chapman 2003
@@ -212,7 +212,7 @@ wave_out_write(STREAM s, uint16 tick, uint8 index)
 	packet->s.p += 4;
 
 	/* we steal the data buffer from s, give it a new one */
-	s->data = malloc(s->size);
+	s->data = (uint8 *) malloc(s->size);
 
 	if (!g_dsp_busy)
 		wave_out_play();
