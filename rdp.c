@@ -157,14 +157,7 @@ rdp_out_unistr(STREAM s, char *string, int len)
 #ifdef HAVE_ICONV
 	size_t ibl = strlen(string), obl = len + 2;
 	static iconv_t iconv_h = (iconv_t) - 1;
-	char *pin = string, *pout;
-#ifdef B_ENDIAN
-	char ss[4096];		// FIXME: global MAX_BUF_SIZE macro need
-
-	pout = ss;
-#else
-	pout = s->p;
-#endif
+	char *pin = string, *pout = s->p;
 
 	memset(pout, 0, len + 4);
 
@@ -196,13 +189,9 @@ rdp_out_unistr(STREAM s, char *string, int len)
 		return;
 	}
 
-#ifdef B_ENDIAN
-	swab(ss, (char *) s->p, len + 4);
-#endif
-
 	s->p += len + 2;
 
-#else /*HAVE_ICONV undef */
+#else /* HAVE_ICONV undef */
 	int i = 0, j = 0;
 
 	len += 2;
@@ -226,16 +215,8 @@ rdp_in_unistr(STREAM s, char *string, int uni_len)
 {
 #ifdef HAVE_ICONV
 	size_t ibl = uni_len, obl = uni_len;
-	char *pin, *pout = string;
+	char *pin = s->p, *pout = string;
 	static iconv_t iconv_h = (iconv_t) - 1;
-#ifdef B_ENDIAN
-	char ss[4096];		// FIXME: global MAX_BUF_SIZE macro need
-
-	swab((char *) s->p, ss, uni_len);
-	pin = ss;
-#else
-	pin = s->p;
-#endif
 
 	if (iconv_h == (iconv_t) - 1)
 	{

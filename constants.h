@@ -22,7 +22,7 @@
 #define TCP_PORT_RDP 3389
 
 #define DEFAULT_CODEPAGE	"UTF-8"
-#define WINDOWS_CODEPAGE	"UTF-16"
+#define WINDOWS_CODEPAGE	"UTF-16LE"
 
 /* ISO PDU codes */
 enum ISO_PDU_CODE
