@@ -298,6 +298,7 @@ rdp_out_order_caps(STREAM s)
 	order_caps[0] = 1;	/* dest blt */
 	order_caps[1] = 1;	/* pat blt */
 	order_caps[2] = 1;	/* screen blt */
+	order_caps[3] = 1;	/* required for memblt? */
 	order_caps[8] = 1;	/* line */
 	order_caps[9] = 1;	/* line */
 	order_caps[10] = 1;	/* rect */
