@@ -66,6 +66,12 @@
 #define STATFS_T statvfs
 #define F_NAMELEN(buf) ((buf).f_namemax)
 
+#elif (defined(__alpha) && !defined(linux))
+#include <sys/mount.h>                /* osf1 statfs */
+#define STATFS_FN(path, buf) (statfs(path,buf,sizeof(buf)))
+#define STATFS_T statfs
+#define F_NAMELEN(buf) (255)
+
 #else
 #include <sys/vfs.h>		/* linux statfs */
 #include <mntent.h>
