@@ -62,7 +62,7 @@ rdpdr_send_available(void)
 #if 1
 	out_uint32_le(s, 0x1);	/* Device type 0x1 - serial */
 	out_uint32_le(s, 0);	/* Handle */
-	out_uint8p(s, "COM2", 4);
+	out_uint8p(s, "COM4", 4);
 	out_uint8s(s, 4);	/* Pad to 8 */
 	out_uint32(s, 0);
 #endif
