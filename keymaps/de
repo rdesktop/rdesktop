@@ -30,19 +30,16 @@ bracketright 0x0a altgr
 plusminus 0x0a shift altgr
 equal 0x0b shift
 braceright 0x0b altgr
-degree 0x0b shift altgr
 ssharp 0x0c
 question 0x0c shift
 backslash 0x0c altgr
 questiondown 0x0c shift altgr
-dead_acute 0x0d
-dead_grave 0x0d shift
+acute 0x0d
+grave 0x0d shift
 dead_cedilla 0x0d altgr
 dead_ogonek 0x0d shift altgr
 at 0x10 altgr
 Greek_OMEGA 0x10 shift altgr
-lstroke 0x11 altgr
-Lstroke 0x11 shift altgr
 EuroSign 0x12 altgr
 paragraph 0x13 altgr
 registered 0x13 shift altgr
@@ -65,12 +62,10 @@ dead_diaeresis 0x1a altgr
 dead_abovering 0x1a shift altgr
 plus 0x1b
 asterisk 0x1b shift
-dead_tilde 0x1b altgr
+asciitilde 0x1b altgr
 dead_macron 0x1b shift altgr
 ae 0x1e altgr
 AE 0x1e shift altgr
-ssharp 0x1f altgr
-section 0x1f shift altgr
 eth 0x20 altgr
 ETH 0x20 shift altgr
 dstroke 0x21 altgr
@@ -80,34 +75,25 @@ ENG 0x22 shift altgr
 hstroke 0x23 altgr
 Hstroke 0x23 shift altgr
 kra 0x25 altgr
-ampersand 0x25 shift altgr
-lstroke 0x26 altgr
-Lstroke 0x26 shift altgr
 odiaeresis 0x27
 Odiaeresis 0x27 shift
 dead_doubleacute 0x27 altgr
 adiaeresis 0x28
 Adiaeresis 0x28 shift
-dead_circumflex 0x28 altgr
 dead_caron 0x28 shift altgr
-dead_circumflex 0x29
+asciicircum 0x29
 degree 0x29 shift
 notsign 0x29 altgr
 numbersign 0x2b
 apostrophe 0x2b shift
-dead_grave 0x2b altgr
 dead_breve 0x2b shift altgr
 y 0x2c addupper
 guillemotleft 0x2c altgr
-less 0x2c shift altgr
 guillemotright 0x2d altgr
-greater 0x2d shift altgr
 cent 0x2e altgr
 copyright 0x2e shift altgr
 leftdoublequotemark 0x2f altgr
-grave 0x2f shift altgr
 rightdoublequotemark 0x30 altgr
-apostrophe 0x30 shift altgr
 mu 0x32 altgr
 masculine 0x32 shift altgr
 comma 0x33
