@@ -397,9 +397,6 @@ xwin_process_events()
 	uint32 ev_time;
 	uint32 tmpmods;
 
-	if (display == NULL)
-		return;
-
 	while (XCheckMaskEvent(display, ~0, &xkbevent.core))
 	{
 		ev_time = time(NULL);
@@ -594,15 +591,17 @@ ui_select(int rdp_socket)
 	int n = (rdp_socket > x_socket) ? rdp_socket+1 : x_socket+1;
 	fd_set rfds;
 
-	XFlush(display);
-
 	FD_ZERO(&rfds);
 
 	while (True)
 	{
 		FD_ZERO(&rfds);
 		FD_SET(rdp_socket, &rfds);
-		FD_SET(x_socket, &rfds);
+		if (display != NULL)
+		{
+			FD_SET(x_socket, &rfds);
+			XFlush(display);
+		}
 
 		switch (select(n, &rfds, NULL, NULL, NULL))
 		{

@@ -214,19 +214,19 @@ main(int argc, char *argv[])
 	strcpy(title, "rdesktop - ");
 	strncat(title, server, sizeof(title) - sizeof("rdesktop - "));
 
+	if (!rdp_connect(server, flags, domain, password, shell, directory))
+		return 1;
+
+	printf("Connection successful.\n");
+
 	if (ui_create_window(title))
 	{
-		if (!rdp_connect(server, flags, domain, password, shell,
-				 directory))
-			return 1;
-
-		printf("Connection successful.\n");
 		rdp_main_loop();
-		printf("Disconnecting...\n");
 		ui_destroy_window();
-		rdp_disconnect();
 	}
 
+	printf("Disconnecting...\n");
+	rdp_disconnect();
 	return 0;
 }
 
