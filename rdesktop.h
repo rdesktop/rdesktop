@@ -42,11 +42,27 @@
 #define DEBUG_RDP5(args)
 #endif
 
+#ifdef WITH_DEBUG_CLIPBOARD
+#define DEBUG_CLIPBOARD(args) printf args;
+#else
+#define DEBUG_CLIPBOARD(args)
+#endif
+
 #define STRNCPY(dst,src,n) { strncpy(dst,src,n-1); dst[n-1] = 0; }
 
 #include "constants.h"
 #include "types.h"
 #include "parse.h"
+
+/* Declared here since it uses STREAM that's declared in parse.h */
+typedef struct _rdp5_channel
+{
+	uint16 channelno;
+	char name[8];
+	uint32 channelflags;
+	void (*channelcallback) (STREAM, uint16);
+}
+rdp5_channel;
 
 #ifndef MAKE_PROTO
 #include "proto.h"
