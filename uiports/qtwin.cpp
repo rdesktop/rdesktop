@@ -40,14 +40,14 @@
 
 /* rdesktop globals */
 extern int g_tcp_port_rdp;
-int g_use_rdp5 = 0;
+int g_use_rdp5 = 1;
 char g_hostname[16];
 char g_username[64];
 int g_height = 600;
 int g_width = 800;
 int g_server_bpp = 8;
 int g_encryption = 1;
-int g_desktop_save =1;
+int g_desktop_save = 1;
 int g_bitmap_cache = 1;
 int g_bitmap_cache_persist_enable = False;
 int g_bitmap_cache_precache = True;
@@ -69,7 +69,7 @@ char g_title[128] = "";
 /* qt globals */
 QSocketNotifier* SocketNotifier;
 QApplication* App;
-QMyMainWindow* MW;
+QMyMainWindow* g_MW;
 QMyScrollView* SV;
 QPixmap* BS;
 QPixmap* DS;
@@ -428,20 +428,20 @@ void QMyMainWindow::dataReceived()
 //*****************************************************************************
 void QMyScrollView::keyPressEvent(QKeyEvent* e)
 {
-  MW->keyPressEvent(e);
+  g_MW->keyPressEvent(e);
 }
 
 //*****************************************************************************
 void QMyScrollView::keyReleaseEvent(QKeyEvent* e)
 {
-  MW->keyReleaseEvent(e);
+  g_MW->keyReleaseEvent(e);
 }
 
 
 //*****************************************************************************
 void ui_begin_update(void)
 {
-  P1->begin(MW);
+  P1->begin(g_MW);
   P2->begin(BS);
 }
 
@@ -469,9 +469,9 @@ void ui_deinit(void)
 int ui_create_window(void)
 {
   int w, h;
-  MW = new QMyMainWindow();
+  g_MW = new QMyMainWindow();
   SV = new QMyScrollView();
-  SV->addChild(MW);
+  SV->addChild(g_MW);
   BS = new QPixmap(g_width, g_height);
   QPainter* P = new QPainter(BS);
   P->fillRect(0, 0, g_width, g_height, QBrush(QColor("white")));
@@ -484,7 +484,7 @@ int ui_create_window(void)
   QWidget* d = QApplication::desktop();
   w = d->width();                   // returns screen width
   h = d->height();                  // returns screen height
-  MW->resize(g_width, g_height);
+  g_MW->resize(g_width, g_height);
   if (w < g_width || h < g_height)
     SV->resize(w, h);
   else
@@ -493,7 +493,7 @@ int ui_create_window(void)
   SV->setMaximumHeight(g_height + 4);
   App->setMainWidget(SV);
   SV->show();
-  MW->setMouseTracking(true);
+  g_MW->setMouseTracking(true);
   if (g_title[0] != 0)
     SV->setCaption(g_title);
 
@@ -517,8 +517,8 @@ void ui_main_loop(void)
   if (!rdp_connect(g_servername, RDP_LOGON_NORMAL, "", "", "", ""))
     return;
   // start notifier
-  SocketNotifier = new QSocketNotifier(g_sock, QSocketNotifier::Read, MW);
-  MW->connect(SocketNotifier, SIGNAL(activated(int)), MW, SLOT(dataReceived()));
+  SocketNotifier = new QSocketNotifier(g_sock, QSocketNotifier::Read, g_MW);
+  g_MW->connect(SocketNotifier, SIGNAL(activated(int)), g_MW, SLOT(dataReceived()));
   UpAndRunning = 1;
   // app main loop
   App->exec();
@@ -527,7 +527,7 @@ void ui_main_loop(void)
 //*****************************************************************************
 void ui_destroy_window(void)
 {
-  delete MW;
+  delete g_MW;
   delete SV;
   delete BS;
   delete DS;
@@ -833,9 +833,9 @@ void ui_draw_text(uint8 font, uint8 flags, int mixmode,
     }
   }
   if (boxcx > 1)
-    bitBltClip(MW, NULL, boxx, boxy, BS, boxx, boxy, boxcx, boxcy, Qt::CopyROP, true);
+    bitBltClip(g_MW, NULL, boxx, boxy, BS, boxx, boxy, boxcx, boxcy, Qt::CopyROP, true);
   else
-    bitBltClip(MW, NULL, clipx, clipy, BS, clipx, clipy, clipcx, clipcy, Qt::CopyROP, true);
+    bitBltClip(g_MW, NULL, clipx, clipy, BS, clipx, clipy, clipcx, clipcy, Qt::CopyROP, true);
 }
 
 /*****************************************************************************/
@@ -926,7 +926,7 @@ void ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy)
   QPixmap* Pixmap;
   Pixmap = new QPixmap(cx, cy);
   CommonDeskSave(DS, Pixmap, offset, 0, 0, cx, cy, 1);
-  bitBltClip(MW, BS, x, y, Pixmap, 0, 0, cx, cy, Qt::CopyROP, true);
+  bitBltClip(g_MW, BS, x, y, Pixmap, 0, 0, cx, cy, Qt::CopyROP, true);
   delete Pixmap;
 }
 
@@ -949,7 +949,7 @@ void ui_screenblt(uint8 opcode, int x, int y, int cx, int cy,
                   int srcx, int srcy)
 {
   SetOpCode(opcode);
-  bitBltClip(MW, BS, x, y, NULL, srcx, srcy, cx, cy, Qt::CopyROP, true);
+  bitBltClip(g_MW, BS, x, y, NULL, srcx, srcy, cx, cy, Qt::CopyROP, true);
   ResetOpCode(opcode);
 }
 
@@ -985,7 +985,7 @@ void ui_patblt(uint8 opcode, int x, int y, int cx, int cy,
       break;
   }
   ResetOpCode(opcode);
-  bitBltClip(MW, NULL, x, y, BS, x, y, cx, cy, Qt::CopyROP, true);
+  bitBltClip(g_MW, NULL, x, y, BS, x, y, cx, cy, Qt::CopyROP, true);
 }
 
 /*****************************************************************************/
@@ -1005,6 +1005,7 @@ void ui_move_pointer(int x, int y)
 /*****************************************************************************/
 void ui_set_null_cursor(void)
 {
+  g_MW->setCursor(Qt::BlankCursor);
 }
 
 /*****************************************************************************/
@@ -1111,7 +1112,7 @@ void ui_set_cursor(HCURSOR cursor)
   QCursor* Cursor;
   Cursor = (QCursor*)cursor;
   if (Cursor != NULL)
-    MW->setCursor(*Cursor);
+    g_MW->setCursor(*Cursor);
 }
 
 /*****************************************************************************/

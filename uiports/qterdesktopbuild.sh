@@ -11,7 +11,8 @@ cflags="-pipe -DQT_QWS_EBX -DQT_QWS_CUSTOM -DQWS -fno-exceptions -fno-rtti -Wall
 #cflags=$cflags" -DWITH_DEBUG"
 # uncomment the following line to turn on sound
 cflags=$cflags" -DWITH_RDPSND"
-lflags="-L/usr/local/qt/lib -lqte -lcrypto"
+lflags="-L/usr/local/qt/lib"
+libs="-lqte -lcrypto"
 
 # rdesktop core files
 $cc $cflags -c ../tcp.c -o tcp.o
@@ -38,4 +39,4 @@ $cc $cflags -I/usr/local/qt/include -c qtewin.cpp -o qtewin.o
 
 $cc $cflags -I/usr/local/qt/include -c moc_qtewin.cpp -o moc_qtewin.o
 
-$cc $lflags -o qterdesktop moc_qtewin.o qtewin.o tcp.o iso.o mcs.o secure.o rdp.o rdp5.o orders.o cache.o mppc.o licence.o bitmap.o channels.o pstcache.o rdpsnd.o rdpsnd_oss.o
+$cc $lflags -o qterdesktop moc_qtewin.o qtewin.o tcp.o iso.o mcs.o secure.o rdp.o rdp5.o orders.o cache.o mppc.o licence.o bitmap.o channels.o pstcache.o rdpsnd.o rdpsnd_oss.o $libs

@@ -25,6 +25,7 @@
 #else
 #include <qapplication.h>
 #endif
+#include <qcursor.h>
 #include <qmainwindow.h>
 #include <qwidget.h>
 #include <qpainter.h>
@@ -119,7 +120,7 @@ static int g_clipcy = 0;
 #define SETPIXEL16(d, x, y, w, v) *(((uint16*)d) + ((y) * (w) + (x))) = v
 #define SETPIXEL32(d, x, y, w, v) *(((uint32*)d) + ((y) * (w) + (x))) = v
 
-//*****************************************************************************
+/******************************************************************************/
 void CleanString(QString * Item)
 {
   int i;
@@ -133,7 +134,7 @@ void CleanString(QString * Item)
   }
 }
 
-//*****************************************************************************
+/******************************************************************************/
 QMyDialog::QMyDialog(QWidget * parent) : QDialog(parent, "Settings", true)
 {
   int i, j;
@@ -247,7 +248,7 @@ QMyDialog::QMyDialog(QWidget * parent) : QDialog(parent, "Settings", true)
   if (home != NULL)
   {
     sprintf(Text, "%s/rdesktop.ini", home);
-    QFile* File = new QFile(Text);
+    QFile * File = new QFile(Text);
     if (File->open(IO_ReadOnly))
     {
       i = -1;
@@ -284,10 +285,10 @@ QMyDialog::QMyDialog(QWidget * parent) : QDialog(parent, "Settings", true)
   }
 }
 
-//*****************************************************************************
+/******************************************************************************/
 QMyDialog::~QMyDialog()
 {
-  QMyConnectionItem* Item;
+  QMyConnectionItem * Item;
   int i;
 
   for (i = 0; i < 10; i++)
@@ -297,7 +298,7 @@ QMyDialog::~QMyDialog()
   }
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void QMyDialog::ComboChanged(int index)
 {
   if (index == 0)
@@ -317,7 +318,7 @@ void QMyDialog::ComboChanged(int index)
   }
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void QMyDialog::OKClicked()
 {
   ServerName = ServerNameEdit->text();
@@ -329,13 +330,13 @@ void QMyDialog::OKClicked()
   done(1);
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void QMyDialog::CancelClicked()
 {
   done(0);
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void QMyDialog::AddClicked()
 {
   int i;
@@ -355,7 +356,7 @@ void QMyDialog::AddClicked()
   }
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void QMyDialog::EditClicked()
 {
   int i;
@@ -375,13 +376,13 @@ void QMyDialog::EditClicked()
   }
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void WriteString(QFile* File, QString* Line)
 {
   File->writeBlock((const char*)(*Line), Line->length());
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void QMyDialog::SaveClicked()
 {
   int i, j;
@@ -439,7 +440,7 @@ void QMyDialog::SaveClicked()
   }
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void QMyDialog::RemoveClicked()
 {
   int i, j, c;
@@ -465,7 +466,7 @@ void QMyDialog::RemoveClicked()
   }
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void QMyDialog::ListBoxChanged()
 {
   int i;
@@ -487,12 +488,12 @@ void QMyDialog::ListBoxChanged()
   }
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void QMyDialog::ListBoxSelected(int /*index*/)
 {
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void GetScanCode(QKeyEvent * e, int * ScanCode, int * code)
 {
   int key;
@@ -660,17 +661,17 @@ void GetScanCode(QKeyEvent * e, int * ScanCode, int * code)
 
 }
 
-//*****************************************************************************
+/******************************************************************************/
 QMyScrollView::QMyScrollView() : QScrollView()
 {
 }
 
-//*****************************************************************************
+/******************************************************************************/
 QMyScrollView::~QMyScrollView()
 {
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void QMyScrollView::keyPressEvent(QKeyEvent* e)
 {
   int ScanCode, code;
@@ -688,7 +689,7 @@ void QMyScrollView::keyPressEvent(QKeyEvent* e)
   }
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void QMyScrollView::keyReleaseEvent(QKeyEvent* e)
 {
   int ScanCode, code;
@@ -706,25 +707,25 @@ void QMyScrollView::keyReleaseEvent(QKeyEvent* e)
   }
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void QMyScrollView::showEvent(QShowEvent* e)
 {
   QScrollView::showEvent(e);
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void QMyScrollView::show()
 {
   QScrollView::show();
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void QMyScrollView::polish()
 {
   QScrollView::polish();
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void QMyScrollView::timerEvent(QTimerEvent * e)
 {
   QScrollView::timerEvent(e);
@@ -786,7 +787,7 @@ void QMyScrollView::timerEvent(QTimerEvent * e)
   }
 }
 
-//*****************************************************************************
+/******************************************************************************/
 QMyMainWindow::QMyMainWindow() : QWidget(g_SV->viewport())
 {
   PopupMenu = new QPopupMenu(this);
@@ -797,13 +798,13 @@ QMyMainWindow::QMyMainWindow() : QWidget(g_SV->viewport())
   connect(PopupMenu, SIGNAL(activated(int)), this, SLOT(MemuClicked(int)));
 }
 
-//*****************************************************************************
+/******************************************************************************/
 QMyMainWindow::~QMyMainWindow()
 {
   delete PopupMenu;
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void QMyMainWindow::timerEvent(QTimerEvent * e)
 {
   QWidget::timerEvent(e);
@@ -824,7 +825,7 @@ void QMyMainWindow::timerEvent(QTimerEvent * e)
   killTimer(timer_id);
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void QMyMainWindow::MemuClicked(int MenuID)
 {
   QWidget * Desktop;
@@ -870,7 +871,7 @@ void QMyMainWindow::MemuClicked(int MenuID)
   }
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void QMyMainWindow::mouseMoveEvent(QMouseEvent* e)
 {
   int x;
@@ -892,7 +893,7 @@ void QMyMainWindow::mouseMoveEvent(QMouseEvent* e)
   rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_MOVE, e->x(), e->y());
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void QMyMainWindow::mousePressEvent(QMouseEvent* e)
 {
   timer_id = startTimer(1000);
@@ -906,7 +907,7 @@ void QMyMainWindow::mousePressEvent(QMouseEvent* e)
     rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_DOWN | MOUSE_FLAG_BUTTON3, e->x(), e->y());
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void QMyMainWindow::mouseReleaseEvent(QMouseEvent* e)
 {
   killTimer(timer_id);
@@ -919,7 +920,7 @@ void QMyMainWindow::mouseReleaseEvent(QMouseEvent* e)
     rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_BUTTON3, e->x(), e->y());
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void QMyMainWindow::wheelEvent(QWheelEvent* e)
 {
   if (e->delta() > 0)
@@ -930,7 +931,7 @@ void QMyMainWindow::wheelEvent(QWheelEvent* e)
 
 #define NOT(x) (~x)
 
-//*****************************************************************************
+/******************************************************************************/
 int rop(int rop, int src, int dst)
 {
   switch (rop)
@@ -964,6 +965,8 @@ int get_pixel(int x, int y)
       return g_BS[y * g_width + x];
     else if (g_server_bpp == 16)
       return *(((uint16*)g_BS) + (y * g_width + x));
+    else if (g_server_bpp == 24)
+      return *(((uint32*)g_BS) + (y * g_width + x));
     else
       return 0;
   }
@@ -971,7 +974,7 @@ int get_pixel(int x, int y)
     return 0;
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void set_pixel(int x, int y, int pixel, int op = 0xc)
 {
   uint32 p;
@@ -991,6 +994,10 @@ void set_pixel(int x, int y, int pixel, int op = 0xc)
         {
           SETPIXEL16(g_BS, x, y, g_width, pixel);
         }
+        else if (g_server_bpp == 24)
+        {
+          SETPIXEL32(g_BS, x, y, g_width, pixel);
+        }
       }
       else
       {
@@ -1006,12 +1013,18 @@ void set_pixel(int x, int y, int pixel, int op = 0xc)
           p = rop(op, pixel, p);
           SETPIXEL16(g_BS, x, y, g_width, p);
         }
+        else if (g_server_bpp == 24)
+        {
+          p = GETPIXEL32(g_BS, x, y, g_width);
+          p = rop(op, pixel, p);
+          SETPIXEL32(g_BS, x, y, g_width, p);
+        }
       }
     }
   }
 }
 
-//******************************************************************************
+/******************************************************************************/
 // adjust coordinates for cliping rect
 bool WarpCoords(int * x, int * y, int * cx, int * cy, int * srcx, int * srcy)
 {
@@ -1035,7 +1048,7 @@ bool WarpCoords(int * x, int * y, int * cx, int * cy, int * srcx, int * srcy)
   return true;
 }
 
-//*****************************************************************************
+/******************************************************************************/
 uint32 color16to32(uint32 colour)
 {
   uint32 r, g, b;
@@ -1045,13 +1058,24 @@ uint32 color16to32(uint32 colour)
   return ((r << 16) | (g << 8) | b);
 }
 
-//*****************************************************************************
+/******************************************************************************/
+uint32 color24to32(uint32 colour)
+{
+  uint32 r, g, b;
+  r = (colour >> 0) & 0xff;
+  g = (colour >> 8) & 0xff;
+  b = (colour >> 16) & 0xff;
+  return ((r << 16) | (g << 8) | b);
+}
+
+/******************************************************************************/
 void QMyMainWindow::paintEvent(QPaintEvent * pe)
 {
   QImage * Image;
   QPainter * Painter;
   QRect Rect;
   int i, j, w, h, l, t;
+  int pixel;
   uint8 * data;
 
   Image = 0;
@@ -1083,7 +1107,25 @@ void QMyMainWindow::paintEvent(QPaintEvent * pe)
         data = (uint8*)xmalloc(w * h * 4);
         for (i = 0; i < h; i++)
           for (j = 0; j < w; j++)
-            *(((uint32*)data) + (i * w + j)) = color16to32(get_pixel(l + j, t + i));
+          {
+            pixel = GETPIXEL16(g_BS, l + j, t + i, g_width);
+            pixel = color16to32(pixel);
+            SETPIXEL32(data, j, i, w, pixel);
+          }
+        Image = new QImage(data, w, h, 32, NULL,
+                           0, QImage::IgnoreEndian);
+      }
+      else if (g_server_bpp == 24)
+      {
+        w = (w + 3) & ~3;
+        data = (uint8*)xmalloc(w * h * 4);
+        for (i = 0; i < h; i++)
+          for (j = 0; j < w; j++)
+          {
+            pixel = GETPIXEL32(g_BS, l + j, t + i, g_width);
+            pixel = color24to32(pixel);
+            SETPIXEL32(data, j, i, w, pixel);
+          }
         Image = new QImage(data, w, h, 32, NULL,
                            0, QImage::IgnoreEndian);
       }
@@ -1099,13 +1141,13 @@ void QMyMainWindow::paintEvent(QPaintEvent * pe)
   }
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void QMyMainWindow::closeEvent(QCloseEvent * e)
 {
   e->accept();
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void QMyMainWindow::dataReceived()
 {
   if (!rdp_loop(&g_deactivated, &g_ext_disc_reason))
@@ -1129,7 +1171,7 @@ void QMyMainWindow::dataReceived()
 #endif
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void QMyMainWindow::soundSend()
 {
   g_SoundNotifier->setEnabled(false);
@@ -1140,7 +1182,7 @@ void QMyMainWindow::soundSend()
 #endif
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void redraw(int x, int y, int cx, int cy)
 {
   if (WarpCoords(&x, &y, &cx, &cy, NULL, NULL))
@@ -1149,7 +1191,7 @@ void redraw(int x, int y, int cx, int cy)
   }
 }
 
-//*****************************************************************************
+/******************************************************************************/
 /* Returns 0 after user quit, 1 otherwise */
 int ui_select(int rdp_socket)
 {
@@ -1158,24 +1200,25 @@ int ui_select(int rdp_socket)
   return 1;
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void ui_move_pointer(int /*x*/, int /*y*/)
 {
 }
 
-/*****************************************************************************/
+/******************************************************************************/
 void ui_set_null_cursor(void)
 {
 }
 
-//*****************************************************************************
+/******************************************************************************/
 HBITMAP ui_create_bitmap(int width, int height, uint8 * data)
 {
   struct bitmap * the_bitmap;
   uint8 * bitmap_data;
   int i, j;
+  int r, g, b, pixel;
 
-  bitmap_data = (uint8*)xmalloc(width * height * BPP);
+  bitmap_data = (uint8*)xmalloc(width * height * 4);
   the_bitmap = (struct bitmap*)xmalloc(sizeof(struct bitmap));
   the_bitmap->w = width;
   the_bitmap->h = height;
@@ -1190,16 +1233,30 @@ HBITMAP ui_create_bitmap(int width, int height, uint8 * data)
   {
     for (i = 0; i < height; i++)
       for (j = 0; j < width; j++)
-        *(((uint16*)bitmap_data) + (i * width + j)) = *(((uint16*)data) + (i * width + j));
+        *(((uint16*)bitmap_data) + (i * width + j)) =
+                     *(((uint16*)data) + (i * width + j));
+  }
+  else if (g_server_bpp == 24)
+  {
+    for (i = 0; i < height; i++)
+      for (j = 0; j < width; j++)
+      {
+        r = data[(i * width + j) * 3 + 0];
+        g = data[(i * width + j) * 3 + 1];
+        b = data[(i * width + j) * 3 + 2];
+        pixel = (r << 16) | (g << 8) | b;
+        SETPIXEL32(bitmap_data, j, i, width, pixel);
+      }
   }
   return the_bitmap;
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void ui_paint_bitmap(int x, int y, int cx, int cy, int width,
                      int height, uint8 * data)
 {
   int i, j;
+  int r, g, b, pixel;
 
   if (g_server_bpp == 8)
   {
@@ -1217,10 +1274,24 @@ void ui_paint_bitmap(int x, int y, int cx, int cy, int width,
           if (j < width)
             set_pixel(x + j, y + i, *(((uint16*)data) + (i * width + j)));
   }
+  else if (g_server_bpp == 24)
+  {
+    for (i = 0; i < cy; i++)
+      for (j = 0; j < cx; j++)
+        if (i < height)
+          if (j < width)
+          {
+            r = data[(i * width + j) * 3 + 0];
+            g = data[(i * width + j) * 3 + 1];
+            b = data[(i * width + j) * 3 + 2];
+            pixel = (r << 16) | (g << 8) | b;
+            set_pixel(x + j, y + i, pixel);
+          }
+  }
   redraw(x, y, cx, cy);
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void ui_destroy_bitmap(HBITMAP bmp)
 {
   struct bitmap* the_bitmap;
@@ -1234,8 +1305,8 @@ void ui_destroy_bitmap(HBITMAP bmp)
   }
 }
 
-//*****************************************************************************
-bool is_pixel_on(uint8* data, int x, int y, int width, int bpp)
+/******************************************************************************/
+bool is_pixel_on(uint8 * data, int x, int y, int width, int bpp)
 {
   int start, shift;
 
@@ -1252,14 +1323,14 @@ bool is_pixel_on(uint8* data, int x, int y, int width, int bpp)
     return false;
 }
 
-//*****************************************************************************
-void set_pixel_on(uint8* data, int x, int y, int width, int bpp, uint8 pixel)
+/******************************************************************************/
+void set_pixel_on(uint8 * data, int x, int y, int width, int bpp, uint8 pixel)
 {
   if (bpp == 8)
     data[y * width + x] = pixel;
 }
 
-//*****************************************************************************
+/******************************************************************************/
 HGLYPH ui_create_glyph(int width, int height, uint8 * data)
 {
   int i, j;
@@ -1279,7 +1350,7 @@ HGLYPH ui_create_glyph(int width, int height, uint8 * data)
   return the_glyph;
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void ui_destroy_glyph(HGLYPH glyph)
 {
   struct bitmap* the_glyph;
@@ -1293,7 +1364,7 @@ void ui_destroy_glyph(HGLYPH glyph)
   }
 }
 
-//*****************************************************************************
+/******************************************************************************/
 HCURSOR ui_create_cursor(uint32 x, uint32 y,
                          int width, int height,
                          uint8 * andmask, uint8 * xormask)
@@ -1301,7 +1372,7 @@ HCURSOR ui_create_cursor(uint32 x, uint32 y,
   return (void*)1;
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void ui_set_cursor(HCURSOR /*cursor*/)
 {
 }
@@ -1322,12 +1393,13 @@ unsigned int read_keyboard_state(void)
 void ui_resize_window(void)
 {
 }
-//*****************************************************************************
+
+/******************************************************************************/
 void ui_destroy_cursor(HCURSOR /*cursor*/)
 {
 }
 
-//*****************************************************************************
+/******************************************************************************/
 HCOLOURMAP ui_create_colourmap(COLOURMAP * colours)
 {
   int i;
@@ -1347,27 +1419,27 @@ HCOLOURMAP ui_create_colourmap(COLOURMAP * colours)
   return g_CM;
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void ui_set_colourmap(HCOLOURMAP map)
 {
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void ui_destroy_colourmap(HCOLOURMAP map)
 {
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void ui_begin_update(void)
 {
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void ui_end_update(void)
 {
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void ui_set_clip(int x, int y, int cx, int cy)
 {
   g_clipx = x;
@@ -1376,7 +1448,7 @@ void ui_set_clip(int x, int y, int cx, int cy)
   g_clipcy = cy;
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void ui_reset_clip(void)
 {
   g_clipx = 0;
@@ -1385,13 +1457,13 @@ void ui_reset_clip(void)
   g_clipcy = g_height;
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void ui_bell(void)
 {
   g_App->beep();
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void ui_destblt(uint8 opcode, int x, int y, int cx, int cy)
 {
   int i, j;
@@ -1402,7 +1474,7 @@ void ui_destblt(uint8 opcode, int x, int y, int cx, int cy)
   redraw(x, y, cx, cy);
 }
 
-//*****************************************************************************
+/******************************************************************************/
 // does not repaint
 void fill_rect(int x, int y, int cx, int cy, int colour, int opcode = 0xc)
 {
@@ -1417,14 +1489,14 @@ void fill_rect(int x, int y, int cx, int cy, int colour, int opcode = 0xc)
       set_pixel(x + j, y + i, colour, opcode);
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void ui_rect(int x, int y, int cx, int cy, int colour)
 {
   fill_rect(x, y, cx, cy, colour);
   redraw(x, y, cx, cy);
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void ui_patblt(uint8 opcode, int x, int y, int cx, int cy,
                BRUSH * brush, int bgcolour, int fgcolour)
 {
@@ -1451,14 +1523,14 @@ void ui_patblt(uint8 opcode, int x, int y, int cx, int cy,
   redraw(x, y, cx, cy);
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void ui_screenblt(uint8 opcode, int x, int y, int cx, int cy,
                   int srcx, int srcy)
 {
   int i, j;
-  uint8* temp;
+  uint8 * temp;
 
-  temp = (uint8*)xmalloc(cx * cy * BPP);
+  temp = (uint8*)xmalloc(cx * cy * (BPP + 1));
   if (g_server_bpp == 8)
   {
     for (i = 0; i < cy; i++)
@@ -1477,16 +1549,25 @@ void ui_screenblt(uint8 opcode, int x, int y, int cx, int cy,
       for (j = 0; j < cx; j++)
         set_pixel(x + j, y + i, *(((uint16*)temp) + (i * cx + j)), opcode);
   }
+  else if (g_server_bpp == 24)
+  {
+    for (i = 0; i < cy; i++)
+      for (j = 0; j < cx; j++)
+        *(((uint32*)temp) + (i * cx + j)) = get_pixel(srcx + j, srcy + i);
+    for (i = 0; i < cy; i++)
+      for (j = 0; j < cx; j++)
+        set_pixel(x + j, y + i, *(((uint32*)temp) + (i * cx + j)), opcode);
+  }
   xfree(temp);
   redraw(x, y, cx, cy);
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void ui_memblt(uint8 opcode, int x, int y, int cx, int cy,
                HBITMAP src, int srcx, int srcy)
 {
   int i, j;
-  struct bitmap* the_bitmap;
+  struct bitmap * the_bitmap;
 
   the_bitmap = (struct bitmap*)src;
   if (the_bitmap == NULL)
@@ -1509,10 +1590,19 @@ void ui_memblt(uint8 opcode, int x, int y, int cx, int cy,
                     *(((uint16*)the_bitmap->data) + ((i + srcy) * the_bitmap->w + (j + srcx))),
                     opcode);
   }
+  else if (g_server_bpp == 24)
+  {
+    for (i = 0; i < cy; i++)
+      for (j = 0; j < cx; j++)
+        if ((i + srcy) < the_bitmap->h && (j + srcx) < the_bitmap->w)
+          set_pixel(x + j, y + i,
+                    *(((uint32*)the_bitmap->data) + ((i + srcy) * the_bitmap->w + (j + srcx))),
+                    opcode);
+  }
   redraw(x, y, cx, cy);
 }
 
-//*****************************************************************************
+/******************************************************************************/
 // not used
 void ui_triblt(uint8 opcode, int x, int y, int cx, int cy,
                HBITMAP src, int srcx, int srcy, BRUSH * brush,
@@ -1520,8 +1610,8 @@ void ui_triblt(uint8 opcode, int x, int y, int cx, int cy,
 {
 }
 
-//*****************************************************************************
-// Bresenham's line drawing algorithm
+/******************************************************************************/
+/* Bresenham's line drawing algorithm */
 void ui_line(uint8 opcode, int startx, int starty, int endx,
              int endy, PEN * pen)
 {
@@ -1600,7 +1690,7 @@ void ui_line(uint8 opcode, int startx, int starty, int endx,
   redraw(left, top, (right - left) + 1, (bottom - top) + 1);
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void draw_glyph (int x, int y, HGLYPH glyph, int fgcolour)
 {
   struct bitmap *the_glyph;
@@ -1645,7 +1735,7 @@ void draw_glyph (int x, int y, HGLYPH glyph, int fgcolour)
     }\
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void ui_draw_text(uint8 font, uint8 flags, int mixmode,
                   int x, int y, int clipx, int clipy,
                   int clipcx, int clipcy, int boxx,
@@ -1716,13 +1806,21 @@ void ui_draw_text(uint8 font, uint8 flags, int mixmode,
     redraw(clipx, clipy, clipcx, clipcy);
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void ui_desktop_save(uint32 offset, int x, int y, int cx, int cy)
 {
-  uint8* data;
+  uint8 * data;
   int i, j;
+  int Bpp;
 
-  data = (uint8*)xmalloc(cx * cy * BPP);
+  Bpp = 4;
+  switch (g_server_bpp)
+  {
+    case 8: Bpp = 1; break;
+    case 15: Bpp = 2; break;
+    case 16: Bpp = 2; break;
+  }
+  data = (uint8*)xmalloc(cx * cy * Bpp);
   if (g_server_bpp == 8)
   {
     for (i = 0; i < cy; i++)
@@ -1735,19 +1833,33 @@ void ui_desktop_save(uint32 offset, int x, int y, int cx, int cy)
       for (j = 0; j < cx; j++)
         *(((uint16*)data) + (i * cx + j)) = get_pixel(x + j, y + i);
   }
-  offset *= BPP;
-  cache_put_desktop(offset, cx, cy, cx * BPP, BPP, data);
+  else if (g_server_bpp == 24)
+  {
+    for (i = 0; i < cy; i++)
+      for (j = 0; j < cx; j++)
+        *(((uint32*)data) + (i * cx + j)) = get_pixel(x + j, y + i);
+  }
+  offset *= Bpp;
+  cache_put_desktop(offset, cx, cy, cx * Bpp, Bpp, data);
   xfree(data);
 }
 
-//*****************************************************************************
+/******************************************************************************/
 void ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy)
 {
   uint8* data;
   int i, j;
+  int Bpp;
 
-  offset *= BPP;
-  data = cache_get_desktop(offset, cx, cy, BPP);
+  Bpp = 4;
+  switch (g_server_bpp)
+  {
+    case 8: Bpp = 1; break;
+    case 15: Bpp = 2; break;
+    case 16: Bpp = 2; break;
+  }
+  offset *= Bpp;
+  data = cache_get_desktop(offset, cx, cy, Bpp);
   if (g_server_bpp == 8)
   {
     for (i = 0; i < cy; i++)
@@ -1759,6 +1871,12 @@ void ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy)
     for (i = 0; i < cy; i++)
       for (j = 0; j < cx; j++)
         set_pixel(x + j, y + i, *(((uint16*)data) + (i * cx + j)));
+  }
+  else if (g_server_bpp == 24)
+  {
+    for (i = 0; i < cy; i++)
+      for (j = 0; j < cx; j++)
+        set_pixel(x + j, y + i, *(((uint32*)data) + (i * cx + j)));
   }
   redraw(x, y, cx, cy);
 }
@@ -2034,7 +2152,7 @@ int parse_parameters(int in_argc, char ** in_argv)
   return 1;
 }
 
-//*****************************************************************************
+/******************************************************************************/
 int param_connect(void)
 {
   QWidget * Desktop;
@@ -2074,13 +2192,13 @@ int param_connect(void)
         g_MW->resize(g_width - 4, g_height - 4);
       g_SV->showFullScreen();
     }
-    g_MW->setCursor(BlankCursor);
+    g_MW->setCursor((int)10); /* Qt::BlankCursor */
     g_App->exec();
   }
   return 0;
 }
 
-//*****************************************************************************
+/******************************************************************************/
 int main(int argc, char ** argv)
 {
 #ifdef SHARP
@@ -2100,7 +2218,7 @@ int main(int argc, char ** argv)
   else
   {
     g_SV->timer_id = g_SV->startTimer(1000); /* one sec delay, then dialog */
-    g_MW->setCursor(BlankCursor);
+    g_MW->setCursor((int)10); /* Qt::BlankCursor */
     g_App->exec();
   }
   delete g_SV;
