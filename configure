@@ -137,7 +137,7 @@ if [ -z "$xdir" ]; then
     echo "(searched for include/X11/Xlib.h in: $xdirs)"
 
     # additional helpful information for Linux users
-    if [ -f /etc/redhat_release ]; then
+    if [ -f /etc/redhat-release ]; then
       echo You probably need to install the XFree86-devel package
     elif [ -f /etc/debian_version ]; then
       echo You probably need to install the xlibs-dev package
