@@ -870,7 +870,8 @@ ui_draw_text(uint8 font, uint8 flags, int mixmode, int x, int y,
 	     int bgcolour, int fgcolour, uint8 *text, uint8 length)
 {
 	FONTGLYPH *glyph;
-	int i, offset;
+	short offset;
+	int i;
 
 	SET_FOREGROUND(bgcolour);
 
@@ -892,7 +893,19 @@ ui_draw_text(uint8 font, uint8 flags, int mixmode, int x, int y,
 		{
 			offset = text[++i];
 			if (offset & 0x80)
-				offset = ((offset & 0x7f) << 8) | text[++i];
+			{
+				if (offset == 0x80)
+				{
+					/* next two bytes, little-endian */
+					offset = text[++i];
+					offset |= text[++i] << 8;
+				}
+				else
+				{
+					offset = (offset & 0x7f) << 8; 
+					offset |= text[++i];
+				}
+			}
 
 			if (flags & TEXT2_VERTICAL)
 				y += offset;
