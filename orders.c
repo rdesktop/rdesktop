@@ -701,7 +701,7 @@ process_bmpcache(STREAM s)
 		/* Begin compressedBitmapData */
 		in_uint16_le(s, pad2);	/* pad */
 		in_uint16_le(s, size);
-		/*      in_uint8s(s, 4);  */      /* row_size, final_size */
+		/*      in_uint8s(s, 4);  *//* row_size, final_size */
 		in_uint16_le(s, row_size);
 		in_uint16_le(s, final_size);
 

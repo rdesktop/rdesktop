@@ -217,7 +217,7 @@ xclip_handle_PropertyNotify(XPropertyEvent * event)
 
 
 void
-ui_clip_format_announce(uint8 *data, uint32 length)
+ui_clip_format_announce(uint8 * data, uint32 length)
 {
 	XSetSelectionOwner(g_display, primary_atom, g_wnd, g_last_gesturetime);
 	if (XGetSelectionOwner(g_display, primary_atom) != g_wnd)
@@ -238,7 +238,7 @@ ui_clip_format_announce(uint8 *data, uint32 length)
 
 
 void
-ui_clip_handle_data(uint8 *data, uint32 length)
+ui_clip_handle_data(uint8 * data, uint32 length)
 {
 	xclip_provide_selection(&selection_request, XA_STRING, 8, data, length - 1);
 }

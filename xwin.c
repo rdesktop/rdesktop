@@ -543,7 +543,7 @@ translate24to24(uint8 * data, uint8 * out, uint8 * end)
 		pixel |= *(data++);
 
 		value = make_colour(split_colour24(pixel));
-		
+
 		if (g_xserver_be)
 		{
 			*(out++) = value >> 16;
