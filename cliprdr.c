@@ -198,13 +198,13 @@ cliprdr_handle_SelectionNotify(XSelectionEvent *event)
 		/* We need to handle INCR as well */
 
 		out =  sec_init(encryption ? SEC_ENCRYPT : 0, 
-				20+nitems);
-		out_uint32_le(out, 12+nitems);
+				20+nitems+1);
+		out_uint32_le(out, 12+nitems+1);
 		out_uint32_le(out, 0x13);
 		out_uint16_le(out, 5);
 		out_uint16_le(out, 1);
-		out_uint32_le(out, nitems);
-		out_uint8p(out, data, nitems);
+		out_uint32_le(out, nitems+1);
+		out_uint8p(out, data, nitems+1);
 		/* Insert null string here? */
 		out_uint32_le(out, 0);
 		s_mark_end(out);
@@ -488,6 +488,8 @@ void cliprdr_handle_server_data_request(STREAM s)
 
 void cliprdr_callback(STREAM s) 
 {
+	static int failed_clipboard_acks = 0;
+	struct timeval timeval;
 	uint32 length, flags;
 	uint16 ptype0, ptype1;
 	DEBUG_CLIPBOARD(("cliprdr_callback called, clipboard data:\n"));
@@ -513,8 +515,29 @@ void cliprdr_callback(STREAM s)
 			// There is a strange pad in this packet that we might need some time,
 			// but probably not.
 			DEBUG_CLIPBOARD(("Received format announce ACK\n"));
+			failed_clipboard_acks = 0;
 			return;
 
+		} else if (3 == ptype0 && 2 == ptype1) 
+		{
+			DEBUG_CLIPBOARD(("Received failed clipboard format announce ACK, retrying\n"));
+
+			/* This is a fairly portable way to sleep 1/10 of
+			   a second.. */
+			timeval.tv_sec = 0;
+			timeval.tv_usec = 100;
+			select(0, NULL, NULL, NULL, &timeval);
+			if (failed_clipboard_acks < 3)
+			{
+				
+				cliprdr_send_format_announce();
+				/* Make sure we don't get stuck in this loop */
+				failed_clipboard_acks++;
+			} 
+			else
+			{
+				warning("Reached maximum number of clipboard format announce attempts. Pasting in Windows probably won't work well now.\n");
+			}
 		} else if (2 == ptype0 && 0 == ptype1) 
 		{
 			cliprdr_register_server_formats(s);
