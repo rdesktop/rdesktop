@@ -252,26 +252,27 @@ translate8to16(uint8 * data, uint8 * out, uint8 * end)
 	uint16 value;
 
 	if (g_arch_match)
-		REPEAT(*((uint16*)out) = g_colmap[*(data++)]; out += 2;
+		REPEAT(*((uint16 *) out) = g_colmap[*(data++)]; out += 2;
 		)
-	else if (g_xserver_be)
-	{
-		while (out < end)
-		{
-			value = (uint16) g_colmap[*(data++)];
-			*(out++) = value >> 8;
-			*(out++) = value;
-		}
-	}
 	else
+if (g_xserver_be)
+{
+	while (out < end)
 	{
-		while (out < end)
-		{
-			value = (uint16) g_colmap[*(data++)];
-			*(out++) = value;
-			*(out++) = value >> 8;
-		}
+		value = (uint16) g_colmap[*(data++)];
+		*(out++) = value >> 8;
+		*(out++) = value;
 	}
+}
+else
+{
+	while (out < end)
+	{
+		value = (uint16) g_colmap[*(data++)];
+		*(out++) = value;
+		*(out++) = value >> 8;
+	}
+}
 }
 
 /* little endian - conversion happens when colourmap is built */
@@ -308,30 +309,31 @@ translate8to32(uint8 * data, uint8 * out, uint8 * end)
 	uint32 value;
 
 	if (g_arch_match)
-		REPEAT(*((uint32 *)out) = g_colmap[*(data++)]; out += 4;
+		REPEAT(*((uint32 *) out) = g_colmap[*(data++)]; out += 4;
 		)
-	else if (g_xserver_be)
-	{
-		while (out < end)
-		{
-			value = g_colmap[*(data++)];
-			*(out++) = value >> 24;
-			*(out++) = value >> 16;
-			*(out++) = value >> 8;
-			*(out++) = value;
-		}
-	}
 	else
+if (g_xserver_be)
+{
+	while (out < end)
 	{
-		while (out < end)
-		{
-			value = g_colmap[*(data++)];
-			*(out++) = value;
-			*(out++) = value >> 8;
-			*(out++) = value >> 16;
-			*(out++) = value >> 24;
-		}
+		value = g_colmap[*(data++)];
+		*(out++) = value >> 24;
+		*(out++) = value >> 16;
+		*(out++) = value >> 8;
+		*(out++) = value;
 	}
+}
+else
+{
+	while (out < end)
+	{
+		value = g_colmap[*(data++)];
+		*(out++) = value;
+		*(out++) = value >> 8;
+		*(out++) = value >> 16;
+		*(out++) = value >> 24;
+	}
+}
 }
 
 static void
