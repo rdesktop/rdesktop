@@ -8,8 +8,7 @@
 
 CC       = cc
 CFLAGS   = -O2 -DKEYMAP_PATH=\"$(KEYMAP_PATH)\"
-INCLUDES = -I$(X11DIR)/include
-LDFLAGS  = -L$(X11DIR)/lib -lX11 -lXext
+LDFLAGS  =
 
 prefix      = /usr/local
 exec_prefix = $(prefix)
@@ -86,5 +85,5 @@ dist:
 .SUFFIXES: .c .o
 
 .c.o:
-	$(CC) $(CFLAGS) $(INCLUDES) -o $@ -c $<
+	$(CC) $(CFLAGS) -o $@ -c $<
 
