@@ -262,17 +262,17 @@ Not needed; fixed in another way in recent versions of rdesktop.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/spark-manpage-patch-19.4
 Description:
-TDB
+Adds a manual page. 
 Status:
-Not yet examined. 
+Not needed; rdesktop contains a manual page now. 
 
 
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/spark-manpage-patch-19.4-1
 Description:
-TDB
+Adds a manual page. 
 Status:
-Not yet examined. 
+Not needed; rdesktop contains a manual page now. 
 
 
 URL:
