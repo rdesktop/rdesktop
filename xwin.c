@@ -31,6 +31,8 @@ extern BOOL fullscreen;
 extern BOOL grab_keyboard;
 extern char title[];
 BOOL enable_compose = False;
+BOOL focused;
+BOOL mouse_in_wnd;
 
 Display *display;
 static int x_socket;
@@ -345,14 +347,16 @@ ui_create_window(void)
 	}
 
 	input_mask = KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask |
-		VisibilityChangeMask | FocusChangeMask | LeaveWindowMask;
+		VisibilityChangeMask | FocusChangeMask;
 
 	if (sendmotion)
 		input_mask |= PointerMotionMask;
 	if (ownbackstore)
 		input_mask |= ExposureMask;
-	if (fullscreen)
+	if (fullscreen || grab_keyboard)
 		input_mask |= EnterWindowMask;
+	if (grab_keyboard)
+		input_mask |= LeaveWindowMask;
 
 	if (IM != NULL)
 	{
@@ -373,6 +377,9 @@ ui_create_window(void)
 		XMaskEvent(display, VisibilityChangeMask, &xevent);
 	}
 	while (xevent.type != VisibilityNotify);
+
+	focused = False;
+	mouse_in_wnd = False;
 
 	return True;
 }
@@ -518,24 +525,41 @@ xwin_process_events(void)
 				break;
 
 			case FocusIn:
+				if (xevent.xfocus.mode == NotifyGrab)
+					break;
+				focused = True;
 				XQueryPointer(display, wnd, &wdummy, &wdummy, &dummy, &dummy, &dummy, &dummy, &state);
 				reset_modifier_keys(state);
-				if (grab_keyboard)
+				if (grab_keyboard && mouse_in_wnd)
 					XGrabKeyboard(display, wnd, True,
 						      GrabModeAsync, GrabModeAsync, CurrentTime);
 				break;
 
 			case FocusOut:
+				if (xevent.xfocus.mode == NotifyUngrab)
+					break;
+				focused = False;
 				if (xevent.xfocus.mode == NotifyWhileGrabbed)
 					XUngrabKeyboard(display, CurrentTime);
 				break;
 
 			case EnterNotify:
 				/* we only register for this event when in fullscreen mode */
-				XSetInputFocus(display, wnd, RevertToPointerRoot, CurrentTime);
+				/* or grab_keyboard */
+				mouse_in_wnd = True;
+				if (fullscreen)
+				{
+					XSetInputFocus(display, wnd, RevertToPointerRoot, CurrentTime);
+					break;
+				}
+				if (focused)
+					XGrabKeyboard(display, wnd, True,
+						      GrabModeAsync, GrabModeAsync, CurrentTime);
 				break;
 
 			case LeaveNotify:
+				/* we only register for this event when grab_keyboard */
+				mouse_in_wnd = False;
 				XUngrabKeyboard(display, CurrentTime);
 				break;
 
