@@ -218,7 +218,7 @@ ui_init(void)
 	display = XOpenDisplay(NULL);
 	if (display == NULL)
 	{
-		error("Failed to open display\n");
+		error("Failed to open display: %s\n", XDisplayName(NULL));
 		return False;
 	}
 
