@@ -191,6 +191,56 @@ ftruncate_growable(int fd, off_t length)
 	return 0;
 }
 
+/* Just like open(2), but if a open with O_EXCL fails, retry with
+   GUARDED semantics. This might be necessary because some filesystems
+   (such as NFS filesystems mounted from a unfsd server) doesn't
+   support O_EXCL. GUARDED semantics are subject to race conditions,
+   but we can live with that.
+*/
+static int
+open_weak_exclusive(const char *pathname, int flags, mode_t mode)
+{
+	int ret;
+	struct stat statbuf;
+
+	ret = open(pathname, flags, mode);
+	if (ret != -1 || !(flags & O_EXCL))
+	{
+		/* Success, or not using O_EXCL */
+		return ret;
+	}
+
+	/* An error occured, and we are using O_EXCL. In case the FS
+	   doesn't support O_EXCL, some kind of error will be
+	   returned. Unfortunately, we don't know which one. Linux
+	   2.6.8 seems to return 524, but I cannot find a documented
+	   #define for this case. So, we'll return only on errors that
+	   we know aren't related to O_EXCL. */
+	switch (errno)
+	{
+		case EACCES:
+		case EEXIST:
+		case EINTR:
+		case EISDIR:
+		case ELOOP:
+		case ENAMETOOLONG:
+		case ENOENT:
+		case ENOTDIR:
+			return ret;
+	}
+
+	/* Retry with GUARDED semantics */
+	if (stat(pathname, &statbuf) != -1)
+	{
+		/* File exists */
+		errno = EEXIST;
+		return -1;
+	}
+	else
+	{
+		return open(pathname, flags & ~O_EXCL, mode);
+	}
+}
 
 /* Enumeration of devices from rdesktop.c        */
 /* returns numer of units found and initialized. */
@@ -334,7 +384,7 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 			flags |= O_RDONLY;
 		}
 
-		handle = open(path, flags, mode);
+		handle = open_weak_exclusive(path, flags, mode);
 		if (handle == -1)
 		{
 			switch (errno)
