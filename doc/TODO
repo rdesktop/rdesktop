@@ -1,9 +1,16 @@
-* Implement support for RDP 5.X features, like cut-n-paste, sound and
-  serial port redirection.
+* Implement support for more RDP 5.X features:
+
+  * Sound
+
+  * Serial port redirection
+
+  * Drive redirection
+
 
 * Keymapping: Support non-dead versions of some dead keys, like
  "acute". It seems like RDP4 only supports the dead versions, but the
   non-dead ones can be simulated by sending a space after the dead
   key. 
+
 
 * Keymapping: Autodetect which keymap to use. 
