@@ -551,7 +551,7 @@ disk_query_information(NTHANDLE handle, uint32 info_class, STREAM out)
 NTSTATUS
 disk_set_information(NTHANDLE handle, uint32 info_class, STREAM in, STREAM out)
 {
-	uint32 device_id, length, file_attributes, ft_high, ft_low;
+	uint32 length, file_attributes, ft_high, ft_low;
 	char newname[256], fullpath[256];
 	struct fileinfo *pfinfo;
 
@@ -977,8 +977,6 @@ disk_query_directory(NTHANDLE handle, uint32 info_class, char *pattern, STREAM o
 static NTSTATUS
 disk_device_control(NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 {
-	uint32 result;
-
 	if (((request >> 16) != 20) || ((request >> 16) != 9))
 		return STATUS_INVALID_PARAMETER;
 
