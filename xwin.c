@@ -802,7 +802,8 @@ xwin_process_events(void)
 					/* Multi_key compatible version */
 				{
 					XmbLookupString(IC,
-							&xevent.xkey, str, sizeof(str), &keysym, &status);
+							&xevent.xkey, str, sizeof(str), &keysym,
+							&status);
 					if (!((status == XLookupKeySym) || (status == XLookupBoth)))
 					{
 						error("XmbLookupString failed with status 0x%x\n",
@@ -999,7 +1000,7 @@ xwin_process_events(void)
 				}
 				break;
 
-			/* clipboard stuff */
+				/* clipboard stuff */
 			case SelectionNotify:
 				xclip_handle_SelectionNotify(&xevent.xselection);
 				break;
@@ -1719,4 +1720,3 @@ ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy)
 
 	XFree(image);
 }
-

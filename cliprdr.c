@@ -34,7 +34,7 @@
 static VCHANNEL *cliprdr_channel;
 
 static void
-cliprdr_send_packet(uint16 type, uint16 status, uint8 *data, uint32 length)
+cliprdr_send_packet(uint16 type, uint16 status, uint8 * data, uint32 length)
 {
 	STREAM s;
 
@@ -45,7 +45,7 @@ cliprdr_send_packet(uint16 type, uint16 status, uint8 *data, uint32 length)
 	out_uint16_le(s, status);
 	out_uint32_le(s, length);
 	out_uint8p(s, data, length);
-	out_uint32(s, 0); /* pad? */
+	out_uint32(s, 0);	/* pad? */
 	s_mark_end(s);
 	channel_send(s, cliprdr_channel);
 }
@@ -56,7 +56,7 @@ cliprdr_send_text_format_announce(void)
 	uint8 buffer[36];
 
 	buf_out_uint32(buffer, CF_TEXT);
-	memset(buffer+4, 0, sizeof(buffer)-4); /* description */
+	memset(buffer + 4, 0, sizeof(buffer) - 4);	/* description */
 	cliprdr_send_packet(CLIPRDR_FORMAT_ANNOUNCE, CLIPRDR_REQUEST, buffer, sizeof(buffer));
 }
 
@@ -66,12 +66,12 @@ cliprdr_send_blah_format_announce(void)
 	uint8 buffer[36];
 
 	buf_out_uint32(buffer, CF_OEMTEXT);
-	memset(buffer+4, 0, sizeof(buffer)-4); /* description */
+	memset(buffer + 4, 0, sizeof(buffer) - 4);	/* description */
 	cliprdr_send_packet(CLIPRDR_FORMAT_ANNOUNCE, CLIPRDR_REQUEST, buffer, sizeof(buffer));
 }
 
 void
-cliprdr_send_native_format_announce(uint8 *data, uint32 length)
+cliprdr_send_native_format_announce(uint8 * data, uint32 length)
 {
 	cliprdr_send_packet(CLIPRDR_FORMAT_ANNOUNCE, CLIPRDR_REQUEST, data, length);
 }
@@ -86,7 +86,7 @@ cliprdr_send_data_request(uint32 format)
 }
 
 void
-cliprdr_send_data(uint8 *data, uint32 length)
+cliprdr_send_data(uint8 * data, uint32 length)
 {
 	cliprdr_send_packet(CLIPRDR_DATA_RESPONSE, CLIPRDR_RESPONSE, data, length);
 }
@@ -145,7 +145,10 @@ cliprdr_process(STREAM s)
 BOOL
 cliprdr_init(void)
 {
-	cliprdr_channel = channel_register("cliprdr", CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_ENCRYPT_RDP \
-				 | CHANNEL_OPTION_COMPRESS_RDP | CHANNEL_OPTION_SHOW_PROTOCOL, cliprdr_process);
+	cliprdr_channel =
+		channel_register("cliprdr",
+				 CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_ENCRYPT_RDP |
+				 CHANNEL_OPTION_COMPRESS_RDP | CHANNEL_OPTION_SHOW_PROTOCOL,
+				 cliprdr_process);
 	return (cliprdr_channel != NULL);
 }

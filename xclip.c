@@ -37,7 +37,8 @@ static int have_primary = 0;
 static int rdesktop_is_selection_owner = 0;
 
 static void
-xclip_provide_selection(XSelectionRequestEvent *req, Atom type, unsigned int format, uint8 *data, uint32 length)
+xclip_provide_selection(XSelectionRequestEvent * req, Atom type, unsigned int format, uint8 * data,
+			uint32 length)
 {
 	XEvent xev;
 
@@ -95,7 +96,8 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 			text_target = XInternAtom(display, "TEXT", False);
 			for (i = 0; i < nitems; i++)
 			{
-				DEBUG_CLIPBOARD(("Target %d: %s\n", i, XGetAtomName(display, supported_targets[i])));
+				DEBUG_CLIPBOARD(("Target %d: %s\n", i,
+						 XGetAtomName(display, supported_targets[i])));
 				if (supported_targets[i] == text_target)
 				{
 					DEBUG_CLIPBOARD(("Other party supports TEXT, choosing that as best_target\n"));
@@ -105,7 +107,8 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 			XFree(data);
 		}
 
-		XConvertSelection(display, primary_atom, best_target, rdesktop_clipboard_target_atom, wnd, event->time);
+		XConvertSelection(display, primary_atom, best_target,
+				  rdesktop_clipboard_target_atom, wnd, event->time);
 		return;
 	}
 
@@ -115,19 +118,19 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 		goto fail;
 	}
 
-	cliprdr_send_data(data, nitems+1);
+	cliprdr_send_data(data, nitems + 1);
 	XFree(data);
 
 	if (!rdesktop_is_selection_owner)
 		cliprdr_send_text_format_announce();
 	return;
 
-fail:
+      fail:
 	cliprdr_send_data(NULL, 0);
 }
 
 void
-xclip_handle_SelectionRequest(XSelectionRequestEvent *event)
+xclip_handle_SelectionRequest(XSelectionRequestEvent * event)
 {
 	unsigned long nitems, bytes_left;
 	uint32 *wanted_format;
@@ -141,19 +144,20 @@ xclip_handle_SelectionRequest(XSelectionRequestEvent *event)
 
 	if (event->target == targets_atom)
 	{
-		xclip_provide_selection(event, XA_ATOM, 32, (uint8 *)&targets, NUM_TARGETS);
+		xclip_provide_selection(event, XA_ATOM, 32, (uint8 *) & targets, NUM_TARGETS);
 		return;
 	}
 	else if (event->target == timestamp_atom)
 	{
-		xclip_provide_selection(event, XA_INTEGER, 32, (uint8 *)&last_gesturetime, 1);
+		xclip_provide_selection(event, XA_INTEGER, 32, (uint8 *) & last_gesturetime, 1);
 		return;
 	}
 	else if (event->target == rdesktop_clipboard_formats_atom)
 	{
 		res = XGetWindowProperty(display, event->requestor,
-				rdesktop_clipboard_target_atom, 0, 1, True, XA_INTEGER,
-				&type, &format, &nitems, &bytes_left, (unsigned char **) &wanted_format);
+					 rdesktop_clipboard_target_atom, 0, 1, True, XA_INTEGER,
+					 &type, &format, &nitems, &bytes_left,
+					 (unsigned char **) &wanted_format);
 		format = (res == Success) ? *wanted_format : CF_TEXT;
 	}
 	else
@@ -176,7 +180,7 @@ xclip_handle_SelectionClear(void)
 }
 
 void
-xclip_handle_PropertyNotify(XPropertyEvent *event)
+xclip_handle_PropertyNotify(XPropertyEvent * event)
 {
 	unsigned long nitems, bytes_left;
 	int format, res;
@@ -186,14 +190,15 @@ xclip_handle_PropertyNotify(XPropertyEvent *event)
 	if (event->atom != rdesktop_clipboard_formats_atom)
 		return;
 
-	if (have_primary) /* from us */
+	if (have_primary)	/* from us */
 		return;
 
 	if (event->state == PropertyNewValue)
 	{
 		res = XGetWindowProperty(display, DefaultRootWindow(display),
-			rdesktop_clipboard_formats_atom, 0, XMaxRequestSize(display), False, XA_STRING,
-			&type, &format, &nitems, &bytes_left, &data);
+					 rdesktop_clipboard_formats_atom, 0,
+					 XMaxRequestSize(display), False, XA_STRING, &type, &format,
+					 &nitems, &bytes_left, &data);
 
 		if ((res == Success) && (nitems > 0))
 		{
@@ -221,7 +226,8 @@ ui_clip_format_announce(char *data, uint32 length)
 
 	have_primary = 1;
 	XChangeProperty(display, DefaultRootWindow(display),
-			rdesktop_clipboard_formats_atom, XA_STRING, 8, PropModeReplace, data, length);
+			rdesktop_clipboard_formats_atom, XA_STRING, 8, PropModeReplace, data,
+			length);
 
 	XSetSelectionOwner(display, clipboard_atom, wnd, last_gesturetime);
 	if (XGetSelectionOwner(display, clipboard_atom) != wnd)
@@ -232,7 +238,7 @@ ui_clip_format_announce(char *data, uint32 length)
 void
 ui_clip_handle_data(char *data, uint32 length)
 {
-	xclip_provide_selection(&selection_request, XA_STRING, 8, data, length-1);
+	xclip_provide_selection(&selection_request, XA_STRING, 8, data, length - 1);
 }
 
 void
@@ -248,7 +254,7 @@ ui_clip_request_data(uint32 format)
 				XA_INTEGER, 32, PropModeReplace, (unsigned char *) &format, 1);
 
 		XConvertSelection(display, primary_atom, rdesktop_clipboard_formats_atom,
-					rdesktop_clipboard_target_atom, wnd, CurrentTime);
+				  rdesktop_clipboard_target_atom, wnd, CurrentTime);
 		return;
 	}
 
@@ -256,7 +262,7 @@ ui_clip_request_data(uint32 format)
 	if (selectionowner != None)
 	{
 		XConvertSelection(display, primary_atom, targets_atom,
-					rdesktop_clipboard_target_atom, wnd, CurrentTime);
+				  rdesktop_clipboard_target_atom, wnd, CurrentTime);
 		return;
 	}
 
@@ -265,7 +271,7 @@ ui_clip_request_data(uint32 format)
 	if (selectionowner != None)
 	{
 		XConvertSelection(display, clipboard_atom, targets_atom,
-					rdesktop_clipboard_target_atom, wnd, CurrentTime);
+				  rdesktop_clipboard_target_atom, wnd, CurrentTime);
 		return;
 	}
 
@@ -301,6 +307,7 @@ xclip_init(void)
 
 	/* rdesktop sets _RDESKTOP_CLIPBOARD_FORMATS on the root window when acquiring the clipboard.
 	   Other interested rdesktops can use this to notify their server of the available formats. */
-	rdesktop_clipboard_formats_atom = XInternAtom(display, "_RDESKTOP_CLIPBOARD_FORMATS", False);
+	rdesktop_clipboard_formats_atom =
+		XInternAtom(display, "_RDESKTOP_CLIPBOARD_FORMATS", False);
 	XSelectInput(display, DefaultRootWindow(display), PropertyChangeMask);
 }

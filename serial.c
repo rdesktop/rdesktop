@@ -72,35 +72,77 @@ get_termios(void)
 	speed = cfgetispeed(&termios);
 	switch (speed)
 	{
-		case B75:	baud_rate = 75; break;
-		case B110:	baud_rate = 110; break;
-		case B134:	baud_rate = 134; break;
-		case B150:	baud_rate = 150; break;
-		case B300:	baud_rate = 300; break;
-		case B600:	baud_rate = 600; break;
-		case B1200:	baud_rate = 1200; break;
-		case B1800:	baud_rate = 1800; break;
-		case B2400:	baud_rate = 2400; break;
-		case B4800:	baud_rate = 4800; break;
-		case B9600:	baud_rate = 9600; break;
-		case B19200:	baud_rate = 19200; break;
-		case B38400:	baud_rate = 38400; break;
-		case B57600:	baud_rate = 57600; break;
-		case B115200:	baud_rate = 115200; break;
-		default:	baud_rate = 0; break;
+		case B75:
+			baud_rate = 75;
+			break;
+		case B110:
+			baud_rate = 110;
+			break;
+		case B134:
+			baud_rate = 134;
+			break;
+		case B150:
+			baud_rate = 150;
+			break;
+		case B300:
+			baud_rate = 300;
+			break;
+		case B600:
+			baud_rate = 600;
+			break;
+		case B1200:
+			baud_rate = 1200;
+			break;
+		case B1800:
+			baud_rate = 1800;
+			break;
+		case B2400:
+			baud_rate = 2400;
+			break;
+		case B4800:
+			baud_rate = 4800;
+			break;
+		case B9600:
+			baud_rate = 9600;
+			break;
+		case B19200:
+			baud_rate = 19200;
+			break;
+		case B38400:
+			baud_rate = 38400;
+			break;
+		case B57600:
+			baud_rate = 57600;
+			break;
+		case B115200:
+			baud_rate = 115200;
+			break;
+		default:
+			baud_rate = 0;
+			break;
 	}
 
 	speed = cfgetospeed(&termios);
 	dtr = (speed == B0) ? 0 : 1;
 
 	stop_bits = (termios.c_cflag & CSTOPB) ? STOP_BITS_2 : STOP_BITS_1;
-	parity = (termios.c_cflag & PARENB) ? ((termios.c_cflag & PARODD) ? ODD_PARITY : EVEN_PARITY) : NO_PARITY;
+	parity = (termios.
+		  c_cflag & PARENB) ? ((termios.
+					c_cflag & PARODD) ? ODD_PARITY : EVEN_PARITY) : NO_PARITY;
 	switch (termios.c_cflag & CSIZE)
 	{
-		case CS5: word_length = 5; break;
-		case CS6: word_length = 6; break;
-		case CS7: word_length = 7; break;
-		default:  word_length = 8; break;
+		case CS5:
+			word_length = 5;
+			break;
+		case CS6:
+			word_length = 6;
+			break;
+		case CS7:
+			word_length = 7;
+			break;
+		default:
+			word_length = 8;
+			break;
 	}
 
 	return True;
@@ -113,22 +155,54 @@ set_termios(void)
 
 	switch (baud_rate)
 	{
-		case 75:	speed = B75; break;
-		case 110:	speed = B110; break;
-		case 134:	speed = B134; break;
-		case 150:	speed = B150; break;
-		case 300:	speed = B300; break;
-		case 600:	speed = B600; break;
-		case 1200:	speed = B1200; break;
-		case 1800:	speed = B1800; break;
-		case 2400:	speed = B2400; break;
-		case 4800:	speed = B4800; break;
-		case 9600:	speed = B9600; break;
-		case 19200:	speed = B19200; break;
-		case 38400:	speed = B38400; break;
-		case 57600:	speed = B57600; break;
-		case 115200:	speed = B115200; break;
-		default:	speed = B0; break;
+		case 75:
+			speed = B75;
+			break;
+		case 110:
+			speed = B110;
+			break;
+		case 134:
+			speed = B134;
+			break;
+		case 150:
+			speed = B150;
+			break;
+		case 300:
+			speed = B300;
+			break;
+		case 600:
+			speed = B600;
+			break;
+		case 1200:
+			speed = B1200;
+			break;
+		case 1800:
+			speed = B1800;
+			break;
+		case 2400:
+			speed = B2400;
+			break;
+		case 4800:
+			speed = B4800;
+			break;
+		case 9600:
+			speed = B9600;
+			break;
+		case 19200:
+			speed = B19200;
+			break;
+		case 38400:
+			speed = B38400;
+			break;
+		case 57600:
+			speed = B57600;
+			break;
+		case 115200:
+			speed = B115200;
+			break;
+		default:
+			speed = B0;
+			break;
 	}
 
 	/* on systems with separate ispeed and ospeed, we can remember the speed
@@ -136,7 +210,7 @@ set_termios(void)
 	cfsetispeed(&termios, speed);
 	cfsetospeed(&termios, dtr ? speed : 0);
 
-	termios.c_cflag &= ~(CSTOPB|PARENB|PARODD|CSIZE);
+	termios.c_cflag &= ~(CSTOPB | PARENB | PARODD | CSIZE);
 	switch (stop_bits)
 	{
 		case STOP_BITS_2:
@@ -149,22 +223,30 @@ set_termios(void)
 			termios.c_cflag |= PARENB;
 			break;
 		case ODD_PARITY:
-			termios.c_cflag |= PARENB|PARODD;
+			termios.c_cflag |= PARENB | PARODD;
 			break;
 	}
 	switch (word_length)
 	{
-		case 5:  termios.c_cflag |= CS5; break;
-		case 6:  termios.c_cflag |= CS6; break;
-		case 7:  termios.c_cflag |= CS7; break;
-		default: termios.c_cflag |= CS8; break;
+		case 5:
+			termios.c_cflag |= CS5;
+			break;
+		case 6:
+			termios.c_cflag |= CS6;
+			break;
+		case 7:
+			termios.c_cflag |= CS7;
+			break;
+		default:
+			termios.c_cflag |= CS8;
+			break;
 	}
 
 	tcsetattr(serial_fd, TCSANOW, &termios);
 }
 
 static NTSTATUS
-serial_create(HANDLE *handle)
+serial_create(HANDLE * handle)
 {
 	/* XXX do we have to handle concurrent open attempts? */
 	serial_fd = open("/dev/ttyS0", O_RDWR);
@@ -186,14 +268,14 @@ serial_close(HANDLE handle)
 }
 
 static NTSTATUS
-serial_read(HANDLE handle, uint8 *data, uint32 length, uint32 *result)
+serial_read(HANDLE handle, uint8 * data, uint32 length, uint32 * result)
 {
 	*result = read(serial_fd, data, length);
 	return STATUS_SUCCESS;
 }
 
 static NTSTATUS
-serial_write(HANDLE handle, uint8 *data, uint32 length, uint32 *result)
+serial_write(HANDLE handle, uint8 * data, uint32 length, uint32 * result)
 {
 	*result = write(serial_fd, data, length);
 	return STATUS_SUCCESS;
@@ -253,7 +335,7 @@ serial_device_control(HANDLE handle, uint32 request, STREAM in, STREAM out)
 			break;
 		case SERIAL_GET_HANDFLOW:
 			out_uint32_le(out, 0);
-			out_uint32_le(out, 3); /* Xon/Xoff */
+			out_uint32_le(out, 3);	/* Xon/Xoff */
 			out_uint32_le(out, 0);
 			out_uint32_le(out, 0);
 			break;
@@ -309,12 +391,10 @@ serial_device_control(HANDLE handle, uint32 request, STREAM in, STREAM out)
 	return STATUS_SUCCESS;
 }
 
-DEVICE_FNS serial_fns =
-{
+DEVICE_FNS serial_fns = {
 	serial_create,
 	serial_close,
 	serial_read,
 	serial_write,
 	serial_device_control
 };
-

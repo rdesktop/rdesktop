@@ -889,8 +889,8 @@ rdp_main_loop(void)
 	}
 	return True;
 	/* We want to detect if we got a clean shutdown, but we
-	can't. Se above.  
-	return False;  */
+	   can't. Se above.  
+	   return False;  */
 }
 
 /* Establish a connection up to the RDP layer */

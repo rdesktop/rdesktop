@@ -67,7 +67,7 @@ channel_register(char *name, uint32 flags, void (*callback) (STREAM))
 }
 
 STREAM
-channel_init(VCHANNEL *channel, uint32 length)
+channel_init(VCHANNEL * channel, uint32 length)
 {
 	STREAM s;
 
@@ -77,7 +77,7 @@ channel_init(VCHANNEL *channel, uint32 length)
 }
 
 void
-channel_send(STREAM s, VCHANNEL *channel)
+channel_send(STREAM s, VCHANNEL * channel)
 {
 	uint32 length, flags;
 	uint32 thislength, remaining;
@@ -89,7 +89,7 @@ channel_send(STREAM s, VCHANNEL *channel)
 
 	thislength = MIN(length, CHANNEL_CHUNK_LENGTH);
 	remaining = length - thislength;
-	flags = (remaining == 0) ? CHANNEL_FLAG_FIRST|CHANNEL_FLAG_LAST : CHANNEL_FLAG_FIRST;
+	flags = (remaining == 0) ? CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST : CHANNEL_FLAG_FIRST;
 	if (channel->flags & CHANNEL_OPTION_SHOW_PROTOCOL)
 		flags |= CHANNEL_FLAG_SHOW_PROTOCOL;
 
@@ -168,4 +168,3 @@ channel_process(STREAM s, uint16 mcs_channel)
 		}
 	}
 }
-

@@ -274,7 +274,7 @@ main(int argc, char *argv[])
 			case 'e':
 				encryption = False;
 				break;
-             		case 'E':
+			case 'E':
 				packet_encryption = False;
 				break;
 			case 'm':
@@ -384,7 +384,7 @@ main(int argc, char *argv[])
 
 	/* By setting encryption to False here, we have an encrypted login 
 	   packet but unencrypted transfer of other packets */
-	if (!packet_encryption) 
+	if (!packet_encryption)
 		encryption = False;
 
 
@@ -401,7 +401,7 @@ main(int argc, char *argv[])
 	rdp_disconnect();
 	ui_deinit();
 
-	if (True == rdp_retval) 
+	if (True == rdp_retval)
 		return 0;
 	else
 		return 2;

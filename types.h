@@ -125,11 +125,10 @@ typedef uint32 HANDLE;
 
 typedef struct _DEVICE_FNS
 {
-	NTSTATUS (*create)(HANDLE *handle);
-	NTSTATUS (*close)(HANDLE handle);
-	NTSTATUS (*read)(HANDLE handle, uint8 *data, uint32 length, uint32 *result);
-	NTSTATUS (*write)(HANDLE handle, uint8 *data, uint32 length, uint32 *result);
-	NTSTATUS (*device_control)(HANDLE handle, uint32 request, STREAM in, STREAM out);
+	NTSTATUS(*create) (HANDLE * handle);
+	NTSTATUS(*close) (HANDLE handle);
+	NTSTATUS(*read) (HANDLE handle, uint8 * data, uint32 length, uint32 * result);
+	NTSTATUS(*write) (HANDLE handle, uint8 * data, uint32 length, uint32 * result);
+	NTSTATUS(*device_control) (HANDLE handle, uint32 request, STREAM in, STREAM out);
 }
 DEVICE_FNS;
-

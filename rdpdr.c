@@ -20,9 +20,9 @@ rdpdr_send_connect(void)
 
 	s = channel_init(rdpdr_channel, 12);
 	out_uint8a(s, magic, 4);
-	out_uint16_le(s, 1); /* unknown */
+	out_uint16_le(s, 1);	/* unknown */
 	out_uint16_le(s, 5);
-	out_uint32_be(s, 0x815ed39d); /* IP address (use 127.0.0.1) 0x815ed39d */
+	out_uint32_be(s, 0x815ed39d);	/* IP address (use 127.0.0.1) 0x815ed39d */
 	s_mark_end(s);
 	channel_send(s, rdpdr_channel);
 }
@@ -31,16 +31,16 @@ void
 rdpdr_send_name(void)
 {
 	uint8 magic[4] = "rDNC";
-	uint32 hostlen = (strlen(hostname)+1)*2;
+	uint32 hostlen = (strlen(hostname) + 1) * 2;
 	STREAM s;
 
-	s = channel_init(rdpdr_channel, 16+hostlen);
+	s = channel_init(rdpdr_channel, 16 + hostlen);
 	out_uint8a(s, magic, 4);
-	out_uint16_le(s, 0x63); /* unknown */
+	out_uint16_le(s, 0x63);	/* unknown */
 	out_uint16_le(s, 0x72);
 	out_uint32(s, 0);
 	out_uint32_le(s, hostlen);
-	rdp_out_unistr(s, hostname, hostlen-2);
+	rdp_out_unistr(s, hostname, hostlen - 2);
 	s_mark_end(s);
 	channel_send(s, rdpdr_channel);
 }
@@ -49,15 +49,15 @@ void
 rdpdr_send_available(void)
 {
 	uint8 magic[4] = "rDAD";
-	char *driver = "Digital turbo PrintServer 20"; /* Fairly generic PostScript driver */
+	char *driver = "Digital turbo PrintServer 20";	/* Fairly generic PostScript driver */
 	char *printer = "PostScript";
-	uint32 driverlen = (strlen(driver)+1)*2;
-	uint32 printerlen = (strlen(printer)+1)*2;
+	uint32 driverlen = (strlen(driver) + 1) * 2;
+	uint32 printerlen = (strlen(printer) + 1) * 2;
 	STREAM s;
 
-	s = channel_init(rdpdr_channel, 8+20);
+	s = channel_init(rdpdr_channel, 8 + 20);
 	out_uint8a(s, magic, 4);
-	out_uint32_le(s, 1); /* Number of devices */
+	out_uint32_le(s, 1);	/* Number of devices */
 
 #if 1
 	out_uint32_le(s, 0x1);	/* Device type 0x1 - serial */
@@ -67,35 +67,35 @@ rdpdr_send_available(void)
 	out_uint32(s, 0);
 #endif
 #if 0
-	out_uint32_le(s, 0x2); /* Device type 0x2 - parallel */
+	out_uint32_le(s, 0x2);	/* Device type 0x2 - parallel */
 	out_uint32_le(s, 0);
 	out_uint8p(s, "LPT2", 4);
 	out_uint8s(s, 4);
 	out_uint32(s, 0);
 #endif
 #if 1
-	out_uint32_le(s, 0x4); /* Device type 0x4 - printer */
+	out_uint32_le(s, 0x4);	/* Device type 0x4 - printer */
 	out_uint32_le(s, 1);
 	out_uint8p(s, "PRN1", 4);
 	out_uint8s(s, 4);
-	out_uint32_le(s, 24+driverlen+printerlen); /* length of extra info */
-	out_uint32_le(s, 2); /* unknown */
-	out_uint8s(s, 8); /* unknown */
-	out_uint32_le(s, driverlen); /* length of driver name */
-	out_uint32_le(s, printerlen); /* length of printer name */
-	out_uint32(s, 0); /* unknown */
-	rdp_out_unistr(s, driver, driverlen-2);
-	rdp_out_unistr(s, printer, printerlen-2);
+	out_uint32_le(s, 24 + driverlen + printerlen);	/* length of extra info */
+	out_uint32_le(s, 2);	/* unknown */
+	out_uint8s(s, 8);	/* unknown */
+	out_uint32_le(s, driverlen);	/* length of driver name */
+	out_uint32_le(s, printerlen);	/* length of printer name */
+	out_uint32(s, 0);	/* unknown */
+	rdp_out_unistr(s, driver, driverlen - 2);
+	rdp_out_unistr(s, printer, printerlen - 2);
 #endif
 #if 0
-	out_uint32_le(s, 0x8); /* Device type 0x8 - disk */
+	out_uint32_le(s, 0x8);	/* Device type 0x8 - disk */
 	out_uint32_le(s, 0);
 	out_uint8p(s, "Z:", 2);
 	out_uint8s(s, 6);
 	out_uint32(s, 0);
 #endif
 #if 0
-	out_uint32_le(s, 0x20); /* Device type 0x20 - smart card */
+	out_uint32_le(s, 0x20);	/* Device type 0x20 - smart card */
 	out_uint32_le(s, 0);
 	out_uint8p(s, "SCARD", 5);
 	out_uint8s(s, 3);
@@ -107,7 +107,8 @@ rdpdr_send_available(void)
 }
 
 void
-rdpdr_send_completion(uint32 device, uint32 id, uint32 status, uint32 result, uint8 *buffer, uint32 length)
+rdpdr_send_completion(uint32 device, uint32 id, uint32 status, uint32 result, uint8 * buffer,
+		      uint32 length)
 {
 	uint8 magic[4] = "rDCI";
 	STREAM s;
@@ -120,7 +121,7 @@ rdpdr_send_completion(uint32 device, uint32 id, uint32 status, uint32 result, ui
 	out_uint32_le(s, result);
 	out_uint8p(s, buffer, length);
 	s_mark_end(s);
-	hexdump(s->channel_hdr+8, s->end-s->channel_hdr-8);
+	hexdump(s->channel_hdr + 8, s->end - s->channel_hdr - 8);
 	channel_send(s, rdpdr_channel);
 }
 
@@ -211,7 +212,7 @@ rdpdr_process(STREAM s)
 	char *magic;
 
 	printf("rdpdr_process\n");
-	hexdump(s->p, s->end-s->p);
+	hexdump(s->p, s->end - s->p);
 	in_uint8p(s, magic, 4);
 
 	if ((magic[0] == 'r') && (magic[1] == 'D'))
@@ -247,6 +248,8 @@ rdpdr_process(STREAM s)
 BOOL
 rdpdr_init(void)
 {
-	rdpdr_channel = channel_register("rdpdr", CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_COMPRESS_RDP, rdpdr_process);
+	rdpdr_channel =
+		channel_register("rdpdr", CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_COMPRESS_RDP,
+				 rdpdr_process);
 	return (rdpdr_channel != NULL);
 }

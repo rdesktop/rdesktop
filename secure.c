@@ -406,7 +406,7 @@ sec_out_mcs_data(STREAM s)
 	unsigned int i;
 
 	if (g_num_channels > 0)
-		length += g_num_channels*12 + 8;
+		length += g_num_channels * 12 + 8;
 
 	if (hostlen > 30)
 		hostlen = 30;
@@ -779,7 +779,7 @@ sec_process_mcs_data(STREAM s)
 			case SEC_TAG_SRV_CHANNELS:
 				/* FIXME: We should parse this information and
 				   use it to map RDP5 channels to MCS 
-				   channels */ 
+				   channels */
 				break;
 
 			default:
