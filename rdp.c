@@ -140,6 +140,9 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 	int len_password = 2 * strlen(password);
 	int len_program = 2 * strlen(program);
 	int len_directory = 2 * strlen(directory);
+	int len_ip = 2 * strlen("127.0.0.1");
+	int len_dll = 2 * strlen("C:\\WINNT\\System32\\mstscax.dll");
+	int packetlen = 0;
 	uint32 sec_flags = encryption ? (SEC_LOGON_INFO | SEC_ENCRYPT) : SEC_LOGON_INFO;
 	STREAM s;
 
@@ -165,55 +168,98 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 	}
 	else
 	{
+		flags |= RDP_LOGON_BLOB;
 		DEBUG_RDP5(("Sending RDP5-style Logon packet\n"));
-		s = sec_init(sec_flags, 12 + (flags & RDP_LOGON_AUTO ? 2 : 0) + 6 + (flags & RDP_LOGON_AUTO ? len_password : 0) + len_domain + len_user + 4 + len_program + len_directory + 30 + 2 + 60 + 32 + 20 + 32 + 20);	/* Phew! */
+		packetlen = 4 + // Unknown uint32
+			4 + // flags
+			2 + // len_domain
+			2 + // len_user
+			(flags & RDP_LOGON_AUTO ? 2 : 0) + // len_password
+			(flags & RDP_LOGON_BLOB ? 2 : 0) + // Length of BLOB
+			2 + // len_program
+			2 + // len_directory
+			(0 < len_domain ? len_domain : 2) + // domain 
+			len_user +
+			(flags & RDP_LOGON_AUTO ? len_password : 0) +
+			0 + // We have no 512 byte BLOB. Perhaps we must?
+			(flags & RDP_LOGON_BLOB && !(flags & RDP_LOGON_AUTO) ? 2 : 0) + // After the BLOB is a unknown int16. If there is a BLOB, that is.
+			(0 < len_program ? len_program : 2) +
+			(0 < len_directory ? len_directory : 2) +
+			2 + // Unknown (2)
+			2 + // Client ip length
+			len_ip + // Client ip
+			2 +  // DLL string length
+			len_dll + // DLL string
+			2 +  // Unknown
+			2 +  // Unknown
+			64 +  // Time zone #0
+			2 +  // Unknown
+			64 +  // Time zone #1
+			32; // Unknown
+			
+		s = sec_init(sec_flags, packetlen);	
+		DEBUG_RDP5(("Called sec_init with packetlen %d\n", packetlen));
 
-		out_uint32(s, 0);
+		out_uint32(s, 0); // Unknown
 		out_uint32_le(s, flags);
 		out_uint16_le(s, len_domain);
 		out_uint16_le(s, len_user);
 		if (flags & RDP_LOGON_AUTO)
 		{
 			out_uint16_le(s, len_password);
+
 		}
-		out_uint16(s, 0);	/* Seems to be length of a 512 byte blob with
-					   completely unknown data, but hopefully we'll do
-					   with a 0 length block as well */
+		if (flags & RDP_LOGON_BLOB && !(flags & RDP_LOGON_AUTO)) {
+			out_uint16_le(s, 0);
+		}
 		out_uint16_le(s, len_program);
 		out_uint16_le(s, len_directory);
-		rdp_out_unistr(s, domain, len_domain);
+		if (0 < len_domain)
+			rdp_out_unistr(s, domain, len_domain);
+		else 
+			out_uint16_le(s, 0);
+		rdp_out_unistr(s, user, len_user);
 		if (flags & RDP_LOGON_AUTO)
 		{
 			rdp_out_unistr(s, password, len_password);
 		}
-		rdp_out_unistr(s, user, len_user);
-		out_uint16(s, 0);
-		out_uint16(s, 0);
-		if (0 < len_program)
+		if (flags & RDP_LOGON_BLOB && !(flags & RDP_LOGON_AUTO))  {
+			out_uint16_le(s, 0);
+		}
+		if (0 < len_program) {
 			rdp_out_unistr(s, program, len_program);
-		if (0 < len_directory)
+			
+		} else {
+			out_uint16_le(s, 0);
+		}
+		if (0 < len_directory) {
 			rdp_out_unistr(s, directory, len_directory);
-		out_uint8s(s, 30);	/* Some kind of client data - let's see if the server
-					   handles zeros well.. */
-		out_uint16_le(s, 60);
-		rdp_out_unistr(s, "C:\\WINNT\\System32\\mstscax.dll", 58);
-		out_uint32_be(s, 0x88ffffff);
-		rdp_out_unistr(s, "GTB, normaltid", 2 * strlen("GTB, normaltid") - 2);
-		out_uint8s(s, 30 - 2 * strlen("GTP, normaltid"));
+		} else {
+			out_uint16_le(s, 0);
+		} 
+		out_uint16_le(s, 2);
+		out_uint16_le(s, len_ip+2); // Length of client ip
+		rdp_out_unistr(s, "127.0.0.1", len_ip);
+		out_uint16_le(s, len_dll+2);
+		rdp_out_unistr(s, "C:\\WINNT\\System32\\mstscax.dll", len_dll);
+		out_uint16_le(s, 0xffc4);
+		out_uint16_le(s, 0xffff);
+		rdp_out_unistr(s, "GTB, normaltid", 
+			       2*strlen("GTB, normaltid"));
+		out_uint8s(s, 62-2*strlen("GTB, normaltid"));
+			       
 
 		out_uint32_le(s, 0x0a0000);
 		out_uint32_le(s, 0x050000);
-		out_uint32_le(s, 2);
-		out_uint32(s, 0);
-		out_uint32_le(s, 0xffffffc4);
-		out_uint32_le(s, 0xfffffffe);
-		out_uint32_le(s, 0x0f);
-		out_uint32(s, 0);
+		out_uint32_le(s, 3);
+		out_uint32_le(s, 0);
+		out_uint32_le(s, 0);
+		
+		rdp_out_unistr(s, "GTB, sommartid", 
+			       2*strlen("GTB, sommartid"));
+		out_uint8s(s, 62-2*strlen("GTB, sommartid"));
 
-		rdp_out_unistr(s, "GTB, sommartid", 2 * strlen("GTB, sommartid") - 1);
-		out_uint8s(s, 30 - 2 * strlen("GTP, sommartid"));
-
-		out_uint32_le(s, 0x030000);
+		out_uint32_le(s, 0x30000);
 		out_uint32_le(s, 0x050000);
 		out_uint32_le(s, 2);
 		out_uint32(s, 0);
@@ -221,6 +267,7 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 		out_uint32_le(s, 0xfffffffe);
 		out_uint32_le(s, 0x0f);
 		out_uint32(s, 0);
+
 
 	}
 	s_mark_end(s);

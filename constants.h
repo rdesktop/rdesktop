@@ -230,6 +230,7 @@ enum RDP_INPUT_DEVICE
 /* Logon flags */
 #define RDP_LOGON_NORMAL	0x33
 #define RDP_LOGON_AUTO		0x8
+#define RDP_LOGON_BLOB		0x100
 
 /* Keymap flags */
 #define MapRightShiftMask   (1<<0)
