@@ -992,6 +992,7 @@ ui_patblt(uint8 opcode,
 	  /* brush */ BRUSH *brush, int bgcolour, int fgcolour)
 {
 	Pixmap fill;
+	uint8 i, ipattern[8];
 
 	SET_FUNCTION(opcode);
 
@@ -1003,7 +1004,9 @@ ui_patblt(uint8 opcode,
 			break;
 
 		case 3:	/* Pattern */
-			fill = (Pixmap)ui_create_glyph(8, 8, brush->pattern);
+			for (i = 0; i != 8; i++)
+				ipattern[7 - i] = brush->pattern[i];
+			fill = (Pixmap) ui_create_glyph(8, 8, ipattern);
 
 			SET_FOREGROUND(bgcolour);
 			SET_BACKGROUND(fgcolour);
