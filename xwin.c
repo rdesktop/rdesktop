@@ -57,6 +57,7 @@ static HCURSOR g_null_cursor = NULL;
 static Atom g_protocol_atom, g_kill_atom;
 static BOOL g_focused;
 static BOOL g_mouse_in_wnd;
+static BOOL g_arch_match = False; /* set to True if RGB XServer and little endian */
 
 /* endianness */
 static BOOL g_host_be;
@@ -597,9 +598,21 @@ translate24to32(uint8 * data, uint8 * out, uint8 * end)
 static uint8 *
 translate_image(int width, int height, uint8 * data)
 {
-	int size = width * height * g_bpp / 8;
-	uint8 *out = (uint8 *) xmalloc(size);
-	uint8 *end = out + size;
+	int size;
+	uint8 *out;
+	uint8 *end;
+
+	/* if server and xserver bpp match, */
+	/* and arch(endian) matches, no need to translate */
+	/* just return data */
+	if (g_depth > 8)
+		if (g_arch_match)
+			if (g_depth == g_server_bpp)
+				return data;
+
+	size = width * height * (g_bpp / 8);
+	out = (uint8 *) xmalloc(size);
+	end = out + size;
 
 	switch (g_server_bpp)
 	{
@@ -737,6 +750,10 @@ ui_init(void)
 		TrueColorVisual = True;
 	}
 
+	test = 1;
+	g_host_be = !(BOOL) (*(uint8 *) (&test));
+	g_xserver_be = (ImageByteOrder(g_display) == MSBFirst);
+
 	if ((g_server_bpp == 8) && ((!TrueColorVisual) || (g_depth <= 8)))
 	{
 		/* we use a colourmap, so the default visual should do */
@@ -763,6 +780,11 @@ ui_init(void)
 		calculate_shifts(vi.red_mask, &g_red_shift_r, &g_red_shift_l);
 		calculate_shifts(vi.blue_mask, &g_blue_shift_r, &g_blue_shift_l);
 		calculate_shifts(vi.green_mask, &g_green_shift_r, &g_green_shift_l);
+
+		/* if RGB video and averything is little endian */
+		if (vi.red_mask > vi.green_mask && vi.green_mask > vi.blue_mask)
+			if (!g_xserver_be && !g_host_be)
+				g_arch_match = True;
 	}
 
 	pfm = XListPixmapFormats(g_display, &i);
@@ -801,10 +823,6 @@ ui_init(void)
 		warning("External BackingStore not available, using internal\n");
 		g_ownbackstore = True;
 	}
-
-	test = 1;
-	g_host_be = !(BOOL) (*(uint8 *) (&test));
-	g_xserver_be = (ImageByteOrder(g_display) == MSBFirst);
 
 	/*
 	 * Determine desktop size
@@ -1381,7 +1399,7 @@ ui_create_bitmap(int width, int height, uint8 * data)
 	XPutImage(g_display, bitmap, g_gc, image, 0, 0, 0, 0, width, height);
 
 	XFree(image);
-	if (!g_owncolmap)
+	if (tdata != data)
 		xfree(tdata);
 	return (HBITMAP) bitmap;
 }
@@ -1420,7 +1438,7 @@ ui_paint_bitmap(int x, int y, int cx, int cy, int width, int height, uint8 * dat
 	}
 
 	XFree(image);
-	if (!g_owncolmap)
+	if (tdata != data)
 		xfree(tdata);
 }
 
