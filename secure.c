@@ -412,7 +412,8 @@ sec_out_mcs_data(STREAM s)
 	if (hostlen > 30)
 		hostlen = 30;
 
-	out_uint16_be(s, 5);	/* unknown */
+	/* Generic Conference Control (T.124) ConferenceCreateRequest */
+	out_uint16_be(s, 5);
 	out_uint16_be(s, 0x14);
 	out_uint8(s, 0x7c);
 	out_uint16_be(s, 1);
@@ -425,7 +426,7 @@ sec_out_mcs_data(STREAM s)
 	out_uint16_le(s, 0xc001);
 	out_uint8(s, 0);
 
-	out_uint32_le(s, 0x61637544);	/* "Duca", as in Ducati. */
+	out_uint32_le(s, 0x61637544);	/* OEM ID: "Duca", as in Ducati. */
 	out_uint16_be(s, ((length - 14) | 0x8000));	/* remaining length */
 
 	/* Client information */
@@ -782,7 +783,7 @@ sec_process_mcs_data(STREAM s)
 	uint8 *next_tag;
 	uint8 len;
 
-	in_uint8s(s, 21);	/* header (T.124 stuff, probably) */
+	in_uint8s(s, 21);	/* header (T.124 ConferenceCreateResponse) */
 	in_uint8(s, len);
 	if (len & 0x80)
 		in_uint8(s, len);
