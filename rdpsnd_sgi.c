@@ -3,7 +3,7 @@
    Sound Channel Process Functions - SGI/IRIX
    Copyright (C) Matthew Chapman 2003
    Copyright (C) GuoJunBo guojunbo@ict.ac.cn 2003
-   Copyright (C) Michael Gernoth mike@zerfleddert.de 2003
+   Copyright (C) Jeremy Meng voidfoo@cwazy.co.uk 2004
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
