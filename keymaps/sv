@@ -36,6 +36,7 @@ question 0x0c shift
 backslash 0x0c altgr
 questiondown 0x0c shift altgr
 dead_acute 0x0d
+acute 0x0d
 dead_grave 0x0d shift
 plusminus 0x0d altgr
 notsign 0x0d shift altgr
@@ -96,7 +97,6 @@ paragraph 0x29 altgr
 threequarters 0x29 shift altgr
 apostrophe 0x2b
 asterisk 0x2b shift
-acute 0x2b altgr
 multiply 0x2b shift altgr
 guillemotleft 0x2c altgr
 less 0x2c shift altgr
