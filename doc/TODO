@@ -1,7 +1,5 @@
 * Implement support for more RDP 5.X features:
 
-  * Sound
-
   * Serial port redirection
 
   * Drive redirection
