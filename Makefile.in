@@ -28,6 +28,7 @@ RDPOBJ   = tcp.o iso.o mcs.o secure.o licence.o rdp.o orders.o bitmap.o cache.o 
 X11OBJ   = rdesktop.o xwin.o xkeymap.o ewmhints.o xclip.o cliprdr.o
 VNCOBJ   = vnc/rdp2vnc.o vnc/vnc.o vnc/xkeymap.o vnc/x11stubs.o
 
+.PHONY: all
 all: $(TARGETS)
 
 rdesktop: $(X11OBJ) $(SOUNDOBJ) $(RDPOBJ)
@@ -48,19 +49,23 @@ vnc/xkeymap.o: xkeymap.c
 vnc/x11stubs.o: vnc/x11stubs.c
 	$(CC) $(CFLAGS) $(VNCINC) -o vnc/x11stubs.o -c vnc/x11stubs.c
 
+.PHONY: install
 install: installbin installkeymaps installman
 
+.PHONY: installbin
 installbin: rdesktop
 	mkdir -p $(DESTDIR)/$(bindir)
 	$(INSTALL) rdesktop $(DESTDIR)/$(bindir)
 	strip $(DESTDIR)/$(bindir)/rdesktop
 	chmod 755 $(DESTDIR)/$(bindir)/rdesktop
 
+.PHONY: installman
 installman: doc/rdesktop.1
 	mkdir -p $(DESTDIR)/$(mandir)/man1
 	cp doc/rdesktop.1 $(DESTDIR)/$(mandir)/man1
 	chmod 644 $(DESTDIR)/$(mandir)/man1/rdesktop.1
 
+.PHONY: installkeymaps
 installkeymaps:
 	mkdir -p $(DESTDIR)/$(KEYMAP_PATH)
 # Prevent copying the CVS directory
@@ -69,13 +74,15 @@ installkeymaps:
 	cp keymaps/modifiers $(DESTDIR)/$(KEYMAP_PATH)
 	chmod 644 $(DESTDIR)/$(KEYMAP_PATH)/*
 
+.PHONY: proto
 proto:
 	cproto -DMAKE_PROTO -DWITH_OPENSSL -o proto.h *.c
 
+.PHONY: clean
 clean:
 	rm -f *.o *~ vnc/*.o vnc/*~ rdesktop rdp2vnc
 
-
+.PHONY: dist
 dist: rdesktop-$(VERSION).tar.gz
 
 rdesktop-$(VERSION).tar.gz: Makefile configure
@@ -113,6 +120,7 @@ rdesktop-$(VERSION).tar.gz: Makefile configure
 	rdesktop-$(VERSION)/doc/rdesktop.1 )
 	rm -rf /tmp/rdesktop-make-dist-dir
 
+.PHONY: dist-noversion
 dist-noversion: rdesktop.tar.gz
 
 rdesktop.tar.gz: rdesktop-$(VERSION).tar.gz
