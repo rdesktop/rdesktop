@@ -945,8 +945,6 @@ ui_create_window(void)
 void
 ui_destroy_window(void)
 {
-	ui_destroy_cursor(g_null_cursor);
-
 	if (g_IC != NULL)
 		XDestroyIC(g_IC);
 
