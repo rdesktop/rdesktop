@@ -135,13 +135,24 @@ AC_ARG_WITH(libvncserver,
 #
 # sound
 #
+AC_ARG_WITH(libao,
+    [  --with-libao=DIR        look for libao at DIR/include, DIR/lib],
+    [
+    CFLAGS="$CFLAGS -I$withval/include"
+    CPPFLAGS="$CPPFLAGS -I$withval/include"
+    LIBS="$LIBS -L$withval/lib"
+    rpath="$rpath:$withval/lib"
+    ]
+)
+
 sound="yes"
 AC_ARG_WITH(sound,
-    [  --with-sound            select sound system ("oss", "sgi" or "sun") ],
+    [  --with-sound            select sound system ("oss", "sgi", "sun" or "libao") ],
     [ 
     sound="$withval" 
     ])
 if test "$sound" = yes; then
+    AC_CHECK_HEADER(ao/ao.h, [sound=libao])
     AC_CHECK_HEADER(sys/soundcard.h, [sound=oss])
     AC_CHECK_HEADER(dmedia/audio.h, [sound=sgi])
     AC_CHECK_HEADER(sys/audioio.h, [sound=sun])
@@ -158,11 +169,17 @@ elif test "$sound" = sgi; then
 elif test "$sound" = sun; then
     SOUNDOBJ="rdpsnd.o rdpsnd_sun.o"
     AC_DEFINE(WITH_RDPSND)
+elif test "$sound" = libao; then
+    SOUNDOBJ="rdpsnd.o rdpsnd_libao.o"
+    LDFLAGS="$LDFLAGS -lao"
+    AC_DEFINE(WITH_RDPSND)
 else
-   AC_MSG_WARN([sound support disabled (no sys/soundcard.h or sys/audioio.h)])
-   AC_MSG_WARN([Currently supported systems are Open Sound System (oss), SGI AL (sgi) and Sun/BSD (sun)])
+   AC_MSG_WARN([sound support disabled])
+   AC_MSG_WARN([Currently supported systems are Open Sound System (oss), SGI AL (sgi), Sun/BSD (sun) and libao])
 fi
 AC_SUBST(SOUNDOBJ)
+
+AC_MSG_CHECKING([checking for sound support])
 
 #
 # dirfd
