@@ -152,7 +152,7 @@ Special keys
 * The combination Ctrl-Alt-Enter toggles between fullscreen and
   non-fullscreen mode. 
 
-* Meta, Hyper and Super will be treated as windows keys. RDP4 does not
+* Meta, Hyper and Super are treated as windows keys. RDP4 does not
   support the windows keys though, so if you are running RDP4, these
   keys will translate to Ctrl-Esc. 
 
