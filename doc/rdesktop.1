@@ -114,7 +114,9 @@ Following devices are currently supported:
 Redirects serial devices on your client to the
 server. Note that if you need to change any settings on the serial device(s),
 do so with an appropriate tool before starting rdesktop. In most
-OSes you would use stty.
+OSes you would use stty. Bidirectional/Read support requires Windows XP or newer.
+In Windows 2000 it will create a port, but it's not seamless, most
+shell programs will not work with it.
 .TP
 .BR "-r disk:<driveletter>=<path>,..."
 Redirects a path to the drive letter of your choice on the server.
@@ -122,6 +124,9 @@ Redirects a path to the drive letter of your choice on the server.
 .TP
 .BR "-r lptport:<lptport>=<device>,..."
 Redirects parallel devices on your client to the server.
+Bidirectional/Read support requires Windows XP or newer. In Windows 2000
+it will create a port, but it's not seamless, most shell programs will not work with
+it.
 .TP
 .BR "-r printer:<printername>[=<driver>],..."
 Redirects a printer queue on the client to the server. The <printername>
