@@ -99,6 +99,9 @@ dist:
 	rdesktop-$(VERSION)/doc/keymapping.txt \
 	rdesktop-$(VERSION)/doc/keymap-names.txt \
 	rdesktop-$(VERSION)/doc/ipv6.txt \
+	rdesktop-$(VERSION)/doc/licensing.txt \
+	rdesktop-$(VERSION)/doc/patches.txt \
+	rdesktop-$(VERSION)/doc/redirection.txt \
 	rdesktop-$(VERSION)/doc/rdesktop.1 )
 	rm -rf /tmp/rdesktop-make-dist-dir
 
