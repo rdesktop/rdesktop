@@ -22,7 +22,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <dirent.h>
+#ifdef HAVE_SYS_SELECT_H
 #include <sys/select.h>
+#else
+#include <sys/time.h>
+#include <sys/types.h>
+#include <unistd.h>
+#endif
 
 #define VERSION "1.3.1"
 

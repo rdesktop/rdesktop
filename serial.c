@@ -3,6 +3,17 @@
 #include <termios.h>
 #include <strings.h>
 #include <sys/ioctl.h>
+
+#ifdef HAVE_SYS_MODEM_H
+#include <sys/modem.h>
+#endif
+#ifdef HAVE_SYS_FILIO_H
+#include <sys/filio.h>
+#endif
+#ifdef HAVE_SYS_STRTIO_H
+#include <sys/strtio.h>
+#endif
+
 #include "rdesktop.h"
 
 #ifdef WITH_DEBUG_SERIAL
@@ -111,7 +122,6 @@
 /* FIONREAD should really do the same thing as TIOCINQ, where it is
  * not available */
 #ifndef TIOCINQ
-#include <sys/filio.h>
 #define TIOCINQ FIONREAD
 #endif
 

@@ -16,6 +16,11 @@ AC_PATH_XTRA
 AC_SEARCH_LIBS(socket, socket)
 AC_SEARCH_LIBS(inet_aton, resolv)
 
+AC_CHECK_HEADER(sys/select.h, AC_DEFINE(HAVE_SYS_SELECT_H))
+AC_CHECK_HEADER(sys/modem.h, AC_DEFINE(HAVE_SYS_MODEM_H))
+AC_CHECK_HEADER(sys/filio.h, AC_DEFINE(HAVE_SYS_FILIO_H))
+AC_CHECK_HEADER(sys/strtio.h, AC_DEFINE(HAVE_SYS_STRTIO_H))
+
 rpath=""
 
 #
