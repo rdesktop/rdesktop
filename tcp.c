@@ -43,7 +43,7 @@ tcp_init(uint32 maxlen)
 {
 	if (maxlen > out.size)
 	{
-		out.data = (uint8*)xrealloc(out.data, maxlen);
+		out.data = (uint8 *) xrealloc(out.data, maxlen);
 		out.size = maxlen;
 	}
 
@@ -80,7 +80,7 @@ tcp_recv(uint32 length)
 
 	if (length > in.size)
 	{
-		in.data = (uint8*)xrealloc(in.data, length);
+		in.data = (uint8 *) xrealloc(in.data, length);
 		in.size = length;
 	}
 
@@ -143,10 +143,10 @@ tcp_connect(char *server)
 	setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (void *) &true_value, sizeof(true_value));
 
 	in.size = 4096;
-	in.data = (uint8*)xmalloc(in.size);
+	in.data = (uint8 *) xmalloc(in.size);
 
 	out.size = 4096;
-	out.data = (uint8*)xmalloc(out.size);
+	out.data = (uint8 *) xmalloc(out.size);
 
 	return True;
 }
