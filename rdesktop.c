@@ -425,7 +425,9 @@ main(int argc, char *argv[])
 	if (!ui_init())
 		return 1;
 
-	/* rdpsnd_init(); */
+#ifdef WITH_RDPSND
+	rdpsnd_init();
+#endif
 	/* rdpdr_init(); */
 
 	if (!rdp_connect(server, flags, domain, password, shell, directory))

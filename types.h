@@ -119,6 +119,17 @@ typedef struct _VCHANNEL
 }
 VCHANNEL;
 
+/* RDPSND */
+typedef struct {
+    uint16 wFormatTag;
+    uint16 nChannels;
+    uint32 nSamplesPerSec;
+    uint32 nAvgBytesPerSec;
+    uint16 nBlockAlign;
+    uint16 wBitsPerSample;
+    uint16 cbSize;
+} WAVEFORMATEX;
+
 /* RDPDR */
 typedef uint32 NTSTATUS;
 typedef uint32 HANDLE;

@@ -235,6 +235,19 @@ if [ ! -c /dev/random -a ! -c /dev/urandom ]; then
     fi
 fi
 
+# Check for OSS sound support
+
+if [ -f /usr/include/sys/soundcard.h ]; then
+    echo Sound support enabled: Open Sound System
+    echo
+    echo "SOUNDOBJ    = rdpsnd.o rdpsnd_oss.o" >>Makeconf
+    cflags="$cflags -DWITH_RDPSND"
+else
+    echo "WARNING: sound support disabled (no /usr/include/sys/soundcard.h)"
+    echo "Only Open Sound System audio is supported at present"
+    echo
+fi
+
 
 # Platform-specific options
 

@@ -66,6 +66,11 @@ static BOOL g_moving_wnd;
 static int g_move_x_offset = 0;
 static int g_move_y_offset = 0;
 
+#ifdef WITH_RDPSND
+extern int g_dsp_fd;
+extern BOOL g_dsp_busy;
+#endif
+
 /* MWM decorations */
 #define MWM_HINTS_DECORATIONS   (1L << 1)
 #define PROP_MOTIF_WM_HINTS_ELEMENTS    5
@@ -1078,7 +1083,7 @@ int
 ui_select(int rdp_socket)
 {
 	int n = (rdp_socket > g_x_socket) ? rdp_socket + 1 : g_x_socket + 1;
-	fd_set rfds;
+	fd_set rfds, wfds;
 
 	FD_ZERO(&rfds);
 
@@ -1090,10 +1095,20 @@ ui_select(int rdp_socket)
 			return 0;
 
 		FD_ZERO(&rfds);
+		FD_ZERO(&wfds);
 		FD_SET(rdp_socket, &rfds);
 		FD_SET(g_x_socket, &rfds);
 
-		switch (select(n, &rfds, NULL, NULL, NULL))
+#ifdef WITH_RDPSND
+		/* FIXME: there should be an API for registering fds */
+		if (g_dsp_busy)
+		{
+			FD_SET(g_dsp_fd, &wfds);
+			n = (g_dsp_fd + 1 > n) ? g_dsp_fd + 1 : n;
+                }
+#endif
+
+		switch (select(n, &rfds, &wfds, NULL, NULL))
 		{
 			case -1:
 				error("select: %s\n", strerror(errno));
@@ -1104,6 +1119,11 @@ ui_select(int rdp_socket)
 
 		if (FD_ISSET(rdp_socket, &rfds))
 			return 1;
+
+#ifdef WITH_RDPSND
+		if (FD_ISSET(g_dsp_fd, &wfds))
+			wave_out_play();
+#endif
 	}
 }
 
