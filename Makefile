@@ -7,7 +7,7 @@
 # Configuration defaults
 
 CC       = cc
-CFLAGS   = -Wall -O2 -DKEYMAP_PATH=\"$(KEYMAP_PATH)\"
+CFLAGS   = -O2 -DKEYMAP_PATH=\"$(KEYMAP_PATH)\"
 LDFLAGS  =
 
 prefix      = /usr/local
