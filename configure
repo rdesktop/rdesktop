@@ -296,6 +296,30 @@ fi
 
 
 # Platform-specific options
+cat >conftest.$$.c << EOF
+#include <stdlib.h>
+#include <signal.h>
+int main(int argc, char **argv)
+{
+	unsigned char test[8] = { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 };
+	signal(SIGBUS, exit);
+	signal(SIGABRT, exit);
+	signal(SIGSEGV, exit);
+	if (*((unsigned int *)(test + 1)) != 0x55443322 && *((unsigned int *)(test + 1)) != 0x22334455) {
+		return 1;
+	}
+	return 0;
+}
+EOF
+$cc -o conftest.$$ conftest.$$.c
+need_alignment=yes
+./conftest.$$ && need_alignment=no
+if [ "$need_alignment" = "yes" ]; then
+	echo "Architecture needs alignment"
+	echo
+	cflags="$cflags -DNEED_ALIGNMENT"
+fi
+rm conftest.$$ conftest.$$.c
 
 # strip leading colon from rpath
 rpath=`echo $rpath |sed 's/^://'`
