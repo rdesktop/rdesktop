@@ -150,9 +150,10 @@ Applied.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/norbert_percent.txt
 Description:
-TDB
+Makes is possible to specify RDP geometry based a percent value of the
+current desktop size. 
 Status:
-Not yet examined. 
+Not applied. I don't think many people will need this. 
 
 
 URL:
