@@ -67,6 +67,10 @@
 extern "C" {
 #endif
 
+void error(char *format, ...);
+void *xmalloc(int size);
+void xfree(void *mem);
+
 #define BNerr(context,err)   error("crypto error\n");
 #define OPENSSL_malloc(size) xmalloc(size)
 #define OPENSSL_free(ptr)    xfree(ptr);
