@@ -51,7 +51,7 @@ add_to_keymap(char *keyname, uint8 scancode, uint16 modifiers, char *mapname)
 	keysym = XStringToKeysym(keyname);
 	if (keysym == NoSymbol)
 	{
-		error("Bad keysym %s in keymap %s\n", keyname, mapname);
+		warning("Bad keysym %s in keymap %s\n", keyname, mapname);
 		return;
 	}
 
@@ -344,7 +344,7 @@ xkeymap_translate_key(uint32 keysym, unsigned int keycode, unsigned int state)
 	}
 
 	if (keymap_loaded)
-		error("No translation for (keysym 0x%lx, %s)\n", keysym, get_ksname(keysym));
+		warning("No translation for (keysym 0x%lx, %s)\n", keysym, get_ksname(keysym));
 
 	/* not in keymap, try to interpret the raw scancode */
 	if ((keycode >= min_keycode) && (keycode <= 0x60))

@@ -40,6 +40,7 @@ void *xmalloc(int size);
 void *xrealloc(void *oldmem, int size);
 void xfree(void *mem);
 void error(char *format, ...);
+void warning(char *format, ...);
 void unimpl(char *format, ...);
 void hexdump(unsigned char *p, unsigned int len);
 /* rdp.c */

@@ -447,6 +447,19 @@ error(char *format, ...)
 	va_end(ap);
 }
 
+/* report a warning */
+void
+warning(char *format, ...)
+{
+	va_list ap;
+
+	fprintf(stderr, "WARNING: ");
+
+	va_start(ap, format);
+	vfprintf(stderr, format, ap);
+	va_end(ap);
+}
+
 /* report an unimplemented protocol feature */
 void
 unimpl(char *format, ...)

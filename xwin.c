@@ -128,7 +128,7 @@ mwm_hide_decorations(void)
 	hintsatom = XInternAtom(display, "_MOTIF_WM_HINTS", False);
 	if (!hintsatom)
 	{
-		error("Failed to get atom _MOTIF_WM_HINTS\n");
+		warning("Failed to get atom _MOTIF_WM_HINTS: probably your window manager does not support MWM hints\n");
 		return;
 	}
 
@@ -300,10 +300,7 @@ ui_init(void)
 	{
 		xcolmap = DefaultColormapOfScreen(screen);
 		if (depth <= 8)
-		{
-			printf("You're using a screen depth of 8-bits or lower\n");
-			printf("If you get scewed colours, try the -C switch\n");
-		}
+			warning("Screen depth is 8 bits or lower: you may want to use -C for a private colourmap\n");
 	}
 
 	gc = XCreateGC(display, RootWindowOfScreen(screen), 0, NULL);
@@ -322,9 +319,7 @@ ui_init(void)
 
 		if (get_current_workarea(&xpos, &ypos, &width, &height) < 0)
 		{
-			error("Failed to get workarea.\n");
-			error("Perhaps your window manager does not support EWMH?\n");
-			error("Defaulting to geometry 800x600\n");
+			warning("Failed to get workarea: probably your window manager does not support extended hints\n");
 			width = 800;
 			height = 600;
 		}
