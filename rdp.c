@@ -27,6 +27,10 @@
 #ifdef HAVE_ICONV_H
 #include <iconv.h>
 #endif
+
+#ifndef ICONV_CONST
+#define ICONV_CONST ""
+#endif
 #endif
 
 extern uint16 g_mcs_userid;
@@ -173,7 +177,7 @@ rdp_out_unistr(STREAM s, char *string, int len)
 				g_codepage, WINDOWS_CODEPAGE, (int)iconv_h);
 			return;
 		}
-		if (iconv(iconv_h, (const char**)&pin, &i, &pout, &o) == (size_t)-1)
+		if (iconv(iconv_h, (ICONV_CONST char**)&pin, &i, &pout, &o) == (size_t)-1)
 		{
 			iconv_close(iconv_h);
 			iconv_h = (iconv_t)-1;
@@ -183,7 +187,7 @@ rdp_out_unistr(STREAM s, char *string, int len)
 		pin = string; pout = s->p;
 	}
 
-	if (iconv(iconv_h, (const char**)&pin, &ibl, &pout, &obl) == (size_t)-1)
+	if (iconv(iconv_h, (ICONV_CONST char**)&pin, &ibl, &pout, &obl) == (size_t)-1)
 	{
 		iconv_close(iconv_h);
 		iconv_h = (iconv_t)-1;
@@ -242,7 +246,7 @@ rdp_in_unistr(STREAM s, char *string, int uni_len)
 		}
 	}
 
-	if (iconv(iconv_h, (const char**)&pin, &ibl, &pout, &obl) == (size_t)-1)
+	if (iconv(iconv_h, (ICONV_CONST char**)&pin, &ibl, &pout, &obl) == (size_t)-1)
 	{
 		iconv_close(iconv_h);
 		iconv_h = (iconv_t)-1;
