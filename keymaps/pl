@@ -38,7 +38,6 @@ equal 0x0d
 plus 0x0d shift
 dead_cedilla 0x0d altgr
 dead_ogonek 0x0d shift altgr
-at 0x10 altgr
 Greek_OMEGA 0x10 shift altgr
 lstroke 0x11 altgr
 Lstroke 0x11 shift altgr
