@@ -63,7 +63,9 @@ dead_diaeresis 0x1a altgr
 dead_abovering 0x1a shift altgr
 dead_diaeresis 0x1b
 dead_circumflex 0x1b shift
+asciicircum 0x01b shift
 dead_tilde 0x1b altgr
+asciitilde 0x1b altgr
 dead_caron 0x1b shift altgr
 ordfeminine 0x1e altgr
 masculine 0x1e shift altgr
@@ -78,16 +80,13 @@ ENG 0x22 shift altgr
 hstroke 0x23 altgr
 Hstroke 0x23 shift altgr
 kra 0x25 altgr
-ampersand 0x25 shift altgr
 lstroke 0x26 altgr
 Lstroke 0x26 shift altgr
 oslash 0x27
 Ooblique 0x27 shift
-dead_acute 0x27 altgr
 dead_doubleacute 0x27 shift altgr
 ae 0x28
 AE 0x28 shift
-dead_circumflex 0x28 altgr
 dead_caron 0x28 shift altgr
 bar 0x29
 section 0x29 shift
@@ -95,17 +94,12 @@ brokenbar 0x29 altgr
 paragraph 0x29 shift altgr
 apostrophe 0x2b
 asterisk 0x2b shift
-dead_doubleacute 0x2b altgr
 multiply 0x2b shift altgr
 guillemotleft 0x2c altgr
-less 0x2c shift altgr
 guillemotright 0x2d altgr
-greater 0x2d shift altgr
 copyright 0x2e altgr
 leftdoublequotemark 0x2f altgr
-grave 0x2f shift altgr
 rightdoublequotemark 0x30 altgr
-apostrophe 0x30 shift altgr
 mu 0x32 altgr
 masculine 0x32 shift altgr
 comma 0x33
