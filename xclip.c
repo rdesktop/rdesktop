@@ -36,6 +36,51 @@ static Atom targets[NUM_TARGETS];
 static int have_primary = 0;
 static int rdesktop_is_selection_owner = 0;
 
+
+/* Replace CR-LF to LF (well, rather removing all CR:s) This is done
+   in-place. The length is updated. Handles embedded nulls */
+static void
+crlf2lf(uint8 * data, uint32 * length)
+{
+	uint8 *dst, *src;
+	src = dst = data;
+	while (src < data + *length)
+	{
+		if (*src != '\x0d')
+			*dst++ = *src;
+		src++;
+	}
+	*length = dst - data;
+}
+
+/* Translate LF to CR-LF. To do this, we must allocate more memory.  
+   The length is updated. */
+static uint8 *
+lf2crlf(uint8 * data, uint32 * length)
+{
+	uint8 *result, *p, *o;
+
+	/* Worst case: Every char is LF */
+	result = xmalloc(*length * 2);
+
+	p = data;
+	o = result;
+
+	while (p < data + *length)
+	{
+		if (*p == '\x0a')
+			*o++ = '\x0d';
+		*o++ = *p++;
+	}
+	*length = o - result;
+
+	/* Convenience */
+	*o++ = '\0';
+
+	return result;
+}
+
+
 static void
 xclip_provide_selection(XSelectionRequestEvent * req, Atom type, unsigned int format, uint8 * data,
 			uint32 length)
@@ -86,6 +131,7 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 		goto fail;
 	}
 
+	/* Negotiate target format */
 	if (event->target == targets_atom)
 	{
 		/* FIXME: We should choose format here based on what the server wanted */
@@ -102,6 +148,7 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 				{
 					DEBUG_CLIPBOARD(("Other party supports TEXT, choosing that as best_target\n"));
 					best_target = text_target;
+					break;
 				}
 			}
 			XFree(data);
@@ -118,7 +165,22 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 		goto fail;
 	}
 
-	cliprdr_send_data(data, nitems + 1);
+	/* Translate linebreaks, but only if not getting data from
+	   other rdesktop instance */
+	if (event->target != rdesktop_clipboard_formats_atom)
+	{
+		uint8 *translated_data;
+		uint32 length = nitems;
+
+		DEBUG_CLIPBOARD(("Translating linebreaks before sending data\n"));
+		translated_data = lf2crlf(data, &length);
+		cliprdr_send_data(translated_data, length + 1);
+		xfree(translated_data);	/* Not the same thing as XFree! */
+	}
+	else
+	{
+		cliprdr_send_data(data, nitems + 1);
+	}
 	XFree(data);
 
 	if (!rdesktop_is_selection_owner)
@@ -240,6 +302,21 @@ ui_clip_format_announce(uint8 * data, uint32 length)
 void
 ui_clip_handle_data(uint8 * data, uint32 length)
 {
+	if (selection_request.target != rdesktop_clipboard_formats_atom)
+	{
+		uint8 *firstnull;
+
+		/* translate linebreaks */
+		crlf2lf(data, &length);
+
+		/* Only send data up to null byte, if any */
+		firstnull = strchr(data, '\0');
+		if (firstnull)
+		{
+			length = firstnull - data + 1;
+		}
+	}
+
 	xclip_provide_selection(&selection_request, XA_STRING, 8, data, length - 1);
 }
 
