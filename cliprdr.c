@@ -313,7 +313,7 @@ cliprdr_handle_SelectionNotify(XSelectionEvent * event)
 
 
 		XFree(data);
-		if (!rdesktop_clipboard_target_atom)
+		if (!rdesktop_is_selection_owner)
 			cliprdr_send_format_announce();
 
 	}
