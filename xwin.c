@@ -517,6 +517,7 @@ toggle_fullscreen()
 	XFreePixmap(display, pixmap);
 }
 
+/* Process all events in Xlib queue */
 static void
 xwin_process_events()
 {
@@ -529,15 +530,6 @@ xwin_process_events()
 	char *ksname = NULL;
 	char str[256];
 	Status status;
-
-	/* Refresh keyboard mapping if it has changed. This is important for
-	   Xvnc, since it allocates keycodes dynamically */
-	if (XCheckTypedEvent(display, MappingNotify, &xevent))
-	{
-		if (xevent.xmapping.request == MappingKeyboard
-		    || xevent.xmapping.request == MappingModifier)
-			XRefreshKeyboardMapping(&xevent.xmapping);
-	}
 
 	while (XCheckMaskEvent(display, ~0, &xevent))
 	{
@@ -651,6 +643,15 @@ xwin_process_events()
 					  xevent.xexpose.height,
 					  xevent.xexpose.x, xevent.xexpose.y);
 				break;
+
+			case MappingNotify:
+				/* Refresh keyboard mapping if it has changed. This is important for
+				   Xvnc, since it allocates keycodes dynamically */
+				if (xevent.xmapping.request == MappingKeyboard
+				    || xevent.xmapping.request == MappingModifier)
+					XRefreshKeyboardMapping(&xevent.xmapping);
+				break;
+
 		}
 	}
 }
@@ -660,11 +661,15 @@ ui_select(int rdp_socket)
 {
 	int n = (rdp_socket > x_socket) ? rdp_socket + 1 : x_socket + 1;
 	fd_set rfds;
+	XEvent xevent;
 
 	FD_ZERO(&rfds);
 
 	while (True)
 	{
+		/* Process any events already in queue */
+		xwin_process_events();
+
 		FD_ZERO(&rfds);
 		FD_SET(rdp_socket, &rfds);
 		if (display != NULL)
@@ -683,7 +688,11 @@ ui_select(int rdp_socket)
 		}
 
 		if (FD_ISSET(x_socket, &rfds))
-			xwin_process_events();
+		{
+			/* Move new events from socket to queue */
+			XPeekEvent(display, &xevent);
+			continue;
+		}
 
 		if (FD_ISSET(rdp_socket, &rfds))
 			return;
