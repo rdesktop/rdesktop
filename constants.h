@@ -159,6 +159,8 @@ enum RDP_INPUT_DEVICE
 #define MOUSE_FLAG_BUTTON1      0x1000
 #define MOUSE_FLAG_BUTTON2      0x2000
 #define MOUSE_FLAG_BUTTON3      0x4000
+#define MOUSE_FLAG_BUTTON4      0x0280
+#define MOUSE_FLAG_BUTTON5      0x0380
 #define MOUSE_FLAG_DOWN         0x8000
 
 /* Raster operation masks */
