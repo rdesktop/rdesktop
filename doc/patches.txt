@@ -278,9 +278,9 @@ Not needed; rdesktop contains a manual page now.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/spark_xinerama-patch2
 Description:
-TDB
+Adds XINERAMA support to rdesktop. 
 Status:
-Not yet examined. 
+Not applied yet. TDB. 
 
 
 URL:
