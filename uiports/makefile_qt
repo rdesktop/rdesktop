@@ -21,3 +21,4 @@ clean:
 	rm -f qtrdesktop
 	rm -f *.o
 	rm -f ../*.o
+	rm -f moc_qtwin.cpp

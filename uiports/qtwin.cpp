@@ -1,7 +1,7 @@
-/*
+/* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    User interface services - QT Window System
-   Copyright (C) Jay Sorg 2004
+   Copyright (C) Jay Sorg 2004-2005
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
