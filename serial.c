@@ -395,15 +395,15 @@ set_termios(SERIAL_DEVICE * pser_inf, NTHANDLE serial_fd)
 			break;
 	}
 
-#if 0
+#ifdef CBAUD
+	ptermios->c_cflag &= ~CBAUD;
+	ptermios->c_cflag |= speed;
+#else
 	/* on systems with separate ispeed and ospeed, we can remember the speed
 	   in ispeed while changing DTR with ospeed */
 	cfsetispeed(pser_inf->ptermios, speed);
 	cfsetospeed(pser_inf->ptermios, pser_inf->dtr ? speed : 0);
 #endif
-
-	ptermios->c_cflag &= ~CBAUD;
-	ptermios->c_cflag |= speed;
 
 	ptermios->c_cflag &= ~(CSTOPB | PARENB | PARODD | CSIZE | CRTSCTS);
 	switch (pser_inf->stop_bits)
