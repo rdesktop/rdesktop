@@ -764,19 +764,22 @@ translate24to32(const uint8 * data, uint8 * out, uint8 * end)
 	if (g_arch_match)
 	{
 		/* *INDENT-OFF* */
+#ifdef NEED_ALIGN
 		REPEAT4
 		(
-#ifdef NEED_ALIGN
 			*(out++) = *(data++);
 			*(out++) = *(data++);
 			*(out++) = *(data++);
 			*(out++) = 0;
+		)
 #else
+		REPEAT4
+		(
 			*((uint32 *) out) = *((uint32 *) data);
 			out += 4;
 			data += 3;
-#endif
 		)
+#endif
 		/* *INDENT-ON* */
 	}
 	else if (g_xserver_be)
