@@ -64,7 +64,7 @@ usage(char *program)
 	fprintf(stderr, "Version " VERSION ". Copyright (C) 1999-2002 Matt Chapman.\n");
 	fprintf(stderr, "See http://www.rdesktop.org/ for more information.\n\n");
 
-	fprintf(stderr, "Usage: %s [options] server\n", program);
+	fprintf(stderr, "Usage: %s [options] server[:port]\n", program);
 	fprintf(stderr, "   -u: user name\n");
 	fprintf(stderr, "   -d: domain\n");
 	fprintf(stderr, "   -s: shell\n");
@@ -77,7 +77,6 @@ usage(char *program)
 	fprintf(stderr, "   -b: force bitmap updates\n");
 	fprintf(stderr, "   -e: disable encryption (French TS)\n");
 	fprintf(stderr, "   -m: do not send motion events\n");
-	fprintf(stderr, "   -t: rdp tcp port\n");
 	fprintf(stderr, "   -K: keep window manager key bindings\n");
 	fprintf(stderr, "   -w: window title\n");
 }
@@ -122,6 +121,7 @@ read_password(char *password, int size)
 int
 main(int argc, char *argv[])
 {
+	char server[64];
 	char fullhostname[64];
 	char domain[16];
 	char password[16];
@@ -129,8 +129,8 @@ main(int argc, char *argv[])
 	char directory[32];
 	BOOL prompt_password;
 	struct passwd *pw;
-	char *server, *p;
 	uint32 flags;
+	char *p;
 	int c;
 
 	flags = RDP_LOGON_NORMAL;
@@ -138,7 +138,7 @@ main(int argc, char *argv[])
 	domain[0] = password[0] = shell[0] = directory[0] = 0;
 	strcpy(keymapname, "us");
 
-	while ((c = getopt(argc, argv, "u:d:s:c:p:n:k:g:t:fbemKw:h?")) != -1)
+	while ((c = getopt(argc, argv, "u:d:s:c:p:n:k:g:fbemKw:h?")) != -1)
 	{
 		switch (c)
 		{
@@ -210,16 +210,12 @@ main(int argc, char *argv[])
 				sendmotion = False;
 				break;
 
-			case 't':
-				tcp_port_rdp = strtol(optarg, NULL, 10);
-				break;
-
 			case 'K':
 				grab_keyboard = False;
 				break;
 
 			case 'w':
-				strncpy(title, optarg, sizeof(title));
+				STRNCPY(title, optarg, sizeof(title));
 				break;
 
 			case 'h':
@@ -236,7 +232,13 @@ main(int argc, char *argv[])
 		return 1;
 	}
 
-	server = argv[optind];
+	STRNCPY(server, argv[optind], sizeof(server));
+	p = strchr(server, ':');
+	if (p != NULL)
+	{
+		tcp_port_rdp = strtol(p + 1, NULL, 10);
+		*p = 0;
+	}
 
 	if (username[0] == 0)
 	{
