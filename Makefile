@@ -12,6 +12,7 @@ bindir      = $(exec_prefix)/bin
 mandir      = $(prefix)/man
 datadir     = $(prefix)/share/rdesktop
 
+VERSION     = 1.3.0
 KEYMAP_PATH = $(datadir)/keymaps/
 
 RDPOBJ   = tcp.o iso.o mcs.o secure.o licence.o rdp.o orders.o bitmap.o cache.o rdp5.o channels.o rdpdr.o serial.o printer.o
@@ -75,7 +76,7 @@ dist:
 	mkdir -p /tmp/rdesktop-make-dist-dir
 	ln -sf `pwd` /tmp/rdesktop-make-dist-dir/rdesktop
 	(cd /tmp/rdesktop-make-dist-dir; \
-	tar zcvf rdesktop/rdesktop.tgz \
+	tar zcvf rdesktop/rdesktop-$(VERSION).tar.gz \
 	rdesktop/COPYING \
 	rdesktop/crypto/README \
 	rdesktop/crypto/*.c \

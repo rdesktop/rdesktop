@@ -4,7 +4,7 @@ Version: 1.3.0
 Release: 1
 Copyright: GPL; see COPYING
 Group: Applications/Communications
-Source: rdesktop.tgz
+Source: rdesktop-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-buildroot
 Packager: Peter Åstrand <peter@cendio.se>
 Requires: XFree86-libs 
