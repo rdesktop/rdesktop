@@ -50,6 +50,7 @@ int width = 800;		/* If width or height are reset to zero, the geometry will
 int height = 600;
 int tcp_port_rdp = TCP_PORT_RDP;
 int server_bpp = 8;
+int win_button_size = 0;	/* If zero, disable single app mode */
 BOOL bitmap_compression = True;
 BOOL sendmotion = True;
 BOOL orders = True;
@@ -146,7 +147,7 @@ main(int argc, char *argv[])
 	domain[0] = password[0] = shell[0] = directory[0] = 0;
 	strcpy(keymapname, "en-us");
 
-	while ((c = getopt(argc, argv, "u:d:s:c:p:n:k:g:a:fbemCKT:Dh?")) != -1)
+	while ((c = getopt(argc, argv, "u:d:s:S:c:p:n:k:g:a:fbemCKT:Dh?")) != -1)
 	{
 		switch (c)
 		{
@@ -161,6 +162,23 @@ main(int argc, char *argv[])
 
 			case 's':
 				STRNCPY(shell, optarg, sizeof(shell));
+				break;
+
+			case 'S':
+				if (!strcmp(optarg, "standard"))
+				{
+					win_button_size = 18;
+					break;
+				}
+
+				win_button_size = strtol(optarg, &p, 10);
+
+				if (*p)
+				{
+					error("invalid button size\n");
+					return 1;
+				}
+
 				break;
 
 			case 'c':

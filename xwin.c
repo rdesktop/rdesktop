@@ -32,6 +32,7 @@ extern BOOL grab_keyboard;
 extern BOOL hide_decorations;
 extern char title[];
 extern int server_bpp;
+extern int win_button_size;
 BOOL enable_compose = False;
 BOOL focused;
 BOOL mouse_in_wnd;
@@ -853,6 +854,31 @@ xwin_process_events(void)
 				button = xkeymap_translate_button(xevent.xbutton.button);
 				if (button == 0)
 					break;
+
+				/* If win_button_size is nonzero, enable single app mode */
+				if (xevent.xbutton.y < win_button_size)
+				{
+					if (xevent.xbutton.x >= width - win_button_size)
+					{
+						/* The close button, do nothing */
+						;
+					}
+					else if (xevent.xbutton.x >= width - win_button_size * 2)
+					{
+						/* The maximize/restore button. Do not send to
+						   server.  It might be a good idea to change the
+						   cursor or give some other visible indication 
+						   that rdesktop inhibited this click */
+						break;
+					}
+					else if (xevent.xbutton.x >= width - win_button_size * 3)
+					{
+						/* The minimize button. Iconify window. */
+						XIconifyWindow(display, wnd,
+							       DefaultScreen(display));
+						break;
+					}
+				}
 
 				rdp_send_input(time(NULL), RDP_INPUT_MOUSE,
 					       flags | button, xevent.xbutton.x, xevent.xbutton.y);
