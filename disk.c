@@ -840,13 +840,23 @@ disk_query_directory(HANDLE handle, uint32 info_class, char *pattern, STREAM out
 			// Get information for directory entry
 			sprintf(fullpath, "%s/%s", dirname, pdirent->d_name);
 
-			/* JIF 
-			   printf("Stat: %s\n", fullpath); */
 			if (stat(fullpath, &fstat))
 			{
-				perror("stat");
-				out_uint8(out, 0);
-				return STATUS_ACCESS_DENIED;
+				switch (errno)
+				{
+					case ENOENT:
+					case ELOOP:
+					case EACCES:
+						/* These are non-fatal errors. */
+						memset(&fstat, 0, sizeof(fstat));
+						break;
+					default:
+						/* Fatal error. By returning STATUS_NO_SUCH_FILE, 
+						   the directory list operation will be aborted */
+						perror(fullpath);
+						out_uint8(out, 0);
+						return STATUS_NO_SUCH_FILE;
+				}
 			}
 
 			if (S_ISDIR(fstat.st_mode))
