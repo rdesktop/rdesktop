@@ -43,7 +43,7 @@ Time g_last_gesturetime;
 static int g_x_socket;
 static Screen *g_screen;
 Window g_wnd;
-uint32 g_embed_wnd;
+extern uint32 g_embed_wnd;
 BOOL g_enable_compose = False;
 static GC g_gc = NULL;
 static Visual *g_visual;
@@ -66,7 +66,7 @@ static int g_red_shift_r, g_blue_shift_r, g_green_shift_r;
 static int g_red_shift_l, g_blue_shift_l, g_green_shift_l;
 
 /* software backing store */
-BOOL g_ownbackstore = True;	/* We can't rely on external BackingStore */
+extern BOOL g_ownbackstore;
 static Pixmap g_backstore = 0;
 
 /* Moving in single app mode */
@@ -115,7 +115,7 @@ PixelColour;
 }
 
 /* colour maps */
-BOOL g_owncolmap = False;
+extern BOOL g_owncolmap;
 static Colormap g_xcolmap;
 static uint32 *g_colmap = NULL;
 

@@ -602,12 +602,16 @@ ensure_remote_modifiers(uint32 ev_time, key_translation tr)
 unsigned int
 read_keyboard_state()
 {
+#ifdef RDP2VNC
+	return 0;
+#else
 	unsigned int state;
 	Window wdummy;
 	int dummy;
 
 	XQueryPointer(g_display, g_wnd, &wdummy, &wdummy, &dummy, &dummy, &dummy, &dummy, &state);
 	return state;
+#endif
 }
 
 

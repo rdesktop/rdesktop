@@ -68,9 +68,9 @@ BOOL g_hide_decorations = False;
 BOOL g_use_rdp5 = True;
 BOOL g_console_session = False;
 BOOL g_numlock_sync = False;
-extern BOOL g_owncolmap;
-extern BOOL g_ownbackstore;
-extern uint32 g_embed_wnd;
+BOOL g_owncolmap = False;
+BOOL g_ownbackstore  = True;	/* We can't rely on external BackingStore */
+uint32 g_embed_wnd;
 uint32 g_rdp5_performanceflags = RDP5_NO_WALLPAPER | RDP5_NO_FULLWINDOWDRAG | RDP5_NO_MENUANIMATIONS;
 
 #ifdef WITH_RDPSND

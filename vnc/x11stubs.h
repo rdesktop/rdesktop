@@ -23,6 +23,8 @@
 #define Button5                 5
 
 typedef int Display;
+typedef int Window;
+typedef rfbKeySym KeySym;
 
 KeySym XStringToKeysym(const char *str);
 const char *XKeysymToString(KeySym keysym);

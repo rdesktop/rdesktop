@@ -59,8 +59,8 @@ extern int rfbClientSocket;
 #define BITSPERBYTES 8
 #define TOBYTES(bits) ((bits)/BITSPERBYTES)
 
-extern int width;
-extern int height;
+extern int g_width;
+extern int g_height;
 extern int keylayout;
 extern BOOL sendmotion;
 #ifdef ENABLE_SHADOW
@@ -74,6 +74,8 @@ int rfbClientSocket = 0;
 static rfbScreenInfoPtr server = NULL;
 static vncBuffer *frameBuffer = NULL;
 static uint8_t reverseByte[0x100];
+BOOL g_enable_compose = False;
+int g_display=0;
 
 /* ignored */
 BOOL owncolmap = False;
@@ -149,7 +151,7 @@ get_key_state(unsigned int state, uint32 keysym)
 }
 
 void
-vncKey(Bool down, KeySym keysym, struct _rfbClientRec *cl)
+vncKey(rfbBool down, rfbKeySym keysym, struct _rfbClientRec *cl)
 {
 	uint32 ev_time = time(NULL);
 	key_translation tr = { 0, 0 };
@@ -272,7 +274,7 @@ rdp2vnc_connect(char *server, uint32 flags, char *domain, char *password,
 
 
 
-extern char title[];
+extern char g_title[];
 BOOL
 ui_create_window()
 {
@@ -284,9 +286,9 @@ ui_create_window()
 			(((i >> 4) & 1) << 3) | (((i >> 3) & 1) << 4) | (((i >> 2) & 1) << 5) |
 			(((i >> 1) & 1) << 6) | (((i >> 0) & 1) << 7);
 
-	server = rfbGetScreen(0, NULL, width, height, 8, 1, 1);
-	server->desktopName = title;
-	server->frameBuffer = (char *) malloc(width * height);
+	server = rfbGetScreen(0, NULL, g_width, g_height, 8, 1, 1);
+	server->desktopName = g_title;
+	server->frameBuffer = (char *) malloc(g_width * g_height);
 	server->ptrAddEvent = vncMouse;
 	server->kbdAddEvent = vncKey;
 #ifdef ENABLE_SHADOW
@@ -305,14 +307,14 @@ ui_create_window()
 	server->rfbDeferUpdateTime = defer_time;
 
 	frameBuffer = (vncBuffer *) malloc(sizeof(vncBuffer));
-	frameBuffer->w = width;
-	frameBuffer->h = height;
-	frameBuffer->linew = width;
+	frameBuffer->w = g_width;
+	frameBuffer->h = g_height;
+	frameBuffer->linew = g_width;
 	frameBuffer->data = server->frameBuffer;
 	frameBuffer->owner = FALSE;
 	frameBuffer->format = &server->rfbServerFormat;
 
-	ui_set_clip(0, 0, width, height);
+	ui_set_clip(0, 0, g_width, g_height);
 
 	rfbInitServer(server);
 #ifndef ENABLE_SHADOW
@@ -482,6 +484,11 @@ ui_destroy_cursor(HCURSOR cursor)
 {
 	if (cursor)
 		rfbFreeCursor((rfbCursorPtr) cursor);
+}
+
+void ui_set_null_cursor(void)
+{
+	rfbSetCursor(server, 0, FALSE);
 }
 
 HGLYPH
