@@ -49,6 +49,8 @@ int g_width = 800;		/* width is special: If 0, the
 				   absolute value specifies the
 				   percent of the whole screen. */
 int g_height = 600;
+int g_xpos = 0;
+int g_ypos = 0;
 extern int g_tcp_port_rdp;
 int g_server_bpp = 8;
 int g_win_button_size = 0;	/* If zero, disable single app mode */
@@ -439,7 +441,7 @@ main(int argc, char *argv[])
 				}
 
 				if (*p == 'x')
-					g_height = strtol(p + 1, NULL, 10);
+					g_height = strtol(p + 1, &p, 10);
 
 				if (g_height <= 0)
 				{
@@ -448,7 +450,16 @@ main(int argc, char *argv[])
 				}
 
 				if (*p == '%')
+				{
 					g_width = -g_width;
+					p++;
+				}
+
+				if (*p == '+' || *p == '-')
+					g_xpos = strtol(p, &p, 10);
+				
+				if (*p == '+' || *p == '-')
+					g_ypos = strtol(p, NULL, 10);
 
 				break;
 

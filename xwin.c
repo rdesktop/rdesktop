@@ -30,6 +30,8 @@
 
 extern int g_width;
 extern int g_height;
+extern int g_xpos;
+extern int g_ypos;
 extern BOOL g_sendmotion;
 extern BOOL g_fullscreen;
 extern BOOL g_grab_keyboard;
@@ -964,7 +966,7 @@ ui_create_window(void)
 	attribs.override_redirect = g_fullscreen;
 	attribs.colormap = g_xcolmap;
 
-	g_wnd = XCreateWindow(g_display, RootWindowOfScreen(g_screen), 0, 0, wndwidth, wndheight,
+	g_wnd = XCreateWindow(g_display, RootWindowOfScreen(g_screen), g_xpos, g_ypos, wndwidth, wndheight,
 			      0, g_depth, InputOutput, g_visual,
 			      CWBackPixel | CWBackingStore | CWOverrideRedirect |
 			      CWColormap | CWBorderPixel, &attribs);
