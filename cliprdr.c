@@ -30,6 +30,7 @@ extern Time last_keyrelease;
 static Atom clipboard_atom, primary_atom, targets_atom, timestamp_atom;
 static cliprdr_dataformat *server_formats = NULL;
 static uint16 num_server_formats = 0;
+static XSelectionEvent selection_event;
 
 static void
 cliprdr_print_server_formats(void) 
@@ -45,7 +46,7 @@ cliprdr_print_server_formats(void)
 		i++;
 		this = this->next;
 	}
-	DEBUG_CLIPBOARD(("There was %d server formats.\n", i));
+	DEBUG_CLIPBOARD(("There were %d server formats.\n", i));
 #endif
 }
 
@@ -89,7 +90,7 @@ void print_X_error(int res)
 		break;
 
 	case BadWindow:
-		DEBUG_CLIPBOARD(("BadWindo\n"));
+		DEBUG_CLIPBOARD(("BadWindow\n"));
 		break;
 
 	default:
@@ -97,21 +98,36 @@ void print_X_error(int res)
 	}
 }
 
+static void
+cliprdr_request_clipboard_data(uint32 formatcode) 
+{
+	STREAM s;
+	s = sec_init(encryption ? SEC_ENCRYPT : 0, 24);
+	out_uint32_le(s, 16);
+	out_uint32_le(s, 0x13);
+	out_uint16_le(s, 4);
+	out_uint16_le(s, 0);
+	out_uint32_le(s, 4); // Remaining length
+	out_uint32_le(s, formatcode);
+	out_uint32_le(s, 0); // Unknown. Garbage pad?
+
+	s_mark_end(s);
+
+	sec_send_to_channel(s, encryption ? SEC_ENCRYPT : 0, 1005); // FIXME: Don't hardcode channel!
+}
+
+
 void
 cliprdr_handle_SelectionRequest(XSelectionRequestEvent *xevent) 
 {
 
-	Atom type_return;
 	Atom *targets;
-	int format_return;
-	long nitems_return;
-	long bytes_after_return;
-	char **prop_return;
 	int res;
 
 	XSelectionEvent xev;
 	DEBUG_CLIPBOARD(("cliprdr_handle_SelectionRequest\n"));
-	DEBUG_CLIPBOARD(("Requestor window id 0x%x ", xevent->requestor));
+	DEBUG_CLIPBOARD(("Requestor window id 0x%x ", 
+			 (unsigned)xevent->requestor));
 	if (clipboard_atom == xevent->selection) {
 		DEBUG_CLIPBOARD(("wants CLIPBOARD\n"));
 	} 
@@ -120,9 +136,9 @@ cliprdr_handle_SelectionRequest(XSelectionRequestEvent *xevent)
 	}  
 	DEBUG_CLIPBOARD(("Target is %s (0x%x), property is %s (0x%x)\n", 
 			 XGetAtomName(display, xevent->target), 
-			 xevent->target, 
+			 (unsigned)xevent->target, 
 			 XGetAtomName(display, xevent->property), 
-			 xevent->property));
+			 (unsigned)xevent->property));
 
 	xev.type = SelectionNotify;
 	xev.serial = 0;
@@ -161,7 +177,7 @@ cliprdr_handle_SelectionRequest(XSelectionRequestEvent *xevent)
 	} else if (timestamp_atom == xevent->target) 
 	{
 		DEBUG_CLIPBOARD(("TIMESTAMP requested... sending 0x%x\n",
-				 last_keyrelease));
+				 (unsigned)last_keyrelease));
 		res = XChangeProperty(display, 
 				      xevent->requestor,
 				      xevent->property,
@@ -177,37 +193,33 @@ cliprdr_handle_SelectionRequest(XSelectionRequestEvent *xevent)
 				 (XEvent *)&xev);
 	} else /* Some other target */
 	{
-		res = XChangeProperty(display, 
-				      xevent->requestor,
-				      xevent->property,
-				      XInternAtom(display, "STRING", False),
-				      8,
-				      PropModeAppend,
-				      "krattoflabkat",
-				      13);
-
-		DEBUG_CLIPBOARD(("res after XChangeProperty is "));
-		print_X_error(res);	
-	
-		xev.type = SelectionNotify;
-		xev.serial = 0;
-		xev.send_event = True;
-		xev.requestor = xevent->requestor;
-		xev.selection = xevent->selection;
-		xev.target = xevent->target;
-		xev.property = xevent->property;
-		xev.time = xevent->time;
-
-		res = XSendEvent(display, 
-				 xevent->requestor, 
-				 False, 
-				 NoEventMask,
-				 (XEvent *)&xev);
-	
-		DEBUG_CLIPBOARD(("res after XSendEvent is "));
-		print_X_error(res);
+		cliprdr_request_clipboard_data(CF_TEXT);
+		memcpy(&selection_event, &xev, sizeof(xev));
+		/* Return and wait for data, handled by 
+		   cliprdr_handle_server_data */
 	}
 }
+
+
+static void 
+cliprdr_ack_format_list(void) 
+{
+	STREAM s;
+	s = sec_init(encryption ? SEC_ENCRYPT : 0, 20);
+	out_uint32_le(s, 12);
+	out_uint32_le(s, 0x13);
+	out_uint16_le(s, 3);
+	out_uint16_le(s, 1);
+	out_uint32_le(s, 0);
+	out_uint32_le(s, 0x0000c0da);
+
+	s_mark_end(s);
+
+	sec_send_to_channel(s, encryption ? SEC_ENCRYPT : 0, 1005); // FIXME: Don't hardcode channel!
+}
+
+		
+
 
 
 static void
@@ -238,7 +250,8 @@ cliprdr_register_server_formats(STREAM s)
 	while (1 < num_formats) {
 		in_uint32_le(s, this->identifier);
 		in_uint8a(s, this->textual_description, 32);
-		DEBUG_CLIPBOARD(("Stored format description with numeric id %d\n", this->identifier));
+		DEBUG_CLIPBOARD(("Stored format description with numeric id %d\n", 
+				 this->identifier));
 		this-> next = xmalloc(sizeof(cliprdr_dataformat));
 		this = this->next;
 		num_formats--;
@@ -267,6 +280,8 @@ cliprdr_select_X_clipboards(void)
 	
 }
 
+	
+
 static void
 cliprdr_send_format_announce(void) 
 {
@@ -288,7 +303,7 @@ cliprdr_send_format_announce(void)
 	s_mark_end(s);
 	sec_send_to_channel(s, encryption ? SEC_ENCRYPT : 0, 1005); // FIXME: Don't hardcode channel!
 }
-		
+
 
 static void 
 cliprdr_handle_first_handshake(STREAM s)
@@ -299,6 +314,36 @@ cliprdr_handle_first_handshake(STREAM s)
 	DEBUG_CLIPBOARD(("Remaining length in first handshake frm server is %d, pad is %d\n", 
 			 remaining_length, pad));
 	cliprdr_send_format_announce();
+}
+
+void cliprdr_handle_server_data(uint32 length, STREAM s) 
+{
+	uint32 remaining_length;
+	char *data;
+	int res;
+	in_uint32_le(s, remaining_length);
+	data = s->p;
+	res = XChangeProperty(display, 
+			      selection_event.requestor,
+			      selection_event.property,
+			      XInternAtom(display, "STRING", False),
+			      8,
+			      PropModeAppend,
+			      data,
+			      remaining_length);
+
+	DEBUG_CLIPBOARD(("res after XChangeProperty is "));
+	print_X_error(res);	
+	
+	res = XSendEvent(display, 
+			 selection_event.requestor, 
+			 False, 
+			 NoEventMask,
+			 (XEvent *)&selection_event);
+	
+	DEBUG_CLIPBOARD(("res after XSendEvent is "));
+	print_X_error(res);
+
 }
 
 void cliprdr_callback(STREAM s) 
@@ -329,15 +374,21 @@ void cliprdr_callback(STREAM s)
 			// but probably not.
 			DEBUG_CLIPBOARD(("Received format announce ACK\n"));
 			return;
+
 		} else if (2 == ptype0 && 0 == ptype1) 
 		{
 			cliprdr_register_server_formats(s);
 			cliprdr_select_X_clipboards();
+			cliprdr_ack_format_list();
 			return;
+		} else if (5 == ptype0 && 1 == ptype1) 
+		{
+			cliprdr_handle_server_data(length, s);
 		}
 		
 	}
 }
+
 
 void cliprdr_init(void) 
 {
