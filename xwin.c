@@ -328,7 +328,7 @@ xwin_process_events()
 	if (display == NULL)
 		return;
 
-	while (XCheckWindowEvent(display, wnd, ~0, &event))
+	while (XCheckMaskEvent(display, ~0, &event))
 	{
 		ev_time = time(NULL);
 
