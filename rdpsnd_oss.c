@@ -138,6 +138,7 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 	{
 		audio_buf_info info;
 
+		memset(&info,0,sizeof(info));
 		if (ioctl(g_dsp_fd, SNDCTL_DSP_GETOSPACE, &info) == -1)
 		{
 			perror("SNDCTL_DSP_GETOSPACE");
@@ -253,6 +254,7 @@ wave_out_play(void)
 
 		if (!g_driver_broken)
 		{
+			memset(&info,0,sizeof(info));
 			if (ioctl(g_dsp_fd, SNDCTL_DSP_GETOSPACE, &info) == -1)
 			{
 				perror("SNDCTL_DSP_GETOSPACE");
