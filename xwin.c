@@ -1922,6 +1922,12 @@ ui_draw_text(uint8 font, uint8 flags, int mixmode, int x, int y,
 
 	SET_FOREGROUND(bgcolour);
 
+	/* Sometimes, the boxcx value is something really large, like
+	   32691. This makes XCopyArea fail with Xvnc. The code below
+	   is a quick fix. */
+	if (boxx + boxcx > g_width)
+		boxcx = g_width - boxx;
+
 	if (boxcx > 1)
 	{
 		FILL_RECTANGLE_BACKSTORE(boxx, boxy, boxcx, boxcy);
