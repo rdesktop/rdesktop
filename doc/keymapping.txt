@@ -102,7 +102,7 @@ Keyboard keys:
 CtrlLeft WinLeft AltLeft Space AltGr WinRight Menu CtrlRight
 
 ...should generate keysyms:
-Control_L Hyper_L Alt_L space Mode_switch Hyper_R Menu Control_R
+Control_L Super_L Alt_L space Mode_switch Super_R Menu Control_R
 
 Additionally:
 Shift-Alt should produce Meta_L
@@ -116,7 +116,7 @@ control     Control_L (0x42),  Control_R (0x6d)
 mod1        Alt_L (0x40)
 mod2        Num_Lock (0x4d)
 mod3        Mode_switch (0x71)
-mod4        Hyper_L (0x73),  Hyper_R (0x74)
+mod4        Super_L (0x73),  Super_R (0x74)
 mod5        Scroll_Lock (0x4e)
 
 
