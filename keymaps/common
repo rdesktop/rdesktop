@@ -19,6 +19,7 @@ BackSpace 0xe
 # QWERTY first row
 #
 Tab 0xf
+ISO_Left_Tab 0xf shift
 q 0x10 addupper
 w 0x11 addupper
 e 0x12 addupper
