@@ -673,11 +673,16 @@ sec_process_crypt_info(STREAM s)
 	}
 
 	DEBUG(("Generating client random\n"));
-	/* Generate a client random, and hence determine encryption keys */
-	generate_random(inr);
 	// This is what the MS client do:
-	//      memset(inr, 0, SEC_RANDOM_SIZE);
-	// *ARIGL!*
+	memset(inr, 0, SEC_RANDOM_SIZE);
+	/*  *ARIGL!* Plaintext attack, anyone?
+	    I tried doing:
+	    generate_random(inr);
+	    ..but that generates connection errors now and then (yes, 
+	    "now and then". Something like 0 to 3 attempts needed before a 
+	    successful connection. Nice. Not! 
+	*/
+
 	generate_random(client_random);
 	if (NULL != server_public_key)
 	{			/* Which means we should use 
