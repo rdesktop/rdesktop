@@ -40,8 +40,8 @@
 #include "crypto/md5.h"
 #endif
 
-char g_title[32] = "";
-char g_username[16];
+char g_title[64] = "";
+char g_username[64];
 char hostname[16];
 char keymapname[16];
 int keylayout = 0x409;		/* Defaults to US keyboard layout */
@@ -197,7 +197,7 @@ main(int argc, char *argv[])
 	char server[64];
 	char fullhostname[64];
 	char domain[16];
-	char password[16];
+	char password[64];
 	char shell[128];
 	char directory[32];
 	BOOL prompt_password, rdp_retval = False;
