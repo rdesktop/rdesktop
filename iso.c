@@ -78,7 +78,7 @@ iso_recv_msg(uint8 * code)
 	uint16 length;
 	uint8 version;
 
-	next_packet:
+      next_packet:
 	s = tcp_recv(NULL, 4);
 	if (s == NULL)
 		return NULL;
