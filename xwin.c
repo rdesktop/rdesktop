@@ -64,6 +64,7 @@ static int g_red_shift_l, g_blue_shift_l, g_green_shift_l;
 /* software backing store */
 static BOOL g_ownbackstore;
 static Pixmap g_backstore;
+static BOOL g_backstore_initialized = False;
 
 /* Moving in single app mode */
 static BOOL g_moving_wnd;
@@ -699,7 +700,10 @@ ui_init(void)
 	XVisualInfo vi;
 	XPixmapFormatValues *pfm;
 	uint16 test;
-	int i, screen_num;
+	int i, screen_num, nvisuals;
+	XVisualInfo *vmatches = NULL;
+	XVisualInfo template;
+	Bool TrueColorVisual = False;
 
 	g_display = XOpenDisplay(NULL);
 	if (g_display == NULL)
@@ -713,10 +717,32 @@ ui_init(void)
 	g_screen = ScreenOfDisplay(g_display, screen_num);
 	g_depth = DefaultDepthOfScreen(g_screen);
 
-	if (g_server_bpp == 8)
+	/* Search for best TrueColor depth */
+	template.class = TrueColor;
+	vmatches = XGetVisualInfo(g_display, VisualClassMask, &template, &nvisuals);
+
+	nvisuals--;
+	while (nvisuals >= 0)
 	{
-		/* we use a colourmap, so any visual should do */
+		if ((vmatches + nvisuals)->depth > g_depth)
+		{
+			g_depth = (vmatches + nvisuals)->depth;
+		}
+		nvisuals--;
+		TrueColorVisual = True;
+	}
+
+	if ((g_server_bpp == 8) && ((! TrueColorVisual) || (g_depth <= 8)))
+	{
+		/* we use a colourmap, so the default visual should do */
 		g_visual = DefaultVisualOfScreen(g_screen);
+		g_depth = DefaultDepthOfScreen(g_screen);
+
+		/* Do not allocate colours on a TrueColor visual */
+		if (g_visual->class == TrueColor)
+		{
+			g_owncolmap = False;
+		}
 	}
 	else
 	{
@@ -758,12 +784,10 @@ ui_init(void)
 
 	if (!g_owncolmap)
 	{
-		g_xcolmap = DefaultColormapOfScreen(g_screen);
+		g_xcolmap = XCreateColormap(g_display,RootWindowOfScreen(g_screen),g_visual,AllocNone);
 		if (g_depth <= 8)
 			warning("Screen depth is 8 bits or lower: you may want to use -C for a private colourmap\n");
 	}
-
-	g_gc = XCreateGC(g_display, RootWindowOfScreen(g_screen), 0, NULL);
 
 	if (DoesBackingStore(g_screen) != Always)
 		g_ownbackstore = True;
@@ -806,17 +830,6 @@ ui_init(void)
 
 	/* make sure width is a multiple of 4 */
 	g_width = (g_width + 3) & ~3;
-
-	if (g_ownbackstore)
-	{
-		g_backstore =
-			XCreatePixmap(g_display, RootWindowOfScreen(g_screen), g_width, g_height,
-				      g_depth);
-
-		/* clear to prevent rubbish being exposed at startup */
-		XSetForeground(g_display, g_gc, BlackPixelOfScreen(g_screen));
-		XFillRectangle(g_display, g_backstore, g_gc, 0, 0, g_width, g_height);
-	}
 
 	g_mod_map = XGetModifierMapping(g_display);
 
@@ -864,12 +877,29 @@ ui_create_window(void)
 	wndheight = g_fullscreen ? HeightOfScreen(g_screen) : g_height;
 
 	attribs.background_pixel = BlackPixelOfScreen(g_screen);
+	attribs.border_pixel = WhitePixelOfScreen(g_screen);
 	attribs.backing_store = g_ownbackstore ? NotUseful : Always;
 	attribs.override_redirect = g_fullscreen;
+	attribs.colormap = g_xcolmap;
 
 	g_wnd = XCreateWindow(g_display, RootWindowOfScreen(g_screen), 0, 0, wndwidth, wndheight,
-			      0, CopyFromParent, InputOutput, CopyFromParent,
-			      CWBackPixel | CWBackingStore | CWOverrideRedirect, &attribs);
+			      0, g_depth, InputOutput, g_visual,
+			      CWBackPixel | CWBackingStore | CWOverrideRedirect |
+			      CWColormap | CWBorderPixel, &attribs);
+
+	g_gc = XCreateGC(g_display, g_wnd, 0, NULL);
+
+	if ((g_ownbackstore) && (! g_backstore_initialized))
+	{
+		g_backstore =
+			XCreatePixmap(g_display, g_wnd, g_width, g_height,
+				      g_depth);
+
+		/* clear to prevent rubbish being exposed at startup */
+		XSetForeground(g_display, g_gc, BlackPixelOfScreen(g_screen));
+		XFillRectangle(g_display, g_backstore, g_gc, 0, 0, g_width, g_height);
+		g_backstore_initialized = True;
+	}
 
 	XStoreName(g_display, g_wnd, g_title);
 
