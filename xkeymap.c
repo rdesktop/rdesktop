@@ -289,6 +289,15 @@ xkeymap_translate_key(KeySym keysym, unsigned int keycode, unsigned int state)
 	if ((keycode >= min_keycode) && (keycode <= 0x60))
 	{
 		tr.scancode = keycode - min_keycode;
+
+		/* The modifiers to send for this key should be
+		   obtained from the local state. Currently, only
+		   shift is implemented. */
+		if (state & ShiftMask)
+		{
+			tr.modifiers = MapLeftShiftMask;
+		}
+
 		fprintf(stderr, "Sending guessed scancode 0x%x\n", tr.scancode);
 	}
 	else
@@ -367,6 +376,7 @@ ensure_remote_modifiers(uint32 ev_time, key_translation tr)
 		{
 			/* Should not use this modifier. Send up. */
 			rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_LSHIFT);
+			rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_RSHIFT);
 		}
 	}
 
