@@ -456,7 +456,9 @@ xwin_process_events()
 
 				tr = xkeymap_translate_key(keysym,
 							   xevent.xkey.
-							   keycode);
+							   keycode,
+							   xevent.xkey.state);
+
 				ensure_remote_modifiers(ev_time, tr);
 
 				if (tr.scancode == 0)
@@ -479,7 +481,8 @@ xwin_process_events()
 
 				tr = xkeymap_translate_key(keysym,
 							   xevent.xkey.
-							   keycode);
+							   keycode,
+							   xevent.xkey.state);
 
 				if (tr.scancode == 0)
 					break;

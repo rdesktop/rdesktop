@@ -249,6 +249,8 @@ enum RDP_INPUT_DEVICE
 #define MapNumLockMask      (1<<8)
 #define MapCapsLockMask     (1<<9)
 
+#define MapLocalStateMask   (1<<10)
+
 #define MASK_ADD_BITS(var, mask) (var |= mask)
 #define MASK_REMOVE_BITS(var, mask) (var &= ~mask)
 #define MASK_HAS_BITS(var, mask) ((var & mask)>0)

@@ -163,6 +163,11 @@ xkeymap_read(char *mapname)
 			MASK_ADD_BITS(modifiers, MapNumLockMask);
 		}
 
+		if (strstr(line_rest, "localstate"))
+		{
+			MASK_ADD_BITS(modifiers, MapLocalStateMask);
+		}
+
 		add_to_keymap(keyname, scancode, modifiers, mapname);
 
 		if (strstr(line_rest, "addupper"))
@@ -211,11 +216,21 @@ xkeymap_init2(void)
 
 
 key_translation
-xkeymap_translate_key(KeySym keysym, unsigned int keycode)
+xkeymap_translate_key(KeySym keysym, unsigned int keycode, unsigned int state)
 {
 	key_translation tr = { 0, 0 };
 
 	tr = keymap[keysym & KEYMAP_MASK];
+
+	if (tr.modifiers & MapLocalStateMask)
+	{
+		/* The modifiers to send for this key should be obtained
+		   from the local state. Currently, only shift is implemented. */
+		if (state & ShiftMask)
+		{
+			tr.modifiers = MapLeftShiftMask;
+		}
+	}
 
 	if (tr.scancode != 0)
 	{

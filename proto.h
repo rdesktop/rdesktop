@@ -72,7 +72,8 @@ void tcp_disconnect(void);
 /* xkeymap.c */
 void xkeymap_init1(void);
 void xkeymap_init2(void);
-key_translation xkeymap_translate_key(KeySym keysym, unsigned int keycode);
+key_translation xkeymap_translate_key(KeySym keysym, unsigned int keycode,
+				      unsigned int state);
 uint16 xkeymap_translate_button(unsigned int button);
 char *get_ksname(KeySym keysym);
 BOOL inhibit_key(KeySym keysym);
