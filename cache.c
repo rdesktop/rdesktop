@@ -39,7 +39,7 @@ static HBITMAP g_volatile_bc[3];
 void
 cache_remove_lru_bitmap(uint8 cache_id)
 {
-	int i;
+	uint32 i;
 	uint16 cache_idx = 0;
 	uint32 m = 0xffffffff;
 	BMPCACHEENTRY *pbce;
@@ -125,7 +125,7 @@ cache_put_bitmap(uint8 cache_id, uint16 cache_idx, HBITMAP bitmap, uint32 stamp)
 void
 cache_save_state(void)
 {
-	int id, idx;
+	uint32 id, idx;
 
 	for (id = 0; id < NUM_ELEMENTS(g_bmpcache); id++)
 		if (IS_PERSISTENT(id))
