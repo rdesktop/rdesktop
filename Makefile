@@ -34,15 +34,15 @@ Makeconf:
 install: installbin installkeymaps installman
 
 installbin: rdesktop
-	mkdir -p $(DESTDIR)/$(BINDIR)
-	install rdesktop $(DESTDIR)/$(BINDIR)
-	strip $(DESTDIR)/$(BINDIR)/rdesktop
-	chmod 755 $(DESTDIR)/$(BINDIR)/rdesktop
+	mkdir -p $(DESTDIR)/$(bindir)
+	install rdesktop $(DESTDIR)/$(bindir)
+	strip $(DESTDIR)/$(bindir)/rdesktop
+	chmod 755 $(DESTDIR)/$(bindir)/rdesktop
 
 installman: doc/rdesktop.1
-	mkdir -p $(DESTDIR)/$(MANDIR)/man1
-	cp doc/rdesktop.1 $(DESTDIR)/$(MANDIR)/man1
-	chmod 644 $(DESTDIR)/$(MANDIR)/man1/rdesktop.1
+	mkdir -p $(DESTDIR)/$(mandir)/man1
+	cp doc/rdesktop.1 $(DESTDIR)/$(mandir)/man1
+	chmod 644 $(DESTDIR)/$(mandir)/man1/rdesktop.1
 
 installkeymaps:
 	mkdir -p $(DESTDIR)/$(KEYMAP_PATH)
