@@ -246,9 +246,9 @@ Not needed anymore, with the new keyboard mapping implementation.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/rdp-srvr-19-6-6.diff
 Description:
-TDB
+Basic RDP server. 
 Status:
-Not yet examined. 
+Not applied. 
 
 
 URL:
