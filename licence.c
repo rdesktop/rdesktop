@@ -7,7 +7,7 @@
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation; either version 2 of the License, or
    (at your option) any later version.
-   
+
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -103,7 +103,7 @@ licence_send_request(uint8 *client_random, uint8 *rsa_data,
 	uint32 sec_flags = SEC_LICENCE_NEG;
 	uint16 userlen = strlen(user) + 1;
 	uint16 hostlen = strlen(host) + 1;
-	uint16 length = 120 + userlen + hostlen;
+	uint16 length = 128 + userlen + hostlen;
 	STREAM s;
 
 	s = sec_init(sec_flags, length + 2);
