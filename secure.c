@@ -547,8 +547,12 @@ sec_process_mcs_data(STREAM s)
 {
 	uint16 tag, length;
 	uint8 *next_tag;
+	uint8 len;
 
-	in_uint8s(s, 23);	/* header */
+	in_uint8s(s, 21);	/* header */
+	in_uint8(s, len);
+	if (len & 0x80)
+		in_uint8(s, len);
 
 	while (s->p < s->end)
 	{
