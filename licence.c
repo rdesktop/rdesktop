@@ -1,7 +1,7 @@
 /*
    rdesktop: A Remote Desktop Protocol client.
    RDP licensing negotiation
-   Copyright (C) Matthew Chapman 1999-2002
+   Copyright (C) Matthew Chapman 1999-2005
    
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by

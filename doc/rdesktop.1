@@ -1,4 +1,4 @@
-.TH rdesktop 1 "January 2004"
+.TH rdesktop 1 "March 2005"
 .SH NAME
 .I rdesktop
 \- Remote Desktop Protocol client
@@ -58,6 +58,10 @@ toggled at any time using Ctrl-Alt-Enter.
 Force the server to send screen updates as bitmaps rather than using
 higher-level drawing operations.
 .TP
+.BR "-B"
+Use the BackingStore of the Xserver instead of the integrated one in
+rdesktop.
+.TP
 .BR "-e"
 Disable encryption.  This option is only needed (and will only work) if you
 have a French version of NT TSE.
@@ -106,6 +110,10 @@ Sets the colour depth for the connection (8, 15, 16 or 24).
 More than 8 bpp are only supported when connecting to Windows XP
 (up to 16 bpp) or newer.  Note that the colour depth may also be
 limited by the server configuration.
+.TP
+.BR "-z"
+Enable compression of the RDP datastream. This currently only works
+for a colour depth of 8bpp.
 .TP
 .BR "-x <experience>"
 Changes default bandwidth performance behaviour for RDP5. By default only

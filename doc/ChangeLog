@@ -10,7 +10,9 @@ rdesktop (1.4.0)
    * Report disconnect-reason
    * Support for RDP-compression (currently only for 8bpp)
    * Support for persistent bitmap caching
-   * Sound-driver for SGI
+   * Sound-driver for SGI/Irix
+
+  -- Michael Gernoth <michael@gernoth.net>  Sun, 6 Mar 2005 22:09:55 +0100 (CET)
 
 rdesktop (1.3.1)
    * Crypto fixes for RDP5

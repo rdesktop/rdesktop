@@ -1,7 +1,7 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    Protocol services - Multipoint Communications Service
-   Copyright (C) Matthew Chapman 1999-2002
+   Copyright (C) Matthew Chapman 1999-2005
    
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
