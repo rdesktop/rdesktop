@@ -121,6 +121,22 @@ else
 fi
 
 
+# Find install program
+
+if [ -z "$INSTALL" ]; then
+    # Want BSD install
+    if [ -x /usr/ucb/installbsd ]; then
+	INSTALL=/usr/ucb/installbsd
+    elif [ -x /usr/ucb/install ]; then
+	INSTALL=/usr/ucb/install
+    else
+	INSTALL=install
+    fi
+fi
+
+echo "INSTALL     = $INSTALL" >>Makeconf
+
+
 # Find X installation
 
 xdirs="$extraxdir /usr/X11R6 /usr/X11 /usr/openwin /usr /usr/local/X11R6 /usr/local/X11 /usr/local"
