@@ -27,6 +27,7 @@ extern BOOL g_bitmap_compression;
 extern BOOL g_orders;
 extern BOOL g_encryption;
 extern BOOL g_desktop_save;
+extern BOOL g_polygon_ellipse_orders;
 extern BOOL g_use_rdp5;
 extern uint16 g_server_rdp_version;
 extern uint32 g_rdp5_performanceflags;
@@ -504,14 +505,14 @@ rdp_out_order_caps(STREAM s)
 	order_caps[8] = 1;	/* line */
 	order_caps[9] = 1;	/* line */
 	order_caps[10] = 1;	/* rect */
-	order_caps[11] = (g_desktop_save == False ? 0 : 1);	/* desksave */
+	order_caps[11] = (g_desktop_save ? 1 : 0);	/* desksave */
 	order_caps[13] = 1;	/* memblt */
 	order_caps[14] = 1;	/* triblt */
-	order_caps[20] = 1;	/* polygon */
-	order_caps[21] = 1;	/* polygon2 */
+	order_caps[20] = (g_polygon_ellipse_orders ? 1 : 0);	/* polygon */
+	order_caps[21] = (g_polygon_ellipse_orders ? 1 : 0);	/* polygon2 */
 	order_caps[22] = 1;	/* polyline */
-	order_caps[25] = 1;	/* ellipse */
-	order_caps[26] = 1;	/* ellipse2 */
+	order_caps[25] = (g_polygon_ellipse_orders ? 1 : 0);	/* ellipse */
+	order_caps[26] = (g_polygon_ellipse_orders ? 1 : 0);	/* ellipse2 */
 	order_caps[27] = 1;	/* text2 */
 	out_uint16_le(s, RDP_CAPSET_ORDER);
 	out_uint16_le(s, RDP_CAPLEN_ORDER);
