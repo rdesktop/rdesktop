@@ -227,6 +227,34 @@ handle_special_keys(uint32 keysym, uint32 ev_time, BOOL pressed)
 			}
 			break;
 
+		case XK_Pause:
+			/* According to MS Keyboard Scan Code
+			   Specification, pressing Pause should result
+			   in E1 1D 45 E1 9D C5. I'm not exactly sure
+			   of how this is supposed to be sent via
+			   RDP. The code below seems to work, but with
+			   the side effect that Left Ctrl stays
+			   down. Therefore, we release it when Pause
+			   is released. */
+			if (pressed)
+			{
+				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS, 0xe1, 0);
+				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS, 0x1d, 0);
+				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS, 0x45, 0);
+				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS, 0xe1, 0);
+				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS, 0x9d, 0);
+				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS, 0xc5, 0);
+			}
+			else
+			{
+				// Release Left Ctrl
+				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYRELEASE, 0x1d,
+					       0);
+			}
+
+			return True;
+			break;
+
 		case XK_Meta_L:	/* Windows keys */
 		case XK_Super_L:
 		case XK_Hyper_L:
@@ -277,7 +305,7 @@ xkeymap_translate_key(uint32 keysym, unsigned int keycode, unsigned int state)
 	if (tr.scancode != 0)
 	{
 		DEBUG_KBD(("Found key translation, scancode=0x%x, modifiers=0x%x\n",
-			  tr.scancode, tr.modifiers));
+			   tr.scancode, tr.modifiers));
 		return tr;
 	}
 
