@@ -124,11 +124,11 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 
 	if (pwfx->nChannels == 1)
 	{
-		info.play.channels = AUDIO_CHANNELS_MONO;
+		info.play.channels = 1;
 	}
 	else if (pwfx->nChannels == 2)
 	{
-		info.play.channels = AUDIO_CHANNELS_STEREO;
+		info.play.channels = 2;
 		g_samplewidth *= 2;
 	}
 
