@@ -172,48 +172,43 @@ mwm_hide_decorations(void)
 			(unsigned char *) &motif_hints, PROP_MOTIF_WM_HINTS_ELEMENTS);
 }
 
-static PixelColour
-split_colour15(uint32 colour)
-{
-	PixelColour rv;
-	rv.red = ((colour >> 7) & 0xf8) | ((colour >> 12) & 0x7);
-	rv.green = ((colour >> 2) & 0xf8) | ((colour >> 8) & 0x7);
-	rv.blue = ((colour << 3) & 0xf8) | ((colour >> 2) & 0x7);
-	return rv;
+#define SPLITCOLOUR15(colour, rv) \
+{ \
+	rv.red = ((colour >> 7) & 0xf8) | ((colour >> 12) & 0x7); \
+	rv.green = ((colour >> 2) & 0xf8) | ((colour >> 8) & 0x7); \
+	rv.blue = ((colour << 3) & 0xf8) | ((colour >> 2) & 0x7); \
 }
 
-static PixelColour
-split_colour16(uint32 colour)
-{
-	PixelColour rv;
-	rv.red = ((colour >> 8) & 0xf8) | ((colour >> 13) & 0x7);
-	rv.green = ((colour >> 3) & 0xfc) | ((colour >> 9) & 0x3);
-	rv.blue = ((colour << 3) & 0xf8) | ((colour >> 2) & 0x7);
-	return rv;
+#define SPLITCOLOUR16(colour, rv) \
+{ \
+	rv.red = ((colour >> 8) & 0xf8) | ((colour >> 13) & 0x7); \
+	rv.green = ((colour >> 3) & 0xfc) | ((colour >> 9) & 0x3); \
+	rv.blue = ((colour << 3) & 0xf8) | ((colour >> 2) & 0x7); \
+} \
+
+#define SPLITCOLOUR24(colour, rv) \
+{ \
+	rv.blue = (colour & 0xff0000) >> 16; \
+	rv.green = (colour & 0x00ff00) >> 8; \
+	rv.red = (colour & 0x0000ff); \
 }
 
-static PixelColour
-split_colour24(uint32 colour)
-{
-	PixelColour rv;
-	rv.blue = (colour & 0xff0000) >> 16;
-	rv.green = (colour & 0x00ff00) >> 8;
-	rv.red = (colour & 0x0000ff);
-	return rv;
-}
-
-static uint32
-make_colour(PixelColour pc)
-{
-	return (((pc.red >> g_red_shift_r) << g_red_shift_l)
-		| ((pc.green >> g_green_shift_r) << g_green_shift_l)
-		| ((pc.blue >> g_blue_shift_r) << g_blue_shift_l));
-}
+#define MAKECOLOUR(pc) \
+	((pc.red >> g_red_shift_r) << g_red_shift_l) \
+		| ((pc.green >> g_green_shift_r) << g_green_shift_l) \
+		| ((pc.blue >> g_blue_shift_r) << g_blue_shift_l) \
 
 #define BSWAP16(x) { x = (((x & 0xff) << 8) | (x >> 8)); }
 #define BSWAP24(x) { x = (((x & 0xff) << 16) | (x >> 16) | (x & 0xff00)); }
 #define BSWAP32(x) { x = (((x & 0xff00ff) << 8) | ((x >> 8) & 0xff00ff)); \
 			x = (x << 16) | (x >> 16); }
+
+#define BOUT16(o, x) { *(o++) = x >> 8; *(o++) = x; }
+#define BOUT24(o, x) { *(o++) = x >> 16; *(o++) = x >> 8; *(o++) = x; }
+#define BOUT32(o, x) { *(o++) = x >> 24; *(o++) = x >> 16; *(o++) = x >> 8; *(o++) = x; }
+#define LOUT16(o, x) { *(o++) = x; *(o++) = x >> 8; }
+#define LOUT24(o, x) { *(o++) = x; *(o++) = x >> 8; *(o++) = x >> 16; }
+#define LOUT32(o, x) { *(o++) = x; *(o++) = x >> 8; *(o++) = x >> 16; *(o++) = x >> 24; }
 
 static uint32
 translate_colour(uint32 colour)
@@ -222,16 +217,16 @@ translate_colour(uint32 colour)
 	switch (g_server_bpp)
 	{
 		case 15:
-			pc = split_colour15(colour);
+			SPLITCOLOUR15(colour, pc);
 			break;
 		case 16:
-			pc = split_colour16(colour);
+			SPLITCOLOUR16(colour, pc);
 			break;
 		case 24:
-			pc = split_colour24(colour);
+			SPLITCOLOUR24(colour, pc);
 			break;
 	}
-	return make_colour(pc);
+	return MAKECOLOUR(pc);
 }
 
 /* indent is confused by UNROLL8 */
@@ -251,6 +246,14 @@ translate_colour(uint32 colour)
 	while (out < end) \
 		{ stm } \
 }
+/* 3 byte output repeat */
+#define REPEAT3(stm) \
+{ \
+	while (out <= end - 8 * 3) \
+		UNROLL8(stm) \
+	while (out < end) \
+		{ stm } \
+}
 /* 4 byte output repeat */
 #define REPEAT4(stm) \
 { \
@@ -259,34 +262,36 @@ translate_colour(uint32 colour)
 	while (out < end) \
 		{ stm } \
 }
+/* *INDENT-ON* */
 
 static void
-translate8to8(uint8 * data, uint8 * out, uint8 * end)
+translate8to8(const uint8 * data, uint8 * out, uint8 * end)
 {
 	while (out < end)
 		*(out++) = (uint8) g_colmap[*(data++)];
 }
 
 static void
-translate8to16(uint8 * data, uint8 * out, uint8 * end)
+translate8to16(const uint8 * data, uint8 * out, uint8 * end)
 {
 	uint16 value;
 
 	if (g_arch_match)
 	{
+		/* *INDENT-OFF* */
 		REPEAT2
 		(
 			*((uint16 *) out) = g_colmap[*(data++)];
 			out += 2;
 		)
+		/* *INDENT-ON* */
 	}
 	else if (g_xserver_be)
 	{
 		while (out < end)
 		{
 			value = (uint16) g_colmap[*(data++)];
-			*(out++) = value >> 8;
-			*(out++) = value;
+			BOUT16(out, value);
 		}
 	}
 	else
@@ -294,15 +299,14 @@ translate8to16(uint8 * data, uint8 * out, uint8 * end)
 		while (out < end)
 		{
 			value = (uint16) g_colmap[*(data++)];
-			*(out++) = value;
-			*(out++) = value >> 8;
+			LOUT16(out, value);
 		}
 	}
 }
 
 /* little endian - conversion happens when colourmap is built */
 static void
-translate8to24(uint8 * data, uint8 * out, uint8 * end)
+translate8to24(const uint8 * data, uint8 * out, uint8 * end)
 {
 	uint32 value;
 
@@ -311,9 +315,7 @@ translate8to24(uint8 * data, uint8 * out, uint8 * end)
 		while (out < end)
 		{
 			value = g_colmap[*(data++)];
-			*(out++) = value >> 16;
-			*(out++) = value >> 8;
-			*(out++) = value;
+			BOUT24(out, value);
 		}
 	}
 	else
@@ -321,35 +323,32 @@ translate8to24(uint8 * data, uint8 * out, uint8 * end)
 		while (out < end)
 		{
 			value = g_colmap[*(data++)];
-			*(out++) = value;
-			*(out++) = value >> 8;
-			*(out++) = value >> 16;
+			LOUT24(out, value);
 		}
 	}
 }
 
 static void
-translate8to32(uint8 * data, uint8 * out, uint8 * end)
+translate8to32(const uint8 * data, uint8 * out, uint8 * end)
 {
 	uint32 value;
 
 	if (g_arch_match)
 	{
+		/* *INDENT-OFF* */
 		REPEAT4
 		(
 			*((uint32 *) out) = g_colmap[*(data++)];
 			out += 4;
 		)
+		/* *INDENT-ON* */
 	}
 	else if (g_xserver_be)
 	{
 		while (out < end)
 		{
 			value = g_colmap[*(data++)];
-			*(out++) = value >> 24;
-			*(out++) = value >> 16;
-			*(out++) = value >> 8;
-			*(out++) = value;
+			BOUT32(out, value);
 		}
 	}
 	else
@@ -357,289 +356,451 @@ translate8to32(uint8 * data, uint8 * out, uint8 * end)
 		while (out < end)
 		{
 			value = g_colmap[*(data++)];
-			*(out++) = value;
-			*(out++) = value >> 8;
-			*(out++) = value >> 16;
-			*(out++) = value >> 24;
+			LOUT32(out, value);
 		}
 	}
 }
 
-/* *INDENT-ON* */
-
 static void
-translate15to16(uint16 * data, uint8 * out, uint8 * end)
+translate15to16(const uint16 * data, uint8 * out, uint8 * end)
 {
 	uint16 pixel;
 	uint16 value;
+	PixelColour pc;
 
-	while (out < end)
+	if (g_xserver_be)
 	{
-		pixel = *(data++);
-
-		if (g_host_be)
+		while (out < end)
 		{
-			BSWAP16(pixel);
+			pixel = *(data++);
+			if (g_host_be)
+			{
+				BSWAP16(pixel);
+			}
+			SPLITCOLOUR15(pixel, pc);
+			value = MAKECOLOUR(pc);
+			BOUT16(out, value);
 		}
-
-		value = make_colour(split_colour15(pixel));
-
-		if (g_xserver_be)
+	}
+	else
+	{
+		while (out < end)
 		{
-			*(out++) = value >> 8;
-			*(out++) = value;
-		}
-		else
-		{
-			*(out++) = value;
-			*(out++) = value >> 8;
+			pixel = *(data++);
+			if (g_host_be)
+			{
+				BSWAP16(pixel);
+			}
+			SPLITCOLOUR15(pixel, pc);
+			value = MAKECOLOUR(pc);
+			LOUT16(out, value);
 		}
 	}
 }
 
 static void
-translate15to24(uint16 * data, uint8 * out, uint8 * end)
+translate15to24(const uint16 * data, uint8 * out, uint8 * end)
 {
 	uint32 value;
 	uint16 pixel;
+	PixelColour pc;
 
-	while (out < end)
+	if (g_arch_match)
 	{
-		pixel = *(data++);
-
-		if (g_host_be)
+		/* *INDENT-OFF* */
+		REPEAT3
+		(
+			pixel = *(data++);
+			SPLITCOLOUR15(pixel, pc);
+			*(out++) = pc.blue;
+			*(out++) = pc.green;
+			*(out++) = pc.red;
+		)
+		/* *INDENT-ON* */
+	}
+	else if (g_xserver_be)
+	{
+		while (out < end)
 		{
-			BSWAP16(pixel);
+			pixel = *(data++);
+			if (g_host_be)
+			{
+				BSWAP16(pixel);
+			}
+			SPLITCOLOUR15(pixel, pc);
+			value = MAKECOLOUR(pc);
+			BOUT24(out, value);
 		}
-
-		value = make_colour(split_colour15(pixel));
-		if (g_xserver_be)
+	}
+	else
+	{
+		while (out < end)
 		{
-			*(out++) = value >> 16;
-			*(out++) = value >> 8;
-			*(out++) = value;
-		}
-		else
-		{
-			*(out++) = value;
-			*(out++) = value >> 8;
-			*(out++) = value >> 16;
+			pixel = *(data++);
+			if (g_host_be)
+			{
+				BSWAP16(pixel);
+			}
+			SPLITCOLOUR15(pixel, pc);
+			value = MAKECOLOUR(pc);
+			LOUT24(out, value);
 		}
 	}
 }
 
 static void
-translate15to32(uint16 * data, uint8 * out, uint8 * end)
+translate15to32(const uint16 * data, uint8 * out, uint8 * end)
 {
 	uint16 pixel;
 	uint32 value;
+	PixelColour pc;
 
-	while (out < end)
+	if (g_arch_match)
 	{
-		pixel = *(data++);
-
-		if (g_host_be)
+		/* *INDENT-OFF* */
+		REPEAT4
+		(
+			pixel = *(data++);
+			SPLITCOLOUR15(pixel, pc);
+			*(out++) = pc.blue;
+			*(out++) = pc.green;
+			*(out++) = pc.red;
+			*(out++) = 0;
+		)
+		/* *INDENT-ON* */
+	}
+	else if (g_xserver_be)
+	{
+		while (out < end)
 		{
-			BSWAP16(pixel);
+			pixel = *(data++);
+			if (g_host_be)
+			{
+				BSWAP16(pixel);
+			}
+			SPLITCOLOUR15(pixel, pc);
+			value = MAKECOLOUR(pc);
+			BOUT32(out, value);
 		}
-
-		value = make_colour(split_colour15(pixel));
-
-		if (g_xserver_be)
+	}
+	else
+	{
+		while (out < end)
 		{
-			*(out++) = value >> 24;
-			*(out++) = value >> 16;
-			*(out++) = value >> 8;
-			*(out++) = value;
-		}
-		else
-		{
-			*(out++) = value;
-			*(out++) = value >> 8;
-			*(out++) = value >> 16;
-			*(out++) = value >> 24;
+			pixel = *(data++);
+			if (g_host_be)
+			{
+				BSWAP16(pixel);
+			}
+			SPLITCOLOUR15(pixel, pc);
+			value = MAKECOLOUR(pc);
+			LOUT32(out, value);
 		}
 	}
 }
 
 static void
-translate16to16(uint16 * data, uint8 * out, uint8 * end)
+translate16to16(const uint16 * data, uint8 * out, uint8 * end)
 {
 	uint16 pixel;
 	uint16 value;
+	PixelColour pc;
 
-	while (out < end)
+	if (g_xserver_be)
 	{
-		pixel = *(data++);
-
 		if (g_host_be)
 		{
-			BSWAP16(pixel);
-		}
-
-		value = make_colour(split_colour16(pixel));
-
-		if (g_xserver_be)
-		{
-			*(out++) = value >> 8;
-			*(out++) = value;
+			while (out < end)
+			{
+				pixel = *(data++);
+				BSWAP16(pixel);
+				SPLITCOLOUR16(pixel, pc);
+				value = MAKECOLOUR(pc);
+				BOUT16(out, value);
+			}
 		}
 		else
 		{
-			*(out++) = value;
-			*(out++) = value >> 8;
+			while (out < end)
+			{
+				pixel = *(data++);
+				SPLITCOLOUR16(pixel, pc);
+				value = MAKECOLOUR(pc);
+				BOUT16(out, value);
+			}
+		}
+	}
+	else
+	{
+		if (g_host_be)
+		{
+			while (out < end)
+			{
+				pixel = *(data++);
+				BSWAP16(pixel);
+				SPLITCOLOUR16(pixel, pc);
+				value = MAKECOLOUR(pc);
+				LOUT16(out, value);
+			}
+		}
+		else
+		{
+			while (out < end)
+			{
+				pixel = *(data++);
+				SPLITCOLOUR16(pixel, pc);
+				value = MAKECOLOUR(pc);
+				LOUT16(out, value);
+			}
 		}
 	}
 }
 
 static void
-translate16to24(uint16 * data, uint8 * out, uint8 * end)
+translate16to24(const uint16 * data, uint8 * out, uint8 * end)
 {
 	uint32 value;
 	uint16 pixel;
+	PixelColour pc;
 
-	while (out < end)
+	if (g_arch_match)
 	{
-		pixel = *(data++);
-
+		/* *INDENT-OFF* */
+		REPEAT3
+		(
+			pixel = *(data++);
+			SPLITCOLOUR16(pixel, pc);
+			*(out++) = pc.blue;
+			*(out++) = pc.green;
+			*(out++) = pc.red;
+		)
+		/* *INDENT-ON* */
+	}
+	else if (g_xserver_be)
+	{
 		if (g_host_be)
 		{
-			BSWAP16(pixel);
-		}
-
-		value = make_colour(split_colour16(pixel));
-
-		if (g_xserver_be)
-		{
-			*(out++) = value >> 16;
-			*(out++) = value >> 8;
-			*(out++) = value;
+			while (out < end)
+			{
+				pixel = *(data++);
+				BSWAP16(pixel);
+				SPLITCOLOUR16(pixel, pc);
+				value = MAKECOLOUR(pc);
+				BOUT24(out, value);
+			}
 		}
 		else
 		{
-			*(out++) = value;
-			*(out++) = value >> 8;
-			*(out++) = value >> 16;
+			while (out < end)
+			{
+				pixel = *(data++);
+				SPLITCOLOUR16(pixel, pc);
+				value = MAKECOLOUR(pc);
+				BOUT24(out, value);
+			}
+		}
+	}
+	else
+	{
+		if (g_host_be)
+		{
+			while (out < end)
+			{
+				pixel = *(data++);
+				BSWAP16(pixel);
+				SPLITCOLOUR16(pixel, pc);
+				value = MAKECOLOUR(pc);
+				LOUT24(out, value);
+			}
+		}
+		else
+		{
+			while (out < end)
+			{
+				pixel = *(data++);
+				SPLITCOLOUR16(pixel, pc);
+				value = MAKECOLOUR(pc);
+				LOUT24(out, value);
+			}
 		}
 	}
 }
 
 static void
-translate16to32(uint16 * data, uint8 * out, uint8 * end)
+translate16to32(const uint16 * data, uint8 * out, uint8 * end)
 {
 	uint16 pixel;
 	uint32 value;
+	PixelColour pc;
 
-	while (out < end)
+	if (g_arch_match)
 	{
-		pixel = *(data++);
-
+		/* *INDENT-OFF* */
+		REPEAT4
+		(
+			pixel = *(data++);
+			SPLITCOLOUR16(pixel, pc);
+			*(out++) = pc.blue;
+			*(out++) = pc.green;
+			*(out++) = pc.red;
+			*(out++) = 0;
+		)
+		/* *INDENT-ON* */
+	}
+	else if (g_xserver_be)
+	{
 		if (g_host_be)
 		{
-			BSWAP16(pixel);
-		}
-
-		value = make_colour(split_colour16(pixel));
-
-		if (g_xserver_be)
-		{
-			*(out++) = value >> 24;
-			*(out++) = value >> 16;
-			*(out++) = value >> 8;
-			*(out++) = value;
+			while (out < end)
+			{
+				pixel = *(data++);
+				BSWAP16(pixel);
+				SPLITCOLOUR16(pixel, pc);
+				value = MAKECOLOUR(pc);
+				BOUT32(out, value);
+			}
 		}
 		else
 		{
-			*(out++) = value;
-			*(out++) = value >> 8;
-			*(out++) = value >> 16;
-			*(out++) = value >> 24;
+			{
+				pixel = *(data++);
+				SPLITCOLOUR16(pixel, pc);
+				value = MAKECOLOUR(pc);
+				BOUT32(out, value);
+			}
+		}
+	}
+	else
+	{
+		if (g_host_be)
+		{
+			while (out < end)
+			{
+				pixel = *(data++);
+				BSWAP16(pixel);
+				SPLITCOLOUR16(pixel, pc);
+				value = MAKECOLOUR(pc);
+				LOUT32(out, value);
+			}
+		}
+		else
+		{
+			while (out < end)
+			{
+				pixel = *(data++);
+				SPLITCOLOUR16(pixel, pc);
+				value = MAKECOLOUR(pc);
+				LOUT32(out, value);
+			}
 		}
 	}
 }
 
 static void
-translate24to16(uint8 * data, uint8 * out, uint8 * end)
+translate24to16(const uint8 * data, uint8 * out, uint8 * end)
 {
 	uint32 pixel = 0;
 	uint16 value;
+	PixelColour pc;
+
 	while (out < end)
 	{
 		pixel = *(data++) << 16;
 		pixel |= *(data++) << 8;
 		pixel |= *(data++);
-
-		value = (uint16) make_colour(split_colour24(pixel));
-
+		SPLITCOLOUR24(pixel, pc);
+		value = MAKECOLOUR(pc);
 		if (g_xserver_be)
 		{
-			*(out++) = value >> 8;
-			*(out++) = value;
+			BOUT16(out, value);
 		}
 		else
 		{
-			*(out++) = value;
-			*(out++) = value >> 8;
+			LOUT16(out, value);
 		}
 	}
 }
 
 static void
-translate24to24(uint8 * data, uint8 * out, uint8 * end)
+translate24to24(const uint8 * data, uint8 * out, uint8 * end)
 {
 	uint32 pixel;
 	uint32 value;
+	PixelColour pc;
 
-	while (out < end)
+	if (g_xserver_be)
 	{
-		pixel = *(data++) << 16;
-		pixel |= *(data++) << 8;
-		pixel |= *(data++);
-
-		value = make_colour(split_colour24(pixel));
-
-		if (g_xserver_be)
+		while (out < end)
 		{
-			*(out++) = value >> 16;
-			*(out++) = value >> 8;
-			*(out++) = value;
+			pixel = *(data++) << 16;
+			pixel |= *(data++) << 8;
+			pixel |= *(data++);
+			SPLITCOLOUR24(pixel, pc);
+			value = MAKECOLOUR(pc);
+			BOUT24(out, value);
 		}
-		else
+	}
+	else
+	{
+		while (out < end)
 		{
-			*(out++) = value;
-			*(out++) = value >> 8;
-			*(out++) = value >> 16;
+			pixel = *(data++) << 16;
+			pixel |= *(data++) << 8;
+			pixel |= *(data++);
+			SPLITCOLOUR24(pixel, pc);
+			value = MAKECOLOUR(pc);
+			LOUT24(out, value);
 		}
 	}
 }
 
 static void
-translate24to32(uint8 * data, uint8 * out, uint8 * end)
+translate24to32(const uint8 * data, uint8 * out, uint8 * end)
 {
 	uint32 pixel;
 	uint32 value;
+	PixelColour pc;
 
-	while (out < end)
+	if (g_arch_match)
 	{
-		pixel = *(data++) << 16;
-		pixel |= *(data++) << 8;
-		pixel |= *(data++);
-
-		value = make_colour(split_colour24(pixel));
-
-		if (g_xserver_be)
+		/* *INDENT-OFF* */
+		REPEAT4
+		(
+#ifdef NEED_ALIGN
+			*(out++) = *(data++);
+			*(out++) = *(data++);
+			*(out++) = *(data++);
+			*(out++) = 0;
+#else
+			*((uint32 *) out) = *((uint32 *) data);
+			out += 4;
+			data += 3;
+#endif
+		)
+		/* *INDENT-ON* */
+	}
+	else if (g_xserver_be)
+	{
+		while (out < end)
 		{
-			*(out++) = value >> 24;
-			*(out++) = value >> 16;
-			*(out++) = value >> 8;
-			*(out++) = value;
+			pixel = *(data++) << 16;
+			pixel |= *(data++) << 8;
+			pixel |= *(data++);
+			SPLITCOLOUR24(pixel, pc);
+			value = MAKECOLOUR(pc);
+			BOUT32(out, value);
 		}
-		else
+	}
+	else
+	{
+		while (out < end)
 		{
-			*(out++) = value;
-			*(out++) = value >> 8;
-			*(out++) = value >> 16;
-			*(out++) = value >> 24;
+			pixel = *(data++) << 16;
+			pixel |= *(data++) << 8;
+			pixel |= *(data++);
+			SPLITCOLOUR24(pixel, pc);
+			value = MAKECOLOUR(pc);
+			LOUT32(out, value);
 		}
 	}
 }
@@ -659,6 +820,8 @@ translate_image(int width, int height, uint8 * data)
 		if (g_depth == 15 && g_server_bpp == 15)
 			return data;
 		if (g_depth == 16 && g_server_bpp == 16)
+			return data;
+		if (g_depth == 24 && g_bpp == 24 && g_server_bpp == 24)
 			return data;
 	}
 
@@ -833,10 +996,21 @@ ui_init(void)
 		calculate_shifts(vi.blue_mask, &g_blue_shift_r, &g_blue_shift_l);
 		calculate_shifts(vi.green_mask, &g_green_shift_r, &g_green_shift_l);
 
-		/* if RGB video and averything is little endian */
-		if (vi.red_mask > vi.green_mask && vi.green_mask > vi.blue_mask)
-			if (!g_xserver_be && !g_host_be)
+		/* if RGB video and everything is little endian */
+		if ((vi.red_mask > vi.green_mask && vi.green_mask > vi.blue_mask) &&
+		    !g_xserver_be && !g_host_be)
+		{
+			if (g_depth <= 16 || (g_red_shift_l == 16 && g_green_shift_l == 8 &&
+					      g_blue_shift_l == 0))
+			{
 				g_arch_match = True;
+			}
+		}
+
+		if (g_arch_match)
+		{
+			DEBUG(("Architectures match, enabling little endian optimisations.\n"));
+		}
 	}
 
 	pfm = XListPixmapFormats(g_display, &i);
