@@ -517,7 +517,6 @@ void ui_main_loop(void)
   // connect
   if (!rdp_connect(g_servername, RDP_LOGON_NORMAL, "", "", "", ""))
     return;
-  printf("connected\n");
   // start notifier
   SocketNotifier = new QSocketNotifier(g_sock, QSocketNotifier::Read, MW);
   MW->connect(SocketNotifier, SIGNAL(activated(int)), MW, SLOT(dataReceived()));
@@ -1249,6 +1248,22 @@ void error(char* format, ...)
 }
 
 /*****************************************************************************/
+void out_params(void)
+{
+  fprintf(stderr, "rdesktop: A Remote Desktop Protocol client.\n");
+  fprintf(stderr, "Version " VERSION ". Copyright (C) 1999-2003 Matt Chapman.\n");
+  fprintf(stderr, "See http://www.rdesktop.org/ for more information.\n\n");
+  fprintf(stderr, "Usage: qtrdesktop [options] server\n");
+  fprintf(stderr, "   -g: desktop geometry (WxH)\n");
+  fprintf(stderr, "   -4: use RDP version 4\n");
+  fprintf(stderr, "   -5: use RDP version 5 (default)\n");
+  fprintf(stderr, "   -t: tcp port)\n");
+  fprintf(stderr, "   -a: connection colour depth\n");
+  fprintf(stderr, "   -T: window title\n");
+  fprintf(stderr, "\n");
+}
+
+/*****************************************************************************/
 /* produce a hex dump */
 void hexdump(unsigned char *p, unsigned int len)
 {
@@ -1345,7 +1360,10 @@ int parse_parameters(int in_argc, char** in_argv)
   char* p;
 
   if (in_argc <= 1)
+  {
+    out_params();
     return 0;
+  }
   g_argc = in_argc;
   g_argv = in_argv;
   for (i = 1; i < in_argc; i++)
