@@ -70,7 +70,6 @@ typedef struct stream
 #define out_uint32(s,v)		out_uint32_be(s,v)
 
 #else
-#define next_be(s,v)		v = ((v) << 8) + *((s)->p++);
 #define in_uint16_be(s,v)	{ v = *((s)->p++); next_be(s,v); }
 #define in_uint32_be(s,v)	{ in_uint16_be(s,v); next_be(s,v); next_be(s,v); }
 #define out_uint16_be(s,v)	{ *((s)->p++) = ((v) >> 8) & 0xff; *((s)->p++) = (v) & 0xff; }
@@ -92,3 +91,5 @@ typedef struct stream
 #define out_uint8p(s,v,n)	{ memcpy((s)->p,v,n); (s)->p += n; }
 #define out_uint8a(s,v,n)	out_uint8p(s,v,n);
 #define out_uint8s(s,n)		{ memset((s)->p,0,n); (s)->p += n; }
+
+#define next_be(s,v)		v = ((v) << 8) + *((s)->p++);
