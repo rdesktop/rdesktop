@@ -43,6 +43,7 @@ Time g_last_gesturetime;
 static int g_x_socket;
 static Screen *g_screen;
 Window g_wnd;
+uint32 g_embed_wnd;
 BOOL g_enable_compose = False;
 static GC g_gc = NULL;
 static Visual *g_visual;
@@ -924,6 +925,11 @@ ui_create_window(void)
 		XSetWMNormalHints(g_display, g_wnd, sizehints);
 		XFree(sizehints);
 	}
+
+        if ( g_embed_wnd )
+        {
+                XReparentWindow(g_display, g_wnd, (Window)g_embed_wnd, 0, 0);
+        }
 
 	input_mask = KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask |
 		VisibilityChangeMask | FocusChangeMask;

@@ -97,6 +97,10 @@ Enable numlock syncronization between the Xserver and the remote RDP
 session.  This is useful with applications that looks at the numlock
 state, but might cause problems with some Xservers like Xvnc. 
 .TP
+.BR "-X <windowid>"
+Embed rdesktop-window in another window. The windowid is expected to
+be decimal.
+.TP
 .BR "-a <bpp>"
 Sets the colour depth for the connection (8, 15, 16 or 24).
 More than 8 bpp are only supported when connecting to Windows XP

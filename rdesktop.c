@@ -70,6 +70,7 @@ BOOL g_console_session = False;
 BOOL g_numlock_sync = False;
 extern BOOL g_owncolmap;
 extern BOOL g_ownbackstore;
+extern uint32 g_embed_wnd;
 
 #ifdef WITH_RDPSND
 BOOL g_rdpsnd = False;
@@ -118,6 +119,7 @@ usage(char *program)
 	fprintf(stderr, "   -S: caption button size (single application mode)\n");
 	fprintf(stderr, "   -T: window title\n");
 	fprintf(stderr, "   -N: enable numlock syncronization\n");
+	fprintf(stderr, "   -X: embed into another window with a given id.\n");
 	fprintf(stderr, "   -a: connection colour depth\n");
 	fprintf(stderr, "   -r: enable specified device redirection (this flag can be repeated)\n");
 	fprintf(stderr,
@@ -245,6 +247,7 @@ main(int argc, char *argv[])
 	prompt_password = False;
 	domain[0] = password[0] = shell[0] = directory[0] = 0;
 	strcpy(keymapname, "en-us");
+	g_embed_wnd = 0;
 
 	g_num_devices = 0;
 
@@ -254,7 +257,7 @@ main(int argc, char *argv[])
 #define VNCOPT
 #endif
 
-	while ((c = getopt(argc, argv, VNCOPT "u:d:s:c:p:n:k:g:fbBeEmCDKS:T:Na:r:045h?")) != -1)
+	while ((c = getopt(argc, argv, VNCOPT "u:d:s:c:p:n:k:g:fbBeEmCDKS:T:NX:a:r:045h?")) != -1)
 	{
 		switch (c)
 		{
@@ -401,6 +404,10 @@ main(int argc, char *argv[])
 				g_numlock_sync = True;
 				break;
 
+			case 'X':
+				g_embed_wnd = strtol(optarg, NULL, 10);
+				break;
+				
 			case 'a':
 				g_server_bpp = strtol(optarg, NULL, 10);
 				if (g_server_bpp != 8 && g_server_bpp != 16 && g_server_bpp != 15
