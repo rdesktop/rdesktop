@@ -59,6 +59,13 @@
 #define STATFS_T statfs
 #define F_NAMELEN(buf) (NAME_MAX)
 
+#elif (defined(__SGI_IRIX__))
+#include <sys/types.h>
+#include <sys/statvfs.h>
+#define STATFS_FN(path, buf) (statvfs(path,buf))
+#define STATFS_T statvfs
+#define F_NAMELEN(buf) ((buf).f_namemax)
+
 #else
 #include <sys/vfs.h>		/* linux statfs */
 #include <mntent.h>
