@@ -27,7 +27,7 @@ make install DESTDIR=$RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root)
-%doc COPYING doc/AUTHORS doc/keymapping.txt doc/keymap-names.txt doc/ipv6.txt
+%doc COPYING doc/AUTHORS doc/keymapping.txt doc/keymap-names.txt doc/ipv6.txt doc/ChangeLog
 %{_bindir}/rdesktop
 %{_mandir}/man1/rdesktop.1*
 %{_datadir}/rdesktop/keymaps

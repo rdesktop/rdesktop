@@ -90,6 +90,7 @@ dist:
 	rdesktop/doc/HACKING \
 	rdesktop/doc/AUTHORS \
 	rdesktop/doc/TODO \
+	rdesktop/doc/ChangeLog \
 	rdesktop/doc/keymapping.txt \
 	rdesktop/doc/keymap-names.txt \
 	rdesktop/doc/ipv6.txt \

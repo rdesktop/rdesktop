@@ -1,0 +1,35 @@
+rdesktop (1.3.0)
+
+   * RDP5
+   * 15, 16 and 24 bit color depths
+   * Basic clipboard redirection
+   * Sound
+   * IPv6
+   * Attaching to console on Windows 2003
+
+  -- Peter Astrand <peter@cendio.se>  Wed, 29 Oct 2003 16:40:58 +0100 (CET)
+
+rdesktop (1.2.0)
+
+   * new - more portable - key mapping code
+   * support for "high" (128-bit) encryption
+   * toggling out of full-screen mode with Ctrl-Alt-Enter
+   * a few extra options including host:port syntax
+   * many, many bug fixes and optimisations
+
+  -- Matthew Chapman <matthewc@cse.unsw.edu.au>  Thu, 30 Jan 2003 04:29
+
+rdesktop (1.1.0)
+
+   * solves arith.c licensing issue by taking big number routines from
+     OpenSSL
+   * keyboard support not merged from unified patches yet
+   * still no manpage
+
+  -- Matthew Chapman <matthewc@cse.unsw.edu.au>  Mon, 17 Sep 2001 23:14:28 +1000 (AEST)
+
+rdesktop (1.0.0)
+
+   * initial release
+
+  -- Matthew Chapman <matthewc@cse.unsw.edu.au>
