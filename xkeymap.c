@@ -218,8 +218,8 @@ xkeymap_init(void)
 
 	/* Make keymapname lowercase */
 	mapname_ptr = keymapname;
-	while (*mapname_ptr) 
-	    *mapname_ptr++ = tolower(*mapname_ptr);
+	while (*mapname_ptr)
+		*mapname_ptr++ = tolower(*mapname_ptr);
 
 	if (strcmp(keymapname, "none"))
 	{
@@ -240,7 +240,8 @@ handle_special_keys(uint32 keysym, unsigned int state, uint32 ev_time, BOOL pres
 		case XK_Break:
 		case XK_Pause:
 			if ((get_key_state(state, XK_Alt_L) || get_key_state(state, XK_Alt_R))
-				&& (get_key_state(state, XK_Control_L) || get_key_state(state, XK_Control_R)))
+			    && (get_key_state(state, XK_Control_L)
+				|| get_key_state(state, XK_Control_R)))
 			{
 				/* Ctrl-Alt-Break: toggle full screen */
 				if (pressed)
@@ -259,7 +260,7 @@ handle_special_keys(uint32 keysym, unsigned int state, uint32 ev_time, BOOL pres
 				}
 				/* No break sequence */
 			}
-			else /* XK_Pause */
+			else	/* XK_Pause */
 			{
 				/* According to MS Keyboard Scan Code
 				   Specification, pressing Pause should result
@@ -271,18 +272,24 @@ handle_special_keys(uint32 keysym, unsigned int state, uint32 ev_time, BOOL pres
 				   is released. */
 				if (pressed)
 				{
-					rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS, 0xe1, 0);
-					rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS, 0x1d, 0);
-					rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS, 0x45, 0);
-					rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS, 0xe1, 0);
-					rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS, 0x9d, 0);
-					rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS, 0xc5, 0);
+					rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS,
+						       0xe1, 0);
+					rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS,
+						       0x1d, 0);
+					rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS,
+						       0x45, 0);
+					rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS,
+						       0xe1, 0);
+					rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS,
+						       0x9d, 0);
+					rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS,
+						       0xc5, 0);
 				}
 				else
 				{
 					/* Release Left Ctrl */
-					rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYRELEASE, 0x1d,
-						       0);
+					rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYRELEASE,
+						       0x1d, 0);
 				}
 			}
 			return True;
@@ -494,16 +501,20 @@ reset_modifier_keys(unsigned int state)
 	uint32 ev_time;
 	ev_time = time(NULL);
 
-	if (MASK_HAS_BITS(remote_modifier_state, MapLeftShiftMask) && !get_key_state(state, XK_Shift_L))
+	if (MASK_HAS_BITS(remote_modifier_state, MapLeftShiftMask)
+	    && !get_key_state(state, XK_Shift_L))
 		rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_LSHIFT);
 
-	if (MASK_HAS_BITS(remote_modifier_state, MapRightShiftMask) && !get_key_state(state, XK_Shift_R))
+	if (MASK_HAS_BITS(remote_modifier_state, MapRightShiftMask)
+	    && !get_key_state(state, XK_Shift_R))
 		rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_RSHIFT);
 
-	if (MASK_HAS_BITS(remote_modifier_state, MapLeftCtrlMask) && !get_key_state(state, XK_Control_L))
+	if (MASK_HAS_BITS(remote_modifier_state, MapLeftCtrlMask)
+	    && !get_key_state(state, XK_Control_L))
 		rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_LCTRL);
 
-	if (MASK_HAS_BITS(remote_modifier_state, MapRightCtrlMask) && !get_key_state(state, XK_Control_R))
+	if (MASK_HAS_BITS(remote_modifier_state, MapRightCtrlMask)
+	    && !get_key_state(state, XK_Control_R))
 		rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_RCTRL);
 
 	if (MASK_HAS_BITS(remote_modifier_state, MapLeftAltMask) && !get_key_state(state, XK_Alt_L))
