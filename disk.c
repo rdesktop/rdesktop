@@ -638,9 +638,11 @@ disk_set_information(HANDLE handle, uint32 info_class, STREAM in, STREAM out)
 			break;
 
 		case FileAllocationInformation:
-
-			unimpl("IRP Set File Information class: FileAllocationInformation\n");
-			break;
+			/* Fall through to FileEndOfFileInformation,
+			   which uses ftrunc. This is like Samba with
+			   "strict allocation = false", and means that
+			   we won't detect out-of-quota errors, for
+			   example. */
 
 		case FileEndOfFileInformation:
 			in_uint8s(in, 28);	/* unknown */
@@ -651,9 +653,12 @@ disk_set_information(HANDLE handle, uint32 info_class, STREAM in, STREAM out)
 				if (stat_fs.f_bsize * stat_fs.f_bfree < length)
 					return STATUS_DISK_FULL;
 
-			//printf("FileEndOfFileInformation length = %d\n", length);
-			// ????????????
-			//unimpl("IRP Set File Information class: FileEndOfFileInformation\n");
+			if (ftruncate(handle, length) != 0)
+			{
+				perror("ftruncate");
+				return STATUS_DISK_FULL;
+			}
+
 			break;
 		default:
 
