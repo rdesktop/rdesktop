@@ -87,7 +87,7 @@ get_property_value(char *propname, long max_length,
    Returns -1 on error
 */
 static int
-get_current_desktop()
+get_current_desktop(void)
 {
 	unsigned long nitems_return;
 	uint32 *prop_return;

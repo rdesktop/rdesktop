@@ -315,9 +315,14 @@ ui_init(void)
 	if ((width == 0) || (height == 0))
 	{
 		/* Fetch geometry from _NET_WORKAREA */
-		uint32 xpos, ypos;
+		uint32 x, y, cx, cy;
 
-		if (get_current_workarea(&xpos, &ypos, &width, &height) < 0)
+		if (get_current_workarea(&x, &y, &cx, &cy) == 0)
+		{
+			width = cx;
+			height = cy;
+		}
+		else
 		{
 			warning("Failed to get workarea: probably your window manager does not support extended hints\n");
 			width = 800;
