@@ -189,15 +189,8 @@ cache_get_text(uint8 cache_id)
 {
 	DATABLOB *text;
 
-	if (cache_id < NUM_ELEMENTS(g_textcache))
-	{
-		text = &g_textcache[cache_id];
-		if (text->data != NULL)
-			return text;
-	}
-
-	error("get text %d\n", cache_id);
-	return NULL;
+	text = &g_textcache[cache_id];
+	return text;
 }
 
 /* Store a text item in the cache */
@@ -206,20 +199,12 @@ cache_put_text(uint8 cache_id, void *data, int length)
 {
 	DATABLOB *text;
 
-	if (cache_id < NUM_ELEMENTS(g_textcache))
-	{
-		text = &g_textcache[cache_id];
-		if (text->data != NULL)
-			xfree(text->data);
-
-		text->data = xmalloc(length);
-		text->size = length;
-		memcpy(text->data, data, length);
-	}
-	else
-	{
-		error("put text %d\n", cache_id);
-	}
+	text = &g_textcache[cache_id];
+	if (text->data != NULL)
+		xfree(text->data);
+	text->data = xmalloc(length);
+	text->size = length;
+	memcpy(text->data, data, length);
 }
 
 
