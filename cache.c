@@ -32,6 +32,7 @@ int g_num_bitmaps_in_memory[3];
 
 /* BITMAP CACHE */
 static BMPCACHEENTRY g_bmpcache[3][0xa00];
+static HBITMAP g_volatile_bc[3];
 
 /* Remove the least-recently used bitmap from the cache */
 void
@@ -75,6 +76,10 @@ cache_get_bitmap(uint8 cache_id, uint16 cache_idx)
 			return *pbitmap;
 		}
 	}
+	else if ((cache_id < NUM_ELEMENTS(g_volatile_bc)) && (cache_idx == 0x7fff))
+	{
+		return g_volatile_bc[cache_id];
+	}
 
 	error("get bitmap %d:%d\n", cache_id, cache_idx);
 	return NULL;
@@ -101,6 +106,13 @@ cache_put_bitmap(uint8 cache_id, uint16 cache_idx, HBITMAP bitmap, uint32 stamp)
 
 		g_bmpcache[cache_id][cache_idx].bitmap = bitmap;
 		g_bmpcache[cache_id][cache_idx].usage = stamp;
+	}
+	else if ((cache_id < NUM_ELEMENTS(g_volatile_bc)) && (cache_idx == 0x7fff))
+	{
+		old = g_volatile_bc[cache_id];
+		if (old != NULL)
+			ui_destroy_bitmap(old);
+		g_volatile_bc[cache_id] = bitmap;
 	}
 	else
 	{

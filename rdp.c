@@ -539,7 +539,7 @@ rdp_out_bmpcache2_caps(STREAM s)
 	out_uint16_le(s, RDP_CAPSET_BMPCACHE2);
 	out_uint16_le(s, RDP_CAPLEN_BMPCACHE2);
 
-	out_uint16_le(s, g_bitmap_cache_persist_enable ? 1 : 0);	/* version */
+	out_uint16_le(s, g_bitmap_cache_persist_enable ? 2 : 0);	/* version */
 
 	out_uint16_le(s, 0x0300);	/* flags? number of caches? */
 

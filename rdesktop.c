@@ -720,8 +720,8 @@ main(int argc, char *argv[])
 	}
 
 	DEBUG(("Disconnecting...\n"));
-	cache_save_state();
 	rdp_disconnect();
+	cache_save_state();
 	ui_deinit();
 
 	if (ext_disc_reason >= 2)
