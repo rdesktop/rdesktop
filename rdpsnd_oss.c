@@ -29,7 +29,7 @@
 #define MAX_QUEUE	10
 
 int g_dsp_fd;
-BOOL g_dsp_busy;
+BOOL g_dsp_busy = False;
 
 static struct audio_packet
 {
