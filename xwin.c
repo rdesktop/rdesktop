@@ -1799,7 +1799,7 @@ ui_patblt(uint8 opcode,
 	{
 		case 0:	/* Solid */
 			SET_FOREGROUND(fgcolour);
-			FILL_RECTANGLE(x, y, cx, cy);
+			FILL_RECTANGLE_BACKSTORE(x, y, cx, cy);
 			break;
 
 		case 2:	/* Hatch */
@@ -1810,7 +1810,7 @@ ui_patblt(uint8 opcode,
 			XSetFillStyle(g_display, g_gc, FillOpaqueStippled);
 			XSetStipple(g_display, g_gc, fill);
 			XSetTSOrigin(g_display, g_gc, brush->xorigin, brush->yorigin);
-			FILL_RECTANGLE(x, y, cx, cy);
+			FILL_RECTANGLE_BACKSTORE(x, y, cx, cy);
 			XSetFillStyle(g_display, g_gc, FillSolid);
 			XSetTSOrigin(g_display, g_gc, 0, 0);
 			ui_destroy_glyph((HGLYPH) fill);
@@ -1820,15 +1820,12 @@ ui_patblt(uint8 opcode,
 			for (i = 0; i != 8; i++)
 				ipattern[7 - i] = brush->pattern[i];
 			fill = (Pixmap) ui_create_glyph(8, 8, ipattern);
-
 			SET_FOREGROUND(bgcolour);
 			SET_BACKGROUND(fgcolour);
 			XSetFillStyle(g_display, g_gc, FillOpaqueStippled);
 			XSetStipple(g_display, g_gc, fill);
 			XSetTSOrigin(g_display, g_gc, brush->xorigin, brush->yorigin);
-
-			FILL_RECTANGLE(x, y, cx, cy);
-
+			FILL_RECTANGLE_BACKSTORE(x, y, cx, cy);
 			XSetFillStyle(g_display, g_gc, FillSolid);
 			XSetTSOrigin(g_display, g_gc, 0, 0);
 			ui_destroy_glyph((HGLYPH) fill);
@@ -1839,6 +1836,9 @@ ui_patblt(uint8 opcode,
 	}
 
 	RESET_FUNCTION(opcode);
+
+	if (g_ownbackstore)
+		XCopyArea(g_display, g_backstore, g_wnd, g_gc, x, y, cx, cy, x, y);
 }
 
 void
