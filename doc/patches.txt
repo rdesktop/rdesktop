@@ -238,9 +238,9 @@ Not needed anymore, with the new keyboard mapping implementation.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/rdesktop_keymap.patch
 Description:
-TDB
+Some kind of new alternative keyboard mapping implementation. 
 Status:
-Not yet examined. 
+Not needed anymore, with the new keyboard mapping implementation. 
 
 
 URL:
