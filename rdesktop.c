@@ -30,9 +30,10 @@
 
 char username[16];
 char hostname[16];
+char keymapname[16];
+int keylayout;
 int width;
 int height;
-int keylayout = 0x409;
 BOOL bitmap_compression = True;
 BOOL sendmotion = True;
 BOOL orders = True;
@@ -52,7 +53,7 @@ usage(char *program)
 	printf("   -c: working directory\n");
 	printf("   -p: password (autologon)\n");
 	printf("   -n: client hostname\n");
-	printf("   -k: keyboard layout (hex)\n");
+	printf("   -k: keyboard layout\n");
 	printf("   -g: desktop geometry (WxH)\n");
 	printf("   -f: full-screen mode\n");
 	printf("   -b: force bitmap updates\n");
@@ -82,6 +83,7 @@ main(int argc, char *argv[])
 
 	flags = RDP_LOGON_NORMAL;
 	domain[0] = password[0] = shell[0] = directory[0] = 0;
+	strcpy(keymapname, "us");
 
 	while ((c = getopt(argc, argv, "u:d:s:c:p:n:k:g:fbemlh?")) != -1)
 	{
@@ -113,12 +115,7 @@ main(int argc, char *argv[])
 				break;
 
 			case 'k':
-				keylayout = strtol(optarg, NULL, 16);
-				if (keylayout == 0)
-				{
-					error("invalid keyboard layout\n");
-					return 1;
-				}
+				STRNCPY(keymapname, optarg, sizeof(keymapname));
 				break;
 
 			case 'g':
@@ -226,9 +223,9 @@ main(int argc, char *argv[])
 		rdp_main_loop();
 		printf("Disconnecting...\n");
 		ui_destroy_window();
+		rdp_disconnect();
 	}
 
-	rdp_disconnect();
 	return 0;
 }
 

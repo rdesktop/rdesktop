@@ -1,0 +1,49 @@
+include common
+map 40c fr
+02 ampersand 1
+03 eacute 2 asciitilde
+04 quotedbl 3 numbersign
+05 apostrophe 4 braceleft
+06 parenleft 5 bracketleft
+07 minus 6 bar
+08 egrave 7 grave
+09 underscore 8 backslash
+0a ccedilla 9 asciicircum
+0b agrave 0 at
+0c parenright degree bracketright
+0d equal plus braceright
+10 a A
+11 z Z
+12 e E
+13 r R
+14 t T
+15 y Y
+16 u U
+17 i I
+18 o O
+19 p P
+1a diaeresis
+1b dollar sterling currency
+1e q Q
+1f s S ssharp
+20 d D
+21 f F
+22 g G
+23 h H
+24 j J
+25 k K
+26 l L
+27 m M
+28 ugrave percent
+29 asterisk mu
+2c w W
+2d x X
+2e c C
+2f v V
+30 b B
+31 n N
+32 comma question
+33 semicolon period
+34 colon slash
+35 exclam section
+56 less greater

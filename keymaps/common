@@ -1,0 +1,52 @@
+01 Escape
+0e BackSpace
+0f Tab ISO_Left_Tab
+1c Return
+1d Control_L
+2a Shift_L
+36 Shift_R
+37 KP_Multiply
+38 Alt_L
+39 space
+3a Caps_Lock
+3b F1
+3c F2
+3d F3
+3e F4
+3f F5
+40 F6
+41 F7
+42 F8
+43 F9
+44 F10
+45 Num_Lock
+46 Scroll_Lock
+47 KP_Home KP_7
+48 KP_Up KP_8
+49 KP_Prior KP_9
+4a KP_Subtract
+4b KP_Left KP_4
+4c KP_Begin KP_5
+4d KP_Right KP_6
+4e KP_Add
+4f KP_End KP_1
+50 KP_Down KP_2
+51 KP_Next KP_3
+52 KP_Insert KP_0
+53 KP_Delete KP_Decimal
+54 Print
+57 F11
+58 F12
+9c KP_Enter
+9d Control_R
+b8 Alt_R
+c7 Home
+c8 Up
+c9 Prior
+cb Left
+cd Right
+cf End
+d0 Down
+d1 Next
+d2 Insert
+d3 Delete

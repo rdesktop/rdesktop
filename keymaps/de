@@ -1,0 +1,50 @@
+include common
+map 407 de
+02 1 exclam
+03 2 quotedbl twosuperior
+04 3 section threesuperior
+05 4 dollar
+06 5 percent
+07 6 ampersand
+08 7 slash braceleft
+09 8 parenleft bracketleft
+0a 9 parenright bracketright
+0b 0 equal braceright
+0c ssharp question backslash
+0d apostrophe
+10 q Q at
+11 w W
+12 e E
+13 r R
+14 t T
+15 z Z
+16 u U
+17 i I
+18 o O
+19 p P
+1a udiaeresis Udiaeresis
+1b plus asterisk asciitilde
+1e a A
+1f s S
+20 d D
+21 f F
+22 g G
+23 h H
+24 j J
+25 k K
+26 l L
+27 odiaeresis Odiaeresis
+28 adiaeresis Adiaeresis
+29 asciicircum degree
+2b numbersign acute
+2c y Y
+2d x X
+2e c C
+2f v V
+30 b B
+31 n N
+32 m M mu
+33 comma semicolon
+34 period colon
+35 minus underscore
+56 less greater bar

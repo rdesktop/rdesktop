@@ -1,6 +1,6 @@
 /*
    rdesktop: A Remote Desktop Protocol client.
-   User interface services - X-Windows
+   User interface services - X Window System
    Copyright (C) Matthew Chapman 1999-2001
    
    This program is free software; you can redistribute it and/or modify
@@ -24,6 +24,8 @@
 #include <errno.h>
 #include "rdesktop.h"
 
+extern char keymapname[16];
+extern int keylayout;
 extern int width;
 extern int height;
 extern BOOL sendmotion;
@@ -280,6 +282,8 @@ ui_create_window(char *title)
 		XFree(sizehints);
 	}
 
+	xkeymap_init(display);
+
 	input_mask = KeyPressMask | KeyReleaseMask
 			| ButtonPressMask | ButtonReleaseMask
 			| EnterWindowMask | LeaveWindowMask;
@@ -312,79 +316,11 @@ ui_destroy_window()
 	display = NULL;
 }
 
-static uint8
-xwin_translate_key(unsigned long key)
-{
-	DEBUG(("KEY(code=0x%lx)\n", key));
-
-	if ((key > 8) && (key <= 0x60))
-		return (key - 8);
-
-	switch (key)
-	{
-		case 0x61:	/* home */
-			return 0x47 | 0x80;
-		case 0x62:	/* up arrow */
-			return 0x48 | 0x80;
-		case 0x63:	/* page up */
-			return 0x49 | 0x80;
-		case 0x64:	/* left arrow */
-			return 0x4b | 0x80;
-		case 0x66:	/* right arrow */
-			return 0x4d | 0x80;
-		case 0x67:	/* end */
-			return 0x4f | 0x80;
-		case 0x68:	/* down arrow */
-			return 0x50 | 0x80;
-		case 0x69:	/* page down */
-			return 0x51 | 0x80;
-		case 0x6a:	/* insert */
-			return 0x52 | 0x80;
-		case 0x6b:	/* delete */
-			return 0x53 | 0x80;
-		case 0x6c:	/* keypad enter */
-			return 0x1c | 0x80;
-		case 0x6d:	/* right ctrl */
-			return 0x1d | 0x80;
-		case 0x6f:	/* ctrl - print screen */
-			return 0x37 | 0x80;
-		case 0x70:	/* keypad '/' */
-			return 0x35 | 0x80;
-		case 0x71:	/* right alt */
-			return 0x38 | 0x80;
-		case 0x72:	/* ctrl break */
-			return 0x46 | 0x80;
-		case 0x73:	/* left window key */
-			return 0xff;	/* real scancode is 5b */
-		case 0x74:	/* right window key */
-			return 0xff;	/* real scancode is 5c */
-		case 0x75:	/* menu key */
-			return 0x5d | 0x80;
-	}
-
-	return 0;
-}
-
-static uint16
-xwin_translate_mouse(unsigned long button)
-{
-	switch (button)
-	{
-		case Button1:	/* left */
-			return MOUSE_FLAG_BUTTON1;
-		case Button2:	/* middle */
-			return MOUSE_FLAG_BUTTON3;
-		case Button3:	/* right */
-			return MOUSE_FLAG_BUTTON2;
-	}
-
-	return 0;
-}
-
 static void
 xwin_process_events()
 {
 	XEvent event;
+	KeySym keysym;
 	uint8 scancode;
 	uint16 button;
 	uint32 ev_time;
@@ -399,7 +335,8 @@ xwin_process_events()
 		switch (event.type)
 		{
 			case KeyPress:
-				scancode = xwin_translate_key(event.xkey.keycode);
+				keysym = XKeycodeToKeysym(display, event.xkey.keycode, 0);
+				scancode = xkeymap_translate_key(keysym, event.xkey.keycode);
 				if (scancode == 0)
 					break;
 
@@ -408,7 +345,8 @@ xwin_process_events()
 				break;
 
 			case KeyRelease:
-				scancode = xwin_translate_key(event.xkey.keycode);
+				keysym = XKeycodeToKeysym(display, event.xkey.keycode, 0);
+				scancode = xkeymap_translate_key(keysym, event.xkey.keycode);
 				if (scancode == 0)
 					break;
 
@@ -418,7 +356,7 @@ xwin_process_events()
 				break;
 
 			case ButtonPress:
-				button = xwin_translate_mouse(event.xbutton.button);
+				button = xkeymap_translate_button(event.xbutton.button);
 				if (button == 0)
 					break;
 
@@ -429,7 +367,7 @@ xwin_process_events()
 				break;
 
 			case ButtonRelease:
-				button = xwin_translate_mouse(event.xbutton.button);
+				button = xkeymap_translate_button(event.xbutton.button);
 				if (button == 0)
 					break;
 
