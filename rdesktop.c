@@ -43,9 +43,9 @@
 
 char g_title[64] = "";
 char g_username[64];
-char hostname[16];
+char g_hostname[16];
 char keymapname[16];
-int keylayout = 0x409;		/* Defaults to US keyboard layout */
+int g_keylayout = 0x409;	/* Defaults to US keyboard layout */
 
 int g_width = 800;		/* width is special: If 0, the
 				   geometry will be fetched from
@@ -53,7 +53,7 @@ int g_width = 800;		/* width is special: If 0, the
 				   absolute value specifies the
 				   percent of the whole screen. */
 int g_height = 600;
-int tcp_port_rdp = TCP_PORT_RDP;
+extern int g_tcp_port_rdp;
 int g_server_bpp = 8;
 int g_win_button_size = 0;	/* If zero, disable single app mode */
 BOOL g_bitmap_compression = True;
@@ -305,7 +305,7 @@ parse_server_and_port(char *server)
 		if (*server == '[' && p != NULL)
 		{
 			if (*(p + 1) == ':' && *(p + 2) != '\0')
-				tcp_port_rdp = strtol(p + 2, NULL, 10);
+				g_tcp_port_rdp = strtol(p + 2, NULL, 10);
 			/* remove the port number and brackets from the address */
 			*p = '\0';
 			strncpy(server, server + 1, strlen(server));
@@ -317,7 +317,7 @@ parse_server_and_port(char *server)
 		p = strchr(server, ':');
 		if (p != NULL)
 		{
-			tcp_port_rdp = strtol(p + 1, NULL, 10);
+			g_tcp_port_rdp = strtol(p + 1, NULL, 10);
 			*p = 0;
 		}
 	}
@@ -325,7 +325,7 @@ parse_server_and_port(char *server)
 	p = strchr(server, ':');
 	if (p != NULL)
 	{
-		tcp_port_rdp = strtol(p + 1, NULL, 10);
+		g_tcp_port_rdp = strtol(p + 1, NULL, 10);
 		*p = 0;
 	}
 #endif /* IPv6 */
@@ -416,7 +416,7 @@ main(int argc, char *argv[])
 				break;
 
 			case 'n':
-				STRNCPY(hostname, optarg, sizeof(hostname));
+				STRNCPY(g_hostname, optarg, sizeof(g_hostname));
 				break;
 
 			case 'k':
@@ -656,7 +656,7 @@ main(int argc, char *argv[])
 		STRNCPY(g_username, pw->pw_name, sizeof(g_username));
 	}
 
-	if (hostname[0] == 0)
+	if (g_hostname[0] == 0)
 	{
 		if (gethostname(fullhostname, sizeof(fullhostname)) == -1)
 		{
@@ -668,7 +668,7 @@ main(int argc, char *argv[])
 		if (p != NULL)
 			*p = 0;
 
-		STRNCPY(hostname, fullhostname, sizeof(hostname));
+		STRNCPY(g_hostname, fullhostname, sizeof(g_hostname));
 	}
 
 	if (prompt_password && read_password(password, sizeof(password)))
@@ -1056,8 +1056,8 @@ load_licence(unsigned char **data)
 	if (home == NULL)
 		return -1;
 
-	path = (char *) xmalloc(strlen(home) + strlen(hostname) + sizeof("/.rdesktop/licence."));
-	sprintf(path, "%s/.rdesktop/licence.%s", home, hostname);
+	path = (char *) xmalloc(strlen(home) + strlen(g_hostname) + sizeof("/.rdesktop/licence."));
+	sprintf(path, "%s/.rdesktop/licence.%s", home, g_hostname);
 
 	fd = open(path, O_RDONLY);
 	if (fd == -1)
@@ -1083,7 +1083,7 @@ save_licence(unsigned char *data, int length)
 	if (home == NULL)
 		return;
 
-	path = (char *) xmalloc(strlen(home) + strlen(hostname) + sizeof("/.rdesktop/licence."));
+	path = (char *) xmalloc(strlen(home) + strlen(g_hostname) + sizeof("/.rdesktop/licence."));
 
 	sprintf(path, "%s/.rdesktop", home);
 	if ((mkdir(path, 0700) == -1) && errno != EEXIST)
@@ -1094,7 +1094,7 @@ save_licence(unsigned char *data, int length)
 
 	/* write licence to licence.hostname.new, then atomically rename to licence.hostname */
 
-	sprintf(path, "%s/.rdesktop/licence.%s", home, hostname);
+	sprintf(path, "%s/.rdesktop/licence.%s", home, g_hostname);
 	tmppath = (char *) xmalloc(strlen(path) + sizeof(".new"));
 	strcpy(tmppath, path);
 	strcat(tmppath, ".new");

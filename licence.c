@@ -27,7 +27,7 @@
 #endif
 
 extern char g_username[16];
-extern char hostname[16];
+extern char g_hostname[16];
 
 static uint8 g_licence_key[16];
 static uint8 g_licence_sign_key[16];
@@ -56,7 +56,7 @@ static void
 licence_generate_hwid(uint8 * hwid)
 {
 	buf_out_uint32(hwid, 2);
-	strncpy((char *) (hwid + 4), hostname, LICENCE_HWID_SIZE - 4);
+	strncpy((char *) (hwid + 4), g_hostname, LICENCE_HWID_SIZE - 4);
 }
 
 /* Present an existing licence to the server */
@@ -174,7 +174,7 @@ licence_process_demand(STREAM s)
 		return;
 	}
 
-	licence_send_request(null_data, null_data, g_username, hostname);
+	licence_send_request(null_data, null_data, g_username, g_hostname);
 }
 
 /* Send an authentication response packet */

@@ -35,7 +35,7 @@
 static int sock;
 static struct stream in;
 static struct stream out;
-extern int tcp_port_rdp;
+int g_tcp_port_rdp = TCP_PORT_RDP;
 
 /* Initialise TCP transport data packet */
 STREAM
@@ -142,7 +142,7 @@ tcp_connect(char *server)
 	struct addrinfo hints, *res, *ressave;
 	char tcp_port_rdp_s[10];
 
-	snprintf(tcp_port_rdp_s, 10, "%d", tcp_port_rdp);
+	snprintf(tcp_port_rdp_s, 10, "%d", g_tcp_port_rdp);
 
 	memset(&hints, 0, sizeof(struct addrinfo));
 	hints.ai_family = AF_UNSPEC;
@@ -200,7 +200,7 @@ tcp_connect(char *server)
 	}
 
 	servaddr.sin_family = AF_INET;
-	servaddr.sin_port = htons(tcp_port_rdp);
+	servaddr.sin_port = htons(g_tcp_port_rdp);
 
 	if (connect(sock, (struct sockaddr *) &servaddr, sizeof(struct sockaddr)) < 0)
 	{

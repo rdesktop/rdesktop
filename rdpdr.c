@@ -55,7 +55,7 @@
 #define IRP_MN_QUERY_DIRECTORY          0x01
 #define IRP_MN_NOTIFY_CHANGE_DIRECTORY  0x02
 
-extern char hostname[16];
+extern char g_hostname[16];
 extern DEVICE_FNS serial_fns;
 extern DEVICE_FNS printer_fns;
 extern DEVICE_FNS parallel_fns;
@@ -205,7 +205,7 @@ rdpdr_send_name(void)
 
 	if (NULL == g_rdpdr_clientname)
 	{
-		g_rdpdr_clientname = hostname;
+		g_rdpdr_clientname = g_hostname;
 	}
 	hostlen = (strlen(g_rdpdr_clientname) + 1) * 2;
 

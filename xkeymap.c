@@ -40,7 +40,7 @@
 extern Display *g_display;
 extern Window g_wnd;
 extern char keymapname[16];
-extern int keylayout;
+extern int g_keylayout;
 extern int g_win_button_size;
 extern BOOL g_enable_compose;
 extern BOOL g_use_rdp5;
@@ -137,8 +137,8 @@ xkeymap_read(char *mapname)
 		/* map */
 		if (strncmp(line, "map ", 4) == 0)
 		{
-			keylayout = strtol(line + 4, NULL, 16);
-			DEBUG_KBD(("Keylayout 0x%x\n", keylayout));
+			g_keylayout = strtol(line + 4, NULL, 16);
+			DEBUG_KBD(("Keylayout 0x%x\n", g_keylayout));
 			continue;
 		}
 
