@@ -79,6 +79,13 @@ rdp_recv(uint8 * type)
 	}
 
 	in_uint16_le(rdp_s, length);
+	/* 32k packets are really 8, keepalive fix */
+	if (length == 0x8000)
+	{
+		next_packet += 8;
+		*type = 0;
+		return rdp_s;
+	}
 	in_uint16_le(rdp_s, pdu_type);
 	in_uint8s(rdp_s, 2);	/* userid */
 	*type = pdu_type & 0xf;
@@ -710,6 +717,9 @@ rdp_main_loop(void)
 
 			case RDP_PDU_DATA:
 				process_data_pdu(s);
+				break;
+
+			case 0:
 				break;
 
 			default:
