@@ -323,6 +323,7 @@ handle_special_keys(uint32 keysym, unsigned int state, uint32 ev_time, BOOL pres
 			}
 			/* No release sequence */
 			return True;
+			break;
 
 		case XK_Pause:
 			/* According to MS Keyboard Scan Code
@@ -349,30 +350,34 @@ handle_special_keys(uint32 keysym, unsigned int state, uint32 ev_time, BOOL pres
 					       0x1d, 0);
 			}
 			return True;
+			break;
 
 		case XK_Meta_L:	/* Windows keys */
 		case XK_Super_L:
 		case XK_Hyper_L:
 			send_winkey(ev_time, pressed, True);
 			return True;
+			break;
 
 		case XK_Meta_R:
 		case XK_Super_R:
 		case XK_Hyper_R:
 			send_winkey(ev_time, pressed, False);
 			return True;
+			break;
 
 		case XK_space:
 			/* Prevent access to the Windows system menu in single app mode */
 			if (g_win_button_size
 			    && (get_key_state(state, XK_Alt_L) || get_key_state(state, XK_Alt_R)))
 				return True;
+			break;
 		case XK_Num_Lock:
 			/* FIXME: We might want to do RDP_INPUT_SYNCHRONIZE here, if g_numlock_sync */
 			if (!g_numlock_sync)
 				/* Inhibit */
 				return True;
-
+			break;
 
 	}
 	return False;
