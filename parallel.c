@@ -7,6 +7,11 @@
 #include "rdesktop.h"
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/ioctl.h>
+#include <linux/lp.h>
+#include <errno.h>
+
+extern int errno;
 
 extern RDPDR_DEVICE g_rdpdr_device[];
 
@@ -55,6 +60,7 @@ parallel_enum_devices(uint32 * id, char *optarg)
 		// set device type
 		g_rdpdr_device[*id].device_type = DEVICE_TYPE_PARALLEL;
 		g_rdpdr_device[*id].pdevice_data = (void *) ppar_info;
+		g_rdpdr_device[*id].handle = 0;
 		count++;
 		(*id)++;
 
@@ -76,13 +82,15 @@ parallel_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 dispo
 		return STATUS_ACCESS_DENIED;
 	}
 
+	/* all read and writes should be non blocking */
+	if (fcntl(parallel_fd, F_SETFL, O_NONBLOCK) == -1)
+		perror("fcntl");
+
+	ioctl(parallel_fd, LPABORT, (int) 1);
+
 	g_rdpdr_device[device_id].handle = parallel_fd;
 
 	*handle = parallel_fd;
-
-	/* all read and writes should be non blocking */
-	if (fcntl(*handle, F_SETFL, O_NONBLOCK) == -1)
-		perror("fcntl");
 
 	return STATUS_SUCCESS;
 }
@@ -90,7 +98,9 @@ parallel_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 dispo
 static NTSTATUS
 parallel_close(HANDLE handle)
 {
-	g_rdpdr_device[get_device_index(handle)].handle = 0;
+	int i = get_device_index(handle);
+	if (i >= 0)
+		g_rdpdr_device[i].handle = 0;
 	close(handle);
 	return STATUS_SUCCESS;
 }
@@ -105,8 +115,33 @@ parallel_read(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 
 static NTSTATUS
 parallel_write(HANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
 {
-	*result = write(handle, data, length);
-	return STATUS_SUCCESS;
+	int rc = STATUS_SUCCESS;
+
+	int n = write(handle, data, length);
+	if (n < 0)
+	{
+		int status;
+
+		*result = 0;
+		switch (errno)
+		{
+			case EAGAIN:
+				rc = STATUS_DEVICE_OFF_LINE;
+			case ENOSPC:
+				rc = STATUS_DEVICE_PAPER_EMPTY;
+			case EIO:
+				rc = STATUS_DEVICE_OFF_LINE;
+			default:
+				rc = STATUS_DEVICE_POWERED_OFF;
+		}
+		if (ioctl(handle, LPGETSTATUS, &status) == 0)
+		{
+			/* coming soon: take care for the printer status */
+			printf("parallel_write: status = %d, errno = %d\n", status, errno);
+		}
+	}
+	*result = n;
+	return rc;
 }
 
 static NTSTATUS
