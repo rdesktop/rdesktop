@@ -606,9 +606,27 @@ process_text2(STREAM s, TEXT2_ORDER * os, uint32 present, BOOL delta)
 	if (present & 0x002000)
 		in_uint16_le(s, os->boxbottom);
 
-	if (present & 0x004000)	/* fix for connecting to a server that */
-		in_uint8s(s, 10);	/* was disconnected with mstsc.exe */
-	/* 0x008000, 0x020000, and 0x040000 are present too ??? */
+	/*
+	 * Unknown members, seen when connecting to a session that was disconnected with
+	 * mstsc and with wintach's spreadsheet test.
+	 */
+	if (present & 0x004000)
+		in_uint8s(s, 1);
+
+	if (present & 0x008000)
+		in_uint8s(s, 1);
+
+	if (present & 0x010000)
+	{
+		in_uint8s(s, 1);	/* guessing the length here */
+		warning("Unknown order state member (0x010000) in text2 order.\n");
+	}
+
+	if (present & 0x020000)
+		in_uint8s(s, 4);
+
+	if (present & 0x040000)
+		in_uint8s(s, 4);
 
 	if (present & 0x080000)
 		in_uint16_le(s, os->x);
