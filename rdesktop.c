@@ -50,24 +50,24 @@ BOOL grab_keyboard = True;
 static void
 usage(char *program)
 {
-	printf("Usage: %s [options] server\n", program);
-	printf("   -u: user name\n");
-	printf("   -d: domain\n");
-	printf("   -s: shell\n");
-	printf("   -c: working directory\n");
-	printf("   -p: password (autologon)\n");
-	printf("   -P: askpass-program (autologon)\n");
-	printf("   -n: client hostname\n");
-	printf("   -k: keyboard layout on terminal server (us,sv,gr etc.)\n");
-	printf("   -g: desktop geometry (WxH)\n");
-	printf("   -f: full-screen mode\n");
-	printf("   -b: force bitmap updates\n");
-	printf("   -e: disable encryption (French TS)\n");
-	printf("   -m: do not send motion events\n");
-	printf("   -l: do not request licence\n");
-	printf("   -t: rdp tcp port\n");
-	printf("   -K: keep window manager key bindings\n");
-	printf("   -w: window title\n");
+	fprintf(stderr, "Usage: %s [options] server\n", program);
+	fprintf(stderr, "   -u: user name\n");
+	fprintf(stderr, "   -d: domain\n");
+	fprintf(stderr, "   -s: shell\n");
+	fprintf(stderr, "   -c: working directory\n");
+	fprintf(stderr, "   -p: password (autologon)\n");
+	fprintf(stderr, "   -P: askpass-program (autologon)\n");
+	fprintf(stderr, "   -n: client hostname\n");
+	fprintf(stderr, "   -k: keyboard layout on terminal server (us,sv,gr etc.)\n");
+	fprintf(stderr, "   -g: desktop geometry (WxH)\n");
+	fprintf(stderr, "   -f: full-screen mode\n");
+	fprintf(stderr, "   -b: force bitmap updates\n");
+	fprintf(stderr, "   -e: disable encryption (French TS)\n");
+	fprintf(stderr, "   -m: do not send motion events\n");
+	fprintf(stderr, "   -l: do not request licence\n");
+	fprintf(stderr, "   -t: rdp tcp port\n");
+	fprintf(stderr, "   -K: keep window manager key bindings\n");
+	fprintf(stderr, "   -w: window title\n");
 }
 
 /* Client program */
@@ -85,9 +85,9 @@ main(int argc, char *argv[])
 	uint32 flags;
 	int c;
 
-	printf("rdesktop: A Remote Desktop Protocol client.\n");
-	printf("Version " VERSION ". Copyright (C) 1999-2001 Matt Chapman.\n");
-	printf("See http://www.rdesktop.org/ for more information.\n\n");
+	fprintf(stderr, "rdesktop: A Remote Desktop Protocol client.\n");
+	fprintf(stderr, "Version " VERSION ". Copyright (C) 1999-2001 Matt Chapman.\n");
+	fprintf(stderr, "See http://www.rdesktop.org/ for more information.\n\n");
 
 	flags = RDP_LOGON_NORMAL;
 	domain[0] = password[0] = shell[0] = directory[0] = 0;
@@ -258,7 +258,7 @@ main(int argc, char *argv[])
 	if (!rdp_connect(server, flags, domain, password, shell, directory))
 		return 1;
 
-	printf("Connection successful.\n");
+	fprintf(stderr, "Connection successful.\n");
 
 	if (ui_create_window())
 	{
@@ -266,7 +266,7 @@ main(int argc, char *argv[])
 		ui_destroy_window();
 	}
 
-	printf("Disconnecting...\n");
+	fprintf(stderr, "Disconnecting...\n");
 	rdp_disconnect();
 	return 0;
 }
@@ -369,21 +369,21 @@ hexdump(unsigned char *p, unsigned int len)
 
 	while (offset < len)
 	{
-		printf("%04x ", offset);
+		fprintf(stderr, "%04x ", offset);
 		thisline = len - offset;
 		if (thisline > 16)
 			thisline = 16;
 
 		for (i = 0; i < thisline; i++)
-			printf("%02x ", line[i]);
+			fprintf(stderr, "%02x ", line[i]);
 
 		for (; i < 16; i++)
-			printf("   ");
+			fprintf(stderr, "   ");
 
 		for (i = 0; i < thisline; i++)
-			printf("%c", (line[i] >= 0x20 && line[i] < 0x7f) ? line[i] : '.');
+			fprintf(stderr, "%c", (line[i] >= 0x20 && line[i] < 0x7f) ? line[i] : '.');
 
-		printf("\n");
+		fprintf(stderr, "\n");
 		offset += thisline;
 		line += thisline;
 	}

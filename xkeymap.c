@@ -247,17 +247,17 @@ xkeymap_translate_key(KeySym keysym, unsigned int keycode, unsigned int state)
 		return tr;
 	}
 
-	printf("No translation for (keysym 0x%lx, %s)\n", keysym, get_ksname(keysym));
+	fprintf(stderr, "No translation for (keysym 0x%lx, %s)\n", keysym, get_ksname(keysym));
 
 	/* not in keymap, try to interpret the raw scancode */
 	if ((keycode >= min_keycode) && (keycode <= 0x60))
 	{
 		tr.scancode = keycode - min_keycode;
-		printf("Sending guessed scancode 0x%x\n", tr.scancode);
+		fprintf(stderr, "Sending guessed scancode 0x%x\n", tr.scancode);
 	}
 	else
 	{
-		printf("No good guess for keycode 0x%x found\n", keycode);
+		fprintf(stderr, "No good guess for keycode 0x%x found\n", keycode);
 	}
 
 	return tr;
