@@ -18,7 +18,6 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include "rdesktop.h"
 #include "disk.h"
 
 #include <sys/types.h>
@@ -38,49 +37,88 @@
 #define DIRFD(a) ((a)->DIR_FD_MEMBER_NAME)
 #endif
 
-/* TODO: let autoconf figure out everything below... */
-#if (defined(sun) && (defined(__svr4__) || defined(__SVR4)))
-#define SOLARIS
+/* TODO: Fix mntent-handling for solaris
+ * #include <sys/mntent.h> */
+#if (defined(HAVE_MNTENT_H) && defined(HAVE_SETMNTENT))
+#include <mntent.h>
+#define MNTENT_PATH "/etc/mtab"
+#define USE_SETMNTENT
 #endif
 
-#if (defined(SOLARIS) || defined (__hpux) || defined(__BEOS__))
-#include <sys/statvfs.h>	/* solaris statvfs */
-/* TODO: Fix mntent-handling for solaris/hpux
- * #include <sys/mntent.h> */
-#undef HAVE_MNTENT_H
-#define MNTENT_PATH "/etc/mnttab"
-#define STATFS_FN(path, buf) (statvfs(path,buf))
-#define STATFS_T statvfs
-#define F_NAMELEN(buf) ((buf).f_namemax)
+#ifdef HAVE_SYS_VFS_H
+#include <sys/vfs.h>
+#endif
 
-#elif (defined(__OpenBSD__) || defined(__NetBSD__) || defined(__FreeBSD__) || defined(__APPLE__))
-#include <sys/param.h>
-#include <sys/mount.h>
-#define STATFS_FN(path, buf) (statfs(path,buf))
-#define STATFS_T statfs
-#define F_NAMELEN(buf) (NAME_MAX)
-
-#elif (defined(__SGI_IRIX__))
-#include <sys/types.h>
+#ifdef HAVE_SYS_STATVFS_H
 #include <sys/statvfs.h>
-#define STATFS_FN(path, buf) (statvfs(path,buf))
-#define STATFS_T statvfs
-#define F_NAMELEN(buf) ((buf).f_namemax)
+#endif
 
-#elif (defined(__alpha) && !defined(linux))
-#include <sys/mount.h>		/* osf1 statfs */
+#ifdef HAVE_SYS_STATFS_H
+#include <sys/statfs.h>
+#endif
+
+#ifdef HAVE_SYS_PARAM_H
+#include <sys/param.h>
+#endif
+
+#ifdef HAVE_SYS_MOUNT_H
+#include <sys/mount.h>
+#endif
+
+#include "rdesktop.h"
+
+#ifdef STAT_STATFS3_OSF1
 #define STATFS_FN(path, buf) (statfs(path,buf,sizeof(buf)))
 #define STATFS_T statfs
-#define F_NAMELEN(buf) (255)
+#define USE_STATFS
+#endif
 
-#else
-#include <sys/vfs.h>		/* linux statfs */
-#include <mntent.h>
-#define HAVE_MNTENT_H
-#define MNTENT_PATH "/etc/mtab"
+#ifdef STAT_STATVFS
+#define STATFS_FN(path, buf) (statvfs(path,buf))
+#define STATFS_T statvfs
+#define USE_STATVFS
+#endif
+
+#ifdef STAT_STATVFS64
+#define STATFS_FN(path, buf) (statvfs64(path,buf))
+#define STATFS_T statvfs64
+#define USE_STATVFS
+#endif
+
+#if (defined(STAT_STATFS2_FS_DATA) || defined(STAT_STATFS2_BSIZE) || defined(STAT_STATFS2_FSIZE))
 #define STATFS_FN(path, buf) (statfs(path,buf))
 #define STATFS_T statfs
+#define USE_STATFS
+#endif
+
+#ifdef STAT_STATFS4
+#define STATFS_FN(path, buf) (statfs(path,buf,sizeof(buf),0))
+#define STATFS_T statfs
+#define USE_STATFS
+#endif
+
+#if ((defined(USE_STATFS) && defined(HAVE_STRUCT_STATFS_F_NAMEMAX)) || (defined(USE_STATVFS) && defined(HAVE_STRUCT_STATVFS_F_NAMEMAX)))
+#define F_NAMELEN(buf) ((buf).f_namemax)
+#endif
+
+#if ((defined(USE_STATFS) && defined(HAVE_STRUCT_STATFS_F_NAMELEN)) || (defined(USE_STATVFS) && defined(HAVE_STRUCT_STATVFS_F_NAMELEN)))
 #define F_NAMELEN(buf) ((buf).f_namelen)
+#endif
+
+#ifndef F_NAMELEN
+#define F_NAMELEN(buf) (255)
+#endif
+
+/* Dummy statfs fallback */
+#ifndef STATFS_T
+struct dummy_statfs_t
+{
+	long f_bfree = 1;
+	long f_bsize = 512;
+	long f_blocks = 1;
+};
+#define STATFS_T dummy_statfs_t
+#define STATFS_FN(path,buf) 0
 #endif
 
 extern RDPDR_DEVICE g_rdpdr_device[];
@@ -335,7 +373,7 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 			break;
 	}
 
-	/*printf("Open: \"%s\"  flags: %X, accessmask: %X sharemode: %X create disp: %X\n", path, flags_and_attributes, accessmask, sharemode, create_disposition);*/
+	/*printf("Open: \"%s\"  flags: %X, accessmask: %X sharemode: %X create disp: %X\n", path, flags_and_attributes, accessmask, sharemode, create_disposition); */
 
 	/* Get information about file and set that flag ourselfs */
 	if ((stat(path, &filestat) == 0) && (S_ISDIR(filestat.st_mode)))
@@ -835,7 +873,7 @@ disk_check_notify(NTHANDLE handle)
 
 	if (memcmp(&pfinfo->notify, &notify, sizeof(NOTIFY)))
 	{
-		/*printf("disk_check_notify found changed event\n");*/
+		/*printf("disk_check_notify found changed event\n"); */
 		memcpy(&pfinfo->notify, &notify, sizeof(NOTIFY));
 		status = STATUS_NOTIFY_ENUM_DIR;
 	}
@@ -926,7 +964,7 @@ FsVolumeInfo(char *fpath)
 {
 
 	static FsInfoType info;
-#ifdef HAVE_MNTENT_H
+#ifdef USE_SETMNTENT
 	FILE *fdfs;
 	struct mntent *e;
 #endif
@@ -936,7 +974,7 @@ FsVolumeInfo(char *fpath)
 	strcpy(info.label, "RDESKTOP");
 	strcpy(info.type, "RDPFS");
 
-#ifdef HAVE_MNTENT_H
+#ifdef USE_SETMNTENT
 	fdfs = setmntent(MNTENT_PATH, "r");
 	if (!fdfs)
 		return &info;
