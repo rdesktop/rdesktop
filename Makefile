@@ -7,17 +7,26 @@
 # Configuration defaults
 
 CC       = cc
+X11DIR   = /usr/X11R6
 CFLAGS   = -O2 -DKEYMAP_PATH=\"$(KEYMAP_PATH)\"
-INCLUDES = -I/usr/X11R6/include
-LDLIBS   = -L/usr/X11R6/lib -lX11 -lXext
+INCLUDES = -I$(X11DIR)/include
+LDFLAGS  = -L$(X11DIR)/lib -lX11 -lXext
 
 PREFIX   = /usr/local
 EPREFIX  = $(PREFIX)
 BINDIR   = $(EPREFIX)/bin
 MANDIR   = $(PREFIX)/man
 SHAREDIR = $(PREFIX)/share/rdesktop
-
 KEYMAP_PATH = $(SHAREDIR)/keymaps/
+
+OS = $(shell uname -s)
+
+ifeq "$(OS)" "SunOS"
+LDFLAGS += -lsocket -lnsl -R$(X11DIR)/lib
+endif
+ifeq "$(OS)" "OSF1"
+LDFLAGS += -Wl,-rpath,$(X11DIR)/lib
+endif
 
 RDPOBJ   = rdesktop.o tcp.o iso.o mcs.o secure.o licence.o rdp.o orders.o bitmap.o cache.o xwin.o xkeymap.o readpass.o
 CRYPTOBJ = crypto/rc4_enc.o crypto/rc4_skey.o crypto/md5_dgst.o crypto/sha1dgst.o crypto/bn_exp.o crypto/bn_mul.o crypto/bn_div.o crypto/bn_sqr.o crypto/bn_add.o crypto/bn_shift.o crypto/bn_asm.o crypto/bn_ctx.o crypto/bn_lib.o
@@ -26,7 +35,7 @@ include Makeconf  # local configuration
 
 
 rdesktop: $(RDPOBJ) $(CRYPTOBJ)
-	$(CC) $(CFLAGS) -o rdesktop $(RDPOBJ) $(CRYPTOBJ) $(LDDIRS) $(LDLIBS)
+	$(CC) $(CFLAGS) -o rdesktop $(RDPOBJ) $(CRYPTOBJ) $(LDFLAGS)
 
 Makeconf:
 	./configure
