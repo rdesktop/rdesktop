@@ -630,7 +630,12 @@ AC_CHECK_FUNCS(setmntent)
 #
 AC_ARG_WITH(ipv6,
     [  --with-ipv6             enable IPv6-support],
-    [ AC_DEFINE(IPv6) ])
+    [ 
+        if test $withval != "no";
+        then
+	    AC_DEFINE(IPv6,1)
+	fi
+    ])
 
 
 #
@@ -638,19 +643,39 @@ AC_ARG_WITH(ipv6,
 #
 AC_ARG_WITH(debug,
     [  --with-debug            enable protocol debugging output],
-    [ AC_DEFINE(WITH_DEBUG) ])
+    [
+        if test $withval != "no";
+        then 
+            AC_DEFINE(WITH_DEBUG,1)
+	fi
+    ])
 
 AC_ARG_WITH(debug-kbd,
     [  --with-debug-kbd        enable debugging of keyboard handling],
-    [ AC_DEFINE(WITH_DEBUG_KBD) ])
+    [
+        if test $withval != "no";
+        then 
+            AC_DEFINE(WITH_DEBUG_KBD,1)
+	fi
+    ])
 
 AC_ARG_WITH(debug-rdp5,
     [  --with-debug-rdp5       enable debugging of RDP5 code],
-    [ AC_DEFINE(WITH_DEBUG_RDP5) ])
+    [
+        if test $withval != "no";
+        then 
+            AC_DEFINE(WITH_DEBUG_RDP5,1)
+	fi
+    ])
 
 AC_ARG_WITH(debug-clipboard,
     [  --with-debug-clipboard  enable debugging of clipboard code],
-    [ AC_DEFINE(WITH_DEBUG_CLIPBOARD) ])
+    [
+        if test $withval != "no";
+        then 
+            AC_DEFINE(WITH_DEBUG_CLIPBOARD,1)
+	fi
+    ])
 
 
 #
