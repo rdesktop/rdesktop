@@ -137,6 +137,8 @@ cliprdr_process(STREAM s)
 		case CLIPRDR_DATA_RESPONSE:
 			ui_clip_handle_data(data, length);
 			break;
+		case 7:	/* TODO: W2K3 SP1 sends this on connect with a value of 1 */
+			break;
 		default:
 			unimpl("CLIPRDR packet type %d\n", type);
 	}

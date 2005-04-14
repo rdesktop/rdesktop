@@ -103,6 +103,8 @@ rdp5_process(STREAM s)
 			case 5:
 				ui_set_null_cursor();
 				break;
+			case 6:	/* TODO: W2K3 SP1 sends this on connect */
+				break;
 			case 8:
 				in_uint16_le(ts, x);
 				in_uint16_le(ts, y);
