@@ -6,6 +6,7 @@ rdesktop (1.?.?)
    * Added korean keymap
    * Xembed fixes to work with krdc correctly
    * Portability fixes
+   * Support for RDP-compression (all bpps)
 
 rdesktop (1.4.0)
    * Basic disk-, parallel-, printer- and serial-redirection

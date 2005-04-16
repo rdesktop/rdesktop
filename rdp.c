@@ -49,6 +49,7 @@ extern int g_width;
 extern int g_height;
 extern BOOL g_bitmap_cache;
 extern BOOL g_bitmap_cache_persist_enable;
+extern BOOL g_rdp_compression;
 
 uint8 *g_next_packet;
 uint32 g_rdp_shareid;
@@ -659,12 +660,33 @@ rdp_out_bmpcache_caps(STREAM s)
 static void
 rdp_out_bmpcache2_caps(STREAM s)
 {
+	uint16 cellsize;
+
 	out_uint16_le(s, RDP_CAPSET_BMPCACHE2);
 	out_uint16_le(s, RDP_CAPLEN_BMPCACHE2);
 
 	out_uint16_le(s, g_bitmap_cache_persist_enable ? 2 : 0);	/* version */
 
-	out_uint16_le(s, 0x0300);	/* flags? number of caches? */
+	/* Cellsize:
+	   01 = 16x16, 02 = 32x32, 03 = 64x64
+	   log2(cell size) - 3
+	 */
+
+	cellsize = 0x03;
+
+	if (g_rdp_compression)
+	{
+		switch (g_server_bpp)
+		{
+			case 24:
+			case 16:
+			case 15:
+				cellsize = 0x02;
+				break;
+		}
+	}
+
+	out_uint16_le(s, (0x0000 | (cellsize << 8)));	/* flags? number of caches? */
 
 	out_uint32_le(s, BMPCACHE2_C0_CELLS);
 	out_uint32_le(s, BMPCACHE2_C1_CELLS);

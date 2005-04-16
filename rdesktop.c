@@ -85,6 +85,7 @@ BOOL g_console_session = False;
 BOOL g_numlock_sync = False;
 BOOL g_owncolmap = False;
 BOOL g_ownbackstore = True;	/* We can't rely on external BackingStore */
+BOOL g_rdp_compression = False;
 uint32 g_embed_wnd;
 uint32 g_rdp5_performanceflags =
 	RDP5_NO_WALLPAPER | RDP5_NO_FULLWINDOWDRAG | RDP5_NO_MENUANIMATIONS;
@@ -575,6 +576,7 @@ main(int argc, char *argv[])
 			case 'z':
 				DEBUG(("rdp compression enabled\n"));
 				flags |= RDP_COMPRESSION;
+				g_rdp_compression = True;
 				break;
 
 			case 'x':
@@ -738,12 +740,6 @@ main(int argc, char *argv[])
 			*p = 0;
 
 		STRNCPY(g_hostname, fullhostname, sizeof(g_hostname));
-	}
-
-	if ((flags & RDP_COMPRESSION) && (g_server_bpp > 8))
-	{
-		warning("rdp compression not supported for bpp > 8, compression disabled\n");
-		flags ^= RDP_COMPRESSION;
 	}
 
 	if (prompt_password && read_password(password, sizeof(password)))
