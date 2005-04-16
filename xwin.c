@@ -1341,7 +1341,7 @@ xwin_toggle_fullscreen(void)
 	}
 }
 
-/* Process all events in Xlib queue
+/* Process events in Xlib queue
    Returns 0 after user quit, 1 otherwise */
 static int
 xwin_process_events(void)
@@ -1353,8 +1353,9 @@ xwin_process_events(void)
 	key_translation tr;
 	char str[256];
 	Status status;
+	int events = 0;
 
-	while (XPending(g_display) > 0)
+	while ((XPending(g_display) > 0) && events++ < 20)
 	{
 		XNextEvent(g_display, &xevent);
 
