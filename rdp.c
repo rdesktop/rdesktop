@@ -298,12 +298,6 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 	time_t t = time(NULL);
 	time_t tzone;
 
-#if 0
-	/* enable rdp compression */
-	/* some problems still exist with rdp5 */
-	flags |= RDP_COMPRESSION;
-#endif
-
 	if (!g_use_rdp5 || 1 == g_server_rdp_version)
 	{
 		DEBUG_RDP5(("Sending RDP4-style Logon packet\n"));
@@ -660,34 +654,14 @@ rdp_out_bmpcache_caps(STREAM s)
 static void
 rdp_out_bmpcache2_caps(STREAM s)
 {
-	uint16 cellsize;
-
 	out_uint16_le(s, RDP_CAPSET_BMPCACHE2);
 	out_uint16_le(s, RDP_CAPLEN_BMPCACHE2);
 
 	out_uint16_le(s, g_bitmap_cache_persist_enable ? 2 : 0);	/* version */
 
-	/* Cellsize:
-	   01 = 16x16, 02 = 32x32, 03 = 64x64
-	   log2(cell size) - 3
-	 */
+	out_uint16_be(s, 3);	/* number of caches in this set */
 
-	cellsize = 0x03;
-
-	if (g_rdp_compression)
-	{
-		switch (g_server_bpp)
-		{
-			case 24:
-			case 16:
-			case 15:
-				cellsize = 0x02;
-				break;
-		}
-	}
-
-	out_uint16_le(s, (0x0000 | (cellsize << 8)));	/* flags? number of caches? */
-
+	/* max cell size for cache 0 is 16x16, 1 = 32x32, 2 = 64x64, etc */
 	out_uint32_le(s, BMPCACHE2_C0_CELLS);
 	out_uint32_le(s, BMPCACHE2_C1_CELLS);
 	if (pstcache_init(2))

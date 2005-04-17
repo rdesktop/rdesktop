@@ -256,8 +256,9 @@ enum RDP_INPUT_DEVICE
 /* Logon flags */
 #define RDP_LOGON_AUTO		0x0008
 #define RDP_LOGON_NORMAL	0x0033
-#define RDP_COMPRESSION		0x0080
+#define RDP_LOGON_COMPRESSION	0x0080	/* mppc compression with 8kB histroy buffer */
 #define RDP_LOGON_BLOB		0x0100
+#define RDP_LOGON_COMPRESSION2	0x0200	/* rdp5 mppc compression with 64kB history buffer */
 #define RDP_LOGON_LEAVE_AUDIO	0x2000
 
 #define RDP5_DISABLE_NOTHING	0x00
@@ -269,10 +270,13 @@ enum RDP_INPUT_DEVICE
 #define RDP5_NO_CURSORSETTINGS	0x40	/* disables cursor blinking */
 
 /* compression types */
+#define RDP_MPPC_BIG		0x01
 #define RDP_MPPC_COMPRESSED	0x20
 #define RDP_MPPC_RESET		0x40
 #define RDP_MPPC_FLUSH		0x80
-#define RDP_MPPC_DICT_SIZE      8192
+#define RDP_MPPC_DICT_SIZE      65536
+
+#define RDP5_COMPRESSED		0x80
 
 /* Keymap flags */
 #define MapRightShiftMask   (1<<0)
