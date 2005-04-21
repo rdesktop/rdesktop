@@ -1,0 +1,19 @@
+#
+# nanoxrdesktop makefile
+#
+CC = gcc
+CFLAGS = -Os -Wall -I/usr/local/nanox/src/include
+RESTOBJ = ../tcp.o ../iso.o ../mcs.o ../secure.o ../rdp.o ../rdp5.o ../orders.o ../cache.o ../mppc.o ../licence.o ../bitmap.o ../channels.o ../pstcache.o
+LDFLAGS = -lcrypto
+NXLIBS = /usr/local/nanox/src/lib/libnano-X.a
+
+all: nanoxrd
+
+nanoxrd: $(RESTOBJ) nanoxwin.o
+	$(CC) -o nanoxrdesktop nanoxwin.o $(NXLIBS) $(RESTOBJ) $(LDFLAGS)
+	strip nanoxrdesktop
+
+clean:
+	rm -f nanoxrdesktop
+	rm -f *.o
+	rm -f ../*.o
