@@ -25,6 +25,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <ao/ao.h>
+#include <sys/time.h>
 
 #define MAX_QUEUE	10
 #define WAVEOUTBUF	64
@@ -35,6 +36,7 @@ int default_driver;
 int g_samplerate;
 int g_channels;
 BOOL g_dsp_busy = False;
+static BOOL g_reopened;
 static short g_samplewidth;
 
 static struct audio_packet
@@ -68,6 +70,8 @@ wave_out_open(void)
 
 	g_dsp_fd = 0;
 	queue_lo = queue_hi = 0;
+
+	g_reopened = True;
 
 	return True;
 }
@@ -129,6 +133,7 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 		return False;
 	}
 
+	g_reopened = True;
 
 	return True;
 }
@@ -172,6 +177,18 @@ wave_out_play(void)
 	STREAM out;
 	unsigned char outbuf[WAVEOUTBUF];
 	int offset, len, i;
+	static long prev_s, prev_us;
+	unsigned int duration;
+	struct timeval tv;
+	int next_tick;
+
+	if (g_reopened)
+	{
+		g_reopened = False;
+		gettimeofday(&tv, NULL);
+		prev_s = tv.tv_sec;
+		prev_us = tv.tv_usec;
+	}
 
 	if (queue_lo == queue_hi)
 	{
@@ -181,6 +198,15 @@ wave_out_play(void)
 
 	packet = &packet_queue[queue_lo];
 	out = &packet->s;
+
+	if (((queue_lo + 1) % MAX_QUEUE) != queue_hi)
+	{
+		next_tick = packet_queue[(queue_lo + 1) % MAX_QUEUE].tick;
+	}
+	else
+	{
+		next_tick = (packet->tick + 65535) % 65536;
+	}
 
 	len = 0;
 
@@ -216,9 +242,28 @@ wave_out_play(void)
 
 	ao_play(o_device, outbuf, len);
 
-	if (out->p == out->end)
+	gettimeofday(&tv, NULL);
+
+	duration = ((tv.tv_sec - prev_s) * 1000000 + (tv.tv_usec - prev_us)) / 1000;
+
+	if (packet->tick > next_tick)
+		next_tick += 65536;
+
+	if ((out->p == out->end) || duration > next_tick - packet->tick + 500)
 	{
-		rdpsnd_send_completion(packet->tick, packet->index);
+		prev_s = tv.tv_sec;
+		prev_us = tv.tv_usec;
+
+		if (abs((next_tick - packet->tick) - duration) > 20)
+		{
+			DEBUG(("duration: %d, calc: %d, ", duration, next_tick - packet->tick));
+			DEBUG(("last: %d, is: %d, should: %d\n", packet->tick,
+			       (packet->tick + duration) % 65536, next_tick % 65536));
+		}
+
+		/* Until all drivers are using the windows sound-ticks, we need to
+		   substract the 50 ticks added later by rdpsnd.c */
+		rdpsnd_send_completion(((packet->tick + duration) % 65536) - 50, packet->index);
 		free(out->data);
 		queue_lo = (queue_lo + 1) % MAX_QUEUE;
 	}
