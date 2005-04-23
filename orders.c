@@ -1066,7 +1066,9 @@ process_colcache(STREAM s)
 	DEBUG(("COLCACHE(id=%d,n=%d)\n", cache_id, map.ncolours));
 
 	hmap = ui_create_colourmap(&map);
-	ui_set_colourmap(hmap);
+
+	if (cache_id)
+		ui_set_colourmap(hmap);
 
 	xfree(map.colours);
 }
