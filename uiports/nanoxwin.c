@@ -28,6 +28,8 @@
 #include "../rdesktop.h"
 
 #include <stdarg.h>  /* va_list va_start va_end */
+#include <unistd.h> /* gethostname */
+#include <pwd.h> /* getpwuid */
 
 #include <nano-X.h>
 
@@ -52,6 +54,10 @@ int g_keylayout = 0x409; /* Defaults to US keyboard layout */
 
 static int g_sck = 0;
 static char g_servername[256] = "";
+static char g_password[64] = "";
+static char g_domain[64] = "";
+static char g_shell[64] = "";
+static char g_directory[64] = "";
 static GR_WINDOW_ID g_wnd = 0;
 static GR_GC_ID g_gc = 0;
 static GR_GC_ID g_gc_clean = 0;
@@ -60,6 +66,9 @@ static int g_ext_disc_reason = 0;
 static GR_SCREEN_INFO g_screen_info;
 static int g_bpp = 0;
 static int g_Bpp = 0;
+static GR_RECT g_clip; /* set in main */
+static GR_CURSOR_ID g_null_cursor; /* set in main */
+static int g_flags = RDP_LOGON_NORMAL;
 
 struct key
 {
@@ -99,6 +108,128 @@ static uint32 g_ops[16] =
 };
 
 /*****************************************************************************/
+/* do a raster op */
+static int rop(int rop, int src, int dst)
+{
+  switch (rop)
+  {
+    case 0x0: return 0;
+    case 0x1: return ~(src | dst);
+    case 0x2: return (~src) & dst;
+    case 0x3: return ~src;
+    case 0x4: return src & (~dst);
+    case 0x5: return ~(dst);
+    case 0x6: return src ^ dst;
+    case 0x7: return ~(src & dst);
+    case 0x8: return src & dst;
+    case 0x9: return ~(src) ^ dst;
+    case 0xa: return dst;
+    case 0xb: return (~src) | dst;
+    case 0xc: return src;
+    case 0xd: return src | (~dst);
+    case 0xe: return src | dst;
+    case 0xf: return ~0;
+  }
+  return dst;
+}
+
+/*****************************************************************************/
+static int get_pixel32(uint8 * data, int x, int y,
+                       int width, int height)
+{
+  if (x >= 0 && y >= 0 && x < width && y < height)
+  {
+    return *(((int*)data) + (y * width + x));
+  }
+  else
+  {
+    return 0;
+  }
+}
+
+/*****************************************************************************/
+static void set_pixel32(uint8 * data, int x, int y,
+                        int width, int height, int pixel)
+{
+  if (x >= 0 && y >= 0 && x < width && y < height)
+  {
+    *(((int*)data) + (y * width + x)) = pixel;
+  }
+}
+
+/*****************************************************************************/
+static int warp_coords(int * x, int * y, int * cx, int * cy,
+                       int * srcx, int * srcy)
+{
+  int dx;
+  int dy;
+
+  if (g_clip.x > *x)
+  {
+    dx = g_clip.x - *x;
+  }
+  else
+  {
+    dx = 0;
+  }
+  if (g_clip.y > *y)
+  {
+    dy = g_clip.y - *y;
+  }
+  else
+  {
+    dy = 0;
+  }
+  if (*x + *cx > g_clip.x + g_clip.width)
+  {
+    *cx = (*cx - ((*x + *cx) - (g_clip.x + g_clip.width)));
+  }
+  if (*y + *cy > g_clip.y + g_clip.height)
+  {
+    *cy = (*cy - ((*y + *cy) - (g_clip.y + g_clip.height)));
+  }
+  *cx = *cx - dx;
+  *cy = *cy - dy;
+  if (*cx <= 0)
+  {
+    return 0;
+  }
+  if (*cy <= 0)
+  {
+    return 0;
+  }
+  *x = *x + dx;
+  *y = *y + dy;
+  if (srcx != 0)
+  {
+    *srcx = *srcx + dx;
+  }
+  if (srcy != 0)
+  {
+    *srcy = *srcy + dy;
+  }
+  return 1;
+}
+
+/******************************************************************************/
+/* check if a certain pixel is set in a bitmap */
+static int is_pixel_on(uint8 * data, int x, int y, int width, int bpp)
+{
+  int start;
+  int shift;
+
+  if (bpp == 1)
+  {
+    width = (width + 7) / 8;
+    start = (y * width) + x / 8;
+    shift = x % 8;
+    return (data[start] & (0x80 >> shift)) != 0;
+  }
+  else
+    return 0;
+}
+
+/*****************************************************************************/
 int ui_select(int in)
 {
   if (g_sck == 0)
@@ -112,14 +243,13 @@ int ui_select(int in)
 void ui_set_clip(int x, int y, int cx, int cy)
 {
   GR_REGION_ID region;
-  GR_RECT rect;
 
+  g_clip.x = x;
+  g_clip.y = y;
+  g_clip.width = cx;
+  g_clip.height = cy;
   region = GrNewRegion();
-  rect.x = x;
-  rect.y = y;
-  rect.width = cx;
-  rect.height = cy;
-  GrUnionRectWithRegion(region, &rect);
+  GrUnionRectWithRegion(region, &g_clip);
   GrSetGCRegion(g_gc, region); /* can't destroy region here, i guess gc */
                                /* takes owership, if you destroy it */
                                /* clip is reset, hum */
@@ -129,6 +259,10 @@ void ui_set_clip(int x, int y, int cx, int cy)
 void ui_reset_clip(void)
 {
   GrSetGCRegion(g_gc, 0);
+  g_clip.x = 0;
+  g_clip.y = 0;
+  g_clip.width = g_width;
+  g_clip.height = g_height;
 }
 
 /*****************************************************************************/
@@ -373,19 +507,28 @@ void ui_line(uint8 opcode, int startx, int starty, int endx, int endy,
   uint32 op;
   uint32 color;
 
-  opcode = 0; /* some opcode crash it, setting GR_MODE_COPY, todo */
-  op = g_ops[opcode];
-  //printf("opcoe %d %d\n", op, opcode);
-  GrSetGCMode(g_gc, op);
   color = pen->colour;
-  if (g_server_bpp == 16 && g_bpp == 32)
-  {
-    color = COLOR16TO32(color);
+  if (opcode == 5) /* GR_MODE_INVERT, not supported so convert it */
+  {                /* i think x ^ -1 = ~x */
+    color = 0xffffffff;
+    opcode = 6; /* GR_MODE_XOR */
   }
-  GrSetGCForeground(g_gc, color);
-  //printf("%d %d %d %d\n", startx, starty, endx, endy);
-  GrLine(g_wnd, g_gc, startx, starty, endx, endy);
-  GrSetGCMode(g_gc, GR_MODE_COPY);
+  if (opcode == 12 || opcode == 6) /* nanox only supports these 2 opcode */
+  {
+    op = g_ops[opcode];
+    GrSetGCMode(g_gc, op);
+    if (g_server_bpp == 16 && g_bpp == 32)
+    {
+      color = COLOR16TO32(color);
+    }
+    GrSetGCForeground(g_gc, color);
+    GrLine(g_wnd, g_gc, startx, starty, endx, endy);
+    GrSetGCMode(g_gc, GR_MODE_COPY);
+  }
+  else
+  {
+    unimpl("opcode %d in ui_line\n", opcode);
+  }
 }
 
 /*****************************************************************************/
@@ -393,26 +536,66 @@ void ui_triblt(uint8 opcode, int x, int y, int cx, int cy,
                void * src, int srcx, int srcy,
                BRUSH * brush, int bgcolor, int fgcolor)
 {
+/* not used, turned off */
 }
 
 /*****************************************************************************/
 void ui_memblt(uint8 opcode, int x, int y, int cx, int cy,
                void * src, int srcx, int srcy)
 {
-  uint32 op;
+  uint8 * dest;
+  uint8 * source;
+  uint8 * final;
+  GR_WINDOW_INFO wi;
+  int i, j, s, d;
+  GR_WINDOW_ID pixmap;
 
-  op = g_ops[opcode];
-  GrCopyArea(g_wnd, g_gc, x, y, cx, cy, (GR_DRAW_ID)src, srcx, srcy, op);
+  if (opcode == 12)
+  {
+    GrCopyArea(g_wnd, g_gc, x, y, cx, cy, (GR_DRAW_ID)src, srcx, srcy,
+               GR_MODE_COPY);
+  }
+  else /* do opcodes ourself */
+  {    /* slow but its correct, ok to be slow here, these are rare */
+    GrGetWindowInfo((GR_DRAW_ID)src, &wi);
+    dest = xmalloc(cx * cy * g_Bpp);
+    source = xmalloc(wi.width * wi.height * g_Bpp);
+    final = xmalloc(cx * cy * g_Bpp);
+    memset(final, 0, cx * cy * g_Bpp);
+    /* dest */
+    GrReadArea(g_wnd, x, y, cx, cy, (GR_PIXELVAL*)dest);
+    /* source */
+    GrReadArea((GR_DRAW_ID)src, 0, 0,
+               wi.width, wi.height, (GR_PIXELVAL*)source);
+    for (i = 0; i < cy; i++)
+    {
+      for (j = 0; j < cx; j++)
+      {
+        s = get_pixel32(source, j + srcx, i + srcy, wi.width, wi.height);
+        d = get_pixel32(dest, j, i, cx ,cy);
+        set_pixel32(final, j, i, cx, cy, rop(opcode, s, d));
+      }
+    }
+    pixmap = GrNewPixmap(cx, cy, 0);
+    GrArea(pixmap, g_gc_clean, 0, 0, cx, cy, final, MWPF_TRUECOLOR0888);
+    GrCopyArea(g_wnd, g_gc, x, y, cx, cy, pixmap, 0, 0, GR_MODE_COPY);
+    GrDestroyWindow(pixmap);
+    xfree(dest);
+    xfree(source);
+    xfree(final);
+  }
 }
 
 /*****************************************************************************/
 void ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy)
 {
+/* not used, turned off */
 }
 
 /*****************************************************************************/
 void ui_desktop_save(uint32 offset, int x, int y, int cx, int cy)
 {
+/* not used, turned off */
 }
 
 /*****************************************************************************/
@@ -422,43 +605,41 @@ void ui_rect(int x, int y, int cx, int cy, int color)
   {
     color = COLOR16TO32(color);
   }
-  GrSetGCMode(g_gc, GR_MODE_COPY);
   GrSetGCForeground(g_gc, color);
   GrFillRect(g_wnd, g_gc, x, y, cx, cy);
 }
 
 /*****************************************************************************/
+/* using warp_coords cause clip seems to affect source in GrCopyArea */
 void ui_screenblt(uint8 opcode, int x, int y, int cx, int cy,
                   int srcx, int srcy)
 {
-  GR_WINDOW_ID pixmap;
-  uint32 op;
-
-  op = g_ops[opcode];
-  pixmap = GrNewPixmap(cx, cy, 0);
-  GrCopyArea(pixmap, g_gc_clean, 0, 0, cx, cy, g_wnd,
-             srcx, srcy, GR_MODE_COPY);
-  GrCopyArea(g_wnd, g_gc, x, y, cx, cy, pixmap, 0, 0, op);
-  GrDestroyWindow(pixmap);
-
-  // this don't work, i don't know why, todo, check on it
-  //GrCopyArea(g_wnd, g_gc, x, y, cx, cy, g_wnd, srcx, srcy, op);
+  if (opcode == 12)
+  {
+    if (warp_coords(&x, &y, &cx, &cy, &srcx, &srcy))
+    {
+      GrCopyArea(g_wnd, g_gc_clean, x, y, cx, cy, g_wnd, srcx, srcy,
+                 GR_MODE_COPY);
+    }
+  }
+  else
+  {
+    unimpl("opcode %d in ui_screenblt\n", opcode);
+  }
 }
 
-/*****************************************************************************/
+/******************************************************************************/
+/* can't use stipple cause tsorigin don't work, GrPoint too slow,
+   GrPoints too slow but better, using a copy from the screen,
+   do the pattern and copy it back */
 void ui_patblt(uint8 opcode, int x, int y, int cx, int cy,
                BRUSH * brush, int bgcolor, int fgcolor)
 {
+  uint8 ipattern[8], * dest, * final;
   uint32 op;
-  uint8 i, ipattern[8];
-  void * fill;
+  int i, j, s, d;
+  GR_WINDOW_ID pixmap;
 
-  //printf("%d\n", opcode);
-  if (opcode != 12)
-    return;
-  op = g_ops[opcode];
-  GrSetGCMode(g_gc, op);
-  GrSetGCUseBackground(g_gc, 1);
   if (g_server_bpp == 16 && g_bpp == 32)
   {
     fgcolor = COLOR16TO32(fgcolor);
@@ -467,30 +648,57 @@ void ui_patblt(uint8 opcode, int x, int y, int cx, int cy,
   switch (brush->style)
   {
     case 0: /* Solid */
-      GrSetGCForeground(g_gc, fgcolor);
-      GrFillRect(g_wnd, g_gc, x, y, cx, cy);
+      if (opcode == 12 || opcode == 6)
+      {
+        op = g_ops[opcode];
+        GrSetGCMode(g_gc, op);
+        GrSetGCForeground(g_gc, fgcolor);
+        GrFillRect(g_wnd, g_gc, x, y, cx, cy);
+        GrSetGCMode(g_gc, GR_MODE_COPY);
+      }
+      else
+      {
+        unimpl("opcode %d in ui_patblt solid brush\n", opcode);
+      }
       break;
-    case 3: /* Pattern */
+    case 3: /* Pattern - all opcodes ok */
       for (i = 0; i != 8; i++)
       {
         ipattern[7 - i] = brush->pattern[i];
       }
-      fill = ui_create_glyph(8, 8, ipattern);
-      GrSetGCForeground(g_gc, bgcolor);
-      GrSetGCBackground(g_gc, fgcolor);
-      GrSetGCFillMode(g_gc, GR_FILL_OPAQUE_STIPPLE);
-      GrSetGCStipple(g_gc, fill, 8, 8);
-      /* GrSetGCTSOffset don't work, I don't know why todo */
-      GrSetGCTSOffset(g_gc, brush->xorigin, brush->yorigin);
-      GrFillRect(g_wnd, g_gc, x, y, cx, cy);
-      //printf("%d %d %d %d\n", x, y, brush->xorigin, brush->yorigin);
-      GrSetGCFillMode(g_gc, GR_FILL_SOLID);
-      GrSetGCTSOffset(g_gc, 0, 0);
-      ui_destroy_glyph(fill);
+      dest = xmalloc(cx * cy * g_Bpp);
+      final = xmalloc(cx * cy * g_Bpp);
+      memset(final, 0, cx * cy * g_Bpp);
+      /* dest */
+      if (opcode != 12)
+      {
+        GrReadArea(g_wnd, x, y, cx, cy, (GR_PIXELVAL*)dest);
+      }
+      for (i = 0; i < cy; i++)
+      {
+        for (j = 0; j < cx; j++)
+        {
+          if (is_pixel_on(ipattern, (x + j + brush->xorigin) % 8,
+                          (y + i + brush->yorigin) % 8, 8, 1))
+          {
+            s = fgcolor;
+          }
+          else
+          {
+            s = bgcolor;
+          }
+          d = get_pixel32(dest, j, i, cx ,cy);
+          set_pixel32(final, j, i, cx, cy, rop(opcode, s, d));
+        }
+      }
+      pixmap = GrNewPixmap(cx, cy, 0);
+      GrArea(pixmap, g_gc_clean, 0, 0, cx, cy, final, MWPF_TRUECOLOR0888);
+      GrCopyArea(g_wnd, g_gc, x, y, cx, cy, pixmap, 0, 0, GR_MODE_COPY);
+      GrDestroyWindow(pixmap);
+      xfree(dest);
+      xfree(final);
       break;
   }
-  GrSetGCUseBackground(g_gc, 0);
-  GrSetGCMode(g_gc, GR_MODE_COPY);
 }
 
 /*****************************************************************************/
@@ -498,22 +706,32 @@ void ui_destblt(uint8 opcode, int x, int y, int cx, int cy)
 {
   uint32 op;
 
-  //printf("opcode %d x %d y %d cx %d cy %d\n", opcode, x, y, cx, cy);
-  opcode = 0; /* some opcode crash it(opcode 5), setting GR_MODE_COPY, todo */
-  op = g_ops[opcode];
-  GrSetGCMode(g_gc, op);
-  GrFillRect(g_wnd, g_gc, x, y, cx, cy);
-  GrSetGCMode(g_gc, GR_MODE_COPY);
-}
-
-/*****************************************************************************/
-void ui_move_pointer(int x, int y)
-{
-}
-
-/*****************************************************************************/
-void ui_set_null_cursor(void)
-{
+  if (opcode == 0) /* black */
+  {
+    GrSetGCForeground(g_gc, 0);
+    opcode = 12;
+  }
+  else if (opcode == 5) /* invert */
+  {
+    GrSetGCForeground(g_gc, 0xffffffff);
+    opcode = 6;
+  }
+  else if (opcode == 15) /* white */
+  {
+    GrSetGCForeground(g_gc, 0xffffffff);
+    opcode = 12;
+  }
+  if (opcode == 12 || opcode == 6)
+  {
+    op = g_ops[opcode];
+    GrSetGCMode(g_gc, op);
+    GrFillRect(g_wnd, g_gc, x, y, cx, cy);
+    GrSetGCMode(g_gc, GR_MODE_COPY);
+  }
+  else
+  {
+    unimpl("opcode %d in ui_destblt\n", opcode);
+  }
 }
 
 /*****************************************************************************/
@@ -523,13 +741,93 @@ void ui_paint_bitmap(int x, int y, int cx, int cy,
   void * b;
 
   b = ui_create_bitmap(width, height, data);
-  ui_memblt(0xc, x, y, cx, cy, b, 0, 0);
+  ui_memblt(12, x, y, cx, cy, b, 0, 0);
   ui_destroy_bitmap(b);
+}
+
+/*****************************************************************************/
+void ui_move_pointer(int x, int y)
+{
+  GrMoveCursor(x, y);
+}
+
+/*****************************************************************************/
+void ui_set_null_cursor(void)
+{
+  GrSetWindowCursor(g_wnd, g_null_cursor);
 }
 
 /*****************************************************************************/
 void ui_set_cursor(void * cursor)
 {
+  GrSetWindowCursor(g_wnd, (GR_CURSOR_ID)cursor);
+}
+
+//******************************************************************************
+static int is24on(uint8 * data, int x, int y)
+{
+  uint8 r, g, b;
+  int start;
+
+  if (data == 0)
+  {
+    return 0;
+  }
+  start = y * 32 * 3 + x * 3;
+  r = data[start];
+  g = data[start + 1];
+  b = data[start + 2];
+  return !((r == 0) && (g == 0) && (b == 0));
+}
+
+//******************************************************************************
+static int is1on(uint8 * data, int x, int y)
+{
+  int start;
+  int shift;
+
+  if (data == 0)
+  {
+    return 0;
+  }
+  start = (y * 32) / 8 + x / 8;
+  shift = x % 8;
+  return (data[start] & (0x80 >> shift)) == 0;
+}
+
+//******************************************************************************
+static void set1(uint8 * data, int x, int y)
+{
+  int start;
+  int shift;
+
+  if (data == 0)
+  {
+    return;
+  }
+  start = (y * 32) / 8 + x / 8;
+  shift = x % 8;
+  data[start] = data[start] | (0x80 >> shift);
+}
+
+//******************************************************************************
+static void flipover(uint8 * data)
+{
+  uint8 adata[128];
+  int index;
+
+  if (data == 0)
+  {
+    return;
+  }
+  memcpy(adata, data, 128);
+  for (index = 0; index <= 31; index++)
+  {
+    data[127 - (index * 4 + 3)] = adata[index * 4];
+    data[127 - (index * 4 + 2)] = adata[index * 4 + 1];
+    data[127 - (index * 4 + 1)] = adata[index * 4 + 2];
+    data[127 - index * 4] = adata[index * 4 + 3];
+  }
 }
 
 /*****************************************************************************/
@@ -537,12 +835,53 @@ void * ui_create_cursor(uint32 x, uint32 y,
                         int width, int height,
                         uint8 * andmask, uint8 * xormask)
 {
-  return 0;
+  uint8 adata[128];
+  uint8 amask[128];
+  GR_BITMAP * databitmap;
+  GR_BITMAP * maskbitmap;
+  GR_CURSOR_ID cursor;
+  int i1, i2, bon, mon;
+
+  if (width != 32 || height != 32)
+  {
+    return 0;
+  }
+  memset(adata, 0, 128);
+  memset(amask, 0, 128);
+  for (i1 = 0; i1 <= 31; i1++)
+  {
+    for (i2 = 0; i2 <= 31; i2++)
+    {
+      mon = is24on(xormask, i1, i2);
+      bon = is1on(andmask, i1, i2);
+      if (bon ^ mon) // xor
+      {
+        set1(adata, i1, i2);
+        if (!mon)
+        {
+          set1(amask, i1, i2);
+        }
+      }
+      if (mon)
+      {
+        set1(amask, i1, i2);
+      }
+    }
+  }
+  flipover(adata);
+  flipover(amask);
+  databitmap = ui_create_glyph(32, 32, adata);
+  maskbitmap = ui_create_glyph(32, 32, amask);
+  cursor = GrNewCursor(32, 32, x, y, 0xffffff, 0, databitmap, maskbitmap);
+  ui_destroy_glyph(databitmap);
+  ui_destroy_glyph(maskbitmap);
+  return (void*)cursor;
 }
 
 /*****************************************************************************/
 void ui_destroy_cursor(void * cursor)
 {
+  GrDestroyCursor((GR_CURSOR_ID)cursor);
 }
 
 /*****************************************************************************/
@@ -576,6 +915,7 @@ void ui_end_update(void)
 void ui_polygon(uint8 opcode, uint8 fillmode, POINT * point, int npoints,
                 BRUSH * brush, int bgcolor, int fgcolor)
 {
+/* not used, turned off */
 }
 
 /*****************************************************************************/
@@ -603,6 +943,7 @@ void ui_ellipse(uint8 opcode, uint8 fillmode,
                 int x, int y, int cx, int cy,
                 BRUSH * brush, int bgcolor, int fgcolor)
 {
+/* not used, turned off */
 }
 
 /*****************************************************************************/
@@ -720,34 +1061,6 @@ int rd_lseek_file(int fd, int offset)
 int rd_lock_file(int fd, int start, int len)
 {
   return False;
-}
-
-/*****************************************************************************/
-static void out_params(void)
-{
-  fprintf(stderr, "rdesktop: A Remote Desktop Protocol client.\n");
-  fprintf(stderr, "Version " VERSION ". Copyright (C) 1999-2005 Matt Chapman.\n");
-  fprintf(stderr, "nanox uiport by Jay Sorg\n");
-  fprintf(stderr, "See http://www.rdesktop.org/ for more information.\n\n");
-  fprintf(stderr, "Usage: nanoxrdesktop [options] server\n");
-  fprintf(stderr, "\n");
-}
-
-/*****************************************************************************/
-static int parse_parameters(int in_argc, char ** in_argv)
-{
-  int i;
-
-  if (in_argc <= 1)
-  {
-    out_params();
-    return 0;
-  }
-  for (i = 1; i < in_argc; i++)
-  {
-    strcpy(g_servername, in_argv[i]);
-  }
-  return 1;
 }
 
 /*****************************************************************************/
@@ -972,84 +1285,183 @@ void nanox_event(GR_EVENT * ev)
   GR_EVENT_FDINPUT * event_fdinput;
   GR_EVENT_KEYSTROKE * event_keystroke;
 
-  if (ev->type == GR_EVENT_TYPE_FDINPUT) /* 12 */
+  do
   {
-    event_fdinput = (GR_EVENT_FDINPUT *) ev;
-    if (event_fdinput->fd == g_sck)
+    if (ev->type == GR_EVENT_TYPE_FDINPUT) /* 12 */
     {
-      if (!rdp_loop(&g_deactivated, &g_ext_disc_reason))
+      event_fdinput = (GR_EVENT_FDINPUT *) ev;
+      if (event_fdinput->fd == g_sck)
       {
-        fprintf(stderr, "Error in nanox_event\n");
-        exit(1);
+        if (!rdp_loop(&g_deactivated, &g_ext_disc_reason))
+        {
+          fprintf(stderr, "rdp_loop in nanox_event exit codes %d %d\n",
+                  g_deactivated, g_ext_disc_reason);
+          exit(1);
+        }
       }
     }
-  }
-  else if (ev->type == GR_EVENT_TYPE_BUTTON_DOWN) /* 2 */
-  {
-    event_button = (GR_EVENT_BUTTON *) ev;
-    if (event_button->changebuttons & 4) /* left */
+    else if (ev->type == GR_EVENT_TYPE_BUTTON_DOWN) /* 2 */
     {
-      rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_DOWN | MOUSE_FLAG_BUTTON1,
-                     event_button->x, event_button->y);
+      event_button = (GR_EVENT_BUTTON *) ev;
+      if (event_button->changebuttons & 4) /* left */
+      {
+        rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_DOWN | MOUSE_FLAG_BUTTON1,
+                       event_button->x, event_button->y);
+      }
+      else if (event_button->changebuttons & 1) /* right */
+      {
+        rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_DOWN | MOUSE_FLAG_BUTTON2,
+                       event_button->x, event_button->y);
+      }
     }
-    else if (event_button->changebuttons & 1) /* right */
+    else if (ev->type == GR_EVENT_TYPE_BUTTON_UP) /* 3 */
     {
-      rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_DOWN | MOUSE_FLAG_BUTTON2,
-                     event_button->x, event_button->y);
+      event_button = (GR_EVENT_BUTTON *) ev;
+      if (event_button->changebuttons & 4) /* left */
+      {
+        rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_BUTTON1,
+                       event_button->x, event_button->y);
+      }
+      else if (event_button->changebuttons & 1) /* right */
+      {
+        rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_BUTTON2,
+                       event_button->x, event_button->y);
+      }
     }
-  }
-  else if (ev->type == GR_EVENT_TYPE_BUTTON_UP) /* 3 */
-  {
-    event_button = (GR_EVENT_BUTTON *) ev;
-    if (event_button->changebuttons & 4) /* left */
+    else if (ev->type == GR_EVENT_TYPE_MOUSE_MOTION) /* 6 */
     {
-      rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_BUTTON1,
-                     event_button->x, event_button->y);
+      event_mouse = (GR_EVENT_MOUSE *) ev;
+      rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_MOVE,
+                     event_mouse->x, event_mouse->y);
     }
-    else if (event_button->changebuttons & 1) /* right */
+    else if (ev->type == GR_EVENT_TYPE_MOUSE_POSITION) /* 7 */
     {
-      rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_BUTTON2,
-                     event_button->x, event_button->y);
+      /* use GR_EVENT_TYPE_MOUSE_MOTION */
+    }
+    else if (ev->type == GR_EVENT_TYPE_KEY_DOWN) /* 8 */
+    {
+      event_keystroke = (GR_EVENT_KEYSTROKE *) ev;
+      process_keystroke(event_keystroke, 1);
+    }
+    else if (ev->type == GR_EVENT_TYPE_KEY_UP) /* 9 */
+    {
+      event_keystroke = (GR_EVENT_KEYSTROKE *) ev;
+      process_keystroke(event_keystroke, 0);
+    }
+    else if (ev->type == GR_EVENT_TYPE_FOCUS_IN) /* 10 */
+    {
+    }
+    else if (ev->type == GR_EVENT_TYPE_FOCUS_OUT) /* 11 */
+    {
+    }
+    else if (ev->type == GR_EVENT_TYPE_UPDATE) /* 13 */
+    {
+    }
+    GrCheckNextEvent(ev);
+  } while (ev->type != GR_EVENT_TYPE_NONE);
+}
+
+/*****************************************************************************/
+static void get_username_and_hostname(void)
+{
+  char fullhostname[64];
+  char * p;
+  struct passwd * pw;
+
+  STRNCPY(g_username, "unknown", sizeof(g_username));
+  STRNCPY(g_hostname, "unknown", sizeof(g_hostname));
+  pw = getpwuid(getuid());
+  if (pw != NULL && pw->pw_name != NULL)
+  {
+    STRNCPY(g_username, pw->pw_name, sizeof(g_username));
+  }
+  if (gethostname(fullhostname, sizeof(fullhostname)) != -1)
+  {
+    p = strchr(fullhostname, '.');
+    if (p != NULL)
+    {
+      *p = 0;
+    }
+    STRNCPY(g_hostname, fullhostname, sizeof(g_hostname));
+  }
+}
+/*****************************************************************************/
+static void out_params(void)
+{
+  fprintf(stderr, "rdesktop: A Remote Desktop Protocol client.\n");
+  fprintf(stderr, "Version " VERSION ". Copyright (C) 1999-2005 Matt Chapman.\n");
+  fprintf(stderr, "nanox uiport by Jay Sorg\n");
+  fprintf(stderr, "See http://www.rdesktop.org/ for more information.\n\n");
+  fprintf(stderr, "Usage: nanoxrdesktop [options] server\n");
+  fprintf(stderr, "   -u: user name\n");
+  fprintf(stderr, "   -n: client hostname\n");
+  fprintf(stderr, "   -p: password\n");
+  fprintf(stderr, "   -d: domain\n");
+  fprintf(stderr, "   -s: shell\n");
+  fprintf(stderr, "   -c: working directory\n");
+  fprintf(stderr, "\n");
+}
+
+/*****************************************************************************/
+static int parse_parameters(int in_argc, char ** in_argv)
+{
+  int i;
+
+  if (in_argc <= 1)
+  {
+    out_params();
+    return 0;
+  }
+  for (i = 1; i < in_argc; i++)
+  {
+    strcpy(g_servername, in_argv[i]);
+    if (strcmp(in_argv[i], "-h") == 0)
+    {
+      out_params();
+      return 0;
+    }
+    else if (strcmp(in_argv[i], "-n") == 0)
+    {
+      STRNCPY(g_hostname, in_argv[i + 1], sizeof(g_hostname));
+    }
+    else if (strcmp(in_argv[i], "-u") == 0)
+    {
+      STRNCPY(g_username, in_argv[i + 1], sizeof(g_username));
+    }
+    else if (strcmp(in_argv[i], "-p") == 0)
+    {
+      STRNCPY(g_password, in_argv[i + 1], sizeof(g_password));
+      g_flags |= RDP_LOGON_AUTO;
+      i++;
+    }
+    else if (strcmp(in_argv[i], "-d") == 0)
+    {
+      STRNCPY(g_domain, in_argv[i + 1], sizeof(g_domain));
+      i++;
+    }
+    else if (strcmp(in_argv[i], "-s") == 0)
+    {
+      STRNCPY(g_shell, in_argv[i + 1], sizeof(g_shell));
+      i++;
+    }
+    else if (strcmp(in_argv[i], "-c") == 0)
+    {
+      STRNCPY(g_directory, in_argv[i + 1], sizeof(g_directory));
+      i++;
     }
   }
-  else if (ev->type == GR_EVENT_TYPE_MOUSE_MOTION) /* 6 */
-  {
-    event_mouse = (GR_EVENT_MOUSE *) ev;
-    rdp_send_input(0, RDP_INPUT_MOUSE, MOUSE_FLAG_MOVE,
-                   event_mouse->x, event_mouse->y);
-  }
-  else if (ev->type == GR_EVENT_TYPE_MOUSE_POSITION) /* 7 */
-  {
-    /* use GR_EVENT_TYPE_MOUSE_MOTION */
-  }
-  else if (ev->type == GR_EVENT_TYPE_KEY_DOWN) /* 8 */
-  {
-    event_keystroke = (GR_EVENT_KEYSTROKE *) ev;
-    process_keystroke(event_keystroke, 1);
-  }
-  else if (ev->type == GR_EVENT_TYPE_KEY_UP) /* 9 */
-  {
-    event_keystroke = (GR_EVENT_KEYSTROKE *) ev;
-    process_keystroke(event_keystroke, 0);
-  }
-  else if (ev->type == GR_EVENT_TYPE_FOCUS_IN) /* 10 */
-  {
-  }
-  else if (ev->type == GR_EVENT_TYPE_FOCUS_OUT) /* 11 */
-  {
-  }
-  else if (ev->type == GR_EVENT_TYPE_UPDATE) /* 13 */
-  {
-  }
-  else
-  {
-    fprintf(stderr, "unknown event %d\n", ev->type);
-  }
+  return 1;
 }
 
 /*****************************************************************************/
 int main(int in_argc, char ** in_argv)
 {
+  get_username_and_hostname();
+  /* read command line options */
+  if (!parse_parameters(in_argc, in_argv))
+  {
+    exit(0);
+  }
   /* connect to server */
   if (GrOpen() < 0)
   {
@@ -1061,6 +1473,10 @@ int main(int in_argc, char ** in_argv)
   g_Bpp = (g_screen_info.bpp + 7) / 8;
   g_width = g_screen_info.vs_width;
   g_height = g_screen_info.vs_height;
+  g_clip.x = 0;
+  g_clip.y = 0;
+  g_clip.width = g_width;
+  g_clip.height = g_height;
   if (!((g_bpp == 32 && g_server_bpp == 16) ||
         (g_bpp == 16 && g_server_bpp == 16)))
   {
@@ -1069,16 +1485,10 @@ int main(int in_argc, char ** in_argv)
     GrClose();
     exit(0);
   }
-
-  /* read command line options */
-  if (!parse_parameters(in_argc, in_argv))
-  {
-    GrClose();
-    exit(0);
-  }
   init_keys();
   /* connect to server */
-  if (!rdp_connect(g_servername, RDP_LOGON_NORMAL, "", "", "", ""))
+  if (!rdp_connect(g_servername, g_flags, g_domain, g_password, g_shell,
+                   g_directory))
   {
     fprintf(stderr, "Error connecting\n");
     GrClose();
@@ -1094,10 +1504,14 @@ int main(int in_argc, char ** in_argv)
   /* clear screen */
   GrSetGCForeground(g_gc, 0);
   GrFillRect(g_wnd, g_gc, 0, 0, g_width, g_height);
+  /* create null cursor */
+  g_null_cursor = (GR_CURSOR_ID)ui_create_cursor(0, 0, 32, 32, 0, 0);
   /* register callbacks, set mask, and run main loop */
   GrSelectEvents(g_wnd, -1); /* all events */
   GrRegisterInput(g_sck);
   GrMainLoop(nanox_event);
+  /* free null cursor */
+  ui_destroy_cursor((void*)g_null_cursor);
   /* free graphic context */
   GrDestroyGC(g_gc);
   GrDestroyGC(g_gc_clean);
