@@ -408,14 +408,13 @@ xkeymap_translate_key(uint32 keysym, unsigned int keycode, unsigned int state)
 		}
 	}
 
-#if 0
-	if (((remote_modifier_state & MapLeftCtrlMask)
-	     || (remote_modifier_state & MapRightCtrlMask)) && get_key_state(state, XK_Caps_Lock))
+	if ((tr.modifiers & MapLeftShiftMask) && ((remote_modifier_state & MapLeftCtrlMask)
+						  || (remote_modifier_state & MapRightCtrlMask))
+	    && get_key_state(state, XK_Caps_Lock))
 	{
 		DEBUG_KBD(("CapsLock + Ctrl pressed, releasing LeftShift\n"));
 		tr.modifiers ^= MapLeftShiftMask;
 	}
-#endif
 
 	if (tr.scancode != 0)
 	{
