@@ -63,6 +63,7 @@ mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen
 	int next_offset, match_off;
 	int match_len;
 	int old_offset, match_bits;
+	BOOL big = ctype & RDP_MPPC_BIG ? True : False;
 
 	uint8 *dict = g_mppc_dict.hist;
 
@@ -155,7 +156,7 @@ mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen
 		/* decode offset  */
 		/* length pair    */
 		walker <<= 1;
-		if (--walker_len < (ctype & RDP_MPPC_BIG ? 3 : 2))
+		if (--walker_len < (big ? 3 : 2))
 		{
 			if (i >= clen)
 				return -1;
@@ -163,7 +164,7 @@ mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen
 			walker_len += 8;
 		}
 
-		if (ctype & RDP_MPPC_BIG)
+		if (big)
 		{
 			/* offset decoding where offset len is:
 			   -63: 11111 followed by the lower 6 bits of the value
@@ -315,7 +316,7 @@ mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen
 			   i.e. 4097 is encoded as: 111111111110 000000000001
 			   meaning 4096 + 1...
 			 */
-			match_bits = 11;	/* 11 bits of value at most */
+			match_bits = big ? 14 : 11;	/* 11 or 14 bits of value at most */
 			do
 			{
 				walker <<= 1;
@@ -334,7 +335,7 @@ mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen
 				}
 			}
 			while (1);
-			match_len = 13 - match_bits;
+			match_len = (big ? 16 : 13) - match_bits;
 			walker <<= 1;
 			if (--walker_len < match_len)
 			{
@@ -360,7 +361,7 @@ mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen
 			return -1;
 		}
 		/* memory areas can overlap - meaning we can't use memXXX functions */
-		k = (next_offset - match_off) & (ctype & RDP_MPPC_BIG ? 65535 : 8191);
+		k = (next_offset - match_off) & (big ? 65535 : 8191);
 		do
 		{
 			dict[next_offset++] = dict[k++];
