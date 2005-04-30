@@ -38,7 +38,6 @@ BOOL g_dsp_busy = False;
 static BOOL g_swapaudio;
 static int g_snd_rate;
 static BOOL g_swapaudio;
-static short g_samplewidth;
 static int width = AL_SAMPLE_16;
 
 double min_volume, max_volume, volume_range;
@@ -145,40 +144,45 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 #if (defined(IRIX_DEBUG))
 	fprintf(stderr, "wave_out_set_format: init...\n");
 #endif
-	/* limited support to configure an opened audio port in IRIX */
-	/* have to reopen the audio port, using same config */
-	alClosePort(output_port);
 
 	g_swapaudio = False;
-
 	if (pwfx->wBitsPerSample == 8)
 		width = AL_SAMPLE_8;
 	else if (pwfx->wBitsPerSample == 16)
 	{
 		width = AL_SAMPLE_16;
 		/* Do we need to swap the 16bit values? (Are we BigEndian) */
-#if (defined(IRIX_DEBUG))
+#if (defined(B_ENDIAN))
 		g_swapaudio = 1;
 #else
 		g_swapaudio = 0;
 #endif
 	}
 
-	g_samplewidth = pwfx->wBitsPerSample / 8;
+	/* Limited support to configure an opened audio port in IRIX The
+	 number of channels is a static setting and can not be changed after
+	 a port is opened. So if the number of channels remains the same, we
+	 can configure other settings Otherwise we have to reopen the audio
+	 port, using same config. */
+
 	channels = pwfx->nChannels;
 	g_snd_rate = pwfx->nSamplesPerSec;
 
 	alSetSampFmt(audioconfig, AL_SAMPFMT_TWOSCOMP);
 	alSetWidth(audioconfig, width);
-	alSetChannels(audioconfig, channels);
-
-	output_port = alOpenPort("rdpsnd", "w", audioconfig);
-
-	if (output_port == (ALport) 0)
+	if ( channels != alGetChannels(audioconfig) )
 	{
-		fprintf(stderr, "wave_out_set_format: alOpenPort failed: %s\n",
-			alGetErrorString(oserror()));
-		return False;
+		alClosePort(output_port);
+		alSetChannels(audioconfig, channels);
+		output_port = alOpenPort("rdpsnd", "w", audioconfig);
+
+		if (output_port == (ALport) 0)
+		{
+			fprintf(stderr, "wave_out_set_format: alOpenPort failed: %s\n",
+							alGetErrorString(oserror()));
+			return False;
+		}
+
 	}
 
 	resource = alGetResource(output_port);
@@ -281,13 +285,8 @@ wave_out_play(void)
 	unsigned int i;
 	uint8 swap;
 	STREAM out;
-	static long startedat_us;
-	static long startedat_s;
-	static BOOL started = False;
 	static BOOL swapped = False;
-	struct timeval tv;
 	int gf;
-	static long long temp;
 
 	while (1)
 	{
@@ -312,48 +311,25 @@ wave_out_play(void)
 			swapped = True;
 		}
 
-		if (!started)
-		{
-			gettimeofday(&tv, NULL);
-			startedat_us = tv.tv_usec;
-			startedat_s = tv.tv_sec;
-			started = True;
-		}
-
 		len = out->end - out->p;
-		gf = alGetFillable(output_port);
-		if (len > gf)
-		{
-			/* len = gf * combinedFrameSize; */
-#if (defined(IRIX_DEBUG))
-			/* fprintf(stderr,"Fillable...\n"); */
-#endif
-		}
 
 		alWriteFrames(output_port, out->p, len / combinedFrameSize);
 
 		out->p += len;
 		if (out->p == out->end)
 		{
-			long long duration;
-			long elapsed;
-
-			gettimeofday(&tv, NULL);
-			duration = (out->size * (1000000 / (g_samplewidth * g_snd_rate)));
-			elapsed = (tv.tv_sec - startedat_s) * 1000000 + (tv.tv_usec - startedat_us);
-			/* 7/10 is not good for IRIX audio port, 4x/100 is suitable */
-			if (elapsed >= (duration * 485) / 1000)
+			gf = alGetFilled(output_port);
+			if ( gf < (4 * maxFillable / 10) )
 			{
 				rdpsnd_send_completion(packet->tick, packet->index);
 				free(out->data);
 				queue_lo = (queue_lo + 1) % MAX_QUEUE;
-				started = False;
 				swapped = False;
 			}
 			else
 			{
 #if (defined(IRIX_DEBUG))
-				/* fprintf(stderr,"Busy playing...\n"); */
+/*  				fprintf(stderr,"Busy playing...\n"); */
 #endif
 				g_dsp_busy = True;
 				return;
