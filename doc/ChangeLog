@@ -8,6 +8,7 @@ rdesktop (1.?.?)
    * Portability fixes
    * Support for RDP-compression (all bpps)
    * process RDP recv queue if send queue is full (Debian bug #246461)
+   * SGI/Irix sound-driver fixes
 
 rdesktop (1.4.0)
    * Basic disk-, parallel-, printer- and serial-redirection
