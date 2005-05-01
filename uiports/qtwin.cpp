@@ -1764,7 +1764,7 @@ int parse_parameters(int in_argc, char ** in_argv)
     }
     else if (strcmp(in_argv[i], "-z") == 0)
     {
-      g_flags |= RDP_COMPRESSION;
+      g_flags |= (RDP_LOGON_COMPRESSION | RDP_LOGON_COMPRESSION2);
     }
     else if (strcmp(in_argv[i], "-r") == 0)
     {
