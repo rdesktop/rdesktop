@@ -54,25 +54,25 @@ install: installbin installkeymaps installman
 
 .PHONY: installbin
 installbin: rdesktop
-	mkdir -p $(DESTDIR)/$(bindir)
-	$(INSTALL) rdesktop $(DESTDIR)/$(bindir)
-	strip $(DESTDIR)/$(bindir)/rdesktop
-	chmod 755 $(DESTDIR)/$(bindir)/rdesktop
+	mkdir -p $(DESTDIR)$(bindir)
+	$(INSTALL) rdesktop $(DESTDIR)$(bindir)
+	strip $(DESTDIR)$(bindir)/rdesktop
+	chmod 755 $(DESTDIR)$(bindir)/rdesktop
 
 .PHONY: installman
 installman: doc/rdesktop.1
-	mkdir -p $(DESTDIR)/$(mandir)/man1
-	cp doc/rdesktop.1 $(DESTDIR)/$(mandir)/man1
-	chmod 644 $(DESTDIR)/$(mandir)/man1/rdesktop.1
+	mkdir -p $(DESTDIR)$(mandir)/man1
+	cp doc/rdesktop.1 $(DESTDIR)$(mandir)/man1
+	chmod 644 $(DESTDIR)$(mandir)/man1/rdesktop.1
 
 .PHONY: installkeymaps
 installkeymaps:
-	mkdir -p $(DESTDIR)/$(KEYMAP_PATH)
+	mkdir -p $(DESTDIR)$(KEYMAP_PATH)
 # Prevent copying the CVS directory
-	cp keymaps/?? keymaps/??-?? $(DESTDIR)/$(KEYMAP_PATH)
-	cp keymaps/common $(DESTDIR)/$(KEYMAP_PATH)
-	cp keymaps/modifiers $(DESTDIR)/$(KEYMAP_PATH)
-	chmod 644 $(DESTDIR)/$(KEYMAP_PATH)/*
+	cp keymaps/?? keymaps/??-?? $(DESTDIR)$(KEYMAP_PATH)
+	cp keymaps/common $(DESTDIR)$(KEYMAP_PATH)
+	cp keymaps/modifiers $(DESTDIR)$(KEYMAP_PATH)
+	chmod 644 $(DESTDIR)$(KEYMAP_PATH)/*
 
 .PHONY: proto
 proto:
