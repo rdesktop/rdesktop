@@ -27,6 +27,7 @@
 #include <dirent.h>		/* opendir, closedir, readdir */
 #include <fnmatch.h>
 #include <errno.h>		/* errno */
+#include <stdio.h>
 
 #include <utime.h>
 #include <time.h>		/* ctime */
