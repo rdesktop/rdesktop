@@ -1,6 +1,6 @@
 Summary: Remote Desktop Protocol client
 Name: rdesktop
-Version: 1.4.0
+Version: 1.4.1
 Release: 1
 Copyright: GPL; see COPYING
 Group: Applications/Communications

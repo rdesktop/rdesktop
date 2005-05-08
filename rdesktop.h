@@ -30,7 +30,7 @@
 #include <unistd.h>
 #endif
 
-#define VERSION "1.4.0"
+#define VERSION "1.4.1"
 
 #ifdef WITH_DEBUG
 #define DEBUG(args)	printf args;

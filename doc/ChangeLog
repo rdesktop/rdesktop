@@ -1,4 +1,4 @@
-rdesktop (1.?.?)
+rdesktop (1.4.1)
    * persistent bitmap cache optimisations
    * support for more RDP-orders (ellipse, polygon)
    * libao sound-driver (for Mac OSX and others)
@@ -9,6 +9,8 @@ rdesktop (1.?.?)
    * Support for RDP-compression (all bpps)
    * process RDP recv queue if send queue is full (Debian bug #246461)
    * SGI/Irix sound-driver fixes
+
+  -- Michael Gernoth <michael@gernoth.net>  Sun, 8 May 2005 19:55:35 +0200 (CEST)
 
 rdesktop (1.4.0)
    * Basic disk-, parallel-, printer- and serial-redirection

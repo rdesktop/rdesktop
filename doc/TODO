@@ -35,6 +35,20 @@
   * Autodetect which keymap to use.
 
 
+* Sound redirection
+
+  * Use timestamps in audio packets.
+
+  * Add resampling to supported samplerates of audio-hardware.
+
+  * Lower CPU-usage with an audio thread.
+
+
+* Smartcard redirection
+
+  * Merge patches currently implementing sc-redirection.
+
+
 * Miscellaneous
 
   * Clean up header files. The current "proto.h" and "xproto.h" is far
