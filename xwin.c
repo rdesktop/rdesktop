@@ -1227,7 +1227,7 @@ ui_create_window(void)
 	}
 
 	input_mask = KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask |
-		VisibilityChangeMask | FocusChangeMask;
+		VisibilityChangeMask | FocusChangeMask | StructureNotifyMask;
 
 	if (g_sendmotion)
 		input_mask |= PointerMotionMask;
@@ -1598,6 +1598,12 @@ xwin_process_events(void)
 				break;
 			case PropertyNotify:
 				xclip_handle_PropertyNotify(&xevent.xproperty);
+				break;
+			case MapNotify:
+				rdp_send_client_window_status(1);
+				break;
+			case UnmapNotify:
+				rdp_send_client_window_status(0);
 				break;
 		}
 	}

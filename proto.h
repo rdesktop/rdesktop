@@ -100,6 +100,7 @@ void rdp_out_unistr(STREAM s, char *string, int len);
 int rdp_in_unistr(STREAM s, char *string, int uni_len);
 void rdp_send_input(uint32 time, uint16 message_type, uint16 device_flags, uint16 param1,
 		    uint16 param2);
+void rdp_send_client_window_status(int status);
 void process_colour_pointer_pdu(STREAM s);
 void process_cached_pointer_pdu(STREAM s);
 void process_system_pointer_pdu(STREAM s);

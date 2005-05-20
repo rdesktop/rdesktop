@@ -94,21 +94,21 @@ rdp5_process(STREAM s)
 				break;
 			case 3:	/* update synchronize */
 				break;
-			case 5: /* null pointer */
+			case 5:	/* null pointer */
 				ui_set_null_cursor();
 				break;
 			case 6:	/* default pointer */
 				break;
-			case 8: /* pointer position */
+			case 8:	/* pointer position */
 				in_uint16_le(ts, x);
 				in_uint16_le(ts, y);
 				if (s_check(ts))
 					ui_move_pointer(x, y);
 				break;
-			case 9: /* color pointer */
+			case 9:	/* color pointer */
 				process_colour_pointer_pdu(ts);
 				break;
-			case 10: /* cached pointer */
+			case 10:	/* cached pointer */
 				process_cached_pointer_pdu(ts);
 				break;
 			default:

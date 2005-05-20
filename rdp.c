@@ -49,7 +49,6 @@ extern int g_width;
 extern int g_height;
 extern BOOL g_bitmap_cache;
 extern BOOL g_bitmap_cache_persist_enable;
-extern BOOL g_rdp_compression;
 
 uint8 *g_next_packet;
 uint32 g_rdp_shareid;
@@ -482,7 +481,33 @@ rdp_send_input(uint32 time, uint16 message_type, uint16 device_flags, uint16 par
 	rdp_send_data(s, RDP_DATA_PDU_INPUT);
 }
 
-/* Inform the server on the contents of the persistent bitmap cache */
+/* Send a client window information PDU */
+void
+rdp_send_client_window_status(int status)
+{
+	STREAM s;
+
+	s = rdp_init_data(12);
+
+	out_uint32_le(s, status);
+
+	switch (status)
+	{
+		case 0:	/* shut the server up */
+			break;
+
+		case 1:	/* receive data again */
+			out_uint32_le(s, 0);	/* unknown */
+			out_uint16_le(s, g_width);
+			out_uint16_le(s, g_height);
+			break;
+	}
+
+	s_mark_end(s);
+	rdp_send_data(s, RDP_DATA_PDU_CLIENT_WINDOW_STATUS);
+}
+
+/* Send persistent bitmap cache enumeration PDU's */
 static void
 rdp_enum_bmpcache2(void)
 {
