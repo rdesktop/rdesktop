@@ -486,6 +486,10 @@ void
 rdp_send_client_window_status(int status)
 {
 	STREAM s;
+	static int current_status = 1;
+
+	if (current_status == status)
+		return;
 
 	s = rdp_init_data(12);
 
@@ -505,6 +509,7 @@ rdp_send_client_window_status(int status)
 
 	s_mark_end(s);
 	rdp_send_data(s, RDP_DATA_PDU_CLIENT_WINDOW_STATUS);
+	current_status = status;
 }
 
 /* Send persistent bitmap cache enumeration PDU's */
