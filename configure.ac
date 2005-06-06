@@ -22,7 +22,6 @@ AC_CHECK_HEADER(sys/filio.h, AC_DEFINE(HAVE_SYS_FILIO_H))
 AC_CHECK_HEADER(sys/strtio.h, AC_DEFINE(HAVE_SYS_STRTIO_H))
 AC_CHECK_HEADER(locale.h, AC_DEFINE(HAVE_LOCALE_H))
 AC_CHECK_HEADER(langinfo.h, AC_DEFINE(HAVE_LANGINFO_H))
-AC_CHECK_HEADER(iconv.h, AC_DEFINE(HAVE_ICONV_H))
 
 rpath=""
 
@@ -285,6 +284,7 @@ AC_DEFUN([UTILS_FUNC_ICONV],
       if test -d $dir/lib; then LDFLAGS="$LDFLAGS -L$dir/lib"; fi
     done
    ])
+  AC_CHECK_HEADER(iconv.h, AC_DEFINE(HAVE_ICONV_H))
 
   AC_CACHE_CHECK(for iconv, am_cv_func_iconv, [
     am_cv_func_iconv="no, consider installing GNU libiconv"
