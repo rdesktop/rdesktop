@@ -160,17 +160,17 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 	}
 
 	/* Limited support to configure an opened audio port in IRIX The
-	 number of channels is a static setting and can not be changed after
-	 a port is opened. So if the number of channels remains the same, we
-	 can configure other settings Otherwise we have to reopen the audio
-	 port, using same config. */
+	   number of channels is a static setting and can not be changed after
+	   a port is opened. So if the number of channels remains the same, we
+	   can configure other settings Otherwise we have to reopen the audio
+	   port, using same config. */
 
 	channels = pwfx->nChannels;
 	g_snd_rate = pwfx->nSamplesPerSec;
 
 	alSetSampFmt(audioconfig, AL_SAMPFMT_TWOSCOMP);
 	alSetWidth(audioconfig, width);
-	if ( channels != alGetChannels(audioconfig) )
+	if (channels != alGetChannels(audioconfig))
 	{
 		alClosePort(output_port);
 		alSetChannels(audioconfig, channels);
@@ -179,7 +179,7 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 		if (output_port == (ALport) 0)
 		{
 			fprintf(stderr, "wave_out_set_format: alOpenPort failed: %s\n",
-							alGetErrorString(oserror()));
+				alGetErrorString(oserror()));
 			return False;
 		}
 
@@ -319,7 +319,7 @@ wave_out_play(void)
 		if (out->p == out->end)
 		{
 			gf = alGetFilled(output_port);
-			if ( gf < (4 * maxFillable / 10) )
+			if (gf < (4 * maxFillable / 10))
 			{
 				rdpsnd_send_completion(packet->tick, packet->index);
 				free(out->data);
