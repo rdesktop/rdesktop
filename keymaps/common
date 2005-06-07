@@ -114,45 +114,45 @@ Right 0xcd localstate
 # Numpad
 #
 Num_Lock 0x45
-KP_Divide 0xb5
-KP_Multiply 0x37
-KP_Subtract 0x4a
-KP_Add 0x4e
-KP_Enter 0x9c
+KP_Divide 0xb5 localstate
+KP_Multiply 0x37 localstate
+KP_Subtract 0x4a localstate
+KP_Add 0x4e localstate
+KP_Enter 0x9c localstate
 
-KP_Decimal 0x53 numlock
-KP_Separator 0x53 numlock
-KP_Delete 0x53
+KP_Decimal 0x53 localstate numlock
+KP_Separator 0x53 localstate numlock
+KP_Delete 0x53 localstate
 
-KP_0 0x52 numlock
-KP_Insert 0x52
+KP_0 0x52 localstate numlock
+KP_Insert 0x52 localstate
 
-KP_1 0x4f numlock
-KP_End 0x4f
+KP_1 0x4f localstate numlock
+KP_End 0x4f localstate
 
-KP_2 0x50 numlock
-KP_Down 0x50
+KP_2 0x50 localstate numlock
+KP_Down 0x50 localstate
 
-KP_3 0x51 numlock
-KP_Next 0x51
+KP_3 0x51 localstate numlock
+KP_Next 0x51 localstate
 
-KP_4 0x4b numlock
-KP_Left 0x4b
+KP_4 0x4b localstate numlock
+KP_Left 0x4b localstate
 
-KP_5 0x4c numlock
-KP_Begin 0x4c
+KP_5 0x4c localstate numlock
+KP_Begin 0x4c localstate
 
-KP_6 0x4d numlock
-KP_Right 0x4d
+KP_6 0x4d localstate numlock
+KP_Right 0x4d localstate
 
-KP_7 0x47 numlock
-KP_Home 0x47
+KP_7 0x47 localstate numlock
+KP_Home 0x47 localstate
 
-KP_8 0x48 numlock
-KP_Up 0x48
+KP_8 0x48 localstate numlock
+KP_Up 0x48 localstate
 
-KP_9 0x49 numlock
-KP_Prior 0x49
+KP_9 0x49 localstate numlock
+KP_Prior 0x49 localstate
 
 #
 # Inhibited keys
