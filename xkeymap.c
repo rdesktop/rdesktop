@@ -372,11 +372,15 @@ handle_special_keys(uint32 keysym, unsigned int state, uint32 ev_time, BOOL pres
 			    && (get_key_state(state, XK_Alt_L) || get_key_state(state, XK_Alt_R)))
 				return True;
 			break;
+
 		case XK_Num_Lock:
-			/* FIXME: We might want to do RDP_INPUT_SYNCHRONIZE here, if g_numlock_sync */
-			if (!g_numlock_sync)
-				/* Inhibit */
-				return True;
+			/* Synchronize on key release */
+			if (g_numlock_sync && !pressed)
+				rdp_send_input(0, RDP_INPUT_SYNCHRONIZE, 0,
+					       ui_get_numlock_state(read_keyboard_state()), 0);
+
+			/* Inhibit */
+			return True;
 			break;
 
 	}
