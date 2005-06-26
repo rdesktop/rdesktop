@@ -77,7 +77,7 @@ wave_out_open(void)
 	queue_lo = queue_hi = 0;
 
 	audioconfig = alNewConfig();
-	if (audioconfig < 0)
+	if (audioconfig == (ALconfig) 0)
 	{
 		fprintf(stderr, "wave_out_open: alNewConfig failed: %s\n",
 			alGetErrorString(oserror()));
@@ -159,10 +159,10 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 #endif
 	}
 
-	/* Limited support to configure an opened audio port in IRIX The
+	/* Limited support to configure an opened audio port in IRIX.  The
 	   number of channels is a static setting and can not be changed after
-	   a port is opened. So if the number of channels remains the same, we
-	   can configure other settings Otherwise we have to reopen the audio
+	   a port is opened.  So if the number of channels remains the same, we
+	   can configure other settings; otherwise we have to reopen the audio
 	   port, using same config. */
 
 	channels = pwfx->nChannels;
