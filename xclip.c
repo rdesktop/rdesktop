@@ -191,7 +191,7 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 			translated_data = lf2crlf(data, &length);
 
 			g_clip_buffer = (uint8 *) xmalloc(length);
-			strncpy(g_clip_buffer, translated_data, length);
+			strncpy((char*)g_clip_buffer, (char*)translated_data, length);
 			xfree(translated_data);
 			g_clip_buflen = length;
 
@@ -326,10 +326,10 @@ xclip_handle_PropertyNotify(XPropertyEvent * event)
 			translated_data = lf2crlf(data, &length);
 
 			uint8 *tmp = xmalloc(length + g_clip_buflen);
-			strncpy(tmp, g_clip_buffer, g_clip_buflen);
+			strncpy((char*)tmp, (char*)g_clip_buffer, g_clip_buflen);
 			xfree(g_clip_buffer);
 
-			strncpy(tmp + g_clip_buflen, translated_data, length);
+			strncpy((char*)(tmp + g_clip_buflen), (char*)translated_data, length);
 			xfree(translated_data);
 
 			g_clip_buffer = tmp;
