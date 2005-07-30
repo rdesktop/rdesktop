@@ -321,11 +321,12 @@ xclip_handle_PropertyNotify(XPropertyEvent * event)
 		{
 			uint8 *translated_data;
 			uint32 length = nitems;
+			uint8 *tmp;
 
 			DEBUG_CLIPBOARD(("Translating linebreaks before sending data\n"));
 			translated_data = lf2crlf(data, &length);
 
-			uint8 *tmp = xmalloc(length + g_clip_buflen);
+			tmp = xmalloc(length + g_clip_buflen);
 			strncpy((char*)tmp, (char*)g_clip_buffer, g_clip_buflen);
 			xfree(g_clip_buffer);
 
