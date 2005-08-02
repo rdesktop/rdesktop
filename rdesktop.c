@@ -171,7 +171,7 @@ usage(char *program)
 	fprintf(stderr, "   -5: use RDP version 5 (default)\n");
 }
 
-void
+static void
 print_disconnect_reason(uint16 reason)
 {
 	char *text;
