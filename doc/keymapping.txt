@@ -41,22 +41,31 @@ Contents of keymap files
 ========================
 The keymaps are line based. There are four different types of lines:
 
-1) include-lines
+1) include lines
 Syntax:
 include <another-map-file>
 
+Example:
+include common
 
-2) map-lines
+
+2) map lines
 Syntax:
 map <hex-number>
+
+Example:
+map 0x41d
 
 Map-lines specifies how the remote RDP server should interpret the
 sent scancodes. 
 
 
-3) Translation-lines
+3) Translation lines
 Syntax:
 <keysym-name> <scancode> [flags..]
+
+Example:
+onehalf 0x29 shift
 
 The scancode can be found in scancodes.h. Note: The scancode value for
 extended keys can be calculated by OR:ing with 0x80. Example: The
@@ -65,11 +74,12 @@ scancode value to put into the map file by running:
 
 python -c "print hex(0x80 | 0x52)"
 
-If flags are "altgr", "shift", the scancode sent for this
-keysym will be prefix with AltGr, or Shift. 
+If flags are "altgr", "shift", the scancode sent for this keysym will
+be prefixed with AltGr, or Shift.
 
-If flags include "addupper", an translation for this keysyms uppercase
-name will as well, in addition to the non-uppercase name. Example:
+If flags includes "addupper", a translation for this keysyms uppercase
+name will be added as well, in addition to the non-uppercase
+name. Example:
 
 x 2d addupper
 
@@ -91,6 +101,20 @@ enable local Compose/Multi_key handling. Enabling this will often make
 it impossible to compose characters with dead keys (on the remote
 side). This is because when local compose support is enabled, dead
 keys will not be sent to the remote side. 
+
+
+5) sequence lines
+Syntax:
+sequence <event-keysym-name> <keysym-name1> <keysym-name2> ...
+
+Examples:
+sequence eacute dead_acute e
+sequence F12 f o o at e x a m p l e period c o m
+
+Sequence lines allows you to specify that multiple scancodes should be
+sent to the RDP server, in response to one X11 keyboard event. Note:
+The sequence is sent at the X11 KeyPress event. Nothing is sent at
+KeyRelease.
 
 
 Suggested X11 keysym mapping on PCs

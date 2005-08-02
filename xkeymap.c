@@ -47,7 +47,7 @@ extern BOOL g_use_rdp5;
 extern BOOL g_numlock_sync;
 
 static BOOL keymap_loaded;
-static key_translation keymap[KEYMAP_SIZE];
+static key_translation *keymap[KEYMAP_SIZE];
 static int min_keycode;
 static uint16 remote_modifier_state = 0;
 static uint16 saved_remote_modifier_state = 0;
@@ -58,6 +58,7 @@ static void
 add_to_keymap(char *keyname, uint8 scancode, uint16 modifiers, char *mapname)
 {
 	KeySym keysym;
+	key_translation *tr;
 
 	keysym = XStringToKeysym(keyname);
 	if (keysym == NoSymbol)
@@ -69,10 +70,73 @@ add_to_keymap(char *keyname, uint8 scancode, uint16 modifiers, char *mapname)
 	DEBUG_KBD(("Adding translation, keysym=0x%x, scancode=0x%x, "
 		   "modifiers=0x%x\n", (unsigned int) keysym, scancode, modifiers));
 
-	keymap[keysym & KEYMAP_MASK].scancode = scancode;
-	keymap[keysym & KEYMAP_MASK].modifiers = modifiers;
+	tr = (key_translation *) xmalloc(sizeof(key_translation));
+	memset(tr, 0, sizeof(key_translation));
+	tr->scancode = scancode;
+	tr->modifiers = modifiers;
+	keymap[keysym & KEYMAP_MASK] = tr;
 
 	return;
+}
+
+static void
+add_sequence(char *rest, char *mapname)
+{
+	KeySym keysym;
+	key_translation *tr, **prev_next;
+	size_t chars;
+	char keyname[KEYMAP_MAX_LINE_LENGTH];
+
+	/* Skip over whitespace after the sequence keyword */
+	chars = strspn(rest, " \t");
+	rest += chars;
+
+	/* Fetch the keysym name */
+	chars = strcspn(rest, " \t\0");
+	STRNCPY(keyname, rest, chars + 1);
+	rest += chars;
+
+	keysym = XStringToKeysym(keyname);
+	if (keysym == NoSymbol)
+	{
+		DEBUG_KBD(("Bad keysym \"%s\" in keymap %s (ignoring line)\n", keyname, mapname));
+		return;
+	}
+
+
+	DEBUG_KBD(("Adding sequence for keysym (0x%lx, %s) -> ", keysym, keyname));
+
+	prev_next = &keymap[keysym & KEYMAP_MASK];
+
+	while (*rest)
+	{
+		/* Skip whitespace */
+		chars = strspn(rest, " \t");
+		rest += chars;
+
+		/* Fetch the keysym name */
+		chars = strcspn(rest, " \t\0");
+		STRNCPY(keyname, rest, chars + 1);
+		rest += chars;
+
+		keysym = XStringToKeysym(keyname);
+		if (keysym == NoSymbol)
+		{
+			DEBUG_KBD(("Bad keysym \"%s\" in keymap %s (ignoring line)\n", keyname,
+				   mapname));
+			return;
+		}
+
+		/* Allocate space for key_translation structure */
+		tr = (key_translation *) xmalloc(sizeof(key_translation));
+		memset(tr, 0, sizeof(key_translation));
+		*prev_next = tr;
+		prev_next = &tr->next;
+		tr->seq_keysym = keysym;
+
+		DEBUG_KBD(("0x%x, ", (unsigned int) keysym));
+	}
+	DEBUG_KBD(("\n"));
 }
 
 
@@ -147,6 +211,13 @@ xkeymap_read(char *mapname)
 		{
 			DEBUG_KBD(("Enabling compose handling\n"));
 			g_enable_compose = True;
+			continue;
+		}
+
+		/* sequence */
+		if (strncmp(line, "sequence", 8) == 0)
+		{
+			add_sequence(line + 8, mapname);
 			continue;
 		}
 
@@ -391,66 +462,116 @@ handle_special_keys(uint32 keysym, unsigned int state, uint32 ev_time, BOOL pres
 key_translation
 xkeymap_translate_key(uint32 keysym, unsigned int keycode, unsigned int state)
 {
-	key_translation tr = { 0, 0 };
+	key_translation tr = { 0, 0, 0, 0 };
+	key_translation *ptr;
 
-	tr = keymap[keysym & KEYMAP_MASK];
-
-	if (tr.modifiers & MapInhibitMask)
+	ptr = keymap[keysym & KEYMAP_MASK];
+	if (ptr)
 	{
-		DEBUG_KBD(("Inhibiting key\n"));
-		tr.scancode = 0;
-		return tr;
-	}
-
-	if (tr.modifiers & MapLocalStateMask)
-	{
-		/* The modifiers to send for this key should be obtained
-		   from the local state. Currently, only shift is implemented. */
-		if (state & ShiftMask)
+		tr = *ptr;
+		if (tr.seq_keysym == 0)	/* Normal scancode translation */
 		{
-			tr.modifiers = MapLeftShiftMask;
+			if (tr.modifiers & MapInhibitMask)
+			{
+				DEBUG_KBD(("Inhibiting key\n"));
+				tr.scancode = 0;
+				return tr;
+			}
+
+			if (tr.modifiers & MapLocalStateMask)
+			{
+				/* The modifiers to send for this key should be obtained
+				   from the local state. Currently, only shift is implemented. */
+				if (state & ShiftMask)
+				{
+					tr.modifiers = MapLeftShiftMask;
+				}
+			}
+
+			if ((tr.modifiers & MapLeftShiftMask)
+			    && ((remote_modifier_state & MapLeftCtrlMask)
+				|| (remote_modifier_state & MapRightCtrlMask))
+			    && get_key_state(state, XK_Caps_Lock))
+			{
+				DEBUG_KBD(("CapsLock + Ctrl pressed, releasing LeftShift\n"));
+				tr.modifiers ^= MapLeftShiftMask;
+			}
+
+			DEBUG_KBD(("Found scancode translation, scancode=0x%x, modifiers=0x%x\n",
+				   tr.scancode, tr.modifiers));
 		}
-	}
-
-	if ((tr.modifiers & MapLeftShiftMask) && ((remote_modifier_state & MapLeftCtrlMask)
-						  || (remote_modifier_state & MapRightCtrlMask))
-	    && get_key_state(state, XK_Caps_Lock))
-	{
-		DEBUG_KBD(("CapsLock + Ctrl pressed, releasing LeftShift\n"));
-		tr.modifiers ^= MapLeftShiftMask;
-	}
-
-	if (tr.scancode != 0)
-	{
-		DEBUG_KBD(("Found key translation, scancode=0x%x, modifiers=0x%x\n",
-			   tr.scancode, tr.modifiers));
-		return tr;
-	}
-
-	if (keymap_loaded)
-		warning("No translation for (keysym 0x%lx, %s)\n", keysym, get_ksname(keysym));
-
-	/* not in keymap, try to interpret the raw scancode */
-	if (((int) keycode >= min_keycode) && (keycode <= 0x60))
-	{
-		tr.scancode = keycode - min_keycode;
-
-		/* The modifiers to send for this key should be
-		   obtained from the local state. Currently, only
-		   shift is implemented. */
-		if (state & ShiftMask)
-		{
-			tr.modifiers = MapLeftShiftMask;
-		}
-
-		DEBUG_KBD(("Sending guessed scancode 0x%x\n", tr.scancode));
 	}
 	else
 	{
-		DEBUG_KBD(("No good guess for keycode 0x%x found\n", keycode));
+		if (keymap_loaded)
+			warning("No translation for (keysym 0x%lx, %s)\n", keysym,
+				get_ksname(keysym));
+
+		/* not in keymap, try to interpret the raw scancode */
+		if (((int) keycode >= min_keycode) && (keycode <= 0x60))
+		{
+			tr.scancode = keycode - min_keycode;
+
+			/* The modifiers to send for this key should be
+			   obtained from the local state. Currently, only
+			   shift is implemented. */
+			if (state & ShiftMask)
+			{
+				tr.modifiers = MapLeftShiftMask;
+			}
+
+			DEBUG_KBD(("Sending guessed scancode 0x%x\n", tr.scancode));
+		}
+		else
+		{
+			DEBUG_KBD(("No good guess for keycode 0x%x found\n", keycode));
+		}
 	}
 
 	return tr;
+}
+
+void
+xkeymap_send_keys(uint32 keysym, unsigned int keycode, unsigned int state, uint32 ev_time,
+		  BOOL pressed)
+{
+	key_translation tr, *ptr;
+	tr = xkeymap_translate_key(keysym, keycode, state);
+
+	if (tr.seq_keysym == 0)
+	{
+		/* Scancode translation */
+		if (tr.scancode == 0)
+			return;
+
+		if (pressed)
+		{
+			save_remote_modifiers(tr.scancode);
+			ensure_remote_modifiers(ev_time, tr);
+			rdp_send_scancode(ev_time, RDP_KEYPRESS, tr.scancode);
+			restore_remote_modifiers(ev_time, tr.scancode);
+		}
+		else
+		{
+			rdp_send_scancode(ev_time, RDP_KEYRELEASE, tr.scancode);
+		}
+		return;
+	}
+
+	/* Sequence, only on key down */
+	if (pressed)
+	{
+		ptr = &tr;
+		do
+		{
+			DEBUG_KBD(("Handling sequence element, keysym=0x%x\n",
+				   (unsigned int) ptr->seq_keysym));
+			xkeymap_send_keys(ptr->seq_keysym, keycode, state, ev_time, True);
+			xkeymap_send_keys(ptr->seq_keysym, keycode, state, ev_time, False);
+			ptr = ptr->next;
+		}
+		while (ptr);
+	}
 }
 
 uint16

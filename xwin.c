@@ -1350,7 +1350,6 @@ xwin_process_events(void)
 	KeySym keysym;
 	uint16 button, flags;
 	uint32 ev_time;
-	key_translation tr;
 	char str[256];
 	Status status;
 	int events = 0;
@@ -1403,24 +1402,15 @@ xwin_process_events(void)
 						      str, sizeof(str), &keysym, NULL);
 				}
 
-				DEBUG_KBD(("KeyPress for (keysym 0x%lx, %s)\n", keysym,
+				DEBUG_KBD(("KeyPress for keysym (0x%lx, %s)\n", keysym,
 					   get_ksname(keysym)));
 
 				ev_time = time(NULL);
 				if (handle_special_keys(keysym, xevent.xkey.state, ev_time, True))
 					break;
 
-				tr = xkeymap_translate_key(keysym,
-							   xevent.xkey.keycode, xevent.xkey.state);
-
-				if (tr.scancode == 0)
-					break;
-
-				save_remote_modifiers(tr.scancode);
-				ensure_remote_modifiers(ev_time, tr);
-				rdp_send_scancode(ev_time, RDP_KEYPRESS, tr.scancode);
-				restore_remote_modifiers(ev_time, tr.scancode);
-
+				xkeymap_send_keys(keysym, xevent.xkey.keycode, xevent.xkey.state,
+						  ev_time, True);
 				break;
 
 			case KeyRelease:
@@ -1428,20 +1418,15 @@ xwin_process_events(void)
 				XLookupString((XKeyEvent *) & xevent, str,
 					      sizeof(str), &keysym, NULL);
 
-				DEBUG_KBD(("\nKeyRelease for (keysym 0x%lx, %s)\n", keysym,
+				DEBUG_KBD(("\nKeyRelease for keysym (0x%lx, %s)\n", keysym,
 					   get_ksname(keysym)));
 
 				ev_time = time(NULL);
 				if (handle_special_keys(keysym, xevent.xkey.state, ev_time, False))
 					break;
 
-				tr = xkeymap_translate_key(keysym,
-							   xevent.xkey.keycode, xevent.xkey.state);
-
-				if (tr.scancode == 0)
-					break;
-
-				rdp_send_scancode(ev_time, RDP_KEYRELEASE, tr.scancode);
+				xkeymap_send_keys(keysym, xevent.xkey.keycode, xevent.xkey.state,
+						  ev_time, False);
 				break;
 
 			case ButtonPress:

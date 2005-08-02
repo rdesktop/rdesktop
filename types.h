@@ -110,8 +110,12 @@ DATABLOB;
 
 typedef struct _key_translation
 {
+	/* For normal scancode translations */
 	uint8 scancode;
 	uint16 modifiers;
+	/* For sequences. If keysym is nonzero, the fields above are not used. */
+	uint32 seq_keysym;	/* Really KeySym */
+	struct _key_translation *next;
 }
 key_translation;
 
