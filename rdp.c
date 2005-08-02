@@ -897,7 +897,7 @@ rdp_process_bitmap_caps(STREAM s)
 }
 
 /* Process server capabilities */
-void
+static void
 rdp_process_server_caps(STREAM s, uint16 length)
 {
 	int n;
