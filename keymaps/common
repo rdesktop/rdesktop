@@ -23,18 +23,72 @@ ISO_Left_Tab 0xf shift
 q 0x10 addupper
 w 0x11 addupper
 e 0x12 addupper
+sequence egrave dead_grave e
+sequence Egrave dead_grave E
+sequence eacute dead_acute e
+sequence Eacute dead_acute E
+sequence ecircumflex dead_circumflex e 
+sequence Ecircumflex dead_circumflex E 
+sequence ediaeresis dead_diaeresis e
+sequence Ediaeresis dead_diaeresis E
 r 0x13 addupper
 t 0x14 addupper
 y 0x15 addupper
+sequence ygrave dead_grave y
+sequence Ygrave dead_grave Y
+sequence yacute dead_acute y
+sequence Yacute dead_acute Y
+sequence ycircumflex dead_circumflex y
+sequence Ycircumflex dead_circumflex Y 
+sequence ydiaeresis dead_diaeresis y
+sequence Ydiaeresis dead_diaeresis Y
 u 0x16 addupper
+sequence ugrave dead_grave u
+sequence Ugrave dead_grave U
+sequence uacute dead_acute u
+sequence Uacute dead_acute U
+sequence ucircumflex dead_circumflex u 
+sequence Ucircumflex dead_circumflex U 
+sequence udiaeresis dead_diaeresis u
+sequence Udiaeresis dead_diaeresis U
 i 0x17 addupper
+sequence igrave dead_grave i
+sequence Igrave dead_grave I
+sequence iacute dead_acute i
+sequence Iacute dead_acute I
+sequence icircumflex dead_circumflex i 
+sequence Icircumflex dead_circumflex I 
+sequence idiaeresis dead_diaeresis i
+sequence Idiaeresis dead_diaeresis I
 o 0x18 addupper
+sequence ograve dead_grave o
+sequence Ograve dead_grave O
+sequence oacute dead_acute o
+sequence Oacute dead_acute O
+sequence ocircumflex dead_circumflex o 
+sequence Ocircumflex dead_circumflex O 
+sequence odiaeresis dead_diaeresis o
+sequence Odiaeresis dead_diaeresis O
+sequence otilde dead_tilde o
+sequence Otilde dead_tilde O
 p 0x19 addupper
 
 #
 # QWERTY second row
 #
 a 0x1e addupper
+sequence agrave dead_grave a
+sequence Agrave dead_grave A
+sequence aacute dead_acute a
+sequence Aacute dead_acute A
+sequence acircumflex dead_circumflex a 
+sequence Acircumflex dead_circumflex A 
+sequence adiaeresis dead_diaeresis a
+sequence Adiaeresis dead_diaeresis A
+sequence aring dead_abovering a
+sequence Aring dead_abovering A
+sequence atilde dead_tilde a
+sequence Atilde dead_tilde A
 s 0x1f addupper
 d 0x20 addupper
 f 0x21 addupper
@@ -51,9 +105,13 @@ Return 0x1c localstate
 z 0x2c addupper
 x 0x2d addupper
 c 0x2e addupper
+sequence ccedilla dead_cedilla c
+sequence Ccedilla dead_cedilla C
 v 0x2f addupper
 b 0x30 addupper
 n 0x31 addupper
+sequence ntilde dead_tilde n
+sequence Ntilde dead_tilde N
 m 0x32 addupper
 
 space 0x39 localstate
