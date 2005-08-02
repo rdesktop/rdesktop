@@ -929,7 +929,7 @@ rdpdr_remove_iorequest(struct async_iorequest *prev, struct async_iorequest *ior
 }
 
 /* Check if select() returned with one of the rdpdr file descriptors, and complete io if it did */
-void
+static void
 _rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
 {
 	NTSTATUS status;
