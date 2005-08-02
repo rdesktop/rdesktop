@@ -379,8 +379,7 @@ reset_winkey(uint32 ev_time)
 	}
 }
 
-/* Handles, for example, multi-scancode keypresses (which is not
-   possible via keymap-files) */
+/* Handle special key combinations */
 BOOL
 handle_special_keys(uint32 keysym, unsigned int state, uint32 ev_time, BOOL pressed)
 {
