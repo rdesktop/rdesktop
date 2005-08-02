@@ -76,7 +76,11 @@ installkeymaps:
 
 .PHONY: proto
 proto:
-	cproto -DMAKE_PROTO -DWITH_OPENSSL -o proto.h *.c
+	cproto -DMAKE_PROTO -DWITH_OPENSSL -o proto.h \
+	bitmap.c cache.c channels.c cliprdr.c disk.c mppc.c ewmhints.c	\
+	iso.c licence.c mcs.c orders.c parallel.c printer.c printercache.c \
+	pstcache.c rdesktop.c rdp5.c rdp.c rdpdr.c rdpsnd.c rdpsnd_oss.c \
+	secure.c serial.c tcp.c xclip.c xkeymap.c xwin.c
 
 .PHONY: clean
 clean:
