@@ -104,6 +104,7 @@ xclip_provide_selection(XSelectionRequestEvent * req, Atom type, unsigned int fo
 	XSendEvent(g_display, req->requestor, False, NoEventMask, &xev);
 }
 
+#ifndef MAKE_PROTO
 void
 xclip_handle_SelectionNotify(XSelectionEvent * event)
 {
@@ -366,6 +367,7 @@ xclip_handle_PropertyNotify(XPropertyEvent * event)
 	cliprdr_send_text_format_announce();
 	rdesktop_is_selection_owner = 0;
 }
+#endif
 
 
 void
