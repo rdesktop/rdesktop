@@ -54,6 +54,20 @@ static uint16 saved_remote_modifier_state = 0;
 
 static void update_modifier_state(uint8 scancode, BOOL pressed);
 
+/* Free key_translation structure, included linked list */
+void
+free_key_translation(key_translation * ptr)
+{
+	key_translation *next;
+
+	while (ptr)
+	{
+		next = ptr->next;
+		xfree(ptr);
+		ptr = next;
+	}
+}
+
 static void
 add_to_keymap(char *keyname, uint8 scancode, uint16 modifiers, char *mapname)
 {
@@ -74,6 +88,7 @@ add_to_keymap(char *keyname, uint8 scancode, uint16 modifiers, char *mapname)
 	memset(tr, 0, sizeof(key_translation));
 	tr->scancode = scancode;
 	tr->modifiers = modifiers;
+	free_key_translation(keymap[keysym & KEYMAP_MASK]);
 	keymap[keysym & KEYMAP_MASK] = tr;
 
 	return;
@@ -106,6 +121,7 @@ add_sequence(char *rest, char *mapname)
 
 	DEBUG_KBD(("Adding sequence for keysym (0x%lx, %s) -> ", keysym, keyname));
 
+	free_key_translation(keymap[keysym & KEYMAP_MASK]);
 	prev_next = &keymap[keysym & KEYMAP_MASK];
 
 	while (*rest)
@@ -138,7 +154,6 @@ add_sequence(char *rest, char *mapname)
 	}
 	DEBUG_KBD(("\n"));
 }
-
 
 static BOOL
 xkeymap_read(char *mapname)
