@@ -54,7 +54,7 @@ static uint16 saved_remote_modifier_state = 0;
 
 static void update_modifier_state(uint8 scancode, BOOL pressed);
 
-/* Free key_translation structure, included linked list */
+/* Free key_translation structure, including linked list */
 static void
 free_key_translation(key_translation * ptr)
 {
