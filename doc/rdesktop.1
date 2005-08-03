@@ -37,11 +37,16 @@ standard input).
 Client hostname.  Normally rdesktop automatically obtains the hostname of the
 client.
 .TP
-.BR "-k <layout>"
+.BR "-k <keyboard-map>"
 Keyboard layout to emulate.  This requires a corresponding keymap file to be
 installed.  The standard keymaps provided with rdesktop follow the RFC1766
 naming scheme: a language code followed by a country code if necessary - e.g.
 en-us, en-gb, de, fr, sv, etc.  The default is en-us (a US keyboard).
+
+The keyboard-maps are searched relative to the directories KEYMAP_PATH
+(specified at build time), $HOME/.rdesktop/keymaps and $CWD/keymaps,
+in this order. The keyboard-map argument can also be an absolute
+filename.
 .TP
 .BR "-g <geometry>"
 Desktop geometry (WxH). If geometry is the special word "workarea", the geometry
