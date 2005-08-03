@@ -50,7 +50,7 @@
 char g_title[64] = "";
 char g_username[64];
 char g_hostname[16];
-char keymapname[16];
+char keymapname[PATH_MAX];
 int g_keylayout = 0x409;	/* Defaults to US keyboard layout */
 
 int g_width = 800;		/* width is special: If 0, the
