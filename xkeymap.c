@@ -184,13 +184,6 @@ xkeymap_open(const char *filename)
 	char *home;
 	FILE *fp;
 
-	/* Try KEYMAP_PATH */
-	path1 = pathjoin(KEYMAP_PATH, filename);
-	fp = fopen(path1, "r");
-	xfree(path1);
-	if (fp)
-		return fp;
-
 	/* Try ~/.rdesktop/keymaps */
 	home = getenv("HOME");
 	if (home)
@@ -203,6 +196,13 @@ xkeymap_open(const char *filename)
 		if (fp)
 			return fp;
 	}
+
+	/* Try KEYMAP_PATH */
+	path1 = pathjoin(KEYMAP_PATH, filename);
+	fp = fopen(path1, "r");
+	xfree(path1);
+	if (fp)
+		return fp;
 
 	/* Try current directory, in case we are running from the source
 	   tree */
