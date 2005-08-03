@@ -52,6 +52,9 @@ char g_username[64];
 char g_hostname[16];
 char keymapname[PATH_MAX] = "en-us";
 int g_keylayout = 0x409;	/* Defaults to US keyboard layout */
+int g_keyboard_type = 0x4;	/* Defaults to US keyboard layout */
+int g_keyboard_subtype = 0x0;	/* Defaults to US keyboard layout */
+int g_keyboard_functionkeys = 0xc;	/* Defaults to US keyboard layout */
 
 int g_width = 800;		/* width is special: If 0, the
 				   geometry will be fetched from

@@ -1,6 +1,9 @@
 # generated from XKB map jp106
 include common
 map 0x411
+keyboard_type 0x7
+keyboard_subtype 0x2
+keyboard_functionkeys 0xc
 exclam 0x02 shift
 kana_NU 0x02 altgr
 quotedbl 0x03 shift

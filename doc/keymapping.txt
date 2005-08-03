@@ -117,6 +117,32 @@ The sequence is sent at the X11 KeyPress event. Nothing is sent at
 KeyRelease.
 
 
+6) keyboard_type lines
+Syntax:
+keyboard_type <hex-number>
+ 
+keyboard_type lines specifies the keyboard type. Default value is 0x4
+(en-us 101/104 keys keyboard).
+
+
+7) keyboard_subtype lines
+Syntax:
+keyboard_subtype <hex-number>
+
+keyboard_subtype lines specifies the keyboard subtype. Default value
+is 0x0 (en-us 101/104 keys keyboard).
+
+
+8) keyboard_functionkeys lines
+Syntax:
+keyboard_functionkeys <hex-number>
+
+keyboard_functionkeys specifies the number of keyboard function
+keys. Default value is 0xc (12, for standard 101/104 keys keyboard).
+
+
+
+
 Suggested X11 keysym mapping on PCs
 ===================================
 Unfortunately, there is no standard for which keysyms a given key

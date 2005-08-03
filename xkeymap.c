@@ -42,6 +42,9 @@ extern Display *g_display;
 extern Window g_wnd;
 extern char keymapname[16];
 extern int g_keylayout;
+extern int g_keyboard_type;
+extern int g_keyboard_subtype;
+extern int g_keyboard_functionkeys;
 extern int g_win_button_size;
 extern BOOL g_enable_compose;
 extern BOOL g_use_rdp5;
@@ -338,6 +341,31 @@ xkeymap_read(char *mapname)
 		if (strncmp(line, "sequence", 8) == 0)
 		{
 			add_sequence(line + 8, mapname);
+			continue;
+		}
+
+		/* keyboard_type */
+		if (strncmp(line, "keyboard_type ", sizeof("keyboard_type ")) == 0)
+		{
+			g_keyboard_type = strtol(line + sizeof("keyboard_type "), NULL, 16);
+			DEBUG_KBD(("keyboard_type 0x%x\n", g_keyboard_type));
+			continue;
+		}
+
+		/* keyboard_subtype */
+		if (strncmp(line, "keyboard_subtype ", sizeof("keyboard_subtype ")) == 0)
+		{
+			g_keyboard_subtype = strtol(line + sizeof("keyboard_subtype "), NULL, 16);
+			DEBUG_KBD(("keyboard_subtype 0x%x\n", g_keyboard_subtype));
+			continue;
+		}
+
+		/* keyboard_functionkeys */
+		if (strncmp(line, "keyboard_functionkeys ", sizeof("keyboard_functionkeys ")) == 0)
+		{
+			g_keyboard_functionkeys =
+				strtol(line + sizeof("keyboard_functionkeys "), NULL, 16);
+			DEBUG_KBD(("keyboard_functionkeys 0x%x\n", g_keyboard_functionkeys));
 			continue;
 		}
 

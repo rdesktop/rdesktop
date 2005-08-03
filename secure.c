@@ -30,6 +30,9 @@ extern char g_hostname[16];
 extern int g_width;
 extern int g_height;
 extern int g_keylayout;
+extern int g_keyboard_type;
+extern int g_keyboard_subtype;
+extern int g_keyboard_functionkeys;
 extern BOOL g_encryption;
 extern BOOL g_licence_issued;
 extern BOOL g_use_rdp5;
@@ -446,9 +449,9 @@ sec_out_mcs_data(STREAM s)
 	rdp_out_unistr(s, g_hostname, hostlen);
 	out_uint8s(s, 30 - hostlen);
 
-	out_uint32_le(s, 4);
-	out_uint32(s, 0);
-	out_uint32_le(s, 12);
+	out_uint32_le(s, g_keyboard_type);
+	out_uint32_le(s, g_keyboard_subtype);
+	out_uint32_le(s, g_keyboard_functionkeys);
 	out_uint8s(s, 64);	/* reserved? 4 + 12 doublewords */
 	out_uint16_le(s, 0xca01);	/* colour depth? */
 	out_uint16_le(s, 1);
