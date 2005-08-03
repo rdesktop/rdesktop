@@ -1,4 +1,4 @@
-/* 
+/* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    Sound Channel Process Functions - SGI/IRIX
    Copyright (C) Matthew Chapman 2003

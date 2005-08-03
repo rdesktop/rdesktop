@@ -1,4 +1,4 @@
-/*
+/* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    RDP licensing negotiation
    Copyright (C) Matthew Chapman 1999-2005
