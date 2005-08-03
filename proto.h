@@ -166,6 +166,7 @@ void ui_clip_request_data(uint32 format);
 void ui_clip_sync(void);
 void xclip_init(void);
 /* xkeymap.c */
+FILE *xkeymap_open(const char *filename);
 void xkeymap_init(void);
 BOOL handle_special_keys(uint32 keysym, unsigned int state, uint32 ev_time, BOOL pressed);
 key_translation xkeymap_translate_key(uint32 keysym, unsigned int keycode, unsigned int state);

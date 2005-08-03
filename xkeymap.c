@@ -155,12 +155,71 @@ add_sequence(char *rest, char *mapname)
 	DEBUG_KBD(("\n"));
 }
 
+/* Joins two path components. The result should be freed with
+   xfree(). */
+static char *
+pathjoin(const char *a, const char *b)
+{
+	char *result;
+	result = xmalloc(PATH_MAX * 2 + 1);
+
+	if (b[0] == '/')
+	{
+		strncpy(result, b, PATH_MAX);
+	}
+	else
+	{
+		strncpy(result, a, PATH_MAX);
+		strcat(result, "/");
+		strncat(result, b, PATH_MAX);
+	}
+	return result;
+}
+
+/* Try to open a keymap with fopen() */
+FILE *
+xkeymap_open(const char *filename)
+{
+	char *path1, *path2;
+	char *home;
+	FILE *fp;
+
+	/* Try KEYMAP_PATH */
+	path1 = pathjoin(KEYMAP_PATH, filename);
+	fp = fopen(path1, "r");
+	xfree(path1);
+	if (fp)
+		return fp;
+
+	/* Try ~/.rdesktop/keymaps */
+	home = getenv("HOME");
+	if (home)
+	{
+		path1 = pathjoin(home, ".rdesktop/keymaps");
+		path2 = pathjoin(path1, filename);
+		xfree(path1);
+		fp = fopen(path2, "r");
+		xfree(path2);
+		if (fp)
+			return fp;
+	}
+
+	/* Try current directory, in case we are running from the source
+	   tree */
+	path1 = pathjoin("keymaps", filename);
+	fp = fopen(path1, "r");
+	xfree(path1);
+	if (fp)
+		return fp;
+
+	return NULL;
+}
+
 static BOOL
 xkeymap_read(char *mapname)
 {
 	FILE *fp;
 	char line[KEYMAP_MAX_LINE_LENGTH];
-	char path[PATH_MAX], inplace_path[PATH_MAX];
 	unsigned int line_num = 0;
 	unsigned int line_length = 0;
 	char *keyname, *p;
@@ -168,23 +227,11 @@ xkeymap_read(char *mapname)
 	uint8 scancode;
 	uint16 modifiers;
 
-
-	strcpy(path, KEYMAP_PATH);
-	strncat(path, mapname, sizeof(path) - sizeof(KEYMAP_PATH));
-
-	fp = fopen(path, "r");
+	fp = xkeymap_open(mapname);
 	if (fp == NULL)
 	{
-		/* in case we are running from the source tree */
-		strcpy(inplace_path, "keymaps/");
-		strncat(inplace_path, mapname, sizeof(inplace_path) - sizeof("keymaps/"));
-
-		fp = fopen(inplace_path, "r");
-		if (fp == NULL)
-		{
-			error("Failed to open keymap %s\n", path);
-			return False;
-		}
+		error("Failed to open keymap %s\n", mapname);
+		return False;
 	}
 
 	/* FIXME: More tolerant on white space */
