@@ -156,6 +156,63 @@ add_sequence(char *rest, char *mapname)
 	DEBUG_KBD(("\n"));
 }
 
+void
+xkeymap_from_locale(const char *locale)
+{
+	char *str, *ptr;
+	FILE *fp;
+
+	/* Create a working copy */
+	str = strdup(locale);
+	if (str == NULL)
+	{
+		perror("strdup");
+		exit(1);
+	}
+
+	/* Truncate at dot and at */
+	ptr = strrchr(str, '.');
+	if (ptr)
+		*ptr = '\0';
+	ptr = strrchr(str, '@');
+	if (ptr)
+		*ptr = '\0';
+
+	/* Replace _ with - */
+	ptr = strrchr(str, '_');
+	if (ptr)
+		*ptr = '-';
+
+	/* Convert to lowercase */
+	ptr = str;
+	while (*ptr)
+	{
+		*ptr = tolower((int) *ptr);
+		ptr++;
+	}
+
+	/* Try to open this keymap (da-dk) */
+	fp = xkeymap_open(str);
+	if (fp == NULL)
+	{
+		/* Truncate at dash */
+		ptr = strrchr(str, '-');
+		if (ptr)
+			*ptr = '\0';
+
+		/* Try the short name (da) */
+		fp = xkeymap_open(str);
+	}
+
+	if (fp)
+	{
+		fclose(fp);
+		STRNCPY(keymapname, str, sizeof(keymapname));
+		fprintf(stderr, "Autoselected keyboard map %s.\n", keymapname);
+	}
+}
+
+
 /* Joins two path components. The result should be freed with
    xfree(). */
 static char *
@@ -359,7 +416,6 @@ void
 xkeymap_init(void)
 {
 	unsigned int max_keycode;
-	char *mapname_ptr;
 
 	if (strcmp(keymapname, "none"))
 	{

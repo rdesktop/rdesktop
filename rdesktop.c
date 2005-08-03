@@ -30,10 +30,10 @@
 #include <errno.h>
 #include "rdesktop.h"
 
-#ifdef HAVE_ICONV
 #ifdef HAVE_LOCALE_H
 #include <locale.h>
 #endif
+#ifdef HAVE_ICONV
 #ifdef HAVE_LANGINFO_H
 #include <langinfo.h>
 #endif
@@ -50,7 +50,7 @@
 char g_title[64] = "";
 char g_username[64];
 char g_hostname[16];
-char keymapname[PATH_MAX];
+char keymapname[PATH_MAX] = "en-us";
 int g_keylayout = 0x409;	/* Defaults to US keyboard layout */
 
 int g_width = 800;		/* width is special: If 0, the
@@ -370,13 +370,19 @@ main(int argc, char *argv[])
 	uint32 flags, ext_disc_reason = 0;
 	char *p;
 	int c;
-
+	char *locale;
 	int username_option = 0;
+
+	/* Set locale according to environment */
+	locale = setlocale(LC_ALL, "");
+	if (locale)
+	{
+		xkeymap_from_locale(locale);
+	}
 
 	flags = RDP_LOGON_NORMAL;
 	prompt_password = False;
 	domain[0] = password[0] = shell[0] = directory[0] = 0;
-	strcpy(keymapname, "en-us");
 	g_embed_wnd = 0;
 
 	g_num_devices = 0;

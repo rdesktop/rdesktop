@@ -41,7 +41,11 @@ client.
 Keyboard layout to emulate.  This requires a corresponding keymap file to be
 installed.  The standard keymaps provided with rdesktop follow the RFC1766
 naming scheme: a language code followed by a country code if necessary - e.g.
-en-us, en-gb, de, fr, sv, etc.  The default is en-us (a US keyboard).
+en-us, en-gb, de, fr, sv, etc.  
+
+The default keyboard map depends on the current locale (LC_* and LANG
+environment variables). If no valid locale is specified, the default
+keyboard map is en-us (a US keyboard).
 
 The keyboard maps are file names, which means that they are case
 sensitive. The standard keymaps are all in lowercase.
