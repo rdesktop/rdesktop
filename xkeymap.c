@@ -30,6 +30,7 @@
 #include <ctype.h>
 #include <limits.h>
 #include <time.h>
+#include <string.h>
 #include "rdesktop.h"
 #include "scancodes.h"
 
@@ -359,14 +360,6 @@ xkeymap_init(void)
 {
 	unsigned int max_keycode;
 	char *mapname_ptr;
-
-	/* Make keymapname lowercase */
-	mapname_ptr = keymapname;
-	while (*mapname_ptr)
-	{
-		*mapname_ptr = tolower((int) *mapname_ptr);
-		mapname_ptr++;
-	}
 
 	if (strcmp(keymapname, "none"))
 	{

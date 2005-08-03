@@ -43,6 +43,9 @@ installed.  The standard keymaps provided with rdesktop follow the RFC1766
 naming scheme: a language code followed by a country code if necessary - e.g.
 en-us, en-gb, de, fr, sv, etc.  The default is en-us (a US keyboard).
 
+The keyboard maps are file names, which means that they are case
+sensitive. The standard keymaps are all in lowercase.
+
 The keyboard-maps are searched relative to the directories
 $HOME/.rdesktop/keymaps, KEYMAP_PATH (specified at build time), and
 $CWD/keymaps, in this order. The keyboard-map argument can also be an
