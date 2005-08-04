@@ -122,6 +122,15 @@ bar 0x56 altgr
 brokenbar 0x56 shift altgr
 
 #
+# Translations for some other dead keys
+#
+sequence asciitilde dead_tilde space
+sequence diaeresis dead_diaeresis space
+sequence asciicircum dead_circumflex space
+sequence apostrophe dead_acute space
+sequence grave dead_grave space
+
+#
 # Esc and Function keys
 #
 Escape 0x1 localstate
