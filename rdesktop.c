@@ -51,7 +51,7 @@
 char g_title[64] = "";
 char g_username[64];
 char g_hostname[16];
-char keymapname[PATH_MAX] = "";
+char g_keymapname[PATH_MAX] = "";
 int g_keylayout = 0x409;	/* Defaults to US keyboard layout */
 int g_keyboard_type = 0x4;	/* Defaults to US keyboard layout */
 int g_keyboard_subtype = 0x0;	/* Defaults to US keyboard layout */
@@ -464,7 +464,7 @@ main(int argc, char *argv[])
 				break;
 
 			case 'k':
-				STRNCPY(keymapname, optarg, sizeof(keymapname));
+				STRNCPY(g_keymapname, optarg, sizeof(g_keymapname));
 				break;
 
 			case 'g':
@@ -752,15 +752,15 @@ main(int argc, char *argv[])
 		STRNCPY(g_hostname, fullhostname, sizeof(g_hostname));
 	}
 
-	if (keymapname[0] == 0)
+	if (g_keymapname[0] == 0)
 	{
 		if (locale && xkeymap_from_locale(locale))
 		{
-			fprintf(stderr, "Autoselected keyboard map %s\n", keymapname);
+			fprintf(stderr, "Autoselected keyboard map %s\n", g_keymapname);
 		}
 		else
 		{
-			STRNCPY(keymapname, "en-us", sizeof(keymapname));
+			STRNCPY(g_keymapname, "en-us", sizeof(g_keymapname));
 		}
 	}
 	if (locale)

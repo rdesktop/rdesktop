@@ -40,7 +40,7 @@
 
 extern Display *g_display;
 extern Window g_wnd;
-extern char keymapname[16];
+extern char g_keymapname[16];
 extern int g_keylayout;
 extern int g_keyboard_type;
 extern int g_keyboard_subtype;
@@ -205,7 +205,7 @@ xkeymap_from_locale(const char *locale)
 	if (fp)
 	{
 		fclose(fp);
-		STRNCPY(keymapname, str, sizeof(keymapname));
+		STRNCPY(g_keymapname, str, sizeof(g_keymapname));
 		return True;
 	}
 
@@ -444,9 +444,9 @@ xkeymap_init(void)
 {
 	unsigned int max_keycode;
 
-	if (strcmp(keymapname, "none"))
+	if (strcmp(g_keymapname, "none"))
 	{
-		if (xkeymap_read(keymapname))
+		if (xkeymap_read(g_keymapname))
 			keymap_loaded = True;
 	}
 
