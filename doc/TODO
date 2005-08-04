@@ -27,13 +27,6 @@
 
 * Keymapping: 
 
-  * Support non-dead versions of some dead keys, like
-    "acute". It seems like RDP4 only supports the dead versions, but
-    the non-dead ones can be simulated by sending a space after the
-    dead key.
-
-  * Autodetect which keymap to use.
-
 
 * Sound redirection
 
