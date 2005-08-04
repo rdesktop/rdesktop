@@ -41,9 +41,7 @@ plus 0xc
 question 0xc shift
 backslash 0xc altgr
 
-acute 0xd
 dead_acute 0xd
-grave 0xd shift
 dead_grave 0xd shift
 
 #
