@@ -129,6 +129,7 @@ sequence diaeresis dead_diaeresis space
 sequence asciicircum dead_circumflex space
 sequence apostrophe dead_acute space
 sequence grave dead_grave space
+sequence acute dead_acute space
 
 #
 # Esc and Function keys
