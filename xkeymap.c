@@ -670,7 +670,7 @@ xkeymap_translate_key(uint32 keysym, unsigned int keycode, unsigned int state)
 
 void
 xkeymap_send_keys(uint32 keysym, unsigned int keycode, unsigned int state, uint32 ev_time,
-		  BOOL pressed)
+		  BOOL pressed, uint8 nesting)
 {
 	key_translation tr, *ptr;
 	tr = xkeymap_translate_key(keysym, keycode, state);
@@ -703,8 +703,15 @@ xkeymap_send_keys(uint32 keysym, unsigned int keycode, unsigned int state, uint3
 		{
 			DEBUG_KBD(("Handling sequence element, keysym=0x%x\n",
 				   (unsigned int) ptr->seq_keysym));
-			xkeymap_send_keys(ptr->seq_keysym, keycode, state, ev_time, True);
-			xkeymap_send_keys(ptr->seq_keysym, keycode, state, ev_time, False);
+
+			if (nesting++ > 32)
+			{
+				error("Sequence nesting too deep\n");
+				return;
+			}
+
+			xkeymap_send_keys(ptr->seq_keysym, keycode, state, ev_time, True, nesting);
+			xkeymap_send_keys(ptr->seq_keysym, keycode, state, ev_time, False, nesting);
 			ptr = ptr->next;
 		}
 		while (ptr);

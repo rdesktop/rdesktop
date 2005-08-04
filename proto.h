@@ -173,7 +173,7 @@ void xkeymap_init(void);
 BOOL handle_special_keys(uint32 keysym, unsigned int state, uint32 ev_time, BOOL pressed);
 key_translation xkeymap_translate_key(uint32 keysym, unsigned int keycode, unsigned int state);
 void xkeymap_send_keys(uint32 keysym, unsigned int keycode, unsigned int state, uint32 ev_time,
-		       BOOL pressed);
+		       BOOL pressed, uint8 nesting);
 uint16 xkeymap_translate_button(unsigned int button);
 char *get_ksname(uint32 keysym);
 void save_remote_modifiers(uint8 scancode);

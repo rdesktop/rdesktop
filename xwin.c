@@ -1410,7 +1410,7 @@ xwin_process_events(void)
 					break;
 
 				xkeymap_send_keys(keysym, xevent.xkey.keycode, xevent.xkey.state,
-						  ev_time, True);
+						  ev_time, True, 0);
 				break;
 
 			case KeyRelease:
@@ -1426,7 +1426,7 @@ xwin_process_events(void)
 					break;
 
 				xkeymap_send_keys(keysym, xevent.xkey.keycode, xevent.xkey.state,
-						  ev_time, False);
+						  ev_time, False, 0);
 				break;
 
 			case ButtonPress:
