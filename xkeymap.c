@@ -159,7 +159,7 @@ add_sequence(char *rest, char *mapname)
 	DEBUG_KBD(("\n"));
 }
 
-void
+BOOL
 xkeymap_from_locale(const char *locale)
 {
 	char *str, *ptr;
@@ -211,8 +211,10 @@ xkeymap_from_locale(const char *locale)
 	{
 		fclose(fp);
 		STRNCPY(keymapname, str, sizeof(keymapname));
-		fprintf(stderr, "Autoselected keyboard map %s.\n", keymapname);
+		return True;
 	}
+
+	return False;
 }
 
 

@@ -27,7 +27,7 @@
 #include <sys/time.h>		/* gettimeofday */
 #include <sys/times.h>		/* times */
 #include <ctype.h>		/* toupper */
-#include <limits.h>             /* PATH_MAX */
+#include <limits.h>		/* PATH_MAX */
 #include <errno.h>
 #include "rdesktop.h"
 
@@ -51,7 +51,7 @@
 char g_title[64] = "";
 char g_username[64];
 char g_hostname[16];
-char keymapname[PATH_MAX] = "en-us";
+char keymapname[PATH_MAX] = "";
 int g_keylayout = 0x409;	/* Defaults to US keyboard layout */
 int g_keyboard_type = 0x4;	/* Defaults to US keyboard layout */
 int g_keyboard_subtype = 0x0;	/* Defaults to US keyboard layout */
@@ -374,16 +374,23 @@ main(int argc, char *argv[])
 	uint32 flags, ext_disc_reason = 0;
 	char *p;
 	int c;
-	char *locale;
+	char *locale = NULL;
 	int username_option = 0;
 
+#ifdef HAVE_LOCALE_H
 	/* Set locale according to environment */
 	locale = setlocale(LC_ALL, "");
 	if (locale)
 	{
-		xkeymap_from_locale(locale);
+		locale = strdup(locale);
+		if (locale == NULL)
+		{
+			perror("strdup");
+			exit(1);
+		}
 	}
 
+#endif
 	flags = RDP_LOGON_NORMAL;
 	prompt_password = False;
 	domain[0] = password[0] = shell[0] = directory[0] = 0;
@@ -749,6 +756,21 @@ main(int argc, char *argv[])
 
 		STRNCPY(g_hostname, fullhostname, sizeof(g_hostname));
 	}
+
+	if (keymapname[0] == 0)
+	{
+		if (locale && xkeymap_from_locale(locale))
+		{
+			fprintf(stderr, "Autoselected keyboard map %s\n", keymapname);
+		}
+		else
+		{
+			STRNCPY(keymapname, "en-us", sizeof(keymapname));
+		}
+	}
+	if (locale)
+		xfree(locale);
+
 
 	if (prompt_password && read_password(password, sizeof(password)))
 		flags |= RDP_LOGON_AUTO;
