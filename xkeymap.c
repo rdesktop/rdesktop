@@ -166,12 +166,7 @@ xkeymap_from_locale(const char *locale)
 	FILE *fp;
 
 	/* Create a working copy */
-	str = strdup(locale);
-	if (str == NULL)
-	{
-		perror("strdup");
-		exit(1);
-	}
+	str = xstrdup(locale);
 
 	/* Truncate at dot and at */
 	ptr = strrchr(str, '.');

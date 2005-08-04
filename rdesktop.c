@@ -382,12 +382,7 @@ main(int argc, char *argv[])
 	locale = setlocale(LC_ALL, "");
 	if (locale)
 	{
-		locale = strdup(locale);
-		if (locale == NULL)
-		{
-			perror("strdup");
-			exit(1);
-		}
+		locale = xstrdup(locale);
 	}
 
 #endif
@@ -936,6 +931,19 @@ xmalloc(int size)
 	if (mem == NULL)
 	{
 		error("xmalloc %d\n", size);
+		exit(1);
+	}
+	return mem;
+}
+
+/* strdup */
+char *
+xstrdup(const char *s)
+{
+	char *mem = strdup(s);
+	if (mem == NULL)
+	{
+		perror("strdup");
 		exit(1);
 	}
 	return mem;

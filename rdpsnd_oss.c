@@ -50,7 +50,7 @@ wave_out_open(void)
 
 	if (dsp_dev == NULL)
 	{
-		dsp_dev = strdup("/dev/dsp");
+		dsp_dev = xstrdup("/dev/dsp");
 	}
 
 	if ((g_dsp_fd = open(dsp_dev, O_WRONLY | O_NONBLOCK)) == -1)

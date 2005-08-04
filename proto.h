@@ -77,6 +77,7 @@ BOOL pstcache_init(uint8 cache_id);
 int main(int argc, char *argv[]);
 void generate_random(uint8 * random);
 void *xmalloc(int size);
+char *xstrdup(const char *s);
 void *xrealloc(void *oldmem, int size);
 void xfree(void *mem);
 void error(char *format, ...);
