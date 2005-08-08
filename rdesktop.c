@@ -92,6 +92,14 @@ BOOL g_ownbackstore = True;	/* We can't rely on external BackingStore */
 uint32 g_embed_wnd;
 uint32 g_rdp5_performanceflags =
 	RDP5_NO_WALLPAPER | RDP5_NO_FULLWINDOWDRAG | RDP5_NO_MENUANIMATIONS;
+/* Session Directory redirection */
+BOOL g_redirect = False;
+char g_redirect_server[64];
+char g_redirect_domain[16];
+char g_redirect_password[64];
+char g_redirect_username[64];
+char g_redirect_cookie[128];
+uint32 g_redirect_flags = 0;
 
 #ifdef WITH_RDPSND
 BOOL g_rdpsnd = False;
@@ -275,6 +283,12 @@ print_disconnect_reason(uint16 reason)
 	fprintf(stderr, "disconnect: %s.\n", text);
 }
 
+static void
+rdesktop_reset_state(void)
+{
+	rdp_reset_state();
+}
+
 static BOOL
 read_password(char *password, int size)
 {
@@ -376,6 +390,8 @@ main(int argc, char *argv[])
 	int c;
 	char *locale = NULL;
 	int username_option = 0;
+	int run_count = 0;	/* Session Directory support */
+	BOOL continue_connect = True;	/* Session Directory support */
 
 #ifdef HAVE_LOCALE_H
 	/* Set locale according to environment */
@@ -790,26 +806,59 @@ main(int argc, char *argv[])
 #endif
 	rdpdr_init();
 
-	if (!rdp_connect(server, flags, domain, password, shell, directory))
-		return 1;
-
-	/* By setting encryption to False here, we have an encrypted login 
-	   packet but unencrypted transfer of other packets */
-	if (!packet_encryption)
-		g_encryption = False;
-
-
-	DEBUG(("Connection successful.\n"));
-	memset(password, 0, sizeof(password));
-
-	if (ui_create_window())
+	while (run_count < 2 && continue_connect)	/* add support for Session Directory; only reconnect once */
 	{
-		rdp_main_loop(&deactivated, &ext_disc_reason);
-		ui_destroy_window();
+		if (run_count == 0)
+		{
+			if (!rdp_connect(server, flags, domain, password, shell, directory))
+				return 1;
+		}
+		else if (!rdp_reconnect
+			 (server, flags, domain, password, shell, directory, g_redirect_cookie))
+			return 1;
+
+		/* By setting encryption to False here, we have an encrypted login 
+		   packet but unencrypted transfer of other packets */
+		if (!packet_encryption)
+			g_encryption = False;
+
+
+		DEBUG(("Connection successful.\n"));
+		memset(password, 0, sizeof(password));
+
+		if (run_count == 0)
+			if (!ui_create_window())
+				continue_connect = False;
+
+		if (continue_connect)
+			rdp_main_loop(&deactivated, &ext_disc_reason);
+
+		DEBUG(("Disconnecting...\n"));
+		rdp_disconnect();
+
+		if ((g_redirect == True) && (run_count == 0))	/* Support for Session Directory */
+		{
+			/* reset state of major globals */
+			rdesktop_reset_state();
+
+			STRNCPY(domain, g_redirect_domain, sizeof(domain));
+			STRNCPY(g_username, g_redirect_username, sizeof(g_username));
+			STRNCPY(password, g_redirect_password, sizeof(password));
+			STRNCPY(server, g_redirect_server, sizeof(server));
+			flags |= RDP_LOGON_AUTO;
+
+			g_redirect = False;
+		}
+		else
+		{
+			continue_connect = False;
+			ui_destroy_window();
+			break;
+		}
+
+		run_count++;
 	}
 
-	DEBUG(("Disconnecting...\n"));
-	rdp_disconnect();
 	cache_save_state();
 	ui_deinit();
 

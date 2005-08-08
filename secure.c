@@ -56,6 +56,10 @@ static uint8 sec_crypted_random[SEC_MODULUS_SIZE];
 
 uint16 g_server_rdp_version = 0;
 
+/* These values must be available to reset state - Session Directory */
+static int sec_encrypt_use_count = 0;
+static int sec_decrypt_use_count = 0;
+
 /*
  * I believe this is based on SSLv3 with the following differences:
  *  MAC algorithm (5.2.3.1) uses only 32-bit length in place of seq_num/type/length fields
@@ -251,34 +255,30 @@ sec_update(uint8 * key, uint8 * update_key)
 static void
 sec_encrypt(uint8 * data, int length)
 {
-	static int use_count;
-
-	if (use_count == 4096)
+	if (sec_encrypt_use_count == 4096)
 	{
 		sec_update(sec_encrypt_key, sec_encrypt_update_key);
 		RC4_set_key(&rc4_encrypt_key, rc4_key_len, sec_encrypt_key);
-		use_count = 0;
+		sec_encrypt_use_count = 0;
 	}
 
 	RC4(&rc4_encrypt_key, length, data, data);
-	use_count++;
+	sec_encrypt_use_count++;
 }
 
 /* Decrypt data using RC4 */
 void
 sec_decrypt(uint8 * data, int length)
 {
-	static int use_count;
-
-	if (use_count == 4096)
+	if (sec_decrypt_use_count == 4096)
 	{
 		sec_update(sec_decrypt_key, sec_decrypt_update_key);
 		RC4_set_key(&rc4_decrypt_key, rc4_key_len, sec_decrypt_key);
-		use_count = 0;
+		sec_decrypt_use_count = 0;
 	}
 
 	RC4(&rc4_decrypt_key, length, data, data);
-	use_count++;
+	sec_decrypt_use_count++;
 }
 
 static void
@@ -853,6 +853,41 @@ sec_recv(uint8 * rdpver)
 				licence_process(s);
 				continue;
 			}
+
+			if (sec_flags & 0x0400)	/* SEC_REDIRECT_ENCRYPT */
+			{
+				uint8 swapbyte;
+
+				in_uint8s(s, 8);	/* signature */
+				sec_decrypt(s->p, s->end - s->p);
+
+				/* Check for a redirect packet, starts with 00 04 */
+				if (s->p[0] == 0 && s->p[1] == 4)
+				{
+					/* for some reason the PDU and the length seem to be swapped.
+					   This isn't good, but we're going to do a byte for byte
+					   swap.  So the first foure value appear as: 00 04 XX YY,
+					   where XX YY is the little endian length. We're going to
+					   use 04 00 as the PDU type, so after our swap this will look
+					   like: XX YY 04 00 */
+					swapbyte = s->p[0];
+					s->p[0] = s->p[2];
+					s->p[2] = swapbyte;
+
+					swapbyte = s->p[1];
+					s->p[1] = s->p[3];
+					s->p[3] = swapbyte;
+
+					swapbyte = s->p[2];
+					s->p[2] = s->p[3];
+					s->p[3] = swapbyte;
+				}
+#ifdef WITH_DEBUG
+				/* warning!  this debug statement will show passwords in the clear! */
+				hexdump(s->p, s->end - s->p);
+#endif
+			}
+
 		}
 
 		if (channel != MCS_GLOBAL_CHANNEL)
@@ -889,9 +924,40 @@ sec_connect(char *server, char *username)
 	return True;
 }
 
+/* Establish a secure connection */
+BOOL
+sec_reconnect(char *server)
+{
+	struct stream mcs_data;
+
+	/* We exchange some RDP data during the MCS-Connect */
+	mcs_data.size = 512;
+	mcs_data.p = mcs_data.data = (uint8 *) xmalloc(mcs_data.size);
+	sec_out_mcs_data(&mcs_data);
+
+	if (!mcs_reconnect(server, &mcs_data))
+		return False;
+
+	/*      sec_process_mcs_data(&mcs_data); */
+	if (g_encryption)
+		sec_establish_key();
+	xfree(mcs_data.data);
+	return True;
+}
+
 /* Disconnect a connection */
 void
 sec_disconnect(void)
 {
 	mcs_disconnect();
+}
+
+/* reset the state of the sec layer */
+void
+sec_reset_state(void)
+{
+	g_server_rdp_version = 0;
+	sec_encrypt_use_count = 0;
+	sec_decrypt_use_count = 0;
+	mcs_reset_state();
 }

@@ -242,3 +242,37 @@ tcp_get_address()
 		strcpy(ipaddr, "127.0.0.1");
 	return ipaddr;
 }
+
+/* reset the state of the tcp layer */
+/* Support for Session Directory */
+void
+tcp_reset_state(void)
+{
+	sock = -1;		/* reset socket */
+
+	/* Clear the incoming stream */
+	if (in.data != NULL)
+		xfree(in.data);
+	in.p = NULL;
+	in.end = NULL;
+	in.data = NULL;
+	in.size = 0;
+	in.iso_hdr = NULL;
+	in.mcs_hdr = NULL;
+	in.sec_hdr = NULL;
+	in.rdp_hdr = NULL;
+	in.channel_hdr = NULL;
+
+	/* Clear the outgoing stream */
+	if (out.data != NULL)
+		xfree(out.data);
+	out.p = NULL;
+	out.end = NULL;
+	out.data = NULL;
+	out.size = 0;
+	out.iso_hdr = NULL;
+	out.mcs_hdr = NULL;
+	out.sec_hdr = NULL;
+	out.rdp_hdr = NULL;
+	out.channel_hdr = NULL;
+}

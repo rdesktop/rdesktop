@@ -1,4 +1,5 @@
 rdesktop (1.4.1)
+   * Session Directory support (patch from Brian Chapeau <lheria@users.sourceforge.net>)
    * persistent bitmap cache optimisations
    * support for more RDP-orders (ellipse, polygon)
    * libao sound-driver (for Mac OSX and others)

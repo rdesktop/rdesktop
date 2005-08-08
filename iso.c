@@ -191,10 +191,41 @@ iso_connect(char *server, char *username)
 	return True;
 }
 
+/* Establish a reconnection up to the ISO layer */
+BOOL
+iso_reconnect(char *server)
+{
+	uint8 code = 0;
+
+	if (!tcp_connect(server))
+		return False;
+
+	iso_send_msg(ISO_PDU_CR);
+
+	if (iso_recv_msg(&code, NULL) == NULL)
+		return False;
+
+	if (code != ISO_PDU_CC)
+	{
+		error("expected CC, got 0x%x\n", code);
+		tcp_disconnect();
+		return False;
+	}
+
+	return True;
+}
+
 /* Disconnect from the ISO layer */
 void
 iso_disconnect(void)
 {
 	iso_send_msg(ISO_PDU_DR);
 	tcp_disconnect();
+}
+
+/* reset the state to support reconnecting */
+void
+iso_reset_state(void)
+{
+	tcp_reset_state();
 }

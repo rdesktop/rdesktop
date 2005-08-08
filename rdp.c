@@ -55,6 +55,16 @@ uint32 g_rdp_shareid;
 
 extern RDPCOMP g_mppc_dict;
 
+/* Session Directory support */
+extern BOOL g_redirect;
+extern char g_redirect_server[64];
+extern char g_redirect_domain[16];
+extern char g_redirect_password[64];
+extern char g_redirect_username[64];
+extern char g_redirect_cookie[128];
+extern uint32 g_redirect_flags;
+/* END Session Directory support */
+
 #if WITH_DEBUG
 static uint32 g_packetno;
 #endif
@@ -71,7 +81,7 @@ rdp_recv(uint8 * type)
 	uint16 length, pdu_type;
 	uint8 rdpver;
 
-	if ((rdp_s == NULL) || (g_next_packet >= rdp_s->end))
+	if ((rdp_s == NULL) || (g_next_packet >= rdp_s->end) || (g_next_packet == NULL))
 	{
 		rdp_s = sec_recv(&rdpver);
 		if (rdp_s == NULL)
@@ -260,6 +270,10 @@ rdp_in_unistr(STREAM s, char *string, int uni_len)
 			g_iconv_works = False;
 			return rdp_in_unistr(s, string, uni_len);
 		}
+
+		/* we must update the location of the current STREAM for future reads of s->p */
+		s->p += uni_len;
+
 		return pout - string;
 	}
 	else
@@ -1284,6 +1298,54 @@ process_data_pdu(STREAM s, uint32 * ext_disc_reason)
 	return False;
 }
 
+/* Process redirect PDU from Session Directory */
+static BOOL
+process_redirect_pdu(STREAM s /*, uint32 * ext_disc_reason */ )
+{
+	uint32 len;
+
+	/* these 2 bytes are unknown, seem to be zeros */
+	in_uint8s(s, 2);
+
+	/* read connection flags */
+	in_uint32_le(s, g_redirect_flags);
+
+	/* read length of ip string */
+	in_uint32_le(s, len);
+
+	/* read ip string */
+	rdp_in_unistr(s, g_redirect_server, len);
+
+	/* read length of cookie string */
+	in_uint32_le(s, len);
+
+	/* read cookie string (plain ASCII) */
+	in_uint8a(s, g_redirect_cookie, len);
+	g_redirect_cookie[len] = 0;
+
+	/* read length of username string */
+	in_uint32_le(s, len);
+
+	/* read username string */
+	rdp_in_unistr(s, g_redirect_username, len);
+
+	/* read length of domain string */
+	in_uint32_le(s, len);
+
+	/* read domain string */
+	rdp_in_unistr(s, g_redirect_domain, len);
+
+	/* read length of password string */
+	in_uint32_le(s, len);
+
+	/* read password string */
+	rdp_in_unistr(s, g_redirect_password, len);
+
+	g_redirect = True;
+
+	return True;
+}
+
 /* Process incoming packets */
 /* nevers gets out of here till app is done */
 void
@@ -1317,6 +1379,9 @@ rdp_loop(BOOL * deactivated, uint32 * ext_disc_reason)
 				DEBUG(("RDP_PDU_DEACTIVATE\n"));
 				*deactivated = True;
 				break;
+			case RDP_PDU_REDIRECT:
+				return process_redirect_pdu(s);
+				break;
 			case RDP_PDU_DATA:
 				disc = process_data_pdu(s, ext_disc_reason);
 				break;
@@ -1342,6 +1407,27 @@ rdp_connect(char *server, uint32 flags, char *domain, char *password,
 
 	rdp_send_logon_info(flags, domain, g_username, password, command, directory);
 	return True;
+}
+
+/* Establish a reconnection up to the RDP layer */
+BOOL
+rdp_reconnect(char *server, uint32 flags, char *domain, char *password,
+	      char *command, char *directory, char *cookie)
+{
+	if (!sec_reconnect(server))
+		return False;
+
+	rdp_send_logon_info(flags, domain, g_username, password, command, directory);
+	return True;
+}
+
+/* Called during redirection to reset the state to support redirection */
+void
+rdp_reset_state(void)
+{
+	g_next_packet = NULL;	/* reset the packet information */
+	g_rdp_shareid = 0;
+	sec_reset_state();
 }
 
 /* Disconnect from the RDP layer */
