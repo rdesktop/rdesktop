@@ -27,7 +27,6 @@
 #include <sys/time.h>		/* gettimeofday */
 #include <sys/times.h>		/* times */
 #include <ctype.h>		/* toupper */
-#include <limits.h>		/* PATH_MAX */
 #include <errno.h>
 #include "rdesktop.h"
 

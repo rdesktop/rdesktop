@@ -29,6 +29,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #endif
+#include <limits.h>		/* PATH_MAX */
 
 #define VERSION "1.4.1"
 
