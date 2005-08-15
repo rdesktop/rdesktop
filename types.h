@@ -248,13 +248,17 @@ typedef struct notify_data
 }
 NOTIFY;
 
+#ifndef PATH_MAX
+#define PATH_MAX 256
+#endif
+
 typedef struct fileinfo
 {
 	uint32 device_id, flags_and_attributes, accessmask;
-	char path[256];
+	char path[PATH_MAX];
 	DIR *pdir;
 	struct dirent *pdirent;
-	char pattern[64];
+	char pattern[PATH_MAX];
 	BOOL delete_on_close;
 	NOTIFY notify;
 	uint32 info_class;

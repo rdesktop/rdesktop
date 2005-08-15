@@ -144,10 +144,10 @@ BOOL g_notify_stamp = False;
 
 typedef struct
 {
-	char name[256];
-	char label[256];
+	char name[PATH_MAX];
+	char label[PATH_MAX];
 	unsigned long serial;
-	char type[256];
+	char type[PATH_MAX];
 } FsInfoType;
 
 static NTSTATUS NotifyInfo(NTHANDLE handle, uint32 info_class, NOTIFY * p);
@@ -344,7 +344,7 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 	NTHANDLE handle;
 	DIR *dirp;
 	int flags, mode;
-	char path[256];
+	char path[PATH_MAX];
 	struct stat filestat;
 
 	handle = 0;
@@ -491,7 +491,7 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 	g_fileinfo[handle].device_id = device_id;
 	g_fileinfo[handle].flags_and_attributes = flags_and_attributes;
 	g_fileinfo[handle].accessmask = accessmask;
-	strncpy(g_fileinfo[handle].path, path, 255);
+	strncpy(g_fileinfo[handle].path, path, PATH_MAX-1);
 	g_fileinfo[handle].delete_on_close = False;
 	g_notify_stamp = True;
 
@@ -698,7 +698,7 @@ NTSTATUS
 disk_set_information(NTHANDLE handle, uint32 info_class, STREAM in, STREAM out)
 {
 	uint32 length, file_attributes, ft_high, ft_low, delete_on_close;
-	char newname[256], fullpath[256];
+	char newname[PATH_MAX], fullpath[PATH_MAX];
 	struct fileinfo *pfinfo;
 	int mode;
 	struct stat filestat;
@@ -1112,7 +1112,7 @@ NTSTATUS
 disk_query_directory(NTHANDLE handle, uint32 info_class, char *pattern, STREAM out)
 {
 	uint32 file_attributes, ft_low, ft_high;
-	char *dirname, fullpath[256];
+	char *dirname, fullpath[PATH_MAX];
 	DIR *pdir;
 	struct dirent *pdirent;
 	struct stat fstat;
@@ -1130,7 +1130,7 @@ disk_query_directory(NTHANDLE handle, uint32 info_class, char *pattern, STREAM o
 			/* If a search pattern is received, remember this pattern, and restart search */
 			if (pattern[0] != 0)
 			{
-				strncpy(pfinfo->pattern, 1 + strrchr(pattern, '/'), 64);
+				strncpy(pfinfo->pattern, 1 + strrchr(pattern, '/'), PATH_MAX-1);
 				rewinddir(pdir);
 			}
 

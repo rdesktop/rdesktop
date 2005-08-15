@@ -352,7 +352,7 @@ rdpdr_process_irp(STREAM s)
 		error_mode,
 		share_mode, disposition, total_timeout, interval_timeout, flags_and_attributes = 0;
 
-	char filename[256];
+	char filename[PATH_MAX];
 	uint8 *buffer, *pst_buf;
 	struct stream out;
 	DEVICE_FNS *fns;
