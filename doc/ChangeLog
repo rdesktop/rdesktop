@@ -1,3 +1,12 @@
+rdesktop (1.?.?)
+  * Keymap fixes
+  * Fix connection issues with Windows XP RTM
+  * Keyboard handling improvements and fixes
+  * Sound-driver for SGI/Irix
+  * Support for clipboard INCR protocol
+  * Session Directory support
+  * Support for long filenames on redirected drives
+
 rdesktop (1.4.1)
    * Session Directory support (patch from Brian Chapeau <lheria@users.sourceforge.net>)
    * persistent bitmap cache optimisations
