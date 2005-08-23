@@ -32,8 +32,6 @@
 #include <linux/lp.h>
 #endif
 
-extern int errno;
-
 extern RDPDR_DEVICE g_rdpdr_device[];
 
 
