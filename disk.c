@@ -491,7 +491,7 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 	g_fileinfo[handle].device_id = device_id;
 	g_fileinfo[handle].flags_and_attributes = flags_and_attributes;
 	g_fileinfo[handle].accessmask = accessmask;
-	strncpy(g_fileinfo[handle].path, path, PATH_MAX-1);
+	strncpy(g_fileinfo[handle].path, path, PATH_MAX - 1);
 	g_fileinfo[handle].delete_on_close = False;
 	g_notify_stamp = True;
 
@@ -1130,7 +1130,7 @@ disk_query_directory(NTHANDLE handle, uint32 info_class, char *pattern, STREAM o
 			/* If a search pattern is received, remember this pattern, and restart search */
 			if (pattern[0] != 0)
 			{
-				strncpy(pfinfo->pattern, 1 + strrchr(pattern, '/'), PATH_MAX-1);
+				strncpy(pfinfo->pattern, 1 + strrchr(pattern, '/'), PATH_MAX - 1);
 				rewinddir(pdir);
 			}
 

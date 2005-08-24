@@ -240,7 +240,7 @@ wave_out_play(void)
 		out->p += len;
 	}
 
-	ao_play(o_device, (char*)outbuf, len);
+	ao_play(o_device, (char *) outbuf, len);
 
 	gettimeofday(&tv, NULL);
 
