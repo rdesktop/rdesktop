@@ -20,6 +20,8 @@
 #ifndef RDESKTOP_PROTO_H
 #define RDESKTOP_PROTO_H
 
+/* *INDENT-OFF* */
 #ifdef __cplusplus
 extern "C" {
 #endif
+/* *INDENT-ON* */

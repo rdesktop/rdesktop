@@ -1,3 +1,30 @@
+/* -*- c-basic-offset: 8 -*-
+   rdesktop: A Remote Desktop Protocol client.
+   Copyright (C) Matthew Chapman 1999-2005
+
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*/
+
+#ifndef RDESKTOP_PROTO_H
+#define RDESKTOP_PROTO_H
+
+/* *INDENT-OFF* */
+#ifdef __cplusplus
+extern "C" {
+#endif
+/* *INDENT-ON* */
 /* bitmap.c */
 BOOL bitmap_decompress(uint8 * output, int width, int height, uint8 * input, int size, int Bpp);
 /* cache.c */
@@ -242,3 +269,11 @@ void ui_desktop_save(uint32 offset, int x, int y, int cx, int cy);
 void ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy);
 void ui_begin_update(void);
 void ui_end_update(void);
+
+/* *INDENT-OFF* */
+#ifdef __cplusplus
+}
+#endif
+/* *INDENT-ON* */
+
+#endif
