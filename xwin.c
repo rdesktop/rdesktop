@@ -1341,6 +1341,78 @@ xwin_toggle_fullscreen(void)
 	}
 }
 
+static void
+handle_button_event(XEvent xevent, BOOL down)
+{
+	uint16 button, flags = 0;
+	g_last_gesturetime = xevent.xbutton.time;
+	button = xkeymap_translate_button(xevent.xbutton.button);
+	if (button == 0)
+		return;
+
+	if (down)
+		flags = MOUSE_FLAG_DOWN;
+
+	/* Stop moving window when button is released, regardless of cursor position */
+	if (g_moving_wnd && (xevent.type == ButtonRelease))
+		g_moving_wnd = False;
+
+	/* If win_button_size is nonzero, enable single app mode */
+	if (xevent.xbutton.y < g_win_button_size)
+	{
+		/*  Check from right to left: */
+		if (xevent.xbutton.x >= g_width - g_win_button_size)
+		{
+			/* The close button, continue */
+			;
+		}
+		else if (xevent.xbutton.x >= g_width - g_win_button_size * 2)
+		{
+			/* The maximize/restore button. Do not send to
+			   server.  It might be a good idea to change the
+			   cursor or give some other visible indication
+			   that rdesktop inhibited this click */
+			if (xevent.type == ButtonPress)
+				return;
+		}
+		else if (xevent.xbutton.x >= g_width - g_win_button_size * 3)
+		{
+			/* The minimize button. Iconify window. */
+			if (xevent.type == ButtonRelease)
+			{
+				/* Release the mouse button outside the minimize button, to prevent the
+				   actual minimazation to happen */
+				rdp_send_input(time(NULL), RDP_INPUT_MOUSE, button, 1, 1);
+				XIconifyWindow(g_display, g_wnd, DefaultScreen(g_display));
+				return;
+			}
+		}
+		else if (xevent.xbutton.x <= g_win_button_size)
+		{
+			/* The system menu. Ignore. */
+			if (xevent.type == ButtonPress)
+				return;
+		}
+		else
+		{
+			/* The title bar. */
+			if (xevent.type == ButtonPress)
+			{
+				if (!g_fullscreen && g_hide_decorations)
+				{
+					g_moving_wnd = True;
+					g_move_x_offset = xevent.xbutton.x;
+					g_move_y_offset = xevent.xbutton.y;
+				}
+				return;
+			}
+		}
+	}
+
+	rdp_send_input(time(NULL), RDP_INPUT_MOUSE,
+		       flags | button, xevent.xbutton.x, xevent.xbutton.y);
+}
+
 /* Process events in Xlib queue
    Returns 0 after user quit, 1 otherwise */
 static int
@@ -1348,7 +1420,6 @@ xwin_process_events(void)
 {
 	XEvent xevent;
 	KeySym keysym;
-	uint16 button, flags;
 	uint32 ev_time;
 	char str[256];
 	Status status;
@@ -1363,8 +1434,6 @@ xwin_process_events(void)
 			DEBUG_KBD(("Filtering event\n"));
 			continue;
 		}
-
-		flags = 0;
 
 		switch (xevent.type)
 		{
@@ -1430,68 +1499,11 @@ xwin_process_events(void)
 				break;
 
 			case ButtonPress:
-				flags = MOUSE_FLAG_DOWN;
-				/* fall through */
+				handle_button_event(xevent, True);
+				break;
 
 			case ButtonRelease:
-				g_last_gesturetime = xevent.xbutton.time;
-				button = xkeymap_translate_button(xevent.xbutton.button);
-				if (button == 0)
-					break;
-
-				/* If win_button_size is nonzero, enable single app mode */
-				if (xevent.xbutton.y < g_win_button_size)
-				{
-					/* Stop moving window when button is released, regardless of cursor position */
-					if (g_moving_wnd && (xevent.type == ButtonRelease))
-						g_moving_wnd = False;
-
-					/*  Check from right to left: */
-
-					if (xevent.xbutton.x >= g_width - g_win_button_size)
-					{
-						/* The close button, continue */
-						;
-					}
-					else if (xevent.xbutton.x >=
-						 g_width - g_win_button_size * 2)
-					{
-						/* The maximize/restore button. Do not send to
-						   server.  It might be a good idea to change the
-						   cursor or give some other visible indication
-						   that rdesktop inhibited this click */
-						break;
-					}
-					else if (xevent.xbutton.x >=
-						 g_width - g_win_button_size * 3)
-					{
-						/* The minimize button. Iconify window. */
-						XIconifyWindow(g_display, g_wnd,
-							       DefaultScreen(g_display));
-						break;
-					}
-					else if (xevent.xbutton.x <= g_win_button_size)
-					{
-						/* The system menu. Ignore. */
-						break;
-					}
-					else
-					{
-						/* The title bar. */
-						if ((xevent.type == ButtonPress) && !g_fullscreen
-						    && g_hide_decorations)
-						{
-							g_moving_wnd = True;
-							g_move_x_offset = xevent.xbutton.x;
-							g_move_y_offset = xevent.xbutton.y;
-						}
-						break;
-
-					}
-				}
-
-				rdp_send_input(time(NULL), RDP_INPUT_MOUSE,
-					       flags | button, xevent.xbutton.x, xevent.xbutton.y);
+				handle_button_event(xevent, False);
 				break;
 
 			case MotionNotify:
