@@ -79,6 +79,7 @@ static Pixmap g_backstore = 0;
 static BOOL g_moving_wnd;
 static int g_move_x_offset = 0;
 static int g_move_y_offset = 0;
+static BOOL g_using_full_workarea = False;
 
 #ifdef WITH_RDPSND
 extern int g_dsp_fd;
@@ -1091,6 +1092,8 @@ ui_init(void)
 	else if (g_width < 0)
 	{
 		/* Percent of screen */
+		if (-g_width >= 100)
+			g_using_full_workarea = True;
 		g_height = HeightOfScreen(g_screen) * (-g_width) / 100;
 		g_width = WidthOfScreen(g_screen) * (-g_width) / 100;
 	}
@@ -1098,6 +1101,7 @@ ui_init(void)
 	{
 		/* Fetch geometry from _NET_WORKAREA */
 		uint32 x, y, cx, cy;
+		g_using_full_workarea = True;
 
 		if (get_current_workarea(&x, &y, &cx, &cy) == 0)
 		{
@@ -1398,7 +1402,7 @@ handle_button_event(XEvent xevent, BOOL down)
 			/* The title bar. */
 			if (xevent.type == ButtonPress)
 			{
-				if (!g_fullscreen && g_hide_decorations)
+				if (!g_fullscreen && g_hide_decorations && !g_using_full_workarea)
 				{
 					g_moving_wnd = True;
 					g_move_x_offset = xevent.xbutton.x;
