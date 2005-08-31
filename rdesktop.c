@@ -605,17 +605,17 @@ main(int argc, char *argv[])
 				break;
 
 			case 'x':
-				if (strncmp("modem", optarg, 1) == 0)
+				if (str_startswith(optarg, "m"))	/* modem */
 				{
 					g_rdp5_performanceflags =
 						RDP5_NO_WALLPAPER | RDP5_NO_FULLWINDOWDRAG |
 						RDP5_NO_MENUANIMATIONS | RDP5_NO_THEMING;
 				}
-				else if (strncmp("broadband", optarg, 1) == 0)
+				else if (str_startswith(optarg, "b"))	/* broadband */
 				{
 					g_rdp5_performanceflags = RDP5_NO_WALLPAPER;
 				}
-				else if (strncmp("lan", optarg, 1) == 0)
+				else if (str_startswith(optarg, "l"))	/* lan */
 				{
 					g_rdp5_performanceflags = RDP5_DISABLE_NOTHING;
 				}
@@ -631,7 +631,7 @@ main(int argc, char *argv[])
 
 			case 'r':
 
-				if (strncmp("sound", optarg, 5) == 0)
+				if (str_startswith(optarg, "sound"))
 				{
 					optarg += 5;
 
@@ -640,17 +640,17 @@ main(int argc, char *argv[])
 						*optarg++;
 						while ((p = next_arg(optarg, ',')))
 						{
-							if (strncmp("remote", optarg, 6) == 0)
+							if (str_startswith(optarg, "remote"))
 								flags |= RDP_LOGON_LEAVE_AUDIO;
 
-							if (strncmp("local", optarg, 5) == 0)
+							if (str_startswith(optarg, "local"))
 #ifdef WITH_RDPSND
 								g_rdpsnd = True;
 #else
 								warning("Not compiled with sound support\n");
 #endif
 
-							if (strncmp("off", optarg, 3) == 0)
+							if (str_startswith(optarg, "off"))
 #ifdef WITH_RDPSND
 								g_rdpsnd = False;
 #else
@@ -669,24 +669,24 @@ main(int argc, char *argv[])
 #endif
 					}
 				}
-				else if (strncmp("disk", optarg, 4) == 0)
+				else if (str_startswith(optarg, "disk"))
 				{
 					/* -r disk:h:=/mnt/floppy */
 					disk_enum_devices(&g_num_devices, optarg + 4);
 				}
-				else if (strncmp("comport", optarg, 7) == 0)
+				else if (str_startswith(optarg, "comport"))
 				{
 					serial_enum_devices(&g_num_devices, optarg + 7);
 				}
-				else if (strncmp("lptport", optarg, 7) == 0)
+				else if (str_startswith(optarg, "lptport"))
 				{
 					parallel_enum_devices(&g_num_devices, optarg + 7);
 				}
-				else if (strncmp("printer", optarg, 7) == 0)
+				else if (str_startswith(optarg, "printer"))
 				{
 					printer_enum_devices(&g_num_devices, optarg + 7);
 				}
-				else if (strncmp("clientname", optarg, 7) == 0)
+				else if (str_startswith(optarg, "clientname"))
 				{
 					g_rdpdr_clientname = xmalloc(strlen(optarg + 11) + 1);
 					strcpy(g_rdpdr_clientname, optarg + 11);
@@ -1167,6 +1167,13 @@ toupper_str(char *p)
 			*p = toupper((int) *p);
 		p++;
 	}
+}
+
+
+BOOL
+str_startswith(const char *s, const char *prefix)
+{
+	return (strncmp(s, prefix, strlen(prefix)) == 0);
 }
 
 

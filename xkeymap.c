@@ -311,7 +311,7 @@ xkeymap_read(char *mapname)
 		}
 
 		/* Include */
-		if (strncmp(line, "include ", sizeof("include ") - 1) == 0)
+		if (str_startswith(line, "include "))
 		{
 			if (!xkeymap_read(line + sizeof("include ") - 1))
 				return False;
@@ -319,7 +319,7 @@ xkeymap_read(char *mapname)
 		}
 
 		/* map */
-		if (strncmp(line, "map ", sizeof("map ") - 1) == 0)
+		if (str_startswith(line, "map "))
 		{
 			g_keylayout = strtol(line + sizeof("map ") - 1, NULL, 16);
 			DEBUG_KBD(("Keylayout 0x%x\n", g_keylayout));
@@ -327,7 +327,7 @@ xkeymap_read(char *mapname)
 		}
 
 		/* compose */
-		if (strncmp(line, "enable_compose", sizeof("enable_compose") - 1) == 0)
+		if (str_startswith(line, "enable_compose"))
 		{
 			DEBUG_KBD(("Enabling compose handling\n"));
 			g_enable_compose = True;
@@ -335,14 +335,14 @@ xkeymap_read(char *mapname)
 		}
 
 		/* sequence */
-		if (strncmp(line, "sequence", sizeof("sequence") - 1) == 0)
+		if (str_startswith(line, "sequence"))
 		{
 			add_sequence(line + sizeof("sequence") - 1, mapname);
 			continue;
 		}
 
 		/* keyboard_type */
-		if (strncmp(line, "keyboard_type ", sizeof("keyboard_type ") - 1) == 0)
+		if (str_startswith(line, "keyboard_type "))
 		{
 			g_keyboard_type = strtol(line + sizeof("keyboard_type ") - 1, NULL, 16);
 			DEBUG_KBD(("keyboard_type 0x%x\n", g_keyboard_type));
@@ -350,7 +350,7 @@ xkeymap_read(char *mapname)
 		}
 
 		/* keyboard_subtype */
-		if (strncmp(line, "keyboard_subtype ", sizeof("keyboard_subtype ") - 1) == 0)
+		if (str_startswith(line, "keyboard_subtype "))
 		{
 			g_keyboard_subtype =
 				strtol(line + sizeof("keyboard_subtype ") - 1, NULL, 16);
@@ -359,8 +359,7 @@ xkeymap_read(char *mapname)
 		}
 
 		/* keyboard_functionkeys */
-		if (strncmp(line, "keyboard_functionkeys ", sizeof("keyboard_functionkeys ") - 1) ==
-		    0)
+		if (str_startswith(line, "keyboard_functionkeys "))
 		{
 			g_keyboard_functionkeys =
 				strtol(line + sizeof("keyboard_functionkeys ") - 1, NULL, 16);

@@ -997,7 +997,7 @@ FsVolumeInfo(char *fpath)
 
 	while ((e = getmntent(fdfs)))
 	{
-		if (strncmp(fpath, e->mnt_dir, strlen(fpath)) == 0)
+		if (str_startswith(e->mnt_dir, fpath))
 		{
 			strcpy(info.type, e->mnt_type);
 			strcpy(info.name, e->mnt_fsname);

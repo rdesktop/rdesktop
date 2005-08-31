@@ -117,6 +117,7 @@ void unimpl(char *format, ...);
 void hexdump(unsigned char *p, unsigned int len);
 char *next_arg(char *src, char needle);
 void toupper_str(char *p);
+BOOL str_startswith(const char *s, const char *prefix);
 char *l_to_a(long N, int base);
 int load_licence(unsigned char **data);
 void save_licence(unsigned char *data, int length);
