@@ -2,9 +2,9 @@
    rdesktop: A Remote Desktop Protocol client.
 
    Support functions for Extended Window Manager Hints,
-   http://www.freedesktop.org/standards/wm-spec.html
+   http://www.freedesktop.org/wiki/Standards_2fwm_2dspec
 
-   Copyright (C) Peter Astrand <peter@cendio.se> 2003
+   Copyright (C) Peter Astrand <astrand@cendio.se> 2005
    
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -151,3 +151,41 @@ get_current_workarea(uint32 * x, uint32 * y, uint32 * width, uint32 * height)
 	return (0);
 
 }
+
+
+#if 0
+
+/* FIXME: _NET_MOVERESIZE_WINDOW is for pagers, not for
+   applications. We should implement _NET_WM_MOVERESIZE instead */
+
+int
+ewmh_net_moveresize_window(Window wnd, int x, int y, int width, int height)
+{
+	Status status;
+	XEvent xevent;
+	Atom moveresize;
+
+	moveresize = XInternAtom(g_display, "_NET_MOVERESIZE_WINDOW", False);
+	if (!moveresize)
+	{
+		return -1;
+	}
+
+	xevent.type = ClientMessage;
+	xevent.xclient.window = wnd;
+	xevent.xclient.message_type = moveresize;
+	xevent.xclient.format = 32;
+	xevent.xclient.data.l[0] = StaticGravity | (1 << 8) | (1 << 9) | (1 << 10) | (1 << 11);
+	xevent.xclient.data.l[1] = x;
+	xevent.xclient.data.l[2] = y;
+	xevent.xclient.data.l[3] = width;
+	xevent.xclient.data.l[4] = height;
+
+	status = XSendEvent(g_display, DefaultRootWindow(g_display), False,
+			    SubstructureNotifyMask | SubstructureRedirectMask, &xevent);
+	if (!status)
+		return -1;
+	return 0;
+}
+
+#endif
