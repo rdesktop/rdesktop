@@ -12,5 +12,6 @@ see qtreadme.txt for info on the Qt/X11 uiport
 
 see qtereadme.txt for info on the Qt embeded uiport
 
-see svgareadme.txt for info in the svga uiport
+see svgareadme.txt for info on the svga uiport
 
+see nanoxreadme.txt for info on the nanox uiport
