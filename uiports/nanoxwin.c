@@ -51,6 +51,9 @@ uint32 g_rdp5_performanceflags =
   RDP5_NO_WALLPAPER | RDP5_NO_FULLWINDOWDRAG | RDP5_NO_MENUANIMATIONS;
 int g_console_session = 0;
 int g_keylayout = 0x409; /* Defaults to US keyboard layout */
+int g_keyboard_type = 0x4; /* Defaults to US keyboard layout */
+int g_keyboard_subtype = 0x0; /* Defaults to US keyboard layout */
+int g_keyboard_functionkeys = 0xc; /* Defaults to US keyboard layout */
 
 static int g_sck = 0;
 static char g_servername[256] = "";
@@ -79,6 +82,15 @@ struct key
 };
 
 static struct key g_keys[256];
+
+/* Session Directory redirection */
+BOOL g_redirect = False;
+char g_redirect_server[64];
+char g_redirect_domain[16];
+char g_redirect_password[64];
+char g_redirect_username[64];
+char g_redirect_cookie[128];
+uint32 g_redirect_flags = 0;
 
 #define COLOR16TO32(color) \
 ( \
@@ -986,6 +998,18 @@ void xfree(void * in)
   {
     free(in);
   }
+}
+
+/*****************************************************************************/
+char * xstrdup(const char * s)
+{
+  char * mem = strdup(s);
+  if (mem == NULL)
+  {
+    perror("strdup");
+    exit(1);
+  }
+  return mem;
 }
 
 /*****************************************************************************/
