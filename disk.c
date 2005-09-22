@@ -201,7 +201,7 @@ ftruncate_growable(int fd, off_t length)
 {
 	int ret;
 	off_t pos;
-	static const char zero;
+	static const char zero = 0;
 
 	/* Try the simple method first */
 	if ((ret = ftruncate(fd, length)) != -1)
@@ -209,7 +209,7 @@ ftruncate_growable(int fd, off_t length)
 		return ret;
 	}
 
-	/* 
+	/*
 	 * Some kind of error. Perhaps we were trying to grow. Retry
 	 * in a safe way.
 	 */
@@ -325,7 +325,7 @@ disk_enum_devices(uint32 * id, char *optarg)
 			fprintf(stderr, "share name %s truncated to %s\n", optarg,
 				g_rdpdr_device[*id].name);
 
-		g_rdpdr_device[*id].local_path = xmalloc(strlen(pos2) + 1);
+		g_rdpdr_device[*id].local_path = (char *) xmalloc(strlen(pos2) + 1);
 		strcpy(g_rdpdr_device[*id].local_path, pos2);
 		g_rdpdr_device[*id].device_type = DEVICE_TYPE_DISK;
 		count++;
@@ -960,7 +960,7 @@ NotifyInfo(NTHANDLE handle, uint32 info_class, NOTIFY * p)
 		if (!strcmp(dp->d_name, ".") || !strcmp(dp->d_name, ".."))
 			continue;
 		p->num_entries++;
-		fullname = xmalloc(strlen(pfinfo->path) + strlen(dp->d_name) + 2);
+		fullname = (char *) xmalloc(strlen(pfinfo->path) + strlen(dp->d_name) + 2);
 		sprintf(fullname, "%s/%s", pfinfo->path, dp->d_name);
 
 		if (!stat(fullname, &buf))
