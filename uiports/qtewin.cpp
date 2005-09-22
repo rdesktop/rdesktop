@@ -60,9 +60,13 @@ int g_use_rdp5 = 1;
 int g_desktop_save = 1;
 int g_bitmap_compression = 1;
 int g_polygon_ellipse_orders = 0;
-int g_rdp5_performanceflags = 0;
+int g_rdp5_performanceflags =
+  RDP5_NO_WALLPAPER | RDP5_NO_FULLWINDOWDRAG | RDP5_NO_MENUANIMATIONS;
 int g_console_session = 0;
 int g_keylayout = 0x409; /* Defaults to US keyboard layout */
+int g_keyboard_type = 0x4; /* Defaults to US keyboard layout */
+int g_keyboard_subtype = 0x0; /* Defaults to US keyboard layout */
+int g_keyboard_functionkeys = 0xc; /* Defaults to US keyboard layout */
 int g_width = 640;
 int g_height = 480;
 int g_server_bpp = 8;
@@ -117,6 +121,15 @@ static int g_clipx = 0;
 static int g_clipy = 0;
 static int g_clipcx = 0;
 static int g_clipcy = 0;
+
+/* Session Directory redirection */
+BOOL g_redirect = False;
+char g_redirect_server[64];
+char g_redirect_domain[16];
+char g_redirect_password[64];
+char g_redirect_username[64];
+char g_redirect_cookie[128];
+uint32 g_redirect_flags = 0;
 
 #define BPP ((g_server_bpp + 7) / 8)
 #define GETPIXEL8(d, x, y, w) (*(((uint8*)d) + ((y) * (w) + (x))))
@@ -2151,6 +2164,18 @@ void xfree(void * in_val)
   {
     free(in_val);
   }
+}
+
+/*****************************************************************************/
+char * xstrdup(const char * s)
+{
+  char * mem = strdup(s);
+  if (mem == NULL)
+  {
+    perror("strdup");
+    exit(1);
+  }
+  return mem;
 }
 
 /*****************************************************************************/
