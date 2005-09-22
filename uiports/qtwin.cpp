@@ -60,6 +60,9 @@ int g_bitmap_compression = 1;
 int g_rdp5_performanceflags = 0;
 int g_console_session = 0;
 int g_keylayout = 0x409; /* Defaults to US keyboard layout */
+int g_keyboard_type = 0x4; /* Defaults to US keyboard layout */
+int g_keyboard_subtype = 0x0; /* Defaults to US keyboard layout */
+int g_keyboard_functionkeys = 0xc; /* Defaults to US keyboard layout */
 
 /* hack globals */
 static int g_argc = 0;
@@ -116,6 +119,15 @@ static Qt::RasterOp g_OpCodes[16] = {
     Qt::OrNotROP,        //               SDno
     Qt::OrROP,           // SRCPAINT      DSo
     Qt::SetROP};         // WHITENESS     1
+
+/* Session Directory redirection */
+BOOL g_redirect = False;
+char g_redirect_server[64];
+char g_redirect_domain[16];
+char g_redirect_password[64];
+char g_redirect_username[64];
+char g_redirect_cookie[128];
+uint32 g_redirect_flags = 0;
 
 //*****************************************************************************
 uint32 Color15to32(uint32 InColor)
@@ -1491,6 +1503,18 @@ void xfree(void * in_val)
   {
     free(in_val);
   }
+}
+
+/*****************************************************************************/
+char * xstrdup(const char * s)
+{
+  char * mem = strdup(s);
+  if (mem == NULL)
+  {
+    perror("strdup");
+    exit(1);
+  }
+  return mem;
 }
 
 /*****************************************************************************/
