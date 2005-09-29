@@ -138,10 +138,9 @@ PixelColour;
 				XDrawArc(g_display, g_backstore, g_gc, x, y, cx, cy, 0, 360*64); \
 			break; \
 		case 1: /* Filled */ \
-			XFillArc(g_display, g_ownbackstore ? g_backstore : g_wnd, g_gc, x, y, \
-				 cx, cy, 0, 360*64); \
+			XFillArc(g_display, g_wnd, g_gc, x, y, cx, cy, 0, 360*64); \
 			if (g_ownbackstore) \
-				XCopyArea(g_display, g_backstore, g_wnd, g_gc, x, y, cx, cy, x, y); \
+				XFillArc(g_display, g_backstore, g_gc, x, y, cx, cy, 0, 360*64); \
 			break; \
 	} \
 }
