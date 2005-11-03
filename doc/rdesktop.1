@@ -1,4 +1,4 @@
-.TH rdesktop 1 "March 2005"
+.TH rdesktop 1 "November 2005"
 .SH NAME
 .I rdesktop
 \- Remote Desktop Protocol client
@@ -41,19 +41,25 @@ client.
 Keyboard layout to emulate.  This requires a corresponding keymap file to be
 installed.  The standard keymaps provided with rdesktop follow the RFC1766
 naming scheme: a language code followed by a country code if necessary - e.g.
-en-us, en-gb, de, fr, sv, etc.  
+en-us, en-gb, de, fr, sv, etc.
 
 The default keyboard map depends on the current locale (LC_* and LANG
-environment variables). If no valid locale is specified, the default
-keyboard map is en-us (a US keyboard).
+environment variables). If the current locale is unknown, the default
+keyboard map is en-us (a US English keyboard).
 
 The keyboard maps are file names, which means that they are case
 sensitive. The standard keymaps are all in lowercase.
 
-The keyboard-maps are searched relative to the directories
+The keyboard maps are searched relative to the directories
 $HOME/.rdesktop/keymaps, KEYMAP_PATH (specified at build time), and
 $CWD/keymaps, in this order. The keyboard-map argument can also be an
 absolute filename.
+
+The special value `none' can be used instead of a keyboard map.
+In this case, rdesktop will guess the scancodes from the X11 event key
+codes using an internal mapping method. This method only supports the
+basic alphanumeric keys and may not work properly on all platforms
+so its use is discouraged.
 .TP
 .BR "-g <geometry>"
 Desktop geometry (WxH). If geometry is the special word "workarea", the geometry
