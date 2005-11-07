@@ -220,7 +220,7 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 	XFree(data);
 
 	if (!rdesktop_is_selection_owner)
-		cliprdr_send_text_format_announce();
+		cliprdr_send_simple_native_format_announce(CF_TEXT);
 	return;
 
       fail:
@@ -276,7 +276,7 @@ xclip_handle_SelectionClear(void)
 	DEBUG_CLIPBOARD(("xclip_handle_SelectionClear\n"));
 	have_primary = 0;
 	XDeleteProperty(g_display, DefaultRootWindow(g_display), rdesktop_clipboard_formats_atom);
-	cliprdr_send_text_format_announce();
+	cliprdr_send_simple_native_format_announce(CF_TEXT);
 }
 
 void
@@ -311,7 +311,7 @@ xclip_handle_PropertyNotify(XPropertyEvent * event)
 				cliprdr_send_data(g_clip_buffer, g_clip_buflen + 1);
 
 				if (!rdesktop_is_selection_owner)
-					cliprdr_send_text_format_announce();
+					cliprdr_send_simple_native_format_announce(CF_TEXT);
 
 				xfree(g_clip_buffer);
 				g_clip_buffer = 0;
@@ -364,7 +364,7 @@ xclip_handle_PropertyNotify(XPropertyEvent * event)
 	}
 
 	/* PropertyDelete, or XGetWindowProperty failed */
-	cliprdr_send_text_format_announce();
+	cliprdr_send_simple_native_format_announce(CF_TEXT);
 	rdesktop_is_selection_owner = 0;
 }
 #endif
@@ -453,7 +453,7 @@ ui_clip_request_data(uint32 format)
 void
 ui_clip_sync(void)
 {
-	cliprdr_send_text_format_announce();
+	cliprdr_send_simple_native_format_announce(CF_TEXT);
 }
 
 
