@@ -127,7 +127,7 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 		goto fail;
 
 	res = XGetWindowProperty(g_display, g_wnd, rdesktop_clipboard_target_atom,
-				 0, XMaxRequestSize(g_display), True, AnyPropertyType,
+				 0, XMaxRequestSize(g_display), False, AnyPropertyType,
 				 &type, &format, &nitems, &bytes_left, &data);
 
 	if (res != Success)
@@ -136,6 +136,24 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 		goto fail;
 	}
 
+
+	if (type == incr_atom)
+	{
+		DEBUG_CLIPBOARD(("Received INCR.\n"));
+
+		XGetWindowAttributes(g_display, g_wnd, &wa);
+		if ((wa.your_event_mask | PropertyChangeMask) != wa.your_event_mask)
+		{
+			XSelectInput(g_display, g_wnd, (wa.your_event_mask | PropertyChangeMask));
+		}
+		XDeleteProperty(g_display, g_wnd, rdesktop_clipboard_target_atom);
+		XFree(data);
+		g_waiting_for_INCR = 1;
+		return;
+	} 
+	
+	XDeleteProperty(g_display, g_wnd, rdesktop_clipboard_target_atom);
+		
 	/* Negotiate target format */
 	if (event->target == targets_atom)
 	{
@@ -164,43 +182,6 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 		return;
 	}
 
-	if (type == incr_atom)
-	{
-		DEBUG_CLIPBOARD(("Received INCR.\n"));
-
-		XGetWindowAttributes(g_display, g_wnd, &wa);
-		if ((wa.your_event_mask | PropertyChangeMask) != wa.your_event_mask)
-		{
-			XSelectInput(g_display, g_wnd, (wa.your_event_mask | PropertyChangeMask));
-		}
-		XDeleteProperty(g_display, g_wnd, type);
-		XFree(data);
-		g_waiting_for_INCR = 1;
-
-		if ((XGetWindowProperty(g_display, g_wnd, rdesktop_clipboard_target_atom, 0,
-					4096L, True, AnyPropertyType,
-					&type, &format, &nitems, &bytes_left, &data) != Success))
-		{
-			DEBUG_CLIPBOARD(("XGetWindowProperty failed.\n"));
-			goto fail;
-		}
-		else
-		{
-			uint8 *translated_data;
-			uint32 length = nitems;
-
-			translated_data = lf2crlf(data, &length);
-
-			g_clip_buffer = (uint8 *) xmalloc(length);
-			strncpy((char *) g_clip_buffer, (char *) translated_data, length);
-			xfree(translated_data);
-			g_clip_buflen = length;
-
-			XFree(data);
-			return;
-		}
-	}
-
 	/* Translate linebreaks, but only if not getting data from
 	   other rdesktop instance */
 	if (event->target != rdesktop_clipboard_formats_atom)
@@ -223,7 +204,9 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 		cliprdr_send_simple_native_format_announce(CF_TEXT);
 	return;
 
-      fail:
+ fail:
+	XDeleteProperty(g_display, g_wnd, rdesktop_clipboard_target_atom);
+	XFree(data);
 	cliprdr_send_data(NULL, 0);
 }
 
@@ -282,7 +265,9 @@ xclip_handle_SelectionClear(void)
 void
 xclip_handle_PropertyNotify(XPropertyEvent * event)
 {
-	unsigned long nitems, bytes_left;
+	unsigned long nitems; 
+	unsigned long offset = 0;
+	unsigned long bytes_left = 1;
 	int format, res;
 	XWindowAttributes wa;
 	uint8 *data;
@@ -291,55 +276,59 @@ xclip_handle_PropertyNotify(XPropertyEvent * event)
 	if (event->state == PropertyNewValue && g_waiting_for_INCR)
 	{
 		DEBUG_CLIPBOARD(("x_clip_handle_PropertyNotify: g_waiting_for_INCR != 0\n"));
-		if ((XGetWindowProperty(g_display, g_wnd, rdesktop_clipboard_target_atom, 0,
-					4096L, True, AnyPropertyType,
-					&type, &format, &nitems, &bytes_left, &data) != Success))
-		{
-			XFree(data);
-			return;
-		}
 
-		if (nitems == 0)
-		{
-			XGetWindowAttributes(g_display, g_wnd, &wa);
-			XSelectInput(g_display, g_wnd, (wa.your_event_mask ^ PropertyChangeMask));
-			XFree(data);
-			g_waiting_for_INCR = 0;
-
-			if (g_clip_buflen > 0)
+		while (bytes_left > 0) {
+			if ((XGetWindowProperty(g_display, g_wnd, rdesktop_clipboard_target_atom, offset,
+						4096L, False, AnyPropertyType,
+						&type, &format, &nitems, &bytes_left, &data) != Success))
 			{
-				cliprdr_send_data(g_clip_buffer, g_clip_buflen + 1);
+				XFree(data);
+				return;
+			}
 
-				if (!rdesktop_is_selection_owner)
-					cliprdr_send_simple_native_format_announce(CF_TEXT);
+			if (nitems == 0)
+			{
+				XGetWindowAttributes(g_display, g_wnd, &wa);
+				XSelectInput(g_display, g_wnd, (wa.your_event_mask ^ PropertyChangeMask));
+				XFree(data);
+				g_waiting_for_INCR = 0;
 
+				if (g_clip_buflen > 0)
+				{
+					cliprdr_send_data(g_clip_buffer, g_clip_buflen + 1);
+
+					if (!rdesktop_is_selection_owner)
+						cliprdr_send_simple_native_format_announce(CF_TEXT);
+
+					xfree(g_clip_buffer);
+					g_clip_buffer = 0;
+					g_clip_buflen = 0;
+				}
+			}
+			else
+			{
+				uint8 *translated_data;
+				uint32 length = nitems;
+				uint8 *tmp;
+
+				offset += (length/4);
+				DEBUG_CLIPBOARD(("Translating linebreaks before sending data\n"));
+				translated_data = lf2crlf(data, &length);
+
+				tmp = xmalloc(length + g_clip_buflen);
+				strncpy((char *) tmp, (char *) g_clip_buffer, g_clip_buflen);
 				xfree(g_clip_buffer);
-				g_clip_buffer = 0;
-				g_clip_buflen = 0;
+
+				strncpy((char *) (tmp + g_clip_buflen), (char *) translated_data, length);
+				xfree(translated_data);
+
+				g_clip_buffer = tmp;
+				g_clip_buflen += length;
+
+				XFree(data);
 			}
 		}
-		else
-		{
-			uint8 *translated_data;
-			uint32 length = nitems;
-			uint8 *tmp;
-
-			DEBUG_CLIPBOARD(("Translating linebreaks before sending data\n"));
-			translated_data = lf2crlf(data, &length);
-
-			tmp = xmalloc(length + g_clip_buflen);
-			strncpy((char *) tmp, (char *) g_clip_buffer, g_clip_buflen);
-			xfree(g_clip_buffer);
-
-			strncpy((char *) (tmp + g_clip_buflen), (char *) translated_data, length);
-			xfree(translated_data);
-
-			g_clip_buffer = tmp;
-			g_clip_buflen += length;
-
-			XFree(data);
-			return;
-		}
+		XDeleteProperty(g_display, g_wnd, rdesktop_clipboard_target_atom);
 	}
 
 	if (event->atom != rdesktop_clipboard_formats_atom)
