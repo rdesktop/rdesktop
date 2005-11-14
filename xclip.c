@@ -23,25 +23,72 @@
 #include <X11/Xatom.h>
 #include "rdesktop.h"
 
+/*
+  To gain better understanding of this code, one could be assisted by the following documents:
+  - Inter-Client Communication Conventions Manual (ICCCM)
+    HTML: http://tronche.com/gui/x/icccm/
+    PDF:  http://ftp.xfree86.org/pub/XFree86/4.5.0/doc/PDF/icccm.pdf
+  - MSDN: Clipboard Formats
+    http://msdn.microsoft.com/library/en-us/winui/winui/windowsuserinterface/dataexchange/clipboard/clipboardformats.asp
+*/
+
 #define NUM_TARGETS 6
 
 extern Display *g_display;
 extern Window g_wnd;
 extern Time g_last_gesturetime;
 
-static Atom clipboard_atom, primary_atom, targets_atom, timestamp_atom;
-static Atom rdesktop_clipboard_target_atom, rdesktop_clipboard_formats_atom, incr_atom;
+/* Atoms of the two X selections we're dealing with: CLIPBOARD (explicit-copy) and PRIMARY (selection-copy) */
+static Atom clipboard_atom, primary_atom;
+/* Atom of the TARGETS clipboard target */
+static Atom targets_atom;
+/* Atom of the TIMESTAMP clipboard target */
+static Atom timestamp_atom;
+/* Atom _RDESKTOP_CLIPBOARD_TARGET which has multiple uses:
+   - The 'property' argument in XConvertSelection calls: This is the property of our
+     window into which XConvertSelection will store the received clipboard data.
+   - In a clipboard request of target _RDESKTOP_CLIPBOARD_FORMATS, an XA_INTEGER-typed
+     property carrying the Windows native (CF_...) format desired by the requestor.
+     Requestor set this property (e.g. requestor_wnd[_RDESKTOP_CLIPBOARD_TARGET] = CF_TEXT)
+     before requesting clipboard data from a fellow rdesktop using
+     the _RDESKTOP_CLIPBOARD_FORMATS target. */
+static Atom rdesktop_clipboard_target_atom;
+/* Atom _RDESKTOP_CLIPBOARD_FORMATS which has multiple uses:
+   - The clipboard target (X jargon for "clipboard format") for rdesktop-to-rdesktop interchange
+     of Windows native clipboard data.
+     This target cannot be used standalone; the requestor must keep the
+     _RDESKTOP_CLIPBOARD_TARGET property on his window denoting
+     the Windows native clipboard format being requested.
+   - The root window property set by rdesktop when it owns the clipboard,
+     denoting all Windows native clipboard formats it offers via
+     requests of the _RDESKTOP_CLIPBOARD_FORMATS target. */
+static Atom rdesktop_clipboard_formats_atom;
+/* Atom of the INCR clipboard type (see ICCCM on "INCR Properties") */
+static Atom incr_atom;
+/* Stores the last "selection request" (= another X client requesting clipboard data from us).
+   To satisfy such a request, we request the clipboard data from the RDP server.
+   When we receive the response from the RDP server (asynchronously), this variable gives us
+   the context to proceed. */
 static XSelectionRequestEvent selection_request;
+/* Array of offered clipboard targets that will be sent to fellow X clients upon a TARGETS request. */
 static Atom targets[NUM_TARGETS];
+/* Denotes that this client currently holds the PRIMARY selection. */
 static int have_primary = 0;
+/* Denotes that an rdesktop (not this rdesktop) is owning the selection,
+   allowing us to interchange Windows native clipboard data directly. */
 static int rdesktop_is_selection_owner = 0;
 
+/* Denotes that an INCR ("chunked") transfer is in progress. */
 static int g_waiting_for_INCR = 0;
+/* Buffers an INCR transfer. */
 static uint8 *g_clip_buffer = 0;
+/* Denotes the size of g_clip_buffer. */
 static uint32 g_clip_buflen = 0;
 
-/* Replace CR-LF to LF (well, rather removing all CR:s) This is done
-   in-place. The length is updated. Handles embedded nulls */
+/* Translate LF to CR-LF. To do this, we must allocate more memory.
+   The returned string is null-terminated, as required by CF_TEXT.
+   Does not stop on embedded nulls.
+   The length is updated. */
 static void
 crlf2lf(uint8 * data, uint32 * length)
 {
@@ -104,6 +151,10 @@ xclip_provide_selection(XSelectionRequestEvent * req, Atom type, unsigned int fo
 	XSendEvent(g_display, req->requestor, False, NoEventMask, &xev);
 }
 
+/* This function is called for SelectionNotify events.
+   The SelectionNotify message is sent from the clipboard owner to the requestor
+   after his request was satisfied.
+   If this function is called, we're the requestor side. */
 #ifndef MAKE_PROTO
 void
 xclip_handle_SelectionNotify(XSelectionEvent * event)
@@ -210,6 +261,10 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 	cliprdr_send_data(NULL, 0);
 }
 
+/* This function is called for SelectionRequest events.
+   The SelectionRequest message is sent from the requestor to the clipboard owner
+   to request clipboard data.
+ */
 void
 xclip_handle_SelectionRequest(XSelectionRequestEvent * event)
 {
@@ -253,6 +308,11 @@ xclip_handle_SelectionRequest(XSelectionRequestEvent * event)
 	/* wait for data */
 }
 
+/* When this rdesktop holds ownership over the clipboard, it means the clipboard data
+   is offered by the RDP server (and when its pasted inside RDP, there's no network
+   roundtrip). This event symbolizes this rdesktop lost onwership of the clipboard
+   to some other X client. We should find out what clipboard formats this other
+   client offers and announce that to RDP. */
 void
 xclip_handle_SelectionClear(void)
 {
@@ -262,6 +322,7 @@ xclip_handle_SelectionClear(void)
 	cliprdr_send_simple_native_format_announce(CF_TEXT);
 }
 
+/* Called when any property changes in our window or the root window. */
 void
 xclip_handle_PropertyNotify(XPropertyEvent * event)
 {
@@ -359,6 +420,11 @@ xclip_handle_PropertyNotify(XPropertyEvent * event)
 #endif
 
 
+/* Called when the RDP server announces new clipboard data formats.
+   In response, we:
+   - take ownership over the clipboard
+   - declare those formats in their Windows native form
+     to other rdesktop instances on this X server */
 void
 ui_clip_format_announce(uint8 * data, uint32 length)
 {
