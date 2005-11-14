@@ -72,7 +72,8 @@ cliprdr_send_simple_native_format_announce(uint32 format)
 void
 cliprdr_send_native_format_announce(uint8 * formats_data, uint32 formats_data_length)
 {
-	cliprdr_send_packet(CLIPRDR_FORMAT_ANNOUNCE, CLIPRDR_REQUEST, formats_data, formats_data_length);
+	cliprdr_send_packet(CLIPRDR_FORMAT_ANNOUNCE, CLIPRDR_REQUEST, formats_data,
+			    formats_data_length);
 }
 
 void

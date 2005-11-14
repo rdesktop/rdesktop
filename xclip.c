@@ -201,10 +201,10 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 		XFree(data);
 		g_waiting_for_INCR = 1;
 		return;
-	} 
-	
+	}
+
 	XDeleteProperty(g_display, g_wnd, rdesktop_clipboard_target_atom);
-		
+
 	/* Negotiate target format */
 	if (event->target == targets_atom)
 	{
@@ -255,7 +255,7 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 		cliprdr_send_simple_native_format_announce(CF_TEXT);
 	return;
 
- fail:
+      fail:
 	XDeleteProperty(g_display, g_wnd, rdesktop_clipboard_target_atom);
 	XFree(data);
 	cliprdr_send_data(NULL, 0);
@@ -326,7 +326,7 @@ xclip_handle_SelectionClear(void)
 void
 xclip_handle_PropertyNotify(XPropertyEvent * event)
 {
-	unsigned long nitems; 
+	unsigned long nitems;
 	unsigned long offset = 0;
 	unsigned long bytes_left = 1;
 	int format, res;
@@ -338,10 +338,12 @@ xclip_handle_PropertyNotify(XPropertyEvent * event)
 	{
 		DEBUG_CLIPBOARD(("x_clip_handle_PropertyNotify: g_waiting_for_INCR != 0\n"));
 
-		while (bytes_left > 0) {
-			if ((XGetWindowProperty(g_display, g_wnd, rdesktop_clipboard_target_atom, offset,
-						4096L, False, AnyPropertyType,
-						&type, &format, &nitems, &bytes_left, &data) != Success))
+		while (bytes_left > 0)
+		{
+			if ((XGetWindowProperty
+			     (g_display, g_wnd, rdesktop_clipboard_target_atom, offset, 4096L,
+			      False, AnyPropertyType, &type, &format, &nitems, &bytes_left,
+			      &data) != Success))
 			{
 				XFree(data);
 				return;
@@ -350,7 +352,8 @@ xclip_handle_PropertyNotify(XPropertyEvent * event)
 			if (nitems == 0)
 			{
 				XGetWindowAttributes(g_display, g_wnd, &wa);
-				XSelectInput(g_display, g_wnd, (wa.your_event_mask ^ PropertyChangeMask));
+				XSelectInput(g_display, g_wnd,
+					     (wa.your_event_mask ^ PropertyChangeMask));
 				XFree(data);
 				g_waiting_for_INCR = 0;
 
@@ -372,7 +375,7 @@ xclip_handle_PropertyNotify(XPropertyEvent * event)
 				uint32 length = nitems;
 				uint8 *tmp;
 
-				offset += (length/4);
+				offset += (length / 4);
 				DEBUG_CLIPBOARD(("Translating linebreaks before sending data\n"));
 				translated_data = lf2crlf(data, &length);
 
@@ -380,7 +383,8 @@ xclip_handle_PropertyNotify(XPropertyEvent * event)
 				strncpy((char *) tmp, (char *) g_clip_buffer, g_clip_buflen);
 				xfree(g_clip_buffer);
 
-				strncpy((char *) (tmp + g_clip_buflen), (char *) translated_data, length);
+				strncpy((char *) (tmp + g_clip_buflen), (char *) translated_data,
+					length);
 				xfree(translated_data);
 
 				g_clip_buffer = tmp;
