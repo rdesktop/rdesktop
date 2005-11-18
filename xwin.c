@@ -2445,20 +2445,27 @@ ui_draw_text(uint8 font, uint8 flags, uint8 opcode, int mixmode, int x, int y,
 		switch (text[i])
 		{
 			case 0xff:
-				if (i + 2 < length)
-					cache_put_text(text[i + 1], text, text[i + 2]);
-				else
+				if (i + 3 > length)
 				{
-					error("this shouldn't be happening\n");
-					exit(1);
+					/* short command, skip */
+					i = length = 0;
+					break;
 				}
+				cache_put_text(text[i + 1], text, text[i + 2]);
+				i += 3;
+				length -= i;
 				/* this will move pointer from start to first character after FF command */
-				length -= i + 3;
-				text = &(text[i + 3]);
+				text = &(text[i]);
 				i = 0;
 				break;
 
 			case 0xfe:
+				if (i + 3 > length)
+				{
+					/* short command, skip */
+					i = length = 0;
+					break;
+				}
 				entry = cache_get_text(text[i + 1]);
 				if (entry != NULL)
 				{
@@ -2473,10 +2480,7 @@ ui_draw_text(uint8 font, uint8 flags, uint8 opcode, int mixmode, int x, int y,
 					for (j = 0; j < entry->size; j++)
 						DO_GLYPH(((uint8 *) (entry->data)), j);
 				}
-				if (i + 2 < length)
-					i += 3;
-				else
-					i += 2;
+				i += 3;
 				length -= i;
 				/* this will move pointer from start to first character after FE command */
 				text = &(text[i]);
