@@ -2467,7 +2467,7 @@ ui_draw_text(uint8 font, uint8 flags, uint8 opcode, int mixmode, int x, int y,
 					break;
 				}
 				entry = cache_get_text(text[i + 1]);
-				if (entry != NULL)
+				if (entry->data != NULL)
 				{
 					if ((((uint8 *) (entry->data))[1] ==
 					     0) && (!(flags & TEXT2_IMPLICIT_X)))
