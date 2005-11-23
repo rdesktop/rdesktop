@@ -2445,9 +2445,13 @@ ui_draw_text(uint8 font, uint8 flags, uint8 opcode, int mixmode, int x, int y,
 		switch (text[i])
 		{
 			case 0xff:
+				/* At least two bytes needs to follow */
 				if (i + 3 > length)
 				{
-					/* short command, skip */
+					warning("Skipping short 0xff command:");
+					for (j = 0; j < length; j++)
+						fprintf(stderr, "%02x ", text[j]);
+					fprintf(stderr, "\n");
 					i = length = 0;
 					break;
 				}
@@ -2460,17 +2464,21 @@ ui_draw_text(uint8 font, uint8 flags, uint8 opcode, int mixmode, int x, int y,
 				break;
 
 			case 0xfe:
-				if (i + 3 > length)
+				/* At least one byte needs to follow */
+				if (i + 2 > length)
 				{
-					/* short command, skip */
+					warning("Skipping short 0xfe command:");
+					for (j = 0; j < length; j++)
+						fprintf(stderr, "%02x ", text[j]);
+					fprintf(stderr, "\n");
 					i = length = 0;
 					break;
 				}
 				entry = cache_get_text(text[i + 1]);
 				if (entry->data != NULL)
 				{
-					if ((((uint8 *) (entry->data))[1] ==
-					     0) && (!(flags & TEXT2_IMPLICIT_X)))
+					if ((((uint8 *) (entry->data))[1] == 0)
+					    && (!(flags & TEXT2_IMPLICIT_X)) && (i + 2 < length))
 					{
 						if (flags & TEXT2_VERTICAL)
 							y += text[i + 2];
@@ -2480,7 +2488,10 @@ ui_draw_text(uint8 font, uint8 flags, uint8 opcode, int mixmode, int x, int y,
 					for (j = 0; j < entry->size; j++)
 						DO_GLYPH(((uint8 *) (entry->data)), j);
 				}
-				i += 3;
+				if (i + 2 < length)
+					i += 3;
+				else
+					i += 2;
 				length -= i;
 				/* this will move pointer from start to first character after FE command */
 				text = &(text[i]);
