@@ -3,7 +3,7 @@
    Sound Channel Process Functions - SGI/IRIX
    Copyright (C) Matthew Chapman 2003
    Copyright (C) GuoJunBo guojunbo@ict.ac.cn 2003
-   Copyright (C) Jeremy Meng voidfoo@cwazy.co.uk 2004
+   Copyright (C) Jeremy Meng void.foo@gmail.com 2004, 2005
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@
 #include <errno.h>
 #include <dmedia/audio.h>
 
-#define IRIX_DEBUG 1
+/* #define IRIX_DEBUG 1 */
 
 #define IRIX_MAX_VOL     65535
 
@@ -332,6 +332,7 @@ wave_out_play(void)
 /*  				fprintf(stderr,"Busy playing...\n"); */
 #endif
 				g_dsp_busy = True;
+				usleep(10);
 				return;
 			}
 		}
