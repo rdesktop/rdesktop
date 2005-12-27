@@ -92,11 +92,11 @@ extern BOOL g_rdpsnd;
 #define PROP_MOTIF_WM_HINTS_ELEMENTS    5
 typedef struct
 {
-	uint32 flags;
-	uint32 functions;
-	uint32 decorations;
-	sint32 inputMode;
-	uint32 status;
+	unsigned long flags;
+	unsigned long functions;
+	unsigned long decorations;
+	long inputMode;
+	unsigned long status;
 }
 PropMotifWmHints;
 
