@@ -17,6 +17,7 @@ CC          = @CC@
 INSTALL     = @INSTALL@
 CFLAGS      = @CFLAGS@ @X_CFLAGS@ @DEFS@ -DKEYMAP_PATH=\"$(KEYMAP_PATH)\"
 LDFLAGS     = @LDFLAGS@ @LIBS@ @X_LIBS@ @X_EXTRA_LIBS@
+STRIP       = @STRIP@
 
 TARGETS     = rdesktop @RDP2VNCTARGET@
 VNCINC      = @VNCINC@
@@ -56,7 +57,7 @@ install: installbin installkeymaps installman
 installbin: rdesktop
 	mkdir -p $(DESTDIR)$(bindir)
 	$(INSTALL) rdesktop $(DESTDIR)$(bindir)
-	strip $(DESTDIR)$(bindir)/rdesktop
+	$(STRIP) $(DESTDIR)$(bindir)/rdesktop
 	chmod 755 $(DESTDIR)$(bindir)/rdesktop
 
 .PHONY: installman
