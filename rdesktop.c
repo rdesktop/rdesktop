@@ -51,7 +51,7 @@ char g_title[64] = "";
 char g_username[64];
 char g_hostname[16];
 char g_keymapname[PATH_MAX] = "";
-int g_keylayout = 0x409;	/* Defaults to US keyboard layout */
+unsigned int g_keylayout = 0x409;	/* Defaults to US keyboard layout */
 int g_keyboard_type = 0x4;	/* Defaults to US keyboard layout */
 int g_keyboard_subtype = 0x0;	/* Defaults to US keyboard layout */
 int g_keyboard_functionkeys = 0xc;	/* Defaults to US keyboard layout */

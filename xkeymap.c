@@ -41,7 +41,7 @@
 extern Display *g_display;
 extern Window g_wnd;
 extern char g_keymapname[16];
-extern int g_keylayout;
+extern unsigned int g_keylayout;
 extern int g_keyboard_type;
 extern int g_keyboard_subtype;
 extern int g_keyboard_functionkeys;
@@ -321,7 +321,7 @@ xkeymap_read(char *mapname)
 		/* map */
 		if (str_startswith(line, "map "))
 		{
-			g_keylayout = strtol(line + sizeof("map ") - 1, NULL, 16);
+			g_keylayout = strtoul(line + sizeof("map ") - 1, NULL, 16);
 			DEBUG_KBD(("Keylayout 0x%x\n", g_keylayout));
 			continue;
 		}

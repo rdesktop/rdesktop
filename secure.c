@@ -29,7 +29,7 @@
 extern char g_hostname[16];
 extern int g_width;
 extern int g_height;
-extern int g_keylayout;
+extern unsigned int g_keylayout;
 extern int g_keyboard_type;
 extern int g_keyboard_subtype;
 extern int g_keyboard_functionkeys;
