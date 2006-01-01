@@ -1,6 +1,6 @@
 # generated from XKB map ko
 include common
-map 0x412
+map 0xe0010412
 exclam 0x02 shift
 at 0x03 shift
 numbersign 0x04 shift
