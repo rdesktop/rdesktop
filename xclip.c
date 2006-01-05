@@ -146,13 +146,13 @@ utf16_lf2crlf(uint8 * data, uint32 * size)
 	if (result == NULL)
 		return NULL;
 
-	inptr = (uint16*)data;
-	outptr = (uint16*)result;
+	inptr = (uint16 *) data;
+	outptr = (uint16 *) result;
 
 	/* Check for a reversed BOM */
 	Bool swap_endianess = (*inptr == 0xfffe);
 
-	while ((uint8*)inptr < data + *size)
+	while ((uint8 *) inptr < data + *size)
 	{
 		uint16 uvalue = *inptr;
 		if (swap_endianess)
@@ -161,8 +161,8 @@ utf16_lf2crlf(uint8 * data, uint32 * size)
 			*outptr++ = swap_endianess ? 0x0d00 : 0x0d;
 		*outptr++ = *inptr++;
 	}
-	*outptr++ = 0; /* null termination */
-	*size = (uint8*)outptr - result;
+	*outptr++ = 0;		/* null termination */
+	*size = (uint8 *) outptr - result;
 
 	return result;
 }
@@ -260,12 +260,11 @@ helper_cliprdr_send_empty_response()
    to the expected RDP format as necessary. Returns true if data was sent.
  */
 static Bool
-xclip_send_data_with_convert(uint8* source, size_t source_size, Atom target)
+xclip_send_data_with_convert(uint8 * source, size_t source_size, Atom target)
 {
-	#ifdef USE_UNICODE_CLIPBOARD
+#ifdef USE_UNICODE_CLIPBOARD
 	if (target == format_string_atom ||
-	    target == format_unicode_atom ||
-	    target == format_utf8_string_atom)
+	    target == format_unicode_atom || target == format_utf8_string_atom)
 	{
 		if (rdp_clipboard_request_format != RDP_CF_TEXT)
 			return False;
@@ -276,14 +275,14 @@ xclip_send_data_with_convert(uint8* source, size_t source_size, Atom target)
 		   WinNT versions are Unicode-minded).
 		 */
 		size_t unicode_buffer_size;
-		char* unicode_buffer;
+		char *unicode_buffer;
 		iconv_t cd;
 
 		if (target == format_string_atom)
 		{
-			char* locale_charset = nl_langinfo(CODESET);
+			char *locale_charset = nl_langinfo(CODESET);
 			cd = iconv_open(WINDOWS_CODEPAGE, locale_charset);
-			if (cd == (iconv_t)-1)
+			if (cd == (iconv_t) - 1)
 			{
 				DEBUG_CLIPBOARD(("Locale charset %s not found in iconv. Unable to convert clipboard text.\n", locale_charset));
 				return False;
@@ -293,7 +292,7 @@ xclip_send_data_with_convert(uint8* source, size_t source_size, Atom target)
 		else if (target == format_unicode_atom)
 		{
 			cd = iconv_open(WINDOWS_CODEPAGE, "UCS-2");
-			if (cd == (iconv_t)-1)
+			if (cd == (iconv_t) - 1)
 			{
 				return False;
 			}
@@ -302,7 +301,7 @@ xclip_send_data_with_convert(uint8* source, size_t source_size, Atom target)
 		else if (target == format_utf8_string_atom)
 		{
 			cd = iconv_open(WINDOWS_CODEPAGE, "UTF-8");
-			if (cd == (iconv_t)-1)
+			if (cd == (iconv_t) - 1)
 			{
 				return False;
 			}
@@ -318,18 +317,21 @@ xclip_send_data_with_convert(uint8* source, size_t source_size, Atom target)
 
 		unicode_buffer = xmalloc(unicode_buffer_size);
 		size_t unicode_buffer_size_remaining = unicode_buffer_size;
-		char* unicode_buffer_remaining = unicode_buffer;
-		char* data_remaining = (char*)source;
+		char *unicode_buffer_remaining = unicode_buffer;
+		char *data_remaining = (char *) source;
 		size_t data_size_remaining = source_size;
-		iconv(cd, &data_remaining, &data_size_remaining, &unicode_buffer_remaining, &unicode_buffer_size_remaining);
+		iconv(cd, &data_remaining, &data_size_remaining, &unicode_buffer_remaining,
+		      &unicode_buffer_size_remaining);
 		iconv_close(cd);
 
 		/* translate linebreaks */
 		uint32 translated_data_size = unicode_buffer_size - unicode_buffer_size_remaining;
-		uint8* translated_data = utf16_lf2crlf((uint8*)unicode_buffer, &translated_data_size);
+		uint8 *translated_data =
+			utf16_lf2crlf((uint8 *) unicode_buffer, &translated_data_size);
 		if (translated_data != NULL)
 		{
-			DEBUG_CLIPBOARD(("Sending Unicode string of %d bytes\n", translated_data_size));
+			DEBUG_CLIPBOARD(("Sending Unicode string of %d bytes\n",
+					 translated_data_size));
 			cliprdr_send_data(translated_data, translated_data_size);
 			xfree(translated_data);	/* Not the same thing as XFree! */
 		}
@@ -338,7 +340,7 @@ xclip_send_data_with_convert(uint8* source, size_t source_size, Atom target)
 
 		return True;
 	}
-	#else
+#else
 	if (target == format_string_atom)
 	{
 		uint8 *translated_data;
@@ -357,7 +359,7 @@ xclip_send_data_with_convert(uint8* source, size_t source_size, Atom target)
 
 		return True;
 	}
-	#endif
+#endif
 	else if (target == rdesktop_clipboard_formats_atom)
 	{
 		helper_cliprdr_send_response(source, source_size + 1);
@@ -432,7 +434,7 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 		   (ignore TEXT and COMPOUND_TEXT because we don't have code to handle them)
 		 */
 		int text_target_satisfaction = 0;
-		Atom best_text_target = 0; /* measures how much we're satisfied with what we found */
+		Atom best_text_target = 0;	/* measures how much we're satisfied with what we found */
 		if (type != None)
 		{
 			supported_targets = (Atom *) data;
@@ -449,7 +451,7 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 						text_target_satisfaction = 1;
 					}
 				}
-				#ifdef USE_UNICODE_CLIPBOARD
+#ifdef USE_UNICODE_CLIPBOARD
 				else if (supported_targets[i] == format_unicode_atom)
 				{
 					if (text_target_satisfaction < 2)
@@ -468,7 +470,7 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 						text_target_satisfaction = 3;
 					}
 				}
-				#endif
+#endif
 			}
 		}
 
@@ -477,7 +479,8 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 		 */
 		if (best_text_target != 0)
 		{
-			XConvertSelection(g_display, clipboard_atom, best_text_target, rdesktop_clipboard_target_atom, g_wnd, event->time);
+			XConvertSelection(g_display, clipboard_atom, best_text_target,
+					  rdesktop_clipboard_target_atom, g_wnd, event->time);
 			return;
 		}
 		else
@@ -550,27 +553,27 @@ xclip_handle_SelectionRequest(XSelectionRequestEvent * event)
 			   Otherwise, we default to RDP_CF_TEXT.
 			 */
 			res = XGetWindowProperty(g_display, event->requestor,
-						 rdesktop_clipboard_target_atom, 0, 1, True, XA_INTEGER,
-						 &type, &format, &nitems, &bytes_left, &prop_return);
+						 rdesktop_clipboard_target_atom, 0, 1, True,
+						 XA_INTEGER, &type, &format, &nitems, &bytes_left,
+						 &prop_return);
 			wanted_format = (uint32 *) prop_return;
 			format = (res == Success) ? *wanted_format : RDP_CF_TEXT;
 			XFree(prop_return);
 		}
-		else if (event->target == format_string_atom ||
-			 event->target == XA_STRING)
+		else if (event->target == format_string_atom || event->target == XA_STRING)
 		{
 			/* STRING and XA_STRING are defined to be ISO8859-1 */
 			format = CF_TEXT;
 		}
 		else if (event->target == format_utf8_string_atom)
 		{
-			#ifdef USE_UNICODE_CLIPBOARD
+#ifdef USE_UNICODE_CLIPBOARD
 			format = CF_UNICODETEXT;
-			#else
+#else
 			DEBUG_CLIPBOARD(("Requested target unavailable due to lack of Unicode support. (It was not in TARGETS, so why did you ask for it?!)\n"));
 			xclip_refuse_selection(event);
 			return;
-			#endif
+#endif
 		}
 		else if (event->target == format_unicode_atom)
 		{
@@ -587,7 +590,7 @@ xclip_handle_SelectionRequest(XSelectionRequestEvent * event)
 		cliprdr_send_data_request(format);
 		selection_request = *event;
 		has_selection_request = True;
-		return;	/* wait for data */
+		return;		/* wait for data */
 	}
 }
 
@@ -651,7 +654,8 @@ xclip_handle_PropertyNotify(XPropertyEvent * event)
 
 				if (g_clip_buflen > 0)
 				{
-					if (!xclip_send_data_with_convert(g_clip_buffer, g_clip_buflen, g_incr_target))
+					if (!xclip_send_data_with_convert
+					    (g_clip_buffer, g_clip_buflen, g_incr_target))
 					{
 						helper_cliprdr_send_empty_response();
 					}
@@ -663,7 +667,7 @@ xclip_handle_PropertyNotify(XPropertyEvent * event)
 			else
 			{
 				/* Another chunk in the INCR transfer */
-				offset += (nitems / 4); /* offset at which to begin the next slurp */
+				offset += (nitems / 4);	/* offset at which to begin the next slurp */
 				g_clip_buffer = xrealloc(g_clip_buffer, g_clip_buflen + nitems);
 				memcpy(g_clip_buffer + g_clip_buflen, data, nitems);
 				g_clip_buflen += nitems;
@@ -677,7 +681,7 @@ xclip_handle_PropertyNotify(XPropertyEvent * event)
 
 	if ((event->atom == rdesktop_clipboard_formats_atom) &&
 	    (event->window == DefaultRootWindow(g_display)) &&
-	    !have_primary /* not interested in our own events */)
+	    !have_primary /* not interested in our own events */ )
 	{
 		if (event->state == PropertyNewValue)
 		{
@@ -685,8 +689,8 @@ xclip_handle_PropertyNotify(XPropertyEvent * event)
 
 			res = XGetWindowProperty(g_display, DefaultRootWindow(g_display),
 						 rdesktop_clipboard_formats_atom, 0,
-						 XMaxRequestSize(g_display), False, XA_STRING, &type,
-						 &format, &nitems, &bytes_left, &data);
+						 XMaxRequestSize(g_display), False, XA_STRING,
+						 &type, &format, &nitems, &bytes_left, &data);
 
 			if ((res == Success) && (nitems > 0))
 			{
@@ -735,44 +739,44 @@ ui_clip_handle_data(uint8 * data, uint32 length)
 {
 	BOOL free_data = False;
 
-	if (selection_request.target == format_string_atom ||
-	    selection_request.target == XA_STRING)
- 	{
+	if (selection_request.target == format_string_atom || selection_request.target == XA_STRING)
+	{
 		/* We're expecting a CF_TEXT response */
- 		uint8 *firstnull;
+		uint8 *firstnull;
 
- 		/* translate linebreaks */
- 		crlf2lf(data, &length);
+		/* translate linebreaks */
+		crlf2lf(data, &length);
 
- 		/* Only send data up to null byte, if any */
- 		firstnull = (uint8 *) strchr((char *) data, '\0');
- 		if (firstnull)
- 		{
- 			length = firstnull - data + 1;
- 		}
- 	}
+		/* Only send data up to null byte, if any */
+		firstnull = (uint8 *) strchr((char *) data, '\0');
+		if (firstnull)
+		{
+			length = firstnull - data + 1;
+		}
+	}
 #ifdef USE_UNICODE_CLIPBOARD
 	else if (selection_request.target == format_utf8_string_atom)
 	{
 		/* We're expecting a CF_UNICODETEXT response */
 		iconv_t cd = iconv_open("UTF-8", WINDOWS_CODEPAGE);
-		if (cd != (iconv_t)-1)
+		if (cd != (iconv_t) - 1)
 		{
 			size_t utf8_length = length * 2;
-			char* utf8_data = malloc(utf8_length);
+			char *utf8_data = malloc(utf8_length);
 			size_t utf8_length_remaining = utf8_length;
-			char* utf8_data_remaining = utf8_data;
-			char* data_remaining = (char*)data;
-			size_t length_remaining = (size_t)length;
+			char *utf8_data_remaining = utf8_data;
+			char *data_remaining = (char *) data;
+			size_t length_remaining = (size_t) length;
 			if (utf8_data == NULL)
 			{
 				iconv_close(cd);
 				return;
 			}
-			iconv(cd, &data_remaining, &length_remaining, &utf8_data_remaining, &utf8_length_remaining);
+			iconv(cd, &data_remaining, &length_remaining, &utf8_data_remaining,
+			      &utf8_length_remaining);
 			iconv_close(cd);
 			free_data = True;
-			data = (uint8*)utf8_data;
+			data = (uint8 *) utf8_data;
 			length = utf8_length - utf8_length_remaining;
 		}
 	}
@@ -868,9 +872,9 @@ xclip_init(void)
 	targets[num_targets++] = timestamp_atom;
 	targets[num_targets++] = rdesktop_clipboard_formats_atom;
 	targets[num_targets++] = format_string_atom;
-	#ifdef USE_UNICODE_CLIPBOARD
+#ifdef USE_UNICODE_CLIPBOARD
 	targets[num_targets++] = format_utf8_string_atom;
-	#endif
+#endif
 	targets[num_targets++] = format_unicode_atom;
 	targets[num_targets++] = XA_STRING;
 
