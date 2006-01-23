@@ -50,8 +50,8 @@ STREAM channel_init(VCHANNEL * channel, uint32 length);
 void channel_send(STREAM s, VCHANNEL * channel);
 void channel_process(STREAM s, uint16 mcs_channel);
 /* cliprdr.c */
-void cliprdr_send_native_format_announce(uint8 * formats_data, uint32 formats_data_length);
 void cliprdr_send_simple_native_format_announce(uint32 format);
+void cliprdr_send_native_format_announce(uint8 * formats_data, uint32 formats_data_length);
 void cliprdr_send_data_request(uint32 format);
 void cliprdr_send_data(uint8 * data, uint32 length);
 BOOL cliprdr_init(void);
