@@ -802,7 +802,7 @@ translate24to32(const uint8 * data, uint8 * out, uint8 * end)
 #else
 		REPEAT4
 		(
-		 /* Only read 3 bytes. Reading 4 bytes means reading beyound buffer. */
+		 /* Only read 3 bytes. Reading 4 bytes means reading beyond buffer. */
 		 *((uint32 *) out) = *((uint16 *) data) + (*((uint8 *) data + 2) << 16);
 		 out += 4;
 		 data += 3;
