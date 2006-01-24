@@ -37,7 +37,7 @@ extern BOOL g_encryption;
 extern BOOL g_licence_issued;
 extern BOOL g_use_rdp5;
 extern BOOL g_console_session;
-extern int g_server_bpp;
+extern int g_server_depth;
 extern uint16 mcs_userid;
 extern VCHANNEL g_channels[];
 extern unsigned int g_num_channels;
@@ -459,7 +459,7 @@ sec_out_mcs_data(STREAM s)
 	out_uint16_le(s, 1);
 
 	out_uint32(s, 0);
-	out_uint8(s, g_server_bpp);
+	out_uint8(s, g_server_depth);
 	out_uint16_le(s, 0x0700);
 	out_uint8(s, 0);
 	out_uint32_le(s, 1);
@@ -764,7 +764,7 @@ sec_process_srv_info(STREAM s)
 	if (1 == g_server_rdp_version)
 	{
 		g_use_rdp5 = 0;
-		g_server_bpp = 8;
+		g_server_depth = 8;
 	}
 }
 

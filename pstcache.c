@@ -24,7 +24,7 @@
 
 #define IS_PERSISTENT(id) (id < 8 && g_pstcache_fd[id] > 0)
 
-extern int g_server_bpp;
+extern int g_server_depth;
 extern BOOL g_bitmap_cache;
 extern BOOL g_bitmap_cache_persist_enable;
 extern BOOL g_bitmap_cache_precache;
@@ -131,8 +131,8 @@ pstcache_enumerate(uint8 id, HASH_KEY * keylist)
 		{
 			memcpy(keylist[idx], cellhdr.key, sizeof(HASH_KEY));
 
-			/* Pre-cache (not possible for 8bpp because 8bpp needs a colourmap) */
-			if (g_bitmap_cache_precache && cellhdr.stamp && g_server_bpp > 8)
+			/* Pre-cache (not possible for 8 bit colour depth cause it needs a colourmap) */
+			if (g_bitmap_cache_precache && cellhdr.stamp && g_server_depth > 8)
 				pstcache_load_bitmap(id, idx);
 
 			/* Sort by stamp */
@@ -179,7 +179,7 @@ pstcache_init(uint8 cache_id)
 		return False;
 	}
 
-	g_pstcache_Bpp = (g_server_bpp + 7) / 8;
+	g_pstcache_Bpp = (g_server_depth + 7) / 8;
 	sprintf(filename, "cache/pstcache_%d_%d", cache_id, g_pstcache_Bpp);
 	DEBUG(("persistent bitmap cache file: %s\n", filename));
 

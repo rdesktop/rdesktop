@@ -38,7 +38,9 @@ extern BOOL g_fullscreen;
 extern BOOL g_grab_keyboard;
 extern BOOL g_hide_decorations;
 extern char g_title[];
-extern int g_server_bpp;
+/* Color depth of the RDP session.
+   As of RDP 5.1, it may be 8, 15, 16 or 24. */
+extern int g_server_depth;
 extern int g_win_button_size;
 
 Display *g_display;
@@ -53,7 +55,13 @@ static GC g_gc = NULL;
 static GC g_create_bitmap_gc = NULL;
 static GC g_create_glyph_gc = NULL;
 static Visual *g_visual;
+/* Color depth of the X11 visual of our window (e.g. 24 for True Color R8G8B visual).
+   This may be 32 for R8G8B8 visuals, and then the rest of the bits are undefined
+   as far as we're concerned. */
 static int g_depth;
+/* Bits-per-Pixel of the pixmaps we'll be using to draw on our window.
+   This may be larger than g_depth, in which case some of the bits would
+   be kept solely for alignment (e.g. 32bpp pixmaps on a 24bpp visual). */
 static int g_bpp;
 static XIM g_IM;
 static XIC g_IC;
@@ -63,7 +71,13 @@ static HCURSOR g_null_cursor = NULL;
 static Atom g_protocol_atom, g_kill_atom;
 static BOOL g_focused;
 static BOOL g_mouse_in_wnd;
-static BOOL g_arch_match = False;	/* set to True if RGB XServer and little endian */
+/* Indicates the visual is has 15, 16 or 24 depth
+   and the same color channel masks as its RDP equivalent. */
+static BOOL g_compatible_depth;
+/* Indicates whether RDP's bitmaps and our XImages have the same
+   binary format. If so, we can avoid an expensive translation.
+   If this is True, so is g_compatible_depth. */
+static BOOL g_no_translate_image = False;
 
 /* endianness */
 static BOOL g_host_be;
@@ -150,7 +164,7 @@ extern BOOL g_owncolmap;
 static Colormap g_xcolmap;
 static uint32 *g_colmap = NULL;
 
-#define TRANSLATE(col)		( g_server_bpp != 8 ? translate_colour(col) : g_owncolmap ? col : g_colmap[col] )
+#define TRANSLATE(col)		( g_server_depth != 8 ? translate_colour(col) : g_owncolmap ? col : g_colmap[col] )
 #define SET_FOREGROUND(col)	XSetForeground(g_display, g_gc, TRANSLATE(col));
 #define SET_BACKGROUND(col)	XSetBackground(g_display, g_gc, TRANSLATE(col));
 
@@ -240,7 +254,7 @@ static uint32
 translate_colour(uint32 colour)
 {
 	PixelColour pc;
-	switch (g_server_bpp)
+	switch (g_server_depth)
 	{
 		case 15:
 			SPLITCOLOUR15(colour, pc);
@@ -250,6 +264,12 @@ translate_colour(uint32 colour)
 			break;
 		case 24:
 			SPLITCOLOUR24(colour, pc);
+			break;
+		default:
+			/* Avoid warning */
+			pc.red = 0;
+			pc.green = 0;
+			pc.blue = 0;
 			break;
 	}
 	return MAKECOLOUR(pc);
@@ -302,7 +322,7 @@ translate8to16(const uint8 * data, uint8 * out, uint8 * end)
 {
 	uint16 value;
 
-	if (g_arch_match)
+	if (g_compatible_depth)
 	{
 		/* *INDENT-OFF* */
 		REPEAT2
@@ -336,7 +356,7 @@ translate8to24(const uint8 * data, uint8 * out, uint8 * end)
 {
 	uint32 value;
 
-	if (g_xserver_be)
+	if (g_compatible_depth)
 	{
 		while (out < end)
 		{
@@ -359,7 +379,7 @@ translate8to32(const uint8 * data, uint8 * out, uint8 * end)
 {
 	uint32 value;
 
-	if (g_arch_match)
+	if (g_compatible_depth)
 	{
 		/* *INDENT-OFF* */
 		REPEAT4
@@ -431,7 +451,7 @@ translate15to24(const uint16 * data, uint8 * out, uint8 * end)
 	uint16 pixel;
 	PixelColour pc;
 
-	if (g_arch_match)
+	if (g_compatible_depth)
 	{
 		/* *INDENT-OFF* */
 		REPEAT3
@@ -481,7 +501,7 @@ translate15to32(const uint16 * data, uint8 * out, uint8 * end)
 	uint32 value;
 	PixelColour pc;
 
-	if (g_arch_match)
+	if (g_compatible_depth)
 	{
 		/* *INDENT-OFF* */
 		REPEAT4
@@ -589,7 +609,7 @@ translate16to24(const uint16 * data, uint8 * out, uint8 * end)
 	uint16 pixel;
 	PixelColour pc;
 
-	if (g_arch_match)
+	if (g_compatible_depth)
 	{
 		/* *INDENT-OFF* */
 		REPEAT3
@@ -659,7 +679,7 @@ translate16to32(const uint16 * data, uint8 * out, uint8 * end)
 	uint32 value;
 	PixelColour pc;
 
-	if (g_arch_match)
+	if (g_compatible_depth)
 	{
 		/* *INDENT-OFF* */
 		REPEAT4
@@ -788,7 +808,7 @@ translate24to32(const uint8 * data, uint8 * out, uint8 * end)
 	uint32 value;
 	PixelColour pc;
 
-	if (g_arch_match)
+	if (g_compatible_depth)
 	{
 		/* *INDENT-OFF* */
 #ifdef NEED_ALIGN
@@ -843,16 +863,19 @@ translate_image(int width, int height, uint8 * data)
 	uint8 *out;
 	uint8 *end;
 
-	/* if server and xserver bpp match, */
-	/* and arch(endian) matches, no need to translate */
-	/* just return data */
-	if (g_arch_match)
+	/*
+	   If RDP depth and X Visual depths match,
+	   and arch(endian) matches, no need to translate:
+	   just return data.
+	   Note: select_visual should've already ensured g_no_translate
+	   is only set for compatible depths, but the RDP depth might've
+	   changed during connection negotiations.
+	 */
+	if (g_no_translate_image)
 	{
-		if (g_depth == 15 && g_server_bpp == 15)
-			return data;
-		if (g_depth == 16 && g_server_bpp == 16)
-			return data;
-		if (g_depth == 24 && g_bpp == 24 && g_server_bpp == 24)
+		if ((g_depth == 15 && g_server_depth == 15) ||
+		    (g_depth == 16 && g_server_depth == 16) ||
+		    (g_depth == 24 && g_server_depth == 24))
 			return data;
 	}
 
@@ -860,7 +883,7 @@ translate_image(int width, int height, uint8 * data)
 	out = (uint8 *) xmalloc(size);
 	end = out + size;
 
-	switch (g_server_bpp)
+	switch (g_server_depth)
 	{
 		case 24:
 			switch (g_bpp)
@@ -958,16 +981,212 @@ calculate_shifts(uint32 mask, int *shift_r, int *shift_l)
 	*shift_r = 8 - ffs(mask & ~(mask >> 1));
 }
 
+/* Given a mask of a colour channel (e.g. XVisualInfo.red_mask),
+   calculates the bits-per-pixel of this channel (a.k.a. colour weight).
+ */
+static unsigned
+calculate_mask_weight(uint32 mask)
+{
+	unsigned weight = 0;
+	do
+	{
+		weight += (mask & 1);
+	}
+	while (mask >>= 1);
+	return weight;
+}
+
+static BOOL
+select_visual()
+{
+	XPixmapFormatValues *pfm;
+	int pixmap_formats_count, visuals_count;
+	XVisualInfo *vmatches = NULL;
+	XVisualInfo template;
+	int i;
+	unsigned red_weight, blue_weight, green_weight;
+
+	red_weight = blue_weight = green_weight = 0;
+
+	pfm = XListPixmapFormats(g_display, &pixmap_formats_count);
+	if (pfm == NULL)
+	{
+		error("Unable to get list of pixmap formats from display.\n");
+		XCloseDisplay(g_display);
+		return False;
+	}
+
+	/* Search for best TrueColor visual */
+	template.class = TrueColor;
+	vmatches = XGetVisualInfo(g_display, VisualClassMask, &template, &visuals_count);
+	g_visual = NULL;
+	g_no_translate_image = False;
+	g_compatible_depth = False;
+	if (vmatches != NULL)
+	{
+		for (i = 0; i < visuals_count; ++i)
+		{
+			XVisualInfo *visual_info = &vmatches[i];
+
+			/* Try to find a no-translation visual that'll
+			   allow us to use RDP bitmaps directly as ZPixmaps. */
+			if (!g_xserver_be && (((visual_info->depth == 15) &&
+					       /* R5G5B5 */
+					       (visual_info->red_mask == 0x7c00) &&
+					       (visual_info->green_mask == 0x3e0) &&
+					       (visual_info->blue_mask == 0x1f)) ||
+					      ((visual_info->depth == 16) &&
+					       /* R5G6B5 */
+					       (visual_info->red_mask == 0xf800) &&
+					       (visual_info->green_mask == 0x7e0) &&
+					       (visual_info->blue_mask == 0x1f)) ||
+					      ((visual_info->depth == 24) &&
+					       /* R8G8B8 */
+					       (visual_info->red_mask == 0xff0000) &&
+					       (visual_info->green_mask == 0xff00) &&
+					       (visual_info->blue_mask == 0xff))))
+			{
+				g_visual = visual_info->visual;
+				g_depth = visual_info->depth;
+				g_compatible_depth = True;
+				g_no_translate_image = (visual_info->depth == g_server_depth);
+				if (g_no_translate_image)
+					/* We found the best visual */
+					break;
+			}
+			else
+			{
+				g_compatible_depth = False;
+			}
+
+			if (visual_info->depth > 24)
+			{
+				/* Avoid 32-bit visuals and likes like the plague.
+				   They're either untested or proven to work bad
+				   (e.g. nvidia's Composite 32-bit visual).
+				   Most implementation offer a 24-bit visual anyway. */
+				continue;
+			}
+
+			/* Only care for visuals, for whose BPPs (not depths!)
+			   we have a translateXtoY function. */
+			BOOL can_translate_to_bpp = False;
+			int j;
+			for (j = 0; j < pixmap_formats_count; ++j)
+			{
+				if (pfm[j].depth == visual_info->depth)
+				{
+					if ((pfm[j].bits_per_pixel == 16) ||
+					    (pfm[j].bits_per_pixel == 24) ||
+					    (pfm[j].bits_per_pixel == 32))
+					{
+						can_translate_to_bpp = True;
+					}
+					break;
+				}
+			}
+
+			/* Prefer formats which have the most colour depth.
+			   We're being truly aristocratic here, minding each
+			   weight on its own. */
+			if (can_translate_to_bpp)
+			{
+				unsigned vis_red_weight =
+					calculate_mask_weight(visual_info->red_mask);
+				unsigned vis_green_weight =
+					calculate_mask_weight(visual_info->green_mask);
+				unsigned vis_blue_weight =
+					calculate_mask_weight(visual_info->blue_mask);
+				if ((vis_red_weight >= red_weight)
+				    && (vis_green_weight >= green_weight)
+				    && (vis_blue_weight >= blue_weight))
+				{
+					red_weight = vis_red_weight;
+					green_weight = vis_green_weight;
+					blue_weight = vis_blue_weight;
+					g_visual = visual_info->visual;
+					g_depth = visual_info->depth;
+				}
+			}
+		}
+		XFree(vmatches);
+	}
+
+	if (g_visual != NULL)
+	{
+		g_owncolmap = False;
+		calculate_shifts(g_visual->red_mask, &g_red_shift_r, &g_red_shift_l);
+		calculate_shifts(g_visual->green_mask, &g_green_shift_r, &g_green_shift_l);
+		calculate_shifts(g_visual->blue_mask, &g_blue_shift_r, &g_blue_shift_l);
+	}
+	else
+	{
+		template.class = PseudoColor;
+		template.depth = 8;
+		template.colormap_size = 256;
+		vmatches =
+			XGetVisualInfo(g_display,
+				       VisualClassMask | VisualDepthMask | VisualColormapSizeMask,
+				       &template, &visuals_count);
+		if (vmatches == NULL)
+		{
+			error("No usable TrueColor or PseudoColor visuals on this display.\n");
+			XCloseDisplay(g_display);
+			XFree(pfm);
+			return False;
+		}
+
+		/* we use a colourmap, so the default visual should do */
+		g_owncolmap = True;
+		g_visual = vmatches[0].visual;
+		g_depth = vmatches[0].depth;
+	}
+
+	g_bpp = 0;
+	for (i = 0; i < pixmap_formats_count; ++i)
+	{
+		XPixmapFormatValues *pf = &pfm[i];
+		if (pf->depth == g_depth)
+		{
+			g_bpp = pf->bits_per_pixel;
+
+			if (g_no_translate_image)
+			{
+				switch (g_server_depth)
+				{
+					case 15:
+					case 16:
+						if (g_bpp != 16)
+							g_no_translate_image = False;
+						break;
+					case 24:
+						/* Yes, this will force image translation
+						   on most modern servers which use 32 bits
+						   for R8G8B8. */
+						if (g_bpp != 24)
+							g_no_translate_image = False;
+						break;
+					default:
+						g_no_translate_image = False;
+						break;
+				}
+			}
+
+			/* Pixmap formats list is a depth-to-bpp mapping --
+			   there's just a single entry for every depth,
+			   so we can safely break here */
+			break;
+		}
+	}
+	XFree(pfm);
+	pfm = NULL;
+	return True;
+}
+
 BOOL
 ui_init(void)
 {
-	XVisualInfo vi;
-	XPixmapFormatValues *pfm;
-	uint16 test;
-	int i, screen_num, nvisuals;
-	XVisualInfo *vmatches = NULL;
-	XVisualInfo template;
-	Bool TrueColorVisual = False;
+	int screen_num;
 
 	g_display = XOpenDisplay(NULL);
 	if (g_display == NULL)
@@ -976,95 +1195,33 @@ ui_init(void)
 		return False;
 	}
 
+	{
+		uint16 endianess_test = 1;
+		g_host_be = !(BOOL) (*(uint8 *) (&endianess_test));
+	}
+
+	g_xserver_be = (ImageByteOrder(g_display) == MSBFirst);
 	screen_num = DefaultScreen(g_display);
 	g_x_socket = ConnectionNumber(g_display);
 	g_screen = ScreenOfDisplay(g_display, screen_num);
 	g_depth = DefaultDepthOfScreen(g_screen);
 
-	/* Search for best TrueColor depth */
-	template.class = TrueColor;
-	vmatches = XGetVisualInfo(g_display, VisualClassMask, &template, &nvisuals);
-
-	nvisuals--;
-	while (nvisuals >= 0)
-	{
-		if ((vmatches + nvisuals)->depth > g_depth)
-		{
-			g_depth = (vmatches + nvisuals)->depth;
-		}
-		nvisuals--;
-		TrueColorVisual = True;
-	}
-
-	test = 1;
-	g_host_be = !(BOOL) (*(uint8 *) (&test));
-	g_xserver_be = (ImageByteOrder(g_display) == MSBFirst);
-
-	if ((g_server_bpp == 8) && ((!TrueColorVisual) || (g_depth <= 8)))
-	{
-		/* we use a colourmap, so the default visual should do */
-		g_visual = DefaultVisualOfScreen(g_screen);
-		g_depth = DefaultDepthOfScreen(g_screen);
-
-		/* Do not allocate colours on a TrueColor visual */
-		if (g_visual->class == TrueColor)
-		{
-			g_owncolmap = False;
-		}
-	}
-	else
-	{
-		/* need a truecolour visual */
-		if (!XMatchVisualInfo(g_display, screen_num, g_depth, TrueColor, &vi))
-		{
-			error("The display does not support true colour - high colour support unavailable.\n");
-			return False;
-		}
-
-		g_visual = vi.visual;
-		g_owncolmap = False;
-		calculate_shifts(vi.red_mask, &g_red_shift_r, &g_red_shift_l);
-		calculate_shifts(vi.blue_mask, &g_blue_shift_r, &g_blue_shift_l);
-		calculate_shifts(vi.green_mask, &g_green_shift_r, &g_green_shift_l);
-
-		/* if RGB video and everything is little endian */
-		if ((vi.red_mask > vi.green_mask && vi.green_mask > vi.blue_mask) &&
-		    !g_xserver_be && !g_host_be)
-		{
-			if (g_depth <= 16 || (g_red_shift_l == 16 && g_green_shift_l == 8 &&
-					      g_blue_shift_l == 0))
-			{
-				g_arch_match = True;
-			}
-		}
-
-		if (g_arch_match)
-		{
-			DEBUG(("Architectures match, enabling little endian optimisations.\n"));
-		}
-	}
-
-	pfm = XListPixmapFormats(g_display, &i);
-	if (pfm != NULL)
-	{
-		/* Use maximum bpp for this depth - this is generally
-		   desirable, e.g. 24 bits->32 bits. */
-		while (i--)
-		{
-			if ((pfm[i].depth == g_depth) && (pfm[i].bits_per_pixel > g_bpp))
-			{
-				g_bpp = pfm[i].bits_per_pixel;
-			}
-		}
-		XFree(pfm);
-	}
-
-	if (g_bpp < 8)
-	{
-		error("Less than 8 bpp not currently supported.\n");
-		XCloseDisplay(g_display);
+	if (!select_visual())
 		return False;
+
+	if (g_no_translate_image)
+	{
+		DEBUG(("Performance optimization possible: avoiding image translation (colour depth conversion).\n"));
 	}
+
+	if (g_server_depth > g_bpp)
+	{
+		warning("Remote desktop colour depth %d higher than display colour depth %d.\n",
+			g_server_depth, g_bpp);
+	}
+
+	DEBUG(("RDP depth: %d, display depth: %d, display bpp: %d, X server BE: %d, host BE: %d\n",
+	       g_server_depth, g_depth, g_bpp, g_xserver_be, g_host_be));
 
 	if (!g_owncolmap)
 	{
@@ -1072,12 +1229,12 @@ ui_init(void)
 			XCreateColormap(g_display, RootWindowOfScreen(g_screen), g_visual,
 					AllocNone);
 		if (g_depth <= 8)
-			warning("Screen depth is 8 bits or lower: you may want to use -C for a private colourmap\n");
+			warning("Display colour depth is %d bit: you may want to use -C for a private colourmap.\n", g_depth);
 	}
 
 	if ((!g_ownbackstore) && (DoesBackingStore(g_screen) != Always))
 	{
-		warning("External BackingStore not available, using internal\n");
+		warning("External BackingStore not available. Using internal.\n");
 		g_ownbackstore = True;
 	}
 
@@ -1128,7 +1285,7 @@ ui_init(void)
 
 	xclip_init();
 
-	DEBUG_RDP5(("server bpp %d client bpp %d depth %d\n", g_server_bpp, g_bpp, g_depth));
+	DEBUG_RDP5(("server bpp %d client bpp %d depth %d\n", g_server_depth, g_bpp, g_depth));
 
 	return True;
 }
@@ -1689,7 +1846,7 @@ ui_create_bitmap(int width, int height, uint8 * data)
 	uint8 *tdata;
 	int bitmap_pad;
 
-	if (g_server_bpp == 8)
+	if (g_server_depth == 8)
 	{
 		bitmap_pad = 8;
 	}
@@ -1721,7 +1878,7 @@ ui_paint_bitmap(int x, int y, int cx, int cy, int width, int height, uint8 * dat
 	uint8 *tdata;
 	int bitmap_pad;
 
-	if (g_server_bpp == 8)
+	if (g_server_depth == 8)
 	{
 		bitmap_pad = 8;
 	}

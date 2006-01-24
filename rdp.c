@@ -44,7 +44,7 @@ extern BOOL g_polygon_ellipse_orders;
 extern BOOL g_use_rdp5;
 extern uint16 g_server_rdp_version;
 extern uint32 g_rdp5_performanceflags;
-extern int g_server_bpp;
+extern int g_server_depth;
 extern int g_width;
 extern int g_height;
 extern BOOL g_bitmap_cache;
@@ -620,7 +620,7 @@ rdp_out_bitmap_caps(STREAM s)
 	out_uint16_le(s, RDP_CAPSET_BITMAP);
 	out_uint16_le(s, RDP_CAPLEN_BITMAP);
 
-	out_uint16_le(s, g_server_bpp);	/* Preferred BPP */
+	out_uint16_le(s, g_server_depth);	/* Preferred colour depth */
 	out_uint16_le(s, 1);	/* Receive 1 BPP */
 	out_uint16_le(s, 1);	/* Receive 4 BPP */
 	out_uint16_le(s, 1);	/* Receive 8 BPP */
@@ -684,7 +684,7 @@ rdp_out_bmpcache_caps(STREAM s)
 	out_uint16_le(s, RDP_CAPSET_BMPCACHE);
 	out_uint16_le(s, RDP_CAPLEN_BMPCACHE);
 
-	Bpp = (g_server_bpp + 7) / 8;
+	Bpp = (g_server_depth + 7) / 8;	/* bytes per pixel */
 	out_uint8s(s, 24);	/* unused */
 	out_uint16_le(s, 0x258);	/* entries */
 	out_uint16_le(s, 0x100 * Bpp);	/* max cell size */
@@ -881,28 +881,29 @@ rdp_process_general_caps(STREAM s)
 static void
 rdp_process_bitmap_caps(STREAM s)
 {
-	uint16 width, height, bpp;
+	uint16 width, height, depth;
 
-	in_uint16_le(s, bpp);
+	in_uint16_le(s, depth);
 	in_uint8s(s, 6);
 
 	in_uint16_le(s, width);
 	in_uint16_le(s, height);
 
-	DEBUG(("setting desktop size and bpp to: %dx%dx%d\n", width, height, bpp));
+	DEBUG(("setting desktop size and depth to: %dx%dx%d\n", width, height, depth));
 
 	/*
-	 * The server may limit bpp and change the size of the desktop (for
+	 * The server may limit depth and change the size of the desktop (for
 	 * example when shadowing another session).
 	 */
-	if (g_server_bpp != bpp)
+	if (g_server_depth != depth)
 	{
-		warning("colour depth changed from %d to %d\n", g_server_bpp, bpp);
-		g_server_bpp = bpp;
+		warning("Remote desktop does not support colour depth %d; falling back to %d\n",
+			g_server_depth, depth);
+		g_server_depth = depth;
 	}
 	if (g_width != width || g_height != height)
 	{
-		warning("screen size changed from %dx%d to %dx%d\n", g_width, g_height,
+		warning("Remote desktop changed from %dx%d to %dx%d.\n", g_width, g_height,
 			width, height);
 		g_width = width;
 		g_height = height;

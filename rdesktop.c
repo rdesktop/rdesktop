@@ -69,7 +69,7 @@ int g_pos = 0;			/* 0 position unspecified,
 				   2 xpos neg,
 				   4 ypos neg  */
 extern int g_tcp_port_rdp;
-int g_server_bpp = 8;
+int g_server_depth = 8;
 int g_win_button_size = 0;	/* If zero, disable single app mode */
 BOOL g_bitmap_compression = True;
 BOOL g_sendmotion = True;
@@ -590,11 +590,12 @@ main(int argc, char *argv[])
 				break;
 
 			case 'a':
-				g_server_bpp = strtol(optarg, NULL, 10);
-				if (g_server_bpp != 8 && g_server_bpp != 16 && g_server_bpp != 15
-				    && g_server_bpp != 24)
+				g_server_depth = strtol(optarg, NULL, 10);
+				if (g_server_depth != 8 &&
+				    g_server_depth != 16 &&
+				    g_server_depth != 15 && g_server_depth != 24)
 				{
-					error("invalid server bpp\n");
+					error("Invalid server colour depth.\n");
 					return 1;
 				}
 				break;
