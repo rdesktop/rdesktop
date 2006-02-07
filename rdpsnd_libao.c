@@ -175,7 +175,7 @@ wave_out_play(void)
 {
 	struct audio_packet *packet;
 	STREAM out;
-	unsigned char outbuf[WAVEOUTBUF];
+	char outbuf[WAVEOUTBUF];
 	int offset, len, i;
 	static long prev_s, prev_us;
 	unsigned int duration;
@@ -240,7 +240,7 @@ wave_out_play(void)
 		out->p += len;
 	}
 
-	ao_play(o_device, (char *) outbuf, len);
+	ao_play(o_device, outbuf, len);
 
 	gettimeofday(&tv, NULL);
 
