@@ -28,7 +28,7 @@
 #include <sys/time.h>
 
 #define MAX_QUEUE	10
-#define WAVEOUTBUF	64
+#define WAVEOUTBUF	16
 
 int g_dsp_fd;
 ao_device *o_device = NULL;
