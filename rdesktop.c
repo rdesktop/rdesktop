@@ -380,7 +380,7 @@ main(int argc, char *argv[])
 	char fullhostname[64];
 	char domain[16];
 	char password[64];
-	char shell[128];
+	char shell[256];
 	char directory[32];
 	BOOL prompt_password, deactivated;
 	struct passwd *pw;
