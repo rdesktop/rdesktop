@@ -381,7 +381,7 @@ main(int argc, char *argv[])
 	char domain[16];
 	char password[64];
 	char shell[256];
-	char directory[32];
+	char directory[256];
 	BOOL prompt_password, deactivated;
 	struct passwd *pw;
 	uint32 flags, ext_disc_reason = 0;
