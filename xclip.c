@@ -385,7 +385,7 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 	Atom type;
 	Atom *supported_targets;
 	int res, i, format;
-	uint8 *data;
+	uint8 *data = NULL;
 
 	if (event->property == None)
 		goto fail;
@@ -503,7 +503,8 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 
       fail:
 	XDeleteProperty(g_display, g_wnd, rdesktop_clipboard_target_atom);
-	XFree(data);
+	if (data)
+		XFree(data);
 	helper_cliprdr_send_empty_response();
 }
 
