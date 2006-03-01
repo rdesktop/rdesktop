@@ -71,12 +71,23 @@ static HCURSOR g_null_cursor = NULL;
 static Atom g_protocol_atom, g_kill_atom;
 static BOOL g_focused;
 static BOOL g_mouse_in_wnd;
-/* Indicates the visual is has 15, 16 or 24 depth
-   and the same color channel masks as its RDP equivalent. */
-static BOOL g_compatible_depth;
+/* Indicates that:
+   1) visual has 15, 16 or 24 depth and the same color channel masks
+      as its RDP equivalent (implies X server is LE),
+   2) host is LE
+   This will trigger an optimization whose real value is questionable.
+*/
+static BOOL g_compatible_arch;
 /* Indicates whether RDP's bitmaps and our XImages have the same
    binary format. If so, we can avoid an expensive translation.
-   If this is True, so is g_compatible_depth. */
+   Note that this can be true when g_compatible_arch is false,
+   e.g.:
+   
+     RDP(LE) <-> host(BE) <-> X-Server(LE)
+     
+   ('host' is the machine running rdesktop; the host simply memcpy's
+    so its endianess doesn't matter)
+ */
 static BOOL g_no_translate_image = False;
 
 /* endianness */
@@ -243,6 +254,9 @@ mwm_hide_decorations(void)
 #define BSWAP32(x) { x = (((x & 0xff00ff) << 8) | ((x >> 8) & 0xff00ff)); \
 			x = (x << 16) | (x >> 16); }
 
+/* The following macros output the same octet sequences
+   on both BE and LE hosts: */
+
 #define BOUT16(o, x) { *(o++) = x >> 8; *(o++) = x; }
 #define BOUT24(o, x) { *(o++) = x >> 16; *(o++) = x >> 8; *(o++) = x; }
 #define BOUT32(o, x) { *(o++) = x >> 24; *(o++) = x >> 16; *(o++) = x >> 8; *(o++) = x; }
@@ -322,7 +336,7 @@ translate8to16(const uint8 * data, uint8 * out, uint8 * end)
 {
 	uint16 value;
 
-	if (g_compatible_depth)
+	if (g_compatible_arch)
 	{
 		/* *INDENT-OFF* */
 		REPEAT2
@@ -356,7 +370,7 @@ translate8to24(const uint8 * data, uint8 * out, uint8 * end)
 {
 	uint32 value;
 
-	if (g_compatible_depth)
+	if (g_compatible_arch)
 	{
 		while (out < end)
 		{
@@ -379,7 +393,7 @@ translate8to32(const uint8 * data, uint8 * out, uint8 * end)
 {
 	uint32 value;
 
-	if (g_compatible_depth)
+	if (g_compatible_arch)
 	{
 		/* *INDENT-OFF* */
 		REPEAT4
@@ -451,7 +465,7 @@ translate15to24(const uint16 * data, uint8 * out, uint8 * end)
 	uint16 pixel;
 	PixelColour pc;
 
-	if (g_compatible_depth)
+	if (g_compatible_arch)
 	{
 		/* *INDENT-OFF* */
 		REPEAT3
@@ -501,7 +515,7 @@ translate15to32(const uint16 * data, uint8 * out, uint8 * end)
 	uint32 value;
 	PixelColour pc;
 
-	if (g_compatible_depth)
+	if (g_compatible_arch)
 	{
 		/* *INDENT-OFF* */
 		REPEAT4
@@ -609,7 +623,7 @@ translate16to24(const uint16 * data, uint8 * out, uint8 * end)
 	uint16 pixel;
 	PixelColour pc;
 
-	if (g_compatible_depth)
+	if (g_compatible_arch)
 	{
 		/* *INDENT-OFF* */
 		REPEAT3
@@ -679,7 +693,7 @@ translate16to32(const uint16 * data, uint8 * out, uint8 * end)
 	uint32 value;
 	PixelColour pc;
 
-	if (g_compatible_depth)
+	if (g_compatible_arch)
 	{
 		/* *INDENT-OFF* */
 		REPEAT4
@@ -808,7 +822,7 @@ translate24to32(const uint8 * data, uint8 * out, uint8 * end)
 	uint32 value;
 	PixelColour pc;
 
-	if (g_compatible_depth)
+	if (g_compatible_arch)
 	{
 		/* *INDENT-OFF* */
 #ifdef NEED_ALIGN
@@ -1021,7 +1035,7 @@ select_visual()
 	vmatches = XGetVisualInfo(g_display, VisualClassMask, &template, &visuals_count);
 	g_visual = NULL;
 	g_no_translate_image = False;
-	g_compatible_depth = False;
+	g_compatible_arch = False;
 	if (vmatches != NULL)
 	{
 		for (i = 0; i < visuals_count; ++i)
@@ -1048,7 +1062,7 @@ select_visual()
 			{
 				g_visual = visual_info->visual;
 				g_depth = visual_info->depth;
-				g_compatible_depth = True;
+				g_compatible_arch = !g_host_be;
 				g_no_translate_image = (visual_info->depth == g_server_depth);
 				if (g_no_translate_image)
 					/* We found the best visual */
@@ -1056,7 +1070,7 @@ select_visual()
 			}
 			else
 			{
-				g_compatible_depth = False;
+				g_compatible_arch = False;
 			}
 
 			if (visual_info->depth > 24)
