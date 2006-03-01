@@ -320,8 +320,8 @@ xclip_send_data_with_convert(uint8 * source, size_t source_size, Atom target)
 		char *unicode_buffer_remaining = unicode_buffer;
 		char *data_remaining = (char *) source;
 		size_t data_size_remaining = source_size;
-		iconv(cd, &data_remaining, &data_size_remaining, &unicode_buffer_remaining,
-		      &unicode_buffer_size_remaining);
+		iconv(cd, (ICONV_CONST char **) &data_remaining, &data_size_remaining,
+		      &unicode_buffer_remaining, &unicode_buffer_size_remaining);
 		iconv_close(cd);
 
 		/* translate linebreaks */
@@ -773,8 +773,8 @@ ui_clip_handle_data(uint8 * data, uint32 length)
 				iconv_close(cd);
 				return;
 			}
-			iconv(cd, &data_remaining, &length_remaining, &utf8_data_remaining,
-			      &utf8_length_remaining);
+			iconv(cd, (ICONV_CONST char **) &data_remaining, &length_remaining,
+			      &utf8_data_remaining, &utf8_length_remaining);
 			iconv_close(cd);
 			free_data = True;
 			data = (uint8 *) utf8_data;
