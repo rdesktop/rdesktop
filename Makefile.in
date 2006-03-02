@@ -25,7 +25,7 @@ LDVNC       = @LDVNC@
 VNCLINK     = @VNCLINK@
 SOUNDOBJ    = @SOUNDOBJ@
 
-RDPOBJ   = tcp.o iso.o mcs.o secure.o licence.o rdp.o orders.o bitmap.o cache.o rdp5.o channels.o rdpdr.o serial.o printer.o disk.o parallel.o printercache.o mppc.o pstcache.o
+RDPOBJ   = tcp.o iso.o mcs.o secure.o licence.o rdp.o orders.o bitmap.o cache.o rdp5.o channels.o rdpdr.o serial.o printer.o disk.o parallel.o printercache.o mppc.o pstcache.o lspci.o
 X11OBJ   = rdesktop.o xwin.o xkeymap.o ewmhints.o xclip.o cliprdr.o
 VNCOBJ   = vnc/rdp2vnc.o vnc/vnc.o vnc/xkeymap.o vnc/x11stubs.o
 
@@ -82,7 +82,7 @@ proto:
 	bitmap.c cache.c channels.c cliprdr.c disk.c mppc.c ewmhints.c	\
 	iso.c licence.c mcs.c orders.c parallel.c printer.c printercache.c \
 	pstcache.c rdesktop.c rdp5.c rdp.c rdpdr.c rdpsnd.c rdpsnd_oss.c \
-	secure.c serial.c tcp.c xclip.c xkeymap.c xwin.c >> proto.h
+	secure.c serial.c tcp.c xclip.c xkeymap.c xwin.c lspci.c >> proto.h
 	cat proto.tail >> proto.h
 
 .PHONY: clean

@@ -21,7 +21,7 @@
 
 #include "rdesktop.h"
 
-#define MAX_CHANNELS			4
+#define MAX_CHANNELS			5
 #define CHANNEL_CHUNK_LENGTH		1600
 #define CHANNEL_FLAG_FIRST		0x01
 #define CHANNEL_FLAG_LAST		0x02

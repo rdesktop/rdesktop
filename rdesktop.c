@@ -86,6 +86,7 @@ BOOL g_hide_decorations = False;
 BOOL g_use_rdp5 = True;
 BOOL g_console_session = False;
 BOOL g_numlock_sync = False;
+BOOL lspci_enabled = False;
 BOOL g_owncolmap = False;
 BOOL g_ownbackstore = True;	/* We can't rely on external BackingStore */
 uint32 g_embed_wnd;
@@ -679,6 +680,10 @@ main(int argc, char *argv[])
 				{
 					serial_enum_devices(&g_num_devices, optarg + 7);
 				}
+				else if (str_startswith(optarg, "lspci"))
+				{
+					lspci_enabled = True;
+				}
 				else if (str_startswith(optarg, "lptport"))
 				{
 					parallel_enum_devices(&g_num_devices, optarg + 7);
@@ -804,6 +809,10 @@ main(int argc, char *argv[])
 	if (g_rdpsnd)
 		rdpsnd_init();
 #endif
+
+	if (lspci_enabled)
+		lspci_init();
+
 	rdpdr_init();
 
 	while (run_count < 2 && continue_connect)	/* add support for Session Directory; only reconnect once */
@@ -1175,6 +1184,117 @@ BOOL
 str_startswith(const char *s, const char *prefix)
 {
 	return (strncmp(s, prefix, strlen(prefix)) == 0);
+}
+
+
+/* Split input into lines, and call linehandler for each
+   line. Incomplete lines are saved in the rest variable, which should
+   initially point to NULL. When linehandler returns False, stop and
+   return False. Otherwise, return True.  */
+BOOL
+str_handle_lines(const char *input, char **rest, str_handle_lines_t linehandler, void *data)
+{
+	char *buf, *p;
+	char *oldrest;
+	size_t inputlen;
+	size_t buflen;
+	size_t restlen = 0;
+	BOOL ret = True;
+
+	/* Copy data to buffer */
+	inputlen = strlen(input);
+	if (*rest)
+		restlen = strlen(*rest);
+	buflen = restlen + inputlen + 1;
+	buf = (char *) xmalloc(buflen);
+	buf[0] = '\0';
+	if (*rest)
+		STRNCPY(buf, *rest, buflen);
+	strncat(buf, input, inputlen);
+	p = buf;
+
+	while (1)
+	{
+		char *newline = strchr(p, '\n');
+		if (newline)
+		{
+			*newline = '\0';
+			if (!linehandler(p, data))
+			{
+				p = newline + 1;
+				ret = False;
+				break;
+			}
+			p = newline + 1;
+		}
+		else
+		{
+			break;
+
+		}
+	}
+
+	/* Save in rest */
+	oldrest = *rest;
+	restlen = buf + buflen - p;
+	*rest = (char *) xmalloc(restlen);
+	STRNCPY((*rest), p, restlen);
+	xfree(oldrest);
+
+	xfree(buf);
+	return ret;
+}
+
+/* Execute the program specified by argv. For each line in
+   stdout/stderr output, call linehandler. Returns false on failure. */
+BOOL
+subprocess(char *const argv[], str_handle_lines_t linehandler, void *data)
+{
+	pid_t child;
+	int fd[2];
+	int n = 1;
+	char output[256];
+	char *rest = NULL;
+
+	if (pipe(fd) < 0)
+	{
+		perror("pipe");
+		return False;
+	}
+
+	if ((child = fork()) < 0)
+	{
+		perror("fork");
+		return False;
+	}
+
+	/* Child */
+	if (child == 0)
+	{
+		/* Close read end */
+		close(fd[0]);
+
+		/* Redirect stdout and stderr to pipe */
+		dup2(fd[1], 1);
+		dup2(fd[1], 2);
+
+		/* Execute */
+		execvp(argv[0], argv);
+		perror("Error executing child");
+		_exit(128);
+	}
+
+	/* Parent. Close write end. */
+	close(fd[1]);
+	while (n > 0)
+	{
+		n = read(fd[0], output, 255);
+		output[n] = '\0';
+		str_handle_lines(output, &rest, linehandler, data);
+	}
+	xfree(rest);
+
+	return True;
 }
 
 

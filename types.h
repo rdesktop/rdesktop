@@ -264,3 +264,5 @@ typedef struct fileinfo
 	uint32 info_class;
 }
 FILEINFO;
+
+typedef BOOL(*str_handle_lines_t) (const char *line, void *data);

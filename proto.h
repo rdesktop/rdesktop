@@ -117,6 +117,8 @@ void hexdump(unsigned char *p, unsigned int len);
 char *next_arg(char *src, char needle);
 void toupper_str(char *p);
 BOOL str_startswith(const char *s, const char *prefix);
+BOOL str_handle_lines(const char *input, char **rest, str_handle_lines_t linehandler, void *data);
+BOOL subprocess(char *const argv[], str_handle_lines_t linehandler, void *data);
 char *l_to_a(long N, int base);
 int load_licence(unsigned char **data);
 void save_licence(unsigned char *data, int length);
@@ -269,6 +271,8 @@ void ui_desktop_save(uint32 offset, int x, int y, int cx, int cy);
 void ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy);
 void ui_begin_update(void);
 void ui_end_update(void);
+/* lspci.c */
+BOOL lspci_init(void);
 
 /* *INDENT-OFF* */
 #ifdef __cplusplus
