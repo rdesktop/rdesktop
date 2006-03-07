@@ -1259,6 +1259,7 @@ ui_init(void)
 	{
 		g_width = WidthOfScreen(g_screen);
 		g_height = HeightOfScreen(g_screen);
+		g_using_full_workarea = True;
 	}
 	else if (g_width < 0)
 	{
@@ -1272,18 +1273,17 @@ ui_init(void)
 	{
 		/* Fetch geometry from _NET_WORKAREA */
 		uint32 x, y, cx, cy;
-		g_using_full_workarea = True;
-
 		if (get_current_workarea(&x, &y, &cx, &cy) == 0)
 		{
 			g_width = cx;
 			g_height = cy;
+			g_using_full_workarea = True;
 		}
 		else
 		{
 			warning("Failed to get workarea: probably your window manager does not support extended hints\n");
-			g_width = 800;
-			g_height = 600;
+			g_width = WidthOfScreen(g_screen);
+			g_height = HeightOfScreen(g_screen);
 		}
 	}
 
