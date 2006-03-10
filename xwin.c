@@ -2993,7 +2993,7 @@ ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long 
 	XSetWindowAttributes attribs;
 	XClassHint *classhints;
 	long input_mask;
-	seamless_window *sw;
+	seamless_window *sw, *sw_parent;
 
 	get_window_attribs(&attribs);
 
@@ -3018,6 +3018,13 @@ ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long 
 		XSetClassHint(g_display, wnd, classhints);
 		XFree(classhints);
 	}
+
+	/* Set WM_TRANSIENT_FOR, if necessary */
+	sw_parent = seamless_get_window_by_id(parent);
+	if (sw_parent)
+		XSetTransientForHint(g_display, wnd, sw_parent->wnd);
+	else
+		warning("ui_seamless_create_window: No parent window 0x%lx\n", parent);
 
 	/* FIXME: Support for Input Context:s */
 
