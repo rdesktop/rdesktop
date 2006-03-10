@@ -3020,11 +3020,14 @@ ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long 
 	}
 
 	/* Set WM_TRANSIENT_FOR, if necessary */
-	sw_parent = seamless_get_window_by_id(parent);
-	if (sw_parent)
-		XSetTransientForHint(g_display, wnd, sw_parent->wnd);
-	else
-		warning("ui_seamless_create_window: No parent window 0x%lx\n", parent);
+	if (parent)
+	{
+		sw_parent = seamless_get_window_by_id(parent);
+		if (sw_parent)
+			XSetTransientForHint(g_display, wnd, sw_parent->wnd);
+		else
+			warning("ui_seamless_create_window: No parent window 0x%lx\n", parent);
+	}
 
 	/* FIXME: Support for Input Context:s */
 
