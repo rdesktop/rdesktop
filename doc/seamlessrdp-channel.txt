@@ -1,0 +1,148 @@
+TODO
+----
+
+* Command for executing new programs.
+
+* Commands for changing z order and focus.
+
+* Command for transferring icon.
+
+* Think about protocol version management
+
+* Try to assure that messages aren't repeated or are sent for hidden windows.
+
+Overview
+========
+
+The protocol is a line based protocol following this simple syntax:
+
+	OPERATION[,ARG1[,ARG2,[...]]]
+
+The goal is to have a generic protocol that can be used for other display
+systems (e.g. VNC) as well.
+
+One line may not exceed 1024 bytes, including newline.
+
+The protocol has no concept of hidden or unmapped windows. A window does not
+exist unless it is visible. Note that a minimised window is an exception to
+this rule.
+
+Data types
+==========
+Window ID are written in hex, like 0x4321. 
+
+Window positions can be negative. This happens when a window is moved
+outside the desktop.
+
+All integers fit inside 32 bits.
+
+Server to Client Operations
+===========================
+
+CREATE1
+-------
+
+Allocate structures for a new window.
+
+Syntax:
+	CREATE1,<ID>,<FLAGS>
+
+Note that very little information is included in this message. Things like
+title and state will come in subsequent messages. This message should only
+be used to allocate data structures for the new window.
+
+DESTROY1
+--------
+
+Remove a window.
+
+Syntax:
+	DESTROY1,<ID>,<FLAGS>
+
+Remove the window and deallocate all associated structures.
+
+POSITION1
+---------
+
+Move a window.
+
+Syntax:
+	POSITION1,<ID>,<X>,<Y>,<WIDTH>,<HEIGHT>,<FLAGS>
+
+Move and/or resize a window. If the window isn't visible yet (because a
+SETSTATE1 hasn't been set or because it's minimised), you must store the
+position and size. A new POSITION1 is not guaranteed to be sent when the
+window changes state.
+
+
+ZCHANGE1
+--------
+
+The window moved in z order.
+
+Syntax:
+	ZCHANGE1,<ID>,<BEHIND>,<FLAGS>
+
+The window with the id ID is behind the window with the id BEHIND. If
+BEHIND is 0, then this window should be brought to the front. 
+
+SETSTATE1
+---------
+
+Changes the window's state and/or title.
+
+Syntax:
+	SETSTATE1,<ID>,<TITLE>,<STATE>,<FLAGS>
+
+State can have one of three values:
+ 0 : "Normal" window.
+ 1 : Minimised.
+ 2 : Maximised.
+
+
+DEBUG1
+------
+
+Debug output from the server component.
+
+Syntax:
+	DEBUG1,<STRING>
+
+Used for debugging.
+
+SYNCBEGIN
+---------
+
+Indicates that a synchronisation has begun.
+
+Syntax:
+	SYNCBEGIN,<FLAGS>
+
+Sent when the server starts a synchronisation. The client should flush all
+information at this point.
+
+SYNCEND
+-------
+
+Indicates that a synchronisation is complete.
+
+Syntac:
+	SYNCEND,<FLAGS>
+
+Sent when the last message that is part of the synchronisation has been sent.
+This may be followed by duplicate messages and/or messages referring invalid
+windows that were queued up during the synchronisation.
+
+Client to Server Operations
+===========================
+
+SYNC
+----
+
+Request a synchronisation of window information.
+
+Syntax:
+	SYNC,<FLAGS>
+
+For each window, the server will send CREATE1, POSITION1 and SETSTATE1 just as
+if the window was created. 
