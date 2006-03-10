@@ -1731,6 +1731,7 @@ xwin_process_events(void)
 	char str[256];
 	Status status;
 	int events = 0;
+	seamless_window *sw;
 
 	while ((XPending(g_display) > 0) && events++ < 20)
 	{
@@ -1893,7 +1894,6 @@ xwin_process_events(void)
 				}
 				else
 				{
-					seamless_window *sw;
 					sw = seamless_get_window_by_wnd(xevent.xexpose.window);
 					if (sw)
 						XCopyArea(g_display, g_backstore,
@@ -3095,7 +3095,7 @@ ui_seamless_move_window(unsigned long id, int x, int y, int width, int height, u
 
 
 void
-ui_seamless_settitle(unsigned long id, const char *title)
+ui_seamless_settitle(unsigned long id, const char *title, unsigned long flags)
 {
 	seamless_window *sw;
 

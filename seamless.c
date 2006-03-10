@@ -150,27 +150,40 @@ seamless_process_line(const char *line, void *data)
 	{
 		unimpl("SeamlessRDP ZCHANGE1\n");
 	}
-	else if (!strcmp("SETSTATE", tok1))
+	else if (!strcmp("TITLE", tok1))
 	{
-		unsigned int state;
-
-		if (!tok5)
+		if (!tok4)
 			return False;
 
 		id = strtol(tok2, &endptr, 16);
 		if (*endptr)
 			return False;
 
-		state = strtol(tok4, &endptr, 16);	// XXX
+		flags = strtol(tok4, &endptr, 16);
 		if (*endptr)
 			return False;
 
-		flags = strtol(tok5, &endptr, 16);
+		ui_seamless_settitle(id, tok3, flags);
+	}
+	else if (!strcmp("STATE", tok1))
+	{
+		unsigned int state;
+
+		if (!tok4)
+			return False;
+
+		id = strtol(tok2, &endptr, 16);
 		if (*endptr)
 			return False;
 
-		/* FIXME */
-		ui_seamless_settitle(id, tok3);
+		state = strtol(tok3, &endptr, 16);
+		if (*endptr)
+			return False;
+
+		flags = strtol(tok4, &endptr, 16);
+		if (*endptr)
+			return False;
+
 		ui_seamless_setstate(id, state, flags);
 	}
 	else if (!strcmp("DEBUG", tok1))
