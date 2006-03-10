@@ -3126,7 +3126,7 @@ ui_seamless_setstate(unsigned long id, unsigned int state, unsigned long flags)
 	{
 		case SEAMLESSRDP_NORMAL:
 		case SEAMLESSRDP_MAXIMIZED:
-			/* FIXME */
+			XMapWindow(g_display, sw->wnd);
 			break;
 		case SEAMLESSRDP_MINIMIZED:
 			XIconifyWindow(g_display, sw->wnd, DefaultScreen(g_display));
