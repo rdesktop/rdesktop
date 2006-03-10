@@ -589,6 +589,11 @@ handle_special_keys(uint32 keysym, unsigned int state, uint32 ev_time, BOOL pres
 			/* Inhibit */
 			return True;
 			break;
+		case XK_Overlay1_Enable:
+			/* Toggle SeamlessRDP */
+			if (pressed)
+				ui_seamless_toggle();
+			break;
 
 	}
 	return False;

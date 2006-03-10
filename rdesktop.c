@@ -89,6 +89,7 @@ BOOL g_numlock_sync = False;
 BOOL lspci_enabled = False;
 BOOL g_owncolmap = False;
 BOOL g_ownbackstore = True;	/* We can't rely on external BackingStore */
+BOOL g_seamless_rdp = False;
 uint32 g_embed_wnd;
 uint32 g_rdp5_performanceflags =
 	RDP5_NO_WALLPAPER | RDP5_NO_FULLWINDOWDRAG | RDP5_NO_MENUANIMATIONS;
@@ -146,6 +147,7 @@ usage(char *program)
 #ifdef HAVE_ICONV
 	fprintf(stderr, "   -L: local codepage\n");
 #endif
+	fprintf(stderr, "   -A: enable SeamlessRDP mode\n");
 	fprintf(stderr, "   -B: use BackingStore of X-server (if available)\n");
 	fprintf(stderr, "   -e: disable encryption (French TS)\n");
 	fprintf(stderr, "   -E: disable encryption from client to server\n");
@@ -390,6 +392,7 @@ main(int argc, char *argv[])
 	int c;
 	char *locale = NULL;
 	int username_option = 0;
+	BOOL geometry_option = False;
 	int run_count = 0;	/* Session Directory support */
 	BOOL continue_connect = True;	/* Session Directory support */
 
@@ -416,7 +419,7 @@ main(int argc, char *argv[])
 #endif
 
 	while ((c = getopt(argc, argv,
-			   VNCOPT "u:L:d:s:c:p:n:k:g:fbBeEmzCDKS:T:NX:a:x:Pr:045h?")) != -1)
+			   VNCOPT "Au:L:d:s:c:p:n:k:g:fbBeEmzCDKS:T:NX:a:x:Pr:045h?")) != -1)
 	{
 		switch (c)
 		{
@@ -433,6 +436,10 @@ main(int argc, char *argv[])
 					defer_time = 0;
 				break;
 #endif
+
+			case 'A':
+				g_seamless_rdp = True;
+				break;
 
 			case 'u':
 				STRNCPY(g_username, optarg, sizeof(g_username));
@@ -484,6 +491,7 @@ main(int argc, char *argv[])
 				break;
 
 			case 'g':
+				geometry_option = True;
 				g_fullscreen = False;
 				if (!strcmp(optarg, "workarea"))
 				{
@@ -731,6 +739,43 @@ main(int argc, char *argv[])
 
 	STRNCPY(server, argv[optind], sizeof(server));
 	parse_server_and_port(server);
+
+	if (g_seamless_rdp)
+	{
+		if (g_win_button_size)
+		{
+			error("You cannot use -S and -A at the same time\n");
+			return 1;
+		}
+		g_rdp5_performanceflags &= ~RDP5_NO_FULLWINDOWDRAG;
+		if (geometry_option)
+		{
+			error("You cannot use -g and -A at the same time\n");
+			return 1;
+		}
+		if (g_fullscreen)
+		{
+			error("You cannot use -f and -A at the same time\n");
+			return 1;
+		}
+		if (g_hide_decorations)
+		{
+			error("You cannot use -D and -A at the same time\n");
+			return 1;
+		}
+		if (g_embed_wnd)
+		{
+			error("You cannot use -X and -A at the same time\n");
+			return 1;
+		}
+		if (!g_use_rdp5)
+		{
+			error("You cannot use -4 and -A at the same time\n");
+			return 1;
+		}
+		g_width = -100;
+		g_grab_keyboard = False;
+	}
 
 	if (!username_option)
 	{

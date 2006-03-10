@@ -412,3 +412,8 @@ enum RDP_INPUT_DEVICE
 #define exDiscReasonLicenseErrClientEncryption		0x0108
 #define exDiscReasonLicenseCantUpgradeLicense		0x0109
 #define exDiscReasonLicenseNoRemoteConnections		0x010a
+
+/* SeamlessRDP constants */
+#define SEAMLESSRDP_NORMAL 0
+#define SEAMLESSRDP_MINIMIZED 1
+#define SEAMLESSRDP_MAXIMIZED 2
