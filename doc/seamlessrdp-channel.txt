@@ -39,60 +39,73 @@ All integers fit inside 32 bits.
 Server to Client Operations
 ===========================
 
-CREATE1
--------
+CREATE
+------
 
 Allocate structures for a new window.
 
 Syntax:
-	CREATE1,<ID>,<FLAGS>
+	CREATE,<ID>,<FLAGS>
 
 Note that very little information is included in this message. Things like
 title and state will come in subsequent messages. This message should only
 be used to allocate data structures for the new window.
 
-DESTROY1
---------
+DESTROY
+-------
 
 Remove a window.
 
 Syntax:
-	DESTROY1,<ID>,<FLAGS>
+	DESTROY,<ID>,<FLAGS>
 
 Remove the window and deallocate all associated structures.
 
-POSITION1
----------
+POSITION
+--------
 
-Move a window.
+Move and/or resize a window.
 
 Syntax:
-	POSITION1,<ID>,<X>,<Y>,<WIDTH>,<HEIGHT>,<FLAGS>
+	POSITION,<ID>,<X>,<Y>,<WIDTH>,<HEIGHT>,<FLAGS>
 
-Move and/or resize a window. If the window isn't visible yet (because a
-SETSTATE1 hasn't been set or because it's minimised), you must store the
-position and size. A new POSITION1 is not guaranteed to be sent when the
-window changes state.
+If the window isn't visible yet (because a
+STATE hasn't been set or because it's minimised), you must store the position
+and size. A new POSITION is not guaranteed to be sent when the window changes
+state.
+
+TITLE
+-----
+
+Sets a window title.
+
+Syntax:
+	TITLE,<ID>,<TITLE>,<FLAGS>
+
+The text is guaranteed to be stripped of control characters (< 0x20).
+
+Note that this has the same requirement as POSITION, that the title needs to
+be stored for newly created windows until a STATE is sent.
 
 
-ZCHANGE1
---------
+ZCHANGE
+-------
 
 The window moved in z order.
 
 Syntax:
-	ZCHANGE1,<ID>,<BEHIND>,<FLAGS>
+	ZCHANGE,<ID>,<BEHIND>,<FLAGS>
 
 The window with the id ID is behind the window with the id BEHIND. If
 BEHIND is 0, then this window should be brought to the front. 
 
-SETSTATE1
----------
+STATE
+-----
 
 Changes the window's state and/or title.
 
 Syntax:
-	SETSTATE1,<ID>,<TITLE>,<STATE>,<FLAGS>
+	STATE,<ID>,<STATE>,<FLAGS>
 
 State can have one of three values:
  0 : "Normal" window.
@@ -100,13 +113,13 @@ State can have one of three values:
  2 : Maximised.
 
 
-DEBUG1
-------
+DEBUG
+-----
 
 Debug output from the server component.
 
 Syntax:
-	DEBUG1,<STRING>
+	DEBUG,<STRING>
 
 Used for debugging.
 
@@ -144,5 +157,36 @@ Request a synchronisation of window information.
 Syntax:
 	SYNC,<FLAGS>
 
-For each window, the server will send CREATE1, POSITION1 and SETSTATE1 just as
-if the window was created. 
+For each window, the server will send CREATE, POSITION and SETSTATE just as
+if the window was created.
+
+POSITION
+--------
+
+Identical to the command sent from server to client.
+
+TITLE
+-----
+
+Identical to the command sent from server to client.
+
+ZCHANGE
+-------
+
+Identical to the command sent from server to client.
+
+STATE
+-----
+
+Identical to the command sent from server to client.
+
+FOCUS
+-----
+
+Sets which window has input focus.
+
+Syntax:
+	FOCUS,<ID>,<FLAGS>
+
+Changes which window that will recieve the keyboard events. Note that this
+might cause the window to change z order.
