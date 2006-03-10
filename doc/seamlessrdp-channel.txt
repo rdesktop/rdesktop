@@ -24,7 +24,7 @@ systems (e.g. VNC) as well.
 One line may not exceed 1024 bytes, including newline.
 
 The protocol has no concept of hidden or unmapped windows. A window does not
-exist unless it is visible. Note that a minimised window is an exception to
+exist unless it is visible. Note that a minimized window is an exception to
 this rule.
 
 Data types
@@ -70,7 +70,7 @@ Syntax:
 	POSITION,<ID>,<X>,<Y>,<WIDTH>,<HEIGHT>,<FLAGS>
 
 If the window isn't visible yet (because a
-STATE hasn't been set or because it's minimised), you must store the position
+STATE hasn't been set or because it's minimized), you must store the position
 and size. A new POSITION is not guaranteed to be sent when the window changes
 state.
 
@@ -109,8 +109,8 @@ Syntax:
 
 State can have one of three values:
  0 : "Normal" window.
- 1 : Minimised.
- 2 : Maximised.
+ 1 : Minimized.
+ 2 : Maximized.
 
 
 DEBUG
