@@ -2987,7 +2987,7 @@ ui_seamless_toggle()
 }
 
 void
-ui_seamless_create_window(unsigned long id, unsigned long flags)
+ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long flags)
 {
 	Window wnd;
 	XSetWindowAttributes attribs;

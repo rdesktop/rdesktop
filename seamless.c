@@ -82,18 +82,23 @@ seamless_process_line(const char *line, void *data)
 
 	if (!strcmp("CREATE", tok1))
 	{
-		if (!tok3)
+		unsigned long parent;
+		if (!tok4)
 			return False;
 
 		id = strtol(tok2, &endptr, 16);
 		if (*endptr)
 			return False;
 
-		flags = strtol(tok3, &endptr, 16);
+		parent = strtol(tok3, &endptr, 16);
 		if (*endptr)
 			return False;
 
-		ui_seamless_create_window(id, flags);
+		flags = strtol(tok4, &endptr, 16);
+		if (*endptr)
+			return False;
+
+		ui_seamless_create_window(id, parent, flags);
 	}
 	else if (!strcmp("DESTROY", tok1))
 	{

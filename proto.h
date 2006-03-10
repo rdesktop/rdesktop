@@ -272,7 +272,7 @@ void ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy);
 void ui_begin_update(void);
 void ui_end_update(void);
 void ui_seamless_toggle(void);
-void ui_seamless_create_window(unsigned long id, unsigned long flags);
+void ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long flags);
 void ui_seamless_destroy_window(unsigned long id, unsigned long flags);
 void ui_seamless_move_window(unsigned long id, int x, int y, int width, int height,
 			     unsigned long flags);
