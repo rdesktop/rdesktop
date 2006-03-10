@@ -80,7 +80,7 @@ seamless_process_line(const char *line, void *data)
 	tok7 = seamless_get_token(&p);
 	tok8 = seamless_get_token(&p);
 
-	if (!strcmp("CREATE1", tok1))
+	if (!strcmp("CREATE", tok1))
 	{
 		if (!tok3)
 			return False;
@@ -95,7 +95,7 @@ seamless_process_line(const char *line, void *data)
 
 		ui_seamless_create_window(id, flags);
 	}
-	else if (!strcmp("DESTROY1", tok1))
+	else if (!strcmp("DESTROY", tok1))
 	{
 		if (!tok3)
 			return False;
@@ -111,11 +111,11 @@ seamless_process_line(const char *line, void *data)
 		ui_seamless_destroy_window(id, flags);
 
 	}
-	else if (!strcmp("SETICON1", tok1))
+	else if (!strcmp("SETICON", tok1))
 	{
 		unimpl("SeamlessRDP SETICON1\n");
 	}
-	else if (!strcmp("POSITION1", tok1))
+	else if (!strcmp("POSITION", tok1))
 	{
 		int x, y, width, height;
 
@@ -146,11 +146,11 @@ seamless_process_line(const char *line, void *data)
 
 		ui_seamless_move_window(id, x, y, width, height, flags);
 	}
-	else if (!strcmp("ZCHANGE1", tok1))
+	else if (!strcmp("ZCHANGE", tok1))
 	{
 		unimpl("SeamlessRDP ZCHANGE1\n");
 	}
-	else if (!strcmp("SETSTATE1", tok1))
+	else if (!strcmp("SETSTATE", tok1))
 	{
 		unsigned int state;
 
@@ -173,7 +173,7 @@ seamless_process_line(const char *line, void *data)
 		ui_seamless_settitle(id, tok3);
 		ui_seamless_setstate(id, state, flags);
 	}
-	else if (!strcmp("DEBUG1", tok1))
+	else if (!strcmp("DEBUG", tok1))
 	{
 		printf("SeamlessRDP:%s\n", line);
 	}
