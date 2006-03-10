@@ -1903,6 +1903,11 @@ xwin_process_events(void)
 							  xevent.xexpose.width,
 							  xevent.xexpose.height, xevent.xexpose.x,
 							  xevent.xexpose.y);
+					else
+					{
+						error("Expose for unknown window 0x%lx\n",
+						      xevent.xexpose.window);
+					}
 				}
 
 				break;
@@ -3058,8 +3063,8 @@ void
 ui_seamless_destroy_window(unsigned long id, unsigned long flags)
 {
 	seamless_window *sw;
-	sw = seamless_get_window_by_id(id);
 
+	sw = seamless_get_window_by_id(id);
 	if (!sw)
 	{
 		warning("ui_seamless_destroy_window: No information for window 0x%lx\n", id);
@@ -3077,7 +3082,6 @@ ui_seamless_move_window(unsigned long id, int x, int y, int width, int height, u
 	seamless_window *sw;
 
 	sw = seamless_get_window_by_id(id);
-
 	if (!sw)
 	{
 		warning("ui_seamless_move_window: No information for window 0x%lx\n", id);
@@ -3110,6 +3114,11 @@ ui_seamless_settitle(unsigned long id, const char *title, unsigned long flags)
 	seamless_window *sw;
 
 	sw = seamless_get_window_by_id(id);
+	if (!sw)
+	{
+		warning("ui_seamless_settitle: No information for window 0x%lx\n", id);
+		return;
+	}
 
 	XStoreName(g_display, sw->wnd, title);
 }
@@ -3121,6 +3130,11 @@ ui_seamless_setstate(unsigned long id, unsigned int state, unsigned long flags)
 	seamless_window *sw;
 
 	sw = seamless_get_window_by_id(id);
+	if (!sw)
+	{
+		warning("ui_seamless_setstate: No information for window 0x%lx\n", id);
+		return;
+	}
 
 	switch (state)
 	{
