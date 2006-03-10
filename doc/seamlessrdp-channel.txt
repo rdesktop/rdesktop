@@ -45,7 +45,10 @@ CREATE
 Allocate structures for a new window.
 
 Syntax:
-	CREATE,<ID>,<FLAGS>
+	CREATE,<ID>,<PARENT>,<FLAGS>
+
+Indicates that a window has appeared on the server. If PARENT is non-zero then
+the new window is a child of that window (it's transient for it).
 
 Note that very little information is included in this message. Things like
 title and state will come in subsequent messages. This message should only
