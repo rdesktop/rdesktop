@@ -19,6 +19,7 @@
 */
 
 #include "rdesktop.h"
+#include <stdarg.h>
 
 /* #define WITH_DEBUG_SEAMLESS */
 
@@ -245,14 +246,19 @@ seamless_init(void)
 
 
 static void
-seamless_send(const char *output)
+seamless_send(const char *format, ...)
 {
 	STREAM s;
 	size_t len;
+	va_list argp;
+	char buf[1024];
 
-	len = strlen(output);
+	va_start(argp, format);
+	len = vsnprintf(buf, sizeof(buf), format, argp);
+	va_end(argp);
+
 	s = channel_init(seamless_channel, len);
-	out_uint8p(s, output, len) s_mark_end(s);
+	out_uint8p(s, buf, len) s_mark_end(s);
 
 #if 0
 	printf("seamless send:\n");
@@ -267,4 +273,13 @@ void
 seamless_send_sync()
 {
 	seamless_send("SYNC\n");
+}
+
+
+void
+seamless_send_state(unsigned long id, unsigned int state, unsigned long flags)
+{
+
+	DEBUG_SEAMLESS(("sending STATE,0x%p,0x%x,0x%x\n", id, state, flags));
+	seamless_send("STATE,0x%p,0x%x,0x%x", id, state, flags);
 }
