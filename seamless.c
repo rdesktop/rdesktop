@@ -86,15 +86,15 @@ seamless_process_line(const char *line, void *data)
 		if (!tok4)
 			return False;
 
-		id = strtol(tok2, &endptr, 16);
+		id = strtol(tok2, &endptr, 0);
 		if (*endptr)
 			return False;
 
-		parent = strtol(tok3, &endptr, 16);
+		parent = strtol(tok3, &endptr, 0);
 		if (*endptr)
 			return False;
 
-		flags = strtol(tok4, &endptr, 16);
+		flags = strtol(tok4, &endptr, 0);
 		if (*endptr)
 			return False;
 
@@ -105,11 +105,11 @@ seamless_process_line(const char *line, void *data)
 		if (!tok3)
 			return False;
 
-		id = strtol(tok2, &endptr, 16);
+		id = strtol(tok2, &endptr, 0);
 		if (*endptr)
 			return False;
 
-		flags = strtol(tok3, &endptr, 16);
+		flags = strtol(tok3, &endptr, 0);
 		if (*endptr)
 			return False;
 
@@ -127,25 +127,25 @@ seamless_process_line(const char *line, void *data)
 		if (!tok7)
 			return False;
 
-		id = strtol(tok2, &endptr, 16);
+		id = strtol(tok2, &endptr, 0);
 		if (*endptr)
 			return False;
 
-		x = strtol(tok3, &endptr, 10);
+		x = strtol(tok3, &endptr, 0);
 		if (*endptr)
 			return False;
-		y = strtol(tok4, &endptr, 10);
-		if (*endptr)
-			return False;
-
-		width = strtol(tok5, &endptr, 10);
-		if (*endptr)
-			return False;
-		height = strtol(tok6, &endptr, 10);
+		y = strtol(tok4, &endptr, 0);
 		if (*endptr)
 			return False;
 
-		flags = strtol(tok7, &endptr, 16);
+		width = strtol(tok5, &endptr, 0);
+		if (*endptr)
+			return False;
+		height = strtol(tok6, &endptr, 0);
+		if (*endptr)
+			return False;
+
+		flags = strtol(tok7, &endptr, 0);
 		if (*endptr)
 			return False;
 
@@ -160,11 +160,11 @@ seamless_process_line(const char *line, void *data)
 		if (!tok4)
 			return False;
 
-		id = strtol(tok2, &endptr, 16);
+		id = strtol(tok2, &endptr, 0);
 		if (*endptr)
 			return False;
 
-		flags = strtol(tok4, &endptr, 16);
+		flags = strtol(tok4, &endptr, 0);
 		if (*endptr)
 			return False;
 
@@ -177,15 +177,15 @@ seamless_process_line(const char *line, void *data)
 		if (!tok4)
 			return False;
 
-		id = strtol(tok2, &endptr, 16);
+		id = strtol(tok2, &endptr, 0);
 		if (*endptr)
 			return False;
 
-		state = strtol(tok3, &endptr, 16);
+		state = strtol(tok3, &endptr, 0);
 		if (*endptr)
 			return False;
 
-		flags = strtol(tok4, &endptr, 16);
+		flags = strtol(tok4, &endptr, 0);
 		if (*endptr)
 			return False;
 
