@@ -76,6 +76,13 @@ toggled at any time using Ctrl-Alt-Enter.
 Force the server to send screen updates as bitmaps rather than using
 higher-level drawing operations.
 .TP
+.BR "-A"
+Enable SeamlessRDP. In this mode, rdesktop creates separate X11
+windows for each window on the server side. This mode requires the
+SeamlessRDP server side component. When using this option, you should
+specify a startup shell which launches the desired application through
+SeamlessRDP. Example: rdesktop -A -s 'seamlessrdpshell notepad'. 
+.TP
 .BR "-B"
 Use the BackingStore of the Xserver instead of the integrated one in
 rdesktop.
