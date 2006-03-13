@@ -621,7 +621,12 @@ AC_CHECK_MEMBERS([struct statvfs.f_namemax],,,[$statxfs_includes])
 AC_CHECK_MEMBERS([struct statfs.f_namelen],,,[$statxfs_includes])
 AC_CHECK_MEMBERS([struct statvfs.f_namelen],,,[$statxfs_includes])
 
+#
+# Large file support
+#
+AC_SYS_LARGEFILE
 
+#
 # mntent
 #
 AC_CHECK_HEADER(mntent.h, AC_DEFINE(HAVE_MNTENT_H))
