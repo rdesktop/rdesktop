@@ -67,7 +67,7 @@ seamless_process_line(const char *line, void *data)
 	l = xstrdup(line);
 	p = l;
 
-	DEBUG_SEAMLESS(("seamlessrdp line:%s\n", p));
+	DEBUG_SEAMLESS(("seamlessrdp got:%s\n", p));
 
 	if (!g_seamless_rdp)
 		return True;
@@ -260,6 +260,8 @@ seamless_send(const char *format, ...)
 	s = channel_init(seamless_channel, len);
 	out_uint8p(s, buf, len) s_mark_end(s);
 
+	DEBUG_SEAMLESS(("SeamlessRDP sending:%s", buf));
+
 #if 0
 	printf("seamless send:\n");
 	hexdump(s->channel_hdr + 8, s->end - s->channel_hdr - 8);
@@ -279,7 +281,5 @@ seamless_send_sync()
 void
 seamless_send_state(unsigned long id, unsigned int state, unsigned long flags)
 {
-
-	DEBUG_SEAMLESS(("sending STATE,0x%p,0x%x,0x%x\n", id, state, flags));
-	seamless_send("STATE,0x%p,0x%x,0x%x", id, state, flags);
+	seamless_send("STATE,0x%08lx,0x%x,0x%lx\n", id, state, flags);
 }
