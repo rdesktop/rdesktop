@@ -67,6 +67,7 @@ NTSTATUS disk_query_directory(NTHANDLE handle, uint32 info_class, char *pattern,
 int mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen);
 /* ewmhints.c */
 int get_current_workarea(uint32 * x, uint32 * y, uint32 * width, uint32 * height);
+void ewmh_init(void);
 /* iso.c */
 STREAM iso_init(int length);
 void iso_send(STREAM s);
@@ -283,6 +284,7 @@ BOOL lspci_init(void);
 /* seamless.c */
 BOOL seamless_init(void);
 void seamless_send_sync(void);
+void seamless_send_state(unsigned long id, unsigned int state, unsigned long flags);
 
 /* *INDENT-OFF* */
 #ifdef __cplusplus

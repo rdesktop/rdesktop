@@ -56,6 +56,7 @@ typedef struct _seamless_window
 	unsigned long id;
 	int xoffset, yoffset;
 	int width, height;
+	unsigned int state;	/* normal/minimized/maximized */
 	struct _seamless_window *next;
 } seamless_window;
 static seamless_window *g_seamless_windows = NULL;
@@ -83,6 +84,7 @@ static XModifierKeymap *g_mod_map;
 static Cursor g_current_cursor;
 static HCURSOR g_null_cursor = NULL;
 static Atom g_protocol_atom, g_kill_atom;
+extern Atom g_net_wm_state_atom;
 static BOOL g_focused;
 static BOOL g_mouse_in_wnd;
 /* Indicates that:
@@ -1396,6 +1398,7 @@ ui_init(void)
 		g_IM = XOpenIM(g_display, NULL, NULL, NULL);
 
 	xclip_init();
+	ewmh_init();
 	if (g_seamless_rdp)
 		seamless_init();
 
@@ -1938,6 +1941,22 @@ xwin_process_events(void)
 				break;
 			case PropertyNotify:
 				xclip_handle_PropertyNotify(&xevent.xproperty);
+				if (xevent.xproperty.window == g_wnd)
+					break;
+				if (xevent.xproperty.window == DefaultRootWindow(g_display))
+					break;
+
+				/* seamless */
+				sw = seamless_get_window_by_wnd(xevent.xproperty.window);
+				if (!sw)
+					break;
+
+				if ((xevent.xproperty.atom == g_net_wm_state_atom)
+				    && (xevent.xproperty.state == PropertyNewValue))
+				{
+					sw->state = ewmh_get_window_state(sw->wnd);
+					seamless_send_state(sw->id, sw->state, 0);
+				}
 				break;
 			case MapNotify:
 				if (!g_seamless_rdp)
@@ -3037,6 +3056,7 @@ ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long 
 	/* FIXME: Support for Input Context:s */
 
 	get_input_mask(&input_mask);
+	input_mask |= PropertyChangeMask;
 
 	XSelectInput(g_display, wnd, input_mask);
 
@@ -3103,6 +3123,11 @@ ui_seamless_move_window(unsigned long id, int x, int y, int width, int height, u
 	sw->width = MIN(MIN(width, width + x), g_width - sw->xoffset);
 	sw->height = MIN(MIN(height, height + y), g_height - sw->yoffset);
 
+	/* If we move the window in a maximized state, then KDE won't
+	   accept restoration */
+	if (sw->state != SEAMLESSRDP_NORMAL)
+		return;
+
 	/* FIXME: Perhaps use ewmh_net_moveresize_window instead */
 	XMoveResizeWindow(g_display, sw->wnd, sw->xoffset, sw->yoffset, sw->width, sw->height);
 }
@@ -3136,13 +3161,20 @@ ui_seamless_setstate(unsigned long id, unsigned int state, unsigned long flags)
 		return;
 	}
 
+	sw->state = state;
+
 	switch (state)
 	{
 		case SEAMLESSRDP_NORMAL:
 		case SEAMLESSRDP_MAXIMIZED:
-			XMapWindow(g_display, sw->wnd);
+			ewmh_change_state(sw->wnd, state);
 			break;
 		case SEAMLESSRDP_MINIMIZED:
+			/* EWMH says: "if an Application asks to toggle _NET_WM_STATE_HIDDEN
+			   the Window Manager should probably just ignore the request, since
+			   _NET_WM_STATE_HIDDEN is a function of some other aspect of the window
+			   such as minimization, rather than an independent state." Besides,
+			   XIconifyWindow is easier. */
 			XIconifyWindow(g_display, sw->wnd, DefaultScreen(g_display));
 			break;
 		default:
