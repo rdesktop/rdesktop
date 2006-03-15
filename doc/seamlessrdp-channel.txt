@@ -36,6 +36,9 @@ outside the desktop.
 
 All integers fit inside 32 bits.
 
+Strings are sent in UTF-8 and do not contain any characters less than 0x20 or
+the character , (comma).
+
 Server to Client Operations
 ===========================
 
