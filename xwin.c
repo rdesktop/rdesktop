@@ -3084,7 +3084,7 @@ ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long 
 	}
 
 	/* Set WM_TRANSIENT_FOR, if necessary */
-	if (parent)
+	if ((parent == 0x00000000) || (parent == 0xFFFFFFFF))
 	{
 		sw_parent = seamless_get_window_by_id(parent);
 		if (sw_parent)
@@ -3092,6 +3092,10 @@ ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long 
 		else
 			warning("ui_seamless_create_window: No parent window 0x%lx\n", parent);
 	}
+
+	/* Handle popups without parents through some ewm hints */
+	if (parent == 0xFFFFFFFF)
+		ewmh_set_window_popup(wnd);
 
 	/* FIXME: Support for Input Context:s */
 

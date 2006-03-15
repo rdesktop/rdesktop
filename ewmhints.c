@@ -22,6 +22,7 @@
 */
 
 #include <X11/Xlib.h>
+#include <X11/Xatom.h>
 #include "rdesktop.h"
 
 #define _NET_WM_STATE_REMOVE        0	/* remove/unset property */
@@ -30,7 +31,8 @@
 
 extern Display *g_display;
 static Atom g_net_wm_state_maximized_vert_atom, g_net_wm_state_maximized_horz_atom,
-	g_net_wm_state_hidden_atom;
+	g_net_wm_state_hidden_atom, g_net_wm_state_skip_taskbar_atom,
+	g_net_wm_state_skip_pager_atom;
 Atom g_net_wm_state_atom, g_net_wm_desktop_atom;
 
 /* 
@@ -173,6 +175,9 @@ ewmh_init()
 	g_net_wm_state_maximized_horz_atom =
 		XInternAtom(g_display, "_NET_WM_STATE_MAXIMIZED_HORZ", False);
 	g_net_wm_state_hidden_atom = XInternAtom(g_display, "_NET_WM_STATE_HIDDEN", False);
+	g_net_wm_state_skip_taskbar_atom =
+		XInternAtom(g_display, "_NET_WM_STATE_SKIP_TASKBAR", False);
+	g_net_wm_state_skip_pager_atom = XInternAtom(g_display, "_NET_WM_STATE_SKIP_PAGER", False);
 	g_net_wm_state_atom = XInternAtom(g_display, "_NET_WM_STATE", False);
 	g_net_wm_desktop_atom = XInternAtom(g_display, "_NET_WM_DESKTOP", False);
 }
@@ -316,6 +321,14 @@ ewmh_move_to_desktop(Window wnd, unsigned int desktop)
 		return -1;
 
 	return 0;
+}
+
+void
+ewmh_set_window_popup(Window wnd)
+{
+	Atom atoms[2] = { g_net_wm_state_skip_taskbar_atom, g_net_wm_state_skip_pager_atom };
+
+	XChangeProperty(g_display, wnd, g_net_wm_state_atom, XA_ATOM, 32, PropModeAppend, atoms, 2);
 }
 
 #endif /* MAKE_PROTO */
