@@ -88,7 +88,8 @@ Syntax:
 The text is guaranteed to be stripped of control characters (< 0x20).
 
 Note that this has the same requirement as POSITION, that the title needs to
-be stored for newly created windows until a STATE is sent.
+be stored for newly created windows until a STATE is sent. It is however not
+guaranteed that a TITLE will be sent before the first STATE.
 
 
 ZCHANGE
@@ -115,6 +116,8 @@ State can have one of three values:
  1 : Minimized.
  2 : Maximized.
 
+The initial STATE for a window will always be preceeded by one CREATE and one
+POSITION. Optionally, a TITLE may also be sent before the first STATE.
 
 DEBUG
 -----
@@ -160,8 +163,9 @@ Request a synchronisation of window information.
 Syntax:
 	SYNC,<FLAGS>
 
-For each window, the server will send CREATE, POSITION, TITLE and
-STATE just as if the window was created.
+For each window, the server will send CREATE, POSITION and STATE, in that
+order, just as if the window was created. Note that a TITLE may also,
+optionally, be sent before the STATE.
 
 POSITION
 --------
