@@ -3062,6 +3062,7 @@ ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long 
 			    CWBorderPixel, &attribs);
 
 	XStoreName(g_display, wnd, "SeamlessRDP");
+	ewmh_set_wm_name(wnd, "SeamlessRDP");
 
 	mwm_hide_decorations(wnd);
 
@@ -3193,7 +3194,9 @@ ui_seamless_settitle(unsigned long id, const char *title, unsigned long flags)
 		return;
 	}
 
+	/* FIXME: Might want to convert the name for non-EWMH WMs */
 	XStoreName(g_display, sw->wnd, title);
+	ewmh_set_wm_name(sw->wnd, title);
 }
 
 

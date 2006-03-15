@@ -30,9 +30,11 @@
 #define _NET_WM_STATE_TOGGLE        2	/* toggle property  */
 
 extern Display *g_display;
+
 static Atom g_net_wm_state_maximized_vert_atom, g_net_wm_state_maximized_horz_atom,
-	g_net_wm_state_hidden_atom, g_net_wm_state_skip_taskbar_atom,
-	g_net_wm_state_skip_pager_atom;
+	g_net_wm_state_hidden_atom, g_net_wm_name_atom, g_utf8_string_atom,
+	g_net_wm_state_skip_taskbar_atom, g_net_wm_state_skip_pager_atom;
+
 Atom g_net_wm_state_atom, g_net_wm_desktop_atom;
 
 /* 
@@ -170,6 +172,7 @@ get_current_workarea(uint32 * x, uint32 * y, uint32 * width, uint32 * height)
 void
 ewmh_init()
 {
+	/* FIXME: Use XInternAtoms */
 	g_net_wm_state_maximized_vert_atom =
 		XInternAtom(g_display, "_NET_WM_STATE_MAXIMIZED_VERT", False);
 	g_net_wm_state_maximized_horz_atom =
@@ -180,6 +183,8 @@ ewmh_init()
 	g_net_wm_state_skip_pager_atom = XInternAtom(g_display, "_NET_WM_STATE_SKIP_PAGER", False);
 	g_net_wm_state_atom = XInternAtom(g_display, "_NET_WM_STATE", False);
 	g_net_wm_desktop_atom = XInternAtom(g_display, "_NET_WM_DESKTOP", False);
+	g_net_wm_name_atom = XInternAtom(g_display, "_NET_WM_NAME", False);
+	g_utf8_string_atom = XInternAtom(g_display, "UTF8_STRING", False);
 }
 
 
@@ -322,6 +327,17 @@ ewmh_move_to_desktop(Window wnd, unsigned int desktop)
 
 	return 0;
 }
+
+void
+ewmh_set_wm_name(Window wnd, const char *title)
+{
+	int len;
+
+	len = strlen(title);
+	XChangeProperty(g_display, wnd, g_net_wm_name_atom, g_utf8_string_atom,
+			8, PropModeReplace, (unsigned char *) title, len);
+}
+
 
 void
 ewmh_set_window_popup(Window wnd)
