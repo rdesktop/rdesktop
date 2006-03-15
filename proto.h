@@ -279,6 +279,7 @@ void ui_seamless_move_window(unsigned long id, int x, int y, int width, int heig
 			     unsigned long flags);
 void ui_seamless_settitle(unsigned long id, const char *title, unsigned long flags);
 void ui_seamless_setstate(unsigned long id, unsigned int state, unsigned long flags);
+void ui_seamless_syncbegin(unsigned long flags);
 /* lspci.c */
 BOOL lspci_init(void);
 /* seamless.c */
