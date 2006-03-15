@@ -160,8 +160,8 @@ Request a synchronisation of window information.
 Syntax:
 	SYNC,<FLAGS>
 
-For each window, the server will send CREATE, POSITION and SETSTATE just as
-if the window was created.
+For each window, the server will send CREATE, POSITION, TITLE and
+STATE just as if the window was created.
 
 POSITION
 --------
