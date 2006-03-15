@@ -3061,14 +3061,15 @@ ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long 
 			    CWBackPixel | CWBackingStore | CWOverrideRedirect | CWColormap |
 			    CWBorderPixel, &attribs);
 
-	XStoreName(g_display, wnd, "rdesktop-seamless");
+	XStoreName(g_display, wnd, "SeamlessRDP");
 
 	mwm_hide_decorations(wnd);
 
 	classhints = XAllocClassHint();
 	if (classhints != NULL)
 	{
-		classhints->res_name = classhints->res_class = "rdesktop";
+		classhints->res_name = "rdesktop";
+		classhints->res_class = "SeamlessRDP";
 		XSetClassHint(g_display, wnd, classhints);
 		XFree(classhints);
 	}
