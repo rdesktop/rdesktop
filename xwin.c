@@ -3047,8 +3047,12 @@ ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long 
 	long input_mask;
 	seamless_window *sw, *sw_parent;
 
-	get_window_attribs(&attribs);
+	/* Ignore CREATEs for existing windows */
+	sw = seamless_get_window_by_id(id);
+	if (sw)
+		return;
 
+	get_window_attribs(&attribs);
 	attribs.override_redirect = False;
 
 	/* FIXME: Do not assume that -1, -1 is outside screen Consider
