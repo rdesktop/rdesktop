@@ -132,17 +132,17 @@ seamless_process_line(const char *line, void *data)
 		if (*endptr)
 			return False;
 
-		x = strtoul(tok3, &endptr, 0);
+		x = strtol(tok3, &endptr, 0);
 		if (*endptr)
 			return False;
-		y = strtoul(tok4, &endptr, 0);
+		y = strtol(tok4, &endptr, 0);
 		if (*endptr)
 			return False;
 
-		width = strtoul(tok5, &endptr, 0);
+		width = strtol(tok5, &endptr, 0);
 		if (*endptr)
 			return False;
-		height = strtoul(tok6, &endptr, 0);
+		height = strtol(tok6, &endptr, 0);
 		if (*endptr)
 			return False;
 
