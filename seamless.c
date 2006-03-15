@@ -87,11 +87,11 @@ seamless_process_line(const char *line, void *data)
 		if (!tok4)
 			return False;
 
-		id = strtol(tok2, &endptr, 0);
+		id = strtoll(tok2, &endptr, 0);
 		if (*endptr)
 			return False;
 
-		parent = strtol(tok3, &endptr, 0);
+		parent = strtoll(tok3, &endptr, 0);
 		if (*endptr)
 			return False;
 
@@ -106,7 +106,7 @@ seamless_process_line(const char *line, void *data)
 		if (!tok3)
 			return False;
 
-		id = strtol(tok2, &endptr, 0);
+		id = strtoll(tok2, &endptr, 0);
 		if (*endptr)
 			return False;
 
@@ -128,7 +128,7 @@ seamless_process_line(const char *line, void *data)
 		if (!tok7)
 			return False;
 
-		id = strtol(tok2, &endptr, 0);
+		id = strtoll(tok2, &endptr, 0);
 		if (*endptr)
 			return False;
 
@@ -161,7 +161,7 @@ seamless_process_line(const char *line, void *data)
 		if (!tok4)
 			return False;
 
-		id = strtol(tok2, &endptr, 0);
+		id = strtoll(tok2, &endptr, 0);
 		if (*endptr)
 			return False;
 
@@ -178,7 +178,7 @@ seamless_process_line(const char *line, void *data)
 		if (!tok4)
 			return False;
 
-		id = strtol(tok2, &endptr, 0);
+		id = strtoll(tok2, &endptr, 0);
 		if (*endptr)
 			return False;
 
