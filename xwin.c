@@ -57,6 +57,7 @@ typedef struct _seamless_window
 	int xoffset, yoffset;
 	int width, height;
 	unsigned int state;	/* normal/minimized/maximized */
+	unsigned int desktop;
 	struct _seamless_window *next;
 } seamless_window;
 static seamless_window *g_seamless_windows = NULL;
@@ -85,6 +86,7 @@ static Cursor g_current_cursor;
 static HCURSOR g_null_cursor = NULL;
 static Atom g_protocol_atom, g_kill_atom;
 extern Atom g_net_wm_state_atom;
+extern Atom g_net_wm_desktop_atom;
 static BOOL g_focused;
 static BOOL g_mouse_in_wnd;
 /* Indicates that:
@@ -297,6 +299,24 @@ seamless_remove_window(seamless_window * win)
 		prevnext = &sw->next;
 	}
 	return;
+}
+
+
+/* Move all windows except wnd to new desktop */
+static void
+seamless_all_to_desktop(Window wnd, unsigned int desktop)
+{
+	seamless_window *sw;
+	for (sw = g_seamless_windows; sw; sw = sw->next)
+	{
+		if (sw->wnd == wnd)
+			continue;
+		if (sw->desktop != desktop)
+		{
+			ewmh_move_to_desktop(sw->wnd, desktop);
+			sw->desktop = desktop;
+		}
+	}
 }
 
 
@@ -1957,6 +1977,14 @@ xwin_process_events(void)
 					sw->state = ewmh_get_window_state(sw->wnd);
 					seamless_send_state(sw->id, sw->state, 0);
 				}
+
+				if ((xevent.xproperty.atom == g_net_wm_desktop_atom)
+				    && (xevent.xproperty.state == PropertyNewValue))
+				{
+					sw->desktop = ewmh_get_window_desktop(sw->wnd);
+					seamless_all_to_desktop(sw->wnd, sw->desktop);
+				}
+
 				break;
 			case MapNotify:
 				if (!g_seamless_rdp)

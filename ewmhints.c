@@ -31,7 +31,7 @@
 extern Display *g_display;
 static Atom g_net_wm_state_maximized_vert_atom, g_net_wm_state_maximized_horz_atom,
 	g_net_wm_state_hidden_atom;
-Atom g_net_wm_state_atom;
+Atom g_net_wm_state_atom, g_net_wm_desktop_atom;
 
 /* 
    Get window property value (32 bit format) 
@@ -174,6 +174,7 @@ ewmh_init()
 		XInternAtom(g_display, "_NET_WM_STATE_MAXIMIZED_HORZ", False);
 	g_net_wm_state_hidden_atom = XInternAtom(g_display, "_NET_WM_STATE_HIDDEN", False);
 	g_net_wm_state_atom = XInternAtom(g_display, "_NET_WM_STATE", False);
+	g_net_wm_desktop_atom = XInternAtom(g_display, "_NET_WM_DESKTOP", False);
 }
 
 
@@ -261,6 +262,52 @@ ewmh_change_state(Window wnd, int state)
 		xevent.xclient.data.l[0] = _NET_WM_STATE_REMOVE;
 	xevent.xclient.data.l[1] = g_net_wm_state_maximized_vert_atom;
 	xevent.xclient.data.l[2] = g_net_wm_state_maximized_horz_atom;
+	xevent.xclient.data.l[3] = 0;
+	xevent.xclient.data.l[4] = 0;
+	status = XSendEvent(g_display, DefaultRootWindow(g_display), False,
+			    SubstructureNotifyMask | SubstructureRedirectMask, &xevent);
+	if (!status)
+		return -1;
+
+	return 0;
+}
+
+
+int
+ewmh_get_window_desktop(Window wnd)
+{
+	unsigned long nitems_return;
+	unsigned char *prop_return;
+	int desktop;
+
+	if (get_property_value(wnd, "_NET_WM_DESKTOP", 1, &nitems_return, &prop_return) < 0)
+		return (-1);
+
+	if (nitems_return != 1)
+	{
+		fprintf(stderr, "_NET_WM_DESKTOP has bad length\n");
+		return (-1);
+	}
+
+	desktop = *prop_return;
+	XFree(prop_return);
+	return desktop;
+}
+
+
+int
+ewmh_move_to_desktop(Window wnd, unsigned int desktop)
+{
+	Status status;
+	XEvent xevent;
+
+	xevent.type = ClientMessage;
+	xevent.xclient.window = wnd;
+	xevent.xclient.message_type = g_net_wm_desktop_atom;
+	xevent.xclient.format = 32;
+	xevent.xclient.data.l[0] = desktop;
+	xevent.xclient.data.l[1] = 0;
+	xevent.xclient.data.l[2] = 0;
 	xevent.xclient.data.l[3] = 0;
 	xevent.xclient.data.l[4] = 0;
 	status = XSendEvent(g_display, DefaultRootWindow(g_display), False,
