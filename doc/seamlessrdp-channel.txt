@@ -51,7 +51,9 @@ Syntax:
 	CREATE,<ID>,<PARENT>,<FLAGS>
 
 Indicates that a window has appeared on the server. If PARENT is non-zero then
-the new window is a child of that window (it's transient for it).
+the new window is a child of that window (it's transient for it). The special
+value 0xFFFFFFFF for PARENT means that the window is a popup window without a
+parent. It's commonly used for splash screens, tool tips and context menus.
 
 Note that very little information is included in this message. Things like
 title and state will come in subsequent messages. This message should only
