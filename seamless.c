@@ -196,6 +196,29 @@ seamless_process_line(const char *line, void *data)
 	{
 		printf("SeamlessRDP:%s\n", line);
 	}
+	else if (!strcmp("SYNCBEGIN", tok1))
+	{
+		if (!tok2)
+			return False;
+
+		flags = strtoul(tok2, &endptr, 0);
+		if (*endptr)
+			return False;
+
+		ui_seamless_syncbegin(flags);
+	}
+	else if (!strcmp("SYNCEND", tok1))
+	{
+		if (!tok2)
+			return False;
+
+		flags = strtoul(tok2, &endptr, 0);
+		if (*endptr)
+			return False;
+
+		/* do nothing, currently */
+	}
+
 
 	xfree(l);
 	return True;

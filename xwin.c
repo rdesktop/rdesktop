@@ -3214,3 +3214,15 @@ ui_seamless_setstate(unsigned long id, unsigned int state, unsigned long flags)
 			break;
 	}
 }
+
+
+void
+ui_seamless_syncbegin(unsigned long flags)
+{
+	/* Destroy all seamless windows */
+	while (g_seamless_windows)
+	{
+		XDestroyWindow(g_display, g_seamless_windows->wnd);
+		seamless_remove_window(g_seamless_windows);
+	}
+}
