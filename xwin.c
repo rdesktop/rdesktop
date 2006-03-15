@@ -56,7 +56,7 @@ typedef struct _seamless_window
 	unsigned long id;
 	int xoffset, yoffset;
 	int width, height;
-	unsigned int state;	/* normal/minimized/maximized */
+	int state;		/* normal/minimized/maximized. */
 	unsigned int desktop;
 	struct _seamless_window *next;
 } seamless_window;
@@ -3044,6 +3044,7 @@ ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long 
 	Window wnd;
 	XSetWindowAttributes attribs;
 	XClassHint *classhints;
+	XSizeHints *sizehints;
 	long input_mask;
 	seamless_window *sw, *sw_parent;
 
@@ -3055,10 +3056,7 @@ ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long 
 	get_window_attribs(&attribs);
 	attribs.override_redirect = False;
 
-	/* FIXME: Do not assume that -1, -1 is outside screen Consider
-	   wait with showing the window until STATE and others have
-	   been recieved. */
-	wnd = XCreateWindow(g_display, RootWindowOfScreen(g_screen), -1, -1, 1, 1, 0, 0,
+	wnd = XCreateWindow(g_display, RootWindowOfScreen(g_screen), -1, -1, 1, 1, 0, g_depth,
 			    InputOutput, g_visual,
 			    CWBackPixel | CWBackingStore | CWOverrideRedirect | CWColormap |
 			    CWBorderPixel, &attribs);
@@ -3073,6 +3071,15 @@ ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long 
 		classhints->res_name = classhints->res_class = "rdesktop";
 		XSetClassHint(g_display, wnd, classhints);
 		XFree(classhints);
+	}
+
+	/* WM_NORMAL_HINTS */
+	sizehints = XAllocSizeHints();
+	if (sizehints != NULL)
+	{
+		sizehints->flags = USPosition;
+		XSetWMNormalHints(g_display, wnd, sizehints);
+		XFree(sizehints);
 	}
 
 	/* Set WM_TRANSIENT_FOR, if necessary */
@@ -3092,8 +3099,6 @@ ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long 
 
 	XSelectInput(g_display, wnd, input_mask);
 
-	XMapWindow(g_display, wnd);
-
 	/* handle the WM_DELETE_WINDOW protocol. FIXME: When killing a
 	   seamless window, we could try to close the window on the
 	   serverside, instead of terminating rdesktop */
@@ -3106,6 +3111,8 @@ ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long 
 	sw->yoffset = 0;
 	sw->width = 0;
 	sw->height = 0;
+	sw->state = SEAMLESSRDP_NOTYETMAPPED;
+	sw->desktop = 0;
 	sw->next = g_seamless_windows;
 	g_seamless_windows = sw;
 }
@@ -3157,8 +3164,12 @@ ui_seamless_move_window(unsigned long id, int x, int y, int width, int height, u
 
 	/* If we move the window in a maximized state, then KDE won't
 	   accept restoration */
-	if (sw->state != SEAMLESSRDP_NORMAL)
-		return;
+	switch (sw->state)
+	{
+		case SEAMLESSRDP_MINIMIZED:
+		case SEAMLESSRDP_MAXIMIZED:
+			return;
+	}
 
 	/* FIXME: Perhaps use ewmh_net_moveresize_window instead */
 	XMoveResizeWindow(g_display, sw->wnd, sw->xoffset, sw->yoffset, sw->width, sw->height);
@@ -3191,6 +3202,11 @@ ui_seamless_setstate(unsigned long id, unsigned int state, unsigned long flags)
 	{
 		warning("ui_seamless_setstate: No information for window 0x%lx\n", id);
 		return;
+	}
+
+	if (sw->state == SEAMLESSRDP_NOTYETMAPPED)
+	{
+		XMapWindow(g_display, sw->wnd);
 	}
 
 	sw->state = state;
