@@ -55,7 +55,6 @@ typedef struct _seamless_window
 	Window wnd;
 	unsigned long id;
 	unsigned long parent;
-	XWMHints *hints;
 	int xoffset, yoffset;
 	int width, height;
 	int state;		/* normal/minimized/maximized. */
@@ -295,7 +294,6 @@ seamless_remove_window(seamless_window * win)
 		if (sw == win)
 		{
 			*prevnext = sw->next;
-			XFree(sw->hints);
 			xfree(sw);
 			return;
 		}
@@ -3114,8 +3112,6 @@ ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long 
 	sw->wnd = wnd;
 	sw->id = id;
 	sw->parent = parent;
-	sw->hints = XAllocWMHints();
-	sw->hints->flags = 0;
 	sw->xoffset = 0;
 	sw->yoffset = 0;
 	sw->width = 0;
@@ -3230,9 +3226,12 @@ ui_seamless_setstate(unsigned long id, unsigned int state, unsigned long flags)
 			   XIconifyWindow is easier. */
 			if (sw->state == SEAMLESSRDP_NOTYETMAPPED)
 			{
-				sw->hints->flags |= StateHint;
-				sw->hints->initial_state = IconicState;
-				XSetWMHints(g_display, sw->wnd, sw->hints);
+				XWMHints *hints;
+				hints = XAllocWMHints();
+				hints->flags = StateHint;
+				hints->initial_state = IconicState;
+				XSetWMHints(g_display, sw->wnd, hints);
+				XFree(hints);
 				XMapWindow(g_display, sw->wnd);
 			}
 			else
