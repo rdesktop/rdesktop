@@ -239,27 +239,6 @@ ewmh_change_state(Window wnd, int state)
 	XEvent xevent;
 
 	/*
-	 * Deal with the hidden atom
-	 */
-	xevent.type = ClientMessage;
-	xevent.xclient.window = wnd;
-	xevent.xclient.message_type = g_net_wm_state_atom;
-	xevent.xclient.format = 32;
-	if (state == SEAMLESSRDP_MINIMIZED)
-		xevent.xclient.data.l[0] = _NET_WM_STATE_ADD;
-	else
-		xevent.xclient.data.l[0] = _NET_WM_STATE_REMOVE;
-	xevent.xclient.data.l[1] = g_net_wm_state_hidden_atom;
-	xevent.xclient.data.l[2] = 0;
-	xevent.xclient.data.l[3] = 0;
-	xevent.xclient.data.l[4] = 0;
-	status = XSendEvent(g_display, DefaultRootWindow(g_display), False,
-			    SubstructureNotifyMask | SubstructureRedirectMask, &xevent);
-	if (!status)
-		return -1;
-
-
-	/*
 	 * Deal with the max atoms
 	 */
 	xevent.type = ClientMessage;
