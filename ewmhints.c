@@ -228,6 +228,52 @@ ewmh_get_window_state(Window w)
 		return SEAMLESSRDP_NORMAL;
 }
 
+static int
+ewmh_add_state(Window wnd, Atom atom1, Atom atom2)
+{
+	Status status;
+	XEvent xevent;
+
+	xevent.type = ClientMessage;
+	xevent.xclient.window = wnd;
+	xevent.xclient.message_type = g_net_wm_state_atom;
+	xevent.xclient.format = 32;
+	xevent.xclient.data.l[0] = _NET_WM_STATE_ADD;
+	xevent.xclient.data.l[1] = atom1;
+	xevent.xclient.data.l[2] = atom2;
+	xevent.xclient.data.l[3] = 0;
+	xevent.xclient.data.l[4] = 0;
+	status = XSendEvent(g_display, DefaultRootWindow(g_display), False,
+			    SubstructureNotifyMask | SubstructureRedirectMask, &xevent);
+	if (!status)
+		return -1;
+
+	return 0;
+}
+
+static int
+ewmh_remove_state(Window wnd, Atom atom1, Atom atom2)
+{
+	Status status;
+	XEvent xevent;
+
+	xevent.type = ClientMessage;
+	xevent.xclient.window = wnd;
+	xevent.xclient.message_type = g_net_wm_state_atom;
+	xevent.xclient.format = 32;
+	xevent.xclient.data.l[0] = _NET_WM_STATE_REMOVE;
+	xevent.xclient.data.l[1] = atom1;
+	xevent.xclient.data.l[2] = atom2;
+	xevent.xclient.data.l[3] = 0;
+	xevent.xclient.data.l[4] = 0;
+	status = XSendEvent(g_display, DefaultRootWindow(g_display), False,
+			    SubstructureNotifyMask | SubstructureRedirectMask, &xevent);
+	if (!status)
+		return -1;
+
+	return 0;
+}
+
 /* 
    Set the window state: normal/minimized/maximized. 
    Returns -1 on failure. 
@@ -235,28 +281,23 @@ ewmh_get_window_state(Window w)
 int
 ewmh_change_state(Window wnd, int state)
 {
-	Status status;
-	XEvent xevent;
-
 	/*
 	 * Deal with the max atoms
 	 */
-	xevent.type = ClientMessage;
-	xevent.xclient.window = wnd;
-	xevent.xclient.message_type = g_net_wm_state_atom;
-	xevent.xclient.format = 32;
 	if (state == SEAMLESSRDP_MAXIMIZED)
-		xevent.xclient.data.l[0] = _NET_WM_STATE_ADD;
+	{
+		if (ewmh_add_state
+		    (wnd, g_net_wm_state_maximized_vert_atom,
+		     g_net_wm_state_maximized_horz_atom) < 0)
+			return -1;
+	}
 	else
-		xevent.xclient.data.l[0] = _NET_WM_STATE_REMOVE;
-	xevent.xclient.data.l[1] = g_net_wm_state_maximized_vert_atom;
-	xevent.xclient.data.l[2] = g_net_wm_state_maximized_horz_atom;
-	xevent.xclient.data.l[3] = 0;
-	xevent.xclient.data.l[4] = 0;
-	status = XSendEvent(g_display, DefaultRootWindow(g_display), False,
-			    SubstructureNotifyMask | SubstructureRedirectMask, &xevent);
-	if (!status)
-		return -1;
+	{
+		if (ewmh_remove_state
+		    (wnd, g_net_wm_state_maximized_vert_atom,
+		     g_net_wm_state_maximized_horz_atom) < 0)
+			return -1;
+	}
 
 	return 0;
 }
@@ -318,12 +359,13 @@ ewmh_set_wm_name(Window wnd, const char *title)
 }
 
 
-void
+int
 ewmh_set_window_popup(Window wnd)
 {
-	Atom atoms[2] = { g_net_wm_state_skip_taskbar_atom, g_net_wm_state_skip_pager_atom };
-
-	XChangeProperty(g_display, wnd, g_net_wm_state_atom, XA_ATOM, 32, PropModeAppend, atoms, 2);
+	if (ewmh_add_state(wnd, g_net_wm_state_skip_taskbar_atom, g_net_wm_state_skip_pager_atom) <
+	    0)
+		return -1;
+	return 0;
 }
 
 #endif /* MAKE_PROTO */
