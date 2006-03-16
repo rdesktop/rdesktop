@@ -54,6 +54,7 @@ typedef struct _seamless_window
 {
 	Window wnd;
 	unsigned long id;
+	XWMHints *hints;
 	int xoffset, yoffset;
 	int width, height;
 	int state;		/* normal/minimized/maximized. */
@@ -293,6 +294,7 @@ seamless_remove_window(seamless_window * win)
 		if (sw == win)
 		{
 			*prevnext = sw->next;
+			XFree(sw->hints);
 			xfree(sw);
 			return;
 		}
@@ -3113,6 +3115,8 @@ ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long 
 	sw = malloc(sizeof(seamless_window));
 	sw->wnd = wnd;
 	sw->id = id;
+	sw->hints = XAllocWMHints();
+	sw->hints->flags = 0;
 	sw->xoffset = 0;
 	sw->yoffset = 0;
 	sw->width = 0;
@@ -3212,18 +3216,12 @@ ui_seamless_setstate(unsigned long id, unsigned int state, unsigned long flags)
 		return;
 	}
 
-	if (sw->state == SEAMLESSRDP_NOTYETMAPPED)
-	{
-		XMapWindow(g_display, sw->wnd);
-	}
-
-	sw->state = state;
-
 	switch (state)
 	{
 		case SEAMLESSRDP_NORMAL:
 		case SEAMLESSRDP_MAXIMIZED:
 			ewmh_change_state(sw->wnd, state);
+			XMapWindow(g_display, sw->wnd);
 			break;
 		case SEAMLESSRDP_MINIMIZED:
 			/* EWMH says: "if an Application asks to toggle _NET_WM_STATE_HIDDEN
@@ -3231,12 +3229,22 @@ ui_seamless_setstate(unsigned long id, unsigned int state, unsigned long flags)
 			   _NET_WM_STATE_HIDDEN is a function of some other aspect of the window
 			   such as minimization, rather than an independent state." Besides,
 			   XIconifyWindow is easier. */
-			XIconifyWindow(g_display, sw->wnd, DefaultScreen(g_display));
+			if (sw->state == SEAMLESSRDP_NOTYETMAPPED)
+			{
+				sw->hints->flags |= StateHint;
+				sw->hints->initial_state = IconicState;
+				XSetWMHints(g_display, sw->wnd, sw->hints);
+				XMapWindow(g_display, sw->wnd);
+			}
+			else
+				XIconifyWindow(g_display, sw->wnd, DefaultScreen(g_display));
 			break;
 		default:
 			warning("SeamlessRDP: Invalid state %d\n", state);
 			break;
 	}
+
+	sw->state = state;
 }
 
 
