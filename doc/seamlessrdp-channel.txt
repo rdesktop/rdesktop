@@ -157,6 +157,18 @@ Sent when the last message that is part of the synchronisation has been sent.
 This may be followed by duplicate messages and/or messages referring invalid
 windows that were queued up during the synchronisation.
 
+HELLO
+-----
+
+Initial message sent by server.
+
+Syntax:
+	HELLO,<FLAGS>
+
+The server starts each connection by sending this message. Normally the client
+will react by sending a SYNC back to the server. The low bit in FLAGS is set if
+this is a new connection to an existing session.
+
 Client to Server Operations
 ===========================
 
