@@ -69,9 +69,6 @@ seamless_process_line(const char *line, void *data)
 
 	DEBUG_SEAMLESS(("seamlessrdp got:%s\n", p));
 
-	if (!g_seamless_rdp)
-		return True;
-
 	tok1 = seamless_get_token(&p);
 	tok2 = seamless_get_token(&p);
 	tok3 = seamless_get_token(&p);
@@ -218,6 +215,17 @@ seamless_process_line(const char *line, void *data)
 
 		/* do nothing, currently */
 	}
+	else if (!strcmp("HELLO", tok1))
+	{
+		if (!tok2)
+			return False;
+
+		flags = strtoul(tok2, &endptr, 0);
+		if (*endptr)
+			return False;
+
+		ui_seamless_begin();
+	}
 
 
 	xfree(l);
@@ -261,6 +269,9 @@ seamless_process(STREAM s)
 BOOL
 seamless_init(void)
 {
+	if (!g_seamless_rdp)
+		return False;
+
 	seamless_channel =
 		channel_register("seamrdp", CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_ENCRYPT_RDP,
 				 seamless_process);
@@ -297,6 +308,9 @@ seamless_send(const char *format, ...)
 void
 seamless_send_sync()
 {
+	if (!g_seamless_rdp)
+		return;
+
 	seamless_send("SYNC\n");
 }
 
@@ -304,5 +318,8 @@ seamless_send_sync()
 void
 seamless_send_state(unsigned long id, unsigned int state, unsigned long flags)
 {
+	if (!g_seamless_rdp)
+		return;
+
 	seamless_send("STATE,0x%08lx,0x%x,0x%lx\n", id, state, flags);
 }

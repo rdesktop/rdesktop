@@ -62,6 +62,8 @@ typedef struct _seamless_window
 	struct _seamless_window *next;
 } seamless_window;
 static seamless_window *g_seamless_windows = NULL;
+static BOOL g_seamless_started = False;	/* Server end is up and running */
+static BOOL g_seamless_active = False;	/* We are currently in seamless mode */
 extern BOOL g_seamless_rdp;
 
 extern uint32 g_embed_wnd;
@@ -1565,17 +1567,15 @@ ui_create_window(void)
 	}
 
 	XSelectInput(g_display, g_wnd, input_mask);
-	if (!g_seamless_rdp)
+
+	XMapWindow(g_display, g_wnd);
+	/* wait for VisibilityNotify */
+	do
 	{
-		XMapWindow(g_display, g_wnd);
-		/* wait for VisibilityNotify */
-		do
-		{
-			XMaskEvent(g_display, VisibilityChangeMask, &xevent);
-		}
-		while (xevent.type != VisibilityNotify);
-		g_Unobscured = xevent.xvisibility.state == VisibilityUnobscured;
+		XMaskEvent(g_display, VisibilityChangeMask, &xevent);
 	}
+	while (xevent.type != VisibilityNotify);
+	g_Unobscured = xevent.xvisibility.state == VisibilityUnobscured;
 
 	g_focused = False;
 	g_mouse_in_wnd = False;
@@ -1639,7 +1639,7 @@ xwin_toggle_fullscreen(void)
 {
 	Pixmap contents = 0;
 
-	if (g_seamless_rdp)
+	if (g_seamless_active)
 		/* Turn off SeamlessRDP mode */
 		ui_seamless_toggle();
 
@@ -1988,11 +1988,11 @@ xwin_process_events(void)
 
 				break;
 			case MapNotify:
-				if (!g_seamless_rdp)
+				if (!g_seamless_active)
 					rdp_send_client_window_status(1);
 				break;
 			case UnmapNotify:
-				if (!g_seamless_rdp)
+				if (!g_seamless_active)
 					rdp_send_client_window_status(0);
 				break;
 		}
@@ -3006,9 +3006,29 @@ ui_end_update(void)
 }
 
 void
+ui_seamless_begin()
+{
+	if (!g_seamless_rdp)
+		return;
+
+	if (g_seamless_started)
+		return;
+
+	g_seamless_started = True;
+
+	ui_seamless_toggle();
+}
+
+void
 ui_seamless_toggle()
 {
-	if (g_seamless_rdp)
+	if (!g_seamless_rdp)
+		return;
+
+	if (!g_seamless_started)
+		return;
+
+	if (g_seamless_active)
 	{
 		/* Deactivate */
 		while (g_seamless_windows)
@@ -3021,22 +3041,11 @@ ui_seamless_toggle()
 	else
 	{
 		/* Activate */
-		if (g_win_button_size)
-		{
-			error("SeamlessRDP mode cannot be activated when using single application mode\n");
-			return;
-		}
-		if (!g_using_full_workarea)
-		{
-			error("SeamlessRDP mode requires a session that covers the whole screen");
-			return;
-		}
-
 		XUnmapWindow(g_display, g_wnd);
 		seamless_send_sync();
 	}
 
-	g_seamless_rdp = !g_seamless_rdp;
+	g_seamless_active = !g_seamless_active;
 }
 
 void
@@ -3048,6 +3057,9 @@ ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long 
 	XSizeHints *sizehints;
 	long input_mask;
 	seamless_window *sw, *sw_parent;
+
+	if (!g_seamless_active)
+		return;
 
 	/* Ignore CREATEs for existing windows */
 	sw = seamless_get_window_by_id(id);
@@ -3128,6 +3140,9 @@ ui_seamless_destroy_window(unsigned long id, unsigned long flags)
 {
 	seamless_window *sw;
 
+	if (!g_seamless_active)
+		return;
+
 	sw = seamless_get_window_by_id(id);
 	if (!sw)
 	{
@@ -3144,6 +3159,9 @@ void
 ui_seamless_move_window(unsigned long id, int x, int y, int width, int height, unsigned long flags)
 {
 	seamless_window *sw;
+
+	if (!g_seamless_active)
+		return;
 
 	sw = seamless_get_window_by_id(id);
 	if (!sw)
@@ -3186,6 +3204,9 @@ ui_seamless_settitle(unsigned long id, const char *title, unsigned long flags)
 {
 	seamless_window *sw;
 
+	if (!g_seamless_active)
+		return;
+
 	sw = seamless_get_window_by_id(id);
 	if (!sw)
 	{
@@ -3203,6 +3224,9 @@ void
 ui_seamless_setstate(unsigned long id, unsigned int state, unsigned long flags)
 {
 	seamless_window *sw;
+
+	if (!g_seamless_active)
+		return;
 
 	sw = seamless_get_window_by_id(id);
 	if (!sw)
@@ -3253,6 +3277,9 @@ ui_seamless_setstate(unsigned long id, unsigned int state, unsigned long flags)
 void
 ui_seamless_syncbegin(unsigned long flags)
 {
+	if (!g_seamless_active)
+		return;
+
 	/* Destroy all seamless windows */
 	while (g_seamless_windows)
 	{
