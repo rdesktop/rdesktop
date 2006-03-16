@@ -229,7 +229,7 @@ ewmh_get_window_state(Window w)
 }
 
 static int
-ewmh_add_state(Window wnd, Atom atom1, Atom atom2)
+ewmh_modify_state(Window wnd, int add, Atom atom1, Atom atom2)
 {
 	Status status;
 	XEvent xevent;
@@ -238,30 +238,10 @@ ewmh_add_state(Window wnd, Atom atom1, Atom atom2)
 	xevent.xclient.window = wnd;
 	xevent.xclient.message_type = g_net_wm_state_atom;
 	xevent.xclient.format = 32;
-	xevent.xclient.data.l[0] = _NET_WM_STATE_ADD;
-	xevent.xclient.data.l[1] = atom1;
-	xevent.xclient.data.l[2] = atom2;
-	xevent.xclient.data.l[3] = 0;
-	xevent.xclient.data.l[4] = 0;
-	status = XSendEvent(g_display, DefaultRootWindow(g_display), False,
-			    SubstructureNotifyMask | SubstructureRedirectMask, &xevent);
-	if (!status)
-		return -1;
-
-	return 0;
-}
-
-static int
-ewmh_remove_state(Window wnd, Atom atom1, Atom atom2)
-{
-	Status status;
-	XEvent xevent;
-
-	xevent.type = ClientMessage;
-	xevent.xclient.window = wnd;
-	xevent.xclient.message_type = g_net_wm_state_atom;
-	xevent.xclient.format = 32;
-	xevent.xclient.data.l[0] = _NET_WM_STATE_REMOVE;
+	if (add)
+		xevent.xclient.data.l[0] = _NET_WM_STATE_ADD;
+	else
+		xevent.xclient.data.l[0] = _NET_WM_STATE_REMOVE;
 	xevent.xclient.data.l[1] = atom1;
 	xevent.xclient.data.l[2] = atom2;
 	xevent.xclient.data.l[3] = 0;
@@ -286,15 +266,15 @@ ewmh_change_state(Window wnd, int state)
 	 */
 	if (state == SEAMLESSRDP_MAXIMIZED)
 	{
-		if (ewmh_add_state
-		    (wnd, g_net_wm_state_maximized_vert_atom,
+		if (ewmh_modify_state
+		    (wnd, 1, g_net_wm_state_maximized_vert_atom,
 		     g_net_wm_state_maximized_horz_atom) < 0)
 			return -1;
 	}
 	else
 	{
-		if (ewmh_remove_state
-		    (wnd, g_net_wm_state_maximized_vert_atom,
+		if (ewmh_modify_state
+		    (wnd, 0, g_net_wm_state_maximized_vert_atom,
 		     g_net_wm_state_maximized_horz_atom) < 0)
 			return -1;
 	}
@@ -362,8 +342,8 @@ ewmh_set_wm_name(Window wnd, const char *title)
 int
 ewmh_set_window_popup(Window wnd)
 {
-	if (ewmh_add_state(wnd, g_net_wm_state_skip_taskbar_atom, g_net_wm_state_skip_pager_atom) <
-	    0)
+	if (ewmh_modify_state
+	    (wnd, 1, g_net_wm_state_skip_taskbar_atom, g_net_wm_state_skip_pager_atom) < 0)
 		return -1;
 	return 0;
 }
