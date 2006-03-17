@@ -151,7 +151,21 @@ seamless_process_line(const char *line, void *data)
 	}
 	else if (!strcmp("ZCHANGE", tok1))
 	{
-		unimpl("SeamlessRDP ZCHANGE1\n");
+		unsigned long behind;
+
+		id = strtoul(tok2, &endptr, 0);
+		if (*endptr)
+			return False;
+
+		behind = strtoul(tok3, &endptr, 0);
+		if (*endptr)
+			return False;
+
+		flags = strtoul(tok4, &endptr, 0);
+		if (*endptr)
+			return False;
+
+		ui_seamless_restack_window(id, behind, flags);
 	}
 	else if (!strcmp("TITLE", tok1))
 	{
@@ -322,4 +336,14 @@ seamless_send_state(unsigned long id, unsigned int state, unsigned long flags)
 		return;
 
 	seamless_send("STATE,0x%08lx,0x%x,0x%lx\n", id, state, flags);
+}
+
+
+void
+seamless_send_zchange(unsigned long id, unsigned long below, unsigned long flags)
+{
+	if (!g_seamless_rdp)
+		return;
+
+	seamless_send("ZCHANGE,0x%08lx,0x%08lx,0x%lx\n", id, below, flags);
 }

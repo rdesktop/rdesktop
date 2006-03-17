@@ -278,6 +278,7 @@ void ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned 
 void ui_seamless_destroy_window(unsigned long id, unsigned long flags);
 void ui_seamless_move_window(unsigned long id, int x, int y, int width, int height,
 			     unsigned long flags);
+void ui_seamless_restack_window(unsigned long id, unsigned long behind, unsigned long flags);
 void ui_seamless_settitle(unsigned long id, const char *title, unsigned long flags);
 void ui_seamless_setstate(unsigned long id, unsigned int state, unsigned long flags);
 void ui_seamless_syncbegin(unsigned long flags);
@@ -287,6 +288,7 @@ BOOL lspci_init(void);
 BOOL seamless_init(void);
 void seamless_send_sync(void);
 void seamless_send_state(unsigned long id, unsigned int state, unsigned long flags);
+void seamless_send_zchange(unsigned long id, unsigned long below, unsigned long flags);
 
 /* *INDENT-OFF* */
 #ifdef __cplusplus

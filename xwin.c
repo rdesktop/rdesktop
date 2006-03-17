@@ -1744,6 +1744,42 @@ handle_button_event(XEvent xevent, BOOL down)
 	}
 }
 
+static void
+ui_seamless_handle_restack(seamless_window * sw)
+{
+	Status status;
+	Window root, parent, *children;
+	unsigned int nchildren, i;
+	seamless_window *sw_below;
+
+	status = XQueryTree(g_display, RootWindowOfScreen(g_screen),
+			    &root, &parent, &children, &nchildren);
+	if (!status || !nchildren)
+		return;
+
+	sw_below = NULL;
+
+	i = 0;
+	while (children[i] != sw->wnd)
+	{
+		i++;
+		if (i >= nchildren)
+			return;
+	}
+
+	for (i++; i < nchildren; i++)
+	{
+		sw_below = seamless_get_window_by_wnd(children[i]);
+		if (sw_below)
+			break;
+	}
+
+	if (sw_below)
+		seamless_send_zchange(sw->id, sw_below->id, 0);
+	else
+		seamless_send_zchange(sw->id, 0, 0);
+}
+
 /* Process events in Xlib queue
    Returns 0 after user quit, 1 otherwise */
 static int
@@ -1995,6 +2031,13 @@ xwin_process_events(void)
 				if (!g_seamless_active)
 					rdp_send_client_window_status(0);
 				break;
+			case ConfigureNotify:
+				/* seamless */
+				sw = seamless_get_window_by_wnd(xevent.xconfigure.window);
+				if (!sw)
+					break;
+
+				ui_seamless_handle_restack(sw);
 		}
 	}
 	/* Keep going */
@@ -3198,6 +3241,44 @@ ui_seamless_move_window(unsigned long id, int x, int y, int width, int height, u
 	XMoveResizeWindow(g_display, sw->wnd, sw->xoffset, sw->yoffset, sw->width, sw->height);
 }
 
+void
+ui_seamless_restack_window(unsigned long id, unsigned long behind, unsigned long flags)
+{
+	seamless_window *sw;
+
+	if (!g_seamless_active)
+		return;
+
+	sw = seamless_get_window_by_id(id);
+	if (!sw)
+	{
+		warning("ui_seamless_restack_window: No information for window 0x%lx\n", id);
+		return;
+	}
+
+	if (behind)
+	{
+		seamless_window *sw_behind;
+		Window wnds[2];
+
+		sw_behind = seamless_get_window_by_id(behind);
+		if (!sw_behind)
+		{
+			warning("ui_seamless_restack_window: No information for window 0x%lx\n",
+				behind);
+			return;
+		}
+
+		wnds[1] = sw_behind->wnd;
+		wnds[0] = sw->wnd;
+
+		XRestackWindows(g_display, wnds, 2);
+	}
+	else
+	{
+		XRaiseWindow(g_display, sw->wnd);
+	}
+}
 
 void
 ui_seamless_settitle(unsigned long id, const char *title, unsigned long flags)
