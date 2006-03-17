@@ -55,6 +55,7 @@ typedef struct _seamless_window
 	Window wnd;
 	unsigned long id;
 	unsigned long parent;
+	unsigned long behind;
 	int xoffset, yoffset;
 	int width, height;
 	int state;		/* normal/minimized/maximized. */
@@ -62,6 +63,7 @@ typedef struct _seamless_window
 	struct _seamless_window *next;
 } seamless_window;
 static seamless_window *g_seamless_windows = NULL;
+static unsigned long g_seamless_focused = 0;
 static BOOL g_seamless_started = False;	/* Server end is up and running */
 static BOOL g_seamless_active = False;	/* We are currently in seamless mode */
 extern BOOL g_seamless_rdp;
@@ -320,6 +322,36 @@ seamless_all_to_desktop(Window wnd, unsigned int desktop)
 			sw->desktop = desktop;
 		}
 	}
+}
+
+
+static void
+seamless_restack_window(seamless_window * sw, unsigned long behind)
+{
+	seamless_window *sw_above;
+
+	/* Remove window from stack */
+	for (sw_above = g_seamless_windows; sw_above; sw_above = sw_above->next)
+	{
+		if (sw_above->behind == sw->id)
+			break;
+	}
+
+	if (sw_above)
+		sw_above->behind = sw->behind;
+
+	/* And then add it at the new position */
+
+	for (sw_above = g_seamless_windows; sw_above; sw_above = sw_above->next)
+	{
+		if (sw_above->behind == behind)
+			break;
+	}
+
+	if (sw_above)
+		sw_above->behind = sw->id;
+
+	sw->behind = behind;
 }
 
 
@@ -1774,10 +1806,21 @@ ui_seamless_handle_restack(seamless_window * sw)
 			break;
 	}
 
+	if (!sw_below && !sw->behind)
+		return;
+	if (sw_below && (sw_below->id == sw->behind))
+		return;
+
 	if (sw_below)
+	{
 		seamless_send_zchange(sw->id, sw_below->id, 0);
+		seamless_restack_window(sw, sw_below->id);
+	}
 	else
+	{
 		seamless_send_zchange(sw->id, 0, 0);
+		seamless_restack_window(sw, 0);
+	}
 }
 
 /* Process events in Xlib queue
@@ -1917,7 +1960,11 @@ xwin_process_events(void)
 				if (!sw)
 					break;
 
-				seamless_send_focus(sw->id, 0);
+				if (sw->id != g_seamless_focused)
+				{
+					seamless_send_focus(sw->id, 0);
+					g_seamless_focused = sw->id;
+				}
 				break;
 
 			case FocusOut:
@@ -3173,6 +3220,7 @@ ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long 
 	sw->wnd = wnd;
 	sw->id = id;
 	sw->parent = parent;
+	sw->behind = 0;
 	sw->xoffset = 0;
 	sw->yoffset = 0;
 	sw->width = 0;
@@ -3284,6 +3332,8 @@ ui_seamless_restack_window(unsigned long id, unsigned long behind, unsigned long
 	{
 		XRaiseWindow(g_display, sw->wnd);
 	}
+
+	seamless_restack_window(sw, behind);
 }
 
 void
