@@ -23,6 +23,7 @@
 
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
+#include <X11/Xutil.h>
 #include "rdesktop.h"
 
 #define _NET_WM_STATE_REMOVE        0	/* remove/unset property */
@@ -43,7 +44,7 @@ Atom g_net_wm_state_atom, g_net_wm_desktop_atom;
 */
 static int
 get_property_value(Window wnd, char *propname, long max_length,
-		   unsigned long *nitems_return, unsigned char **prop_return)
+		   unsigned long *nitems_return, unsigned char **prop_return, int nowarn)
 {
 	int result;
 	Atom property;
@@ -74,7 +75,8 @@ get_property_value(Window wnd, char *propname, long max_length,
 
 	if (actual_type_return == None || actual_format_return == 0)
 	{
-		fprintf(stderr, "Window is missing property %s\n", propname);
+		if (!nowarn)
+			fprintf(stderr, "Window is missing property %s\n", propname);
 		return (-1);
 	}
 
@@ -106,7 +108,7 @@ get_current_desktop(void)
 
 	if (get_property_value
 	    (DefaultRootWindow(g_display), "_NET_CURRENT_DESKTOP", 1, &nitems_return,
-	     &prop_return) < 0)
+	     &prop_return, 0) < 0)
 		return (-1);
 
 	if (nitems_return != 1)
@@ -140,7 +142,7 @@ get_current_workarea(uint32 * x, uint32 * y, uint32 * width, uint32 * height)
 
 	if (get_property_value
 	    (DefaultRootWindow(g_display), "_NET_WORKAREA", max_prop_length, &nitems_return,
-	     &prop_return) < 0)
+	     &prop_return, 0) < 0)
 		return (-1);
 
 	if (nitems_return % 4)
@@ -203,7 +205,7 @@ ewmh_get_window_state(Window w)
 
 	maximized_vert = maximized_horz = hidden = False;
 
-	if (get_property_value(w, "_NET_WM_STATE", 64, &nitems_return, &prop_return) < 0)
+	if (get_property_value(w, "_NET_WM_STATE", 64, &nitems_return, &prop_return, 0) < 0)
 		return SEAMLESSRDP_NORMAL;
 
 	return_words = (uint32 *) prop_return;
@@ -233,6 +235,61 @@ ewmh_modify_state(Window wnd, int add, Atom atom1, Atom atom2)
 {
 	Status status;
 	XEvent xevent;
+
+	unsigned long nitems;
+	unsigned char *props;
+	uint32 *state;
+
+	/* The spec states that the window manager must respect any
+	   _NET_WM_STATE attributes on a withdrawn window. In order words, we
+	   modify the attributes directly for withdrawn windows and ask the WM
+	   to do it for active windows. */
+	if ((get_property_value(wnd, "WM_STATE", 64, &nitems, &props, 1) < 0)
+	    || ((state = (uint32 *) props)[0] == WithdrawnState))
+	{
+		if (add)
+		{
+			Atom atoms[2];
+
+			atoms[0] = atom1;
+			nitems = 1;
+			if (atom2)
+			{
+				atoms[1] = atom2;
+				nitems = 2;
+			}
+
+			XChangeProperty(g_display, wnd, g_net_wm_state_atom, XA_ATOM,
+					32, PropModeAppend, (unsigned char *) atoms, nitems);
+		}
+		else
+		{
+			Atom *atoms;
+			int i;
+
+			if (get_property_value(wnd, "_NET_WM_STATE", 64, &nitems, &props, 1) < 0)
+				return 0;
+
+			atoms = (Atom *) props;
+
+			for (i = 0; i < nitems; i++)
+			{
+				if ((atoms[i] == atom1) || (atom2 && (atoms[i] == atom2)))
+				{
+					if (i != (nitems - 1))
+						memmove(&atoms[i], &atoms[i + 1],
+							sizeof(Atom) * (nitems - i - 1));
+					nitems--;
+					i--;
+				}
+			}
+
+			XChangeProperty(g_display, wnd, g_net_wm_state_atom, XA_ATOM,
+					32, PropModeReplace, (unsigned char *) atoms, nitems);
+		}
+
+		return 0;
+	}
 
 	xevent.type = ClientMessage;
 	xevent.xclient.window = wnd;
@@ -290,7 +347,7 @@ ewmh_get_window_desktop(Window wnd)
 	unsigned char *prop_return;
 	int desktop;
 
-	if (get_property_value(wnd, "_NET_WM_DESKTOP", 1, &nitems_return, &prop_return) < 0)
+	if (get_property_value(wnd, "_NET_WM_DESKTOP", 1, &nitems_return, &prop_return, 0) < 0)
 		return (-1);
 
 	if (nitems_return != 1)

@@ -54,7 +54,6 @@ typedef struct _seamless_window
 {
 	Window wnd;
 	unsigned long id;
-	unsigned long parent;
 	unsigned long behind;
 	int xoffset, yoffset;
 	int width, height;
@@ -3256,8 +3255,11 @@ ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long 
 		XFree(sizehints);
 	}
 
+	/* Handle popups without parents through some ewm hints */
+	if (parent == 0xFFFFFFFF)
+		ewmh_set_window_popup(wnd);
 	/* Set WM_TRANSIENT_FOR, if necessary */
-	if ((parent != 0x00000000) && (parent != 0xFFFFFFFF))
+	else if (parent != 0x00000000)
 	{
 		sw_parent = seamless_get_window_by_id(parent);
 		if (sw_parent)
@@ -3282,7 +3284,6 @@ ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long 
 	sw = xmalloc(sizeof(seamless_window));
 	sw->wnd = wnd;
 	sw->id = id;
-	sw->parent = parent;
 	sw->behind = 0;
 	sw->xoffset = 0;
 	sw->yoffset = 0;
@@ -3461,10 +3462,6 @@ ui_seamless_setstate(unsigned long id, unsigned int state, unsigned long flags)
 			warning("SeamlessRDP: Invalid state %d\n", state);
 			break;
 	}
-
-	/* Handle popups without parents through some ewm hints */
-	if ((sw->state == SEAMLESSRDP_NOTYETMAPPED) && (sw->parent == 0xFFFFFFFF))
-		ewmh_set_window_popup(sw->wnd);
 
 	sw->state = state;
 }
