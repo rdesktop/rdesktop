@@ -60,6 +60,7 @@ typedef struct _seamless_window
 	int width, height;
 	int state;		/* normal/minimized/maximized. */
 	unsigned int desktop;
+	struct timeval *position_timer;
 	struct _seamless_window *next;
 } seamless_window;
 static seamless_window *g_seamless_windows = NULL;
@@ -320,6 +321,45 @@ seamless_all_to_desktop(Window wnd, unsigned int desktop)
 		{
 			ewmh_move_to_desktop(sw->wnd, desktop);
 			sw->desktop = desktop;
+		}
+	}
+}
+
+
+/* Send our position */
+static void
+seamless_update_position(seamless_window * sw)
+{
+	XWindowAttributes wa;
+	int x, y;
+	Window child_return;
+
+	XGetWindowAttributes(g_display, sw->wnd, &wa);
+	XTranslateCoordinates(g_display, sw->wnd, wa.root,
+			      -wa.border_width, -wa.border_width, &x, &y, &child_return);
+
+	seamless_send_position(sw->id, x, y, wa.width, wa.height, 0);
+	sw->xoffset = x;
+	sw->yoffset = y;
+	sw->width = wa.width;
+	sw->height = wa.height;
+}
+
+
+/* Check if it's time to send our position */
+static void
+seamless_check_timers()
+{
+	seamless_window *sw;
+	struct timeval now;
+
+	gettimeofday(&now, NULL);
+	for (sw = g_seamless_windows; sw; sw = sw->next)
+	{
+		if (timerisset(sw->position_timer) && timercmp(sw->position_timer, &now, <))
+		{
+			timerclear(sw->position_timer);
+			seamless_update_position(sw);
 		}
 	}
 }
@@ -2085,12 +2125,31 @@ xwin_process_events(void)
 					rdp_send_client_window_status(0);
 				break;
 			case ConfigureNotify:
-				/* seamless */
-				sw = seamless_get_window_by_wnd(xevent.xconfigure.window);
-				if (!sw)
+				if (!g_seamless_active)
 					break;
 
+				sw = seamless_get_window_by_wnd(xevent.xconfigure.window);
+				if (!sw)
+				{
+					error("ConfigureNotify for unknown window 0x%lx\n",
+					      xevent.xconfigure.window);
+				}
+
+				gettimeofday(sw->position_timer, NULL);
+				if (sw->position_timer->tv_usec + SEAMLESSRDP_POSITION_TIMER >=
+				    1000000)
+				{
+					sw->position_timer->tv_usec +=
+						SEAMLESSRDP_POSITION_TIMER - 1000000;
+					sw->position_timer->tv_sec += 1;
+				}
+				else
+				{
+					sw->position_timer->tv_usec += SEAMLESSRDP_POSITION_TIMER;
+				}
+
 				ui_seamless_handle_restack(sw);
+				break;
 		}
 	}
 	/* Keep going */
@@ -2114,6 +2173,9 @@ ui_select(int rdp_socket)
 			/* User quit */
 			return 0;
 
+		if (g_seamless_active)
+			seamless_check_timers();
+
 		FD_ZERO(&rfds);
 		FD_ZERO(&wfds);
 		FD_SET(rdp_socket, &rfds);
@@ -2133,6 +2195,7 @@ ui_select(int rdp_socket)
 
 		/* add redirection handles */
 		rdpdr_add_fds(&n, &rfds, &wfds, &tv, &s_timeout);
+		seamless_select_timeout(&tv);
 
 		n++;
 
@@ -3216,7 +3279,7 @@ ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long 
 	   serverside, instead of terminating rdesktop */
 	XSetWMProtocols(g_display, wnd, &g_kill_atom, 1);
 
-	sw = malloc(sizeof(seamless_window));
+	sw = xmalloc(sizeof(seamless_window));
 	sw->wnd = wnd;
 	sw->id = id;
 	sw->parent = parent;
@@ -3227,6 +3290,8 @@ ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long 
 	sw->height = 0;
 	sw->state = SEAMLESSRDP_NOTYETMAPPED;
 	sw->desktop = 0;
+	sw->position_timer = xmalloc(sizeof(struct timeval));
+	timerclear(sw->position_timer);
 	sw->next = g_seamless_windows;
 	g_seamless_windows = sw;
 }
@@ -3271,16 +3336,10 @@ ui_seamless_move_window(unsigned long id, int x, int y, int width, int height, u
 		/* X11 windows must be at least 1x1 */
 		return;
 
-	/* About MAX and MIN: Windows allows moving a window outside
-	   the desktop. This happens, for example, when maximizing an
-	   application. In this case, the position is set to something
-	   like -4,-4,1288,1032. Many WMs does not allow windows
-	   outside the desktop, however. Therefore, clip the window
-	   ourselves. */
-	sw->xoffset = MAX(0, x);
-	sw->yoffset = MAX(0, y);
-	sw->width = MIN(MIN(width, width + x), g_width - sw->xoffset);
-	sw->height = MIN(MIN(height, height + y), g_height - sw->yoffset);
+	sw->xoffset = x;
+	sw->yoffset = y;
+	sw->width = width;
+	sw->height = height;
 
 	/* If we move the window in a maximized state, then KDE won't
 	   accept restoration */

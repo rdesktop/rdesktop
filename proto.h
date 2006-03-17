@@ -288,6 +288,9 @@ BOOL lspci_init(void);
 BOOL seamless_init(void);
 void seamless_send_sync(void);
 void seamless_send_state(unsigned long id, unsigned int state, unsigned long flags);
+void seamless_send_position(unsigned long id, int x, int y, int width, int height,
+			    unsigned long flags);
+void seamless_select_timeout(struct timeval *tv);
 void seamless_send_zchange(unsigned long id, unsigned long below, unsigned long flags);
 void seamless_send_focus(unsigned long id, unsigned long flags);
 
