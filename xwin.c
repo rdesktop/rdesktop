@@ -1912,6 +1912,12 @@ xwin_process_events(void)
 				if (g_grab_keyboard && g_mouse_in_wnd)
 					XGrabKeyboard(g_display, g_wnd, True,
 						      GrabModeAsync, GrabModeAsync, CurrentTime);
+
+				sw = seamless_get_window_by_wnd(xevent.xfocus.window);
+				if (!sw)
+					break;
+
+				seamless_send_focus(sw->id, 0);
 				break;
 
 			case FocusOut:

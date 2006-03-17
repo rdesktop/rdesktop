@@ -289,6 +289,7 @@ BOOL seamless_init(void);
 void seamless_send_sync(void);
 void seamless_send_state(unsigned long id, unsigned int state, unsigned long flags);
 void seamless_send_zchange(unsigned long id, unsigned long below, unsigned long flags);
+void seamless_send_focus(unsigned long id, unsigned long flags);
 
 /* *INDENT-OFF* */
 #ifdef __cplusplus

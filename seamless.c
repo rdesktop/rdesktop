@@ -347,3 +347,13 @@ seamless_send_zchange(unsigned long id, unsigned long below, unsigned long flags
 
 	seamless_send("ZCHANGE,0x%08lx,0x%08lx,0x%lx\n", id, below, flags);
 }
+
+
+void
+seamless_send_focus(unsigned long id, unsigned long flags)
+{
+	if (!g_seamless_rdp)
+		return;
+
+	seamless_send("FOCUS,0x%08lx,0x%lx\n", id, flags);
+}
