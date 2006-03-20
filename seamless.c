@@ -20,6 +20,7 @@
 
 #include "rdesktop.h"
 #include <stdarg.h>
+#include <assert.h>
 
 /* #define WITH_DEBUG_SEAMLESS */
 
@@ -31,6 +32,7 @@
 
 extern BOOL g_seamless_rdp;
 static VCHANNEL *seamless_channel;
+static unsigned int seamless_serial;
 
 static char *
 seamless_get_token(char **s)
@@ -81,18 +83,18 @@ seamless_process_line(const char *line, void *data)
 	if (!strcmp("CREATE", tok1))
 	{
 		unsigned long parent;
-		if (!tok4)
+		if (!tok5)
 			return False;
 
-		id = strtoul(tok2, &endptr, 0);
+		id = strtoul(tok3, &endptr, 0);
 		if (*endptr)
 			return False;
 
-		parent = strtoul(tok3, &endptr, 0);
+		parent = strtoul(tok4, &endptr, 0);
 		if (*endptr)
 			return False;
 
-		flags = strtoul(tok4, &endptr, 0);
+		flags = strtoul(tok5, &endptr, 0);
 		if (*endptr)
 			return False;
 
@@ -100,14 +102,14 @@ seamless_process_line(const char *line, void *data)
 	}
 	else if (!strcmp("DESTROY", tok1))
 	{
-		if (!tok3)
+		if (!tok4)
 			return False;
 
-		id = strtoul(tok2, &endptr, 0);
+		id = strtoul(tok3, &endptr, 0);
 		if (*endptr)
 			return False;
 
-		flags = strtoul(tok3, &endptr, 0);
+		flags = strtoul(tok4, &endptr, 0);
 		if (*endptr)
 			return False;
 
@@ -122,28 +124,28 @@ seamless_process_line(const char *line, void *data)
 	{
 		int x, y, width, height;
 
-		if (!tok7)
+		if (!tok8)
 			return False;
 
-		id = strtoul(tok2, &endptr, 0);
-		if (*endptr)
-			return False;
-
-		x = strtol(tok3, &endptr, 0);
-		if (*endptr)
-			return False;
-		y = strtol(tok4, &endptr, 0);
+		id = strtoul(tok3, &endptr, 0);
 		if (*endptr)
 			return False;
 
-		width = strtol(tok5, &endptr, 0);
+		x = strtol(tok4, &endptr, 0);
 		if (*endptr)
 			return False;
-		height = strtol(tok6, &endptr, 0);
+		y = strtol(tok5, &endptr, 0);
 		if (*endptr)
 			return False;
 
-		flags = strtoul(tok7, &endptr, 0);
+		width = strtol(tok6, &endptr, 0);
+		if (*endptr)
+			return False;
+		height = strtol(tok7, &endptr, 0);
+		if (*endptr)
+			return False;
+
+		flags = strtoul(tok8, &endptr, 0);
 		if (*endptr)
 			return False;
 
@@ -153,15 +155,15 @@ seamless_process_line(const char *line, void *data)
 	{
 		unsigned long behind;
 
-		id = strtoul(tok2, &endptr, 0);
+		id = strtoul(tok3, &endptr, 0);
 		if (*endptr)
 			return False;
 
-		behind = strtoul(tok3, &endptr, 0);
+		behind = strtoul(tok4, &endptr, 0);
 		if (*endptr)
 			return False;
 
-		flags = strtoul(tok4, &endptr, 0);
+		flags = strtoul(tok5, &endptr, 0);
 		if (*endptr)
 			return False;
 
@@ -169,35 +171,35 @@ seamless_process_line(const char *line, void *data)
 	}
 	else if (!strcmp("TITLE", tok1))
 	{
-		if (!tok4)
+		if (!tok5)
 			return False;
 
-		id = strtoul(tok2, &endptr, 0);
+		id = strtoul(tok3, &endptr, 0);
 		if (*endptr)
 			return False;
 
-		flags = strtoul(tok4, &endptr, 0);
+		flags = strtoul(tok5, &endptr, 0);
 		if (*endptr)
 			return False;
 
-		ui_seamless_settitle(id, tok3, flags);
+		ui_seamless_settitle(id, tok4, flags);
 	}
 	else if (!strcmp("STATE", tok1))
 	{
 		unsigned int state;
 
-		if (!tok4)
+		if (!tok5)
 			return False;
 
-		id = strtoul(tok2, &endptr, 0);
+		id = strtoul(tok3, &endptr, 0);
 		if (*endptr)
 			return False;
 
-		state = strtoul(tok3, &endptr, 0);
+		state = strtoul(tok4, &endptr, 0);
 		if (*endptr)
 			return False;
 
-		flags = strtoul(tok4, &endptr, 0);
+		flags = strtoul(tok5, &endptr, 0);
 		if (*endptr)
 			return False;
 
@@ -209,10 +211,10 @@ seamless_process_line(const char *line, void *data)
 	}
 	else if (!strcmp("SYNCBEGIN", tok1))
 	{
-		if (!tok2)
+		if (!tok3)
 			return False;
 
-		flags = strtoul(tok2, &endptr, 0);
+		flags = strtoul(tok3, &endptr, 0);
 		if (*endptr)
 			return False;
 
@@ -220,10 +222,10 @@ seamless_process_line(const char *line, void *data)
 	}
 	else if (!strcmp("SYNCEND", tok1))
 	{
-		if (!tok2)
+		if (!tok3)
 			return False;
 
-		flags = strtoul(tok2, &endptr, 0);
+		flags = strtoul(tok3, &endptr, 0);
 		if (*endptr)
 			return False;
 
@@ -231,10 +233,10 @@ seamless_process_line(const char *line, void *data)
 	}
 	else if (!strcmp("HELLO", tok1))
 	{
-		if (!tok2)
+		if (!tok3)
 			return False;
 
-		flags = strtoul(tok2, &endptr, 0);
+		flags = strtoul(tok3, &endptr, 0);
 		if (*endptr)
 			return False;
 
@@ -286,6 +288,8 @@ seamless_init(void)
 	if (!g_seamless_rdp)
 		return False;
 
+	seamless_serial = 0;
+
 	seamless_channel =
 		channel_register("seamrdp", CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_ENCRYPT_RDP,
 				 seamless_process);
@@ -294,19 +298,30 @@ seamless_init(void)
 
 
 static void
-seamless_send(const char *format, ...)
+seamless_send(const char *command, const char *format, ...)
 {
 	STREAM s;
 	size_t len;
 	va_list argp;
-	char buf[1024];
+	char buf[1025];
+
+	len = snprintf(buf, sizeof(buf) - 1, "%s,%u,", command, seamless_serial);
+
+	assert(len < (sizeof(buf) - 1));
 
 	va_start(argp, format);
-	len = vsnprintf(buf, sizeof(buf), format, argp);
+	len += vsnprintf(buf + len, sizeof(buf) - len - 1, format, argp);
 	va_end(argp);
+
+	assert(len < (sizeof(buf) - 1));
+
+	buf[len] = '\n';
+	buf[len + 1] = '\0';
 
 	s = channel_init(seamless_channel, len);
 	out_uint8p(s, buf, len) s_mark_end(s);
+
+	seamless_serial++;
 
 	DEBUG_SEAMLESS(("SeamlessRDP sending:%s", buf));
 
@@ -325,7 +340,7 @@ seamless_send_sync()
 	if (!g_seamless_rdp)
 		return;
 
-	seamless_send("SYNC\n");
+	seamless_send("SYNC", "");
 }
 
 
@@ -335,14 +350,14 @@ seamless_send_state(unsigned long id, unsigned int state, unsigned long flags)
 	if (!g_seamless_rdp)
 		return;
 
-	seamless_send("STATE,0x%08lx,0x%x,0x%lx\n", id, state, flags);
+	seamless_send("STATE", "0x%08lx,0x%x,0x%lx", id, state, flags);
 }
 
 
 void
 seamless_send_position(unsigned long id, int x, int y, int width, int height, unsigned long flags)
 {
-	seamless_send("POSITION,0x%08lx,%d,%d,%d,%d,0x%lx\n", id, x, y, width, height, flags);
+	seamless_send("POSITION", "0x%08lx,%d,%d,%d,%d,0x%lx", id, x, y, width, height, flags);
 }
 
 
@@ -362,14 +377,13 @@ seamless_select_timeout(struct timeval *tv)
 	}
 }
 
-
 void
 seamless_send_zchange(unsigned long id, unsigned long below, unsigned long flags)
 {
 	if (!g_seamless_rdp)
 		return;
 
-	seamless_send("ZCHANGE,0x%08lx,0x%08lx,0x%lx\n", id, below, flags);
+	seamless_send("ZCHANGE", "0x%08lx,0x%08lx,0x%lx", id, below, flags);
 }
 
 
@@ -379,5 +393,5 @@ seamless_send_focus(unsigned long id, unsigned long flags)
 	if (!g_seamless_rdp)
 		return;
 
-	seamless_send("FOCUS,0x%08lx,0x%lx\n", id, flags);
+	seamless_send("FOCUS", "0x%08lx,0x%lx", id, flags);
 }
