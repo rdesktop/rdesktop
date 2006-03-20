@@ -60,6 +60,12 @@ typedef struct _seamless_window
 	int state;		/* normal/minimized/maximized. */
 	unsigned int desktop;
 	struct timeval *position_timer;
+
+	BOOL outstanding_position;
+	unsigned int outpos_serial;
+	int outpos_xoffset, outpos_yoffset;
+	int outpos_width, outpos_height;
+
 	struct _seamless_window *next;
 } seamless_window;
 static seamless_window *g_seamless_windows = NULL;
@@ -332,16 +338,21 @@ seamless_update_position(seamless_window * sw)
 	XWindowAttributes wa;
 	int x, y;
 	Window child_return;
+	unsigned int serial;
 
 	XGetWindowAttributes(g_display, sw->wnd, &wa);
 	XTranslateCoordinates(g_display, sw->wnd, wa.root,
 			      -wa.border_width, -wa.border_width, &x, &y, &child_return);
 
-	seamless_send_position(sw->id, x, y, wa.width, wa.height, 0);
-	sw->xoffset = x;
-	sw->yoffset = y;
-	sw->width = wa.width;
-	sw->height = wa.height;
+	serial = seamless_send_position(sw->id, x, y, wa.width, wa.height, 0);
+
+	sw->outstanding_position = True;
+	sw->outpos_serial = serial;
+
+	sw->outpos_xoffset = x;
+	sw->outpos_yoffset = y;
+	sw->outpos_width = wa.width;
+	sw->outpos_height = wa.height;
 }
 
 
@@ -3293,6 +3304,7 @@ ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long 
 	sw->desktop = 0;
 	sw->position_timer = xmalloc(sizeof(struct timeval));
 	timerclear(sw->position_timer);
+	sw->outstanding_position = False;
 	sw->next = g_seamless_windows;
 	g_seamless_windows = sw;
 }
@@ -3332,6 +3344,10 @@ ui_seamless_move_window(unsigned long id, int x, int y, int width, int height, u
 		warning("ui_seamless_move_window: No information for window 0x%lx\n", id);
 		return;
 	}
+
+	/* We ignore server updates until it has handled our request. */
+	if (sw->outstanding_position)
+		return;
 
 	if (!width || !height)
 		/* X11 windows must be at least 1x1 */
@@ -3484,4 +3500,21 @@ ui_seamless_syncbegin(unsigned long flags)
 void
 ui_seamless_ack(unsigned int serial)
 {
+	seamless_window *sw;
+	for (sw = g_seamless_windows; sw; sw = sw->next)
+	{
+		if (sw->outpos_serial == serial)
+		{
+			sw->xoffset = sw->outpos_xoffset;
+			sw->yoffset = sw->outpos_yoffset;
+			sw->width = sw->outpos_width;
+			sw->height = sw->outpos_height;
+
+			sw->outstanding_position = False;
+
+			break;
+		}
+	}
+
+	return;
 }
