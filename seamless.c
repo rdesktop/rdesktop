@@ -318,6 +318,8 @@ seamless_send(const char *command, const char *format, ...)
 	buf[len] = '\n';
 	buf[len + 1] = '\0';
 
+	len++;
+
 	s = channel_init(seamless_channel, len);
 	out_uint8p(s, buf, len) s_mark_end(s);
 
