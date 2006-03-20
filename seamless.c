@@ -242,6 +242,16 @@ seamless_process_line(const char *line, void *data)
 
 		ui_seamless_begin();
 	}
+	else if (!strcmp("ACK", tok1))
+	{
+		unsigned int serial;
+
+		serial = strtoul(tok3, &endptr, 0);
+		if (*endptr)
+			return False;
+
+		ui_seamless_ack(serial);
+	}
 
 
 	xfree(l);
@@ -297,7 +307,7 @@ seamless_init(void)
 }
 
 
-static void
+static unsigned int
 seamless_send(const char *command, const char *format, ...)
 {
 	STREAM s;
@@ -323,8 +333,6 @@ seamless_send(const char *command, const char *format, ...)
 	s = channel_init(seamless_channel, len);
 	out_uint8p(s, buf, len) s_mark_end(s);
 
-	seamless_serial++;
-
 	DEBUG_SEAMLESS(("SeamlessRDP sending:%s", buf));
 
 #if 0
@@ -333,33 +341,36 @@ seamless_send(const char *command, const char *format, ...)
 #endif
 
 	channel_send(s, seamless_channel);
+
+	return seamless_serial++;
 }
 
 
-void
+unsigned int
 seamless_send_sync()
 {
 	if (!g_seamless_rdp)
-		return;
+		return (unsigned int) -1;
 
-	seamless_send("SYNC", "");
+	return seamless_send("SYNC", "");
 }
 
 
-void
+unsigned int
 seamless_send_state(unsigned long id, unsigned int state, unsigned long flags)
 {
 	if (!g_seamless_rdp)
-		return;
+		return (unsigned int) -1;
 
-	seamless_send("STATE", "0x%08lx,0x%x,0x%lx", id, state, flags);
+	return seamless_send("STATE", "0x%08lx,0x%x,0x%lx", id, state, flags);
 }
 
 
-void
+unsigned int
 seamless_send_position(unsigned long id, int x, int y, int width, int height, unsigned long flags)
 {
-	seamless_send("POSITION", "0x%08lx,%d,%d,%d,%d,0x%lx", id, x, y, width, height, flags);
+	return seamless_send("POSITION", "0x%08lx,%d,%d,%d,%d,0x%lx", id, x, y, width, height,
+			     flags);
 }
 
 
@@ -379,21 +390,21 @@ seamless_select_timeout(struct timeval *tv)
 	}
 }
 
-void
+unsigned int
 seamless_send_zchange(unsigned long id, unsigned long below, unsigned long flags)
 {
 	if (!g_seamless_rdp)
-		return;
+		return (unsigned int) -1;
 
-	seamless_send("ZCHANGE", "0x%08lx,0x%08lx,0x%lx", id, below, flags);
+	return seamless_send("ZCHANGE", "0x%08lx,0x%08lx,0x%lx", id, below, flags);
 }
 
 
-void
+unsigned int
 seamless_send_focus(unsigned long id, unsigned long flags)
 {
 	if (!g_seamless_rdp)
-		return;
+		return (unsigned int) -1;
 
-	seamless_send("FOCUS", "0x%08lx,0x%lx", id, flags);
+	return seamless_send("FOCUS", "0x%08lx,0x%lx", id, flags);
 }

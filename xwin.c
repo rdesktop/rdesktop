@@ -3480,3 +3480,8 @@ ui_seamless_syncbegin(unsigned long flags)
 		seamless_remove_window(g_seamless_windows);
 	}
 }
+
+void
+ui_seamless_ack(unsigned int serial)
+{
+}

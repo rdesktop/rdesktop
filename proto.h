@@ -282,17 +282,18 @@ void ui_seamless_restack_window(unsigned long id, unsigned long behind, unsigned
 void ui_seamless_settitle(unsigned long id, const char *title, unsigned long flags);
 void ui_seamless_setstate(unsigned long id, unsigned int state, unsigned long flags);
 void ui_seamless_syncbegin(unsigned long flags);
+void ui_seamless_ack(unsigned int serial);
 /* lspci.c */
 BOOL lspci_init(void);
 /* seamless.c */
 BOOL seamless_init(void);
-void seamless_send_sync(void);
-void seamless_send_state(unsigned long id, unsigned int state, unsigned long flags);
-void seamless_send_position(unsigned long id, int x, int y, int width, int height,
-			    unsigned long flags);
+unsigned int seamless_send_sync(void);
+unsigned int seamless_send_state(unsigned long id, unsigned int state, unsigned long flags);
+unsigned int seamless_send_position(unsigned long id, int x, int y, int width, int height,
+				    unsigned long flags);
 void seamless_select_timeout(struct timeval *tv);
-void seamless_send_zchange(unsigned long id, unsigned long below, unsigned long flags);
-void seamless_send_focus(unsigned long id, unsigned long flags);
+unsigned int seamless_send_zchange(unsigned long id, unsigned long below, unsigned long flags);
+unsigned int seamless_send_focus(unsigned long id, unsigned long flags);
 
 /* *INDENT-OFF* */
 #ifdef __cplusplus
