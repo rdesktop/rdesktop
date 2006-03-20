@@ -270,7 +270,7 @@ static int rop2_map[] = {
 #define RESET_FUNCTION(rop2)	{ if (rop2 != ROP2_COPY) XSetFunction(g_display, g_gc, GXcopy); }
 
 static seamless_window *
-seamless_get_window_by_id(unsigned long id)
+sw_get_window_by_id(unsigned long id)
 {
 	seamless_window *sw;
 	for (sw = g_seamless_windows; sw; sw = sw->next)
@@ -283,7 +283,7 @@ seamless_get_window_by_id(unsigned long id)
 
 
 static seamless_window *
-seamless_get_window_by_wnd(Window wnd)
+sw_get_window_by_wnd(Window wnd)
 {
 	seamless_window *sw;
 	for (sw = g_seamless_windows; sw; sw = sw->next)
@@ -296,7 +296,7 @@ seamless_get_window_by_wnd(Window wnd)
 
 
 static void
-seamless_remove_window(seamless_window * win)
+sw_remove_window(seamless_window * win)
 {
 	seamless_window *sw, **prevnext = &g_seamless_windows;
 	for (sw = g_seamless_windows; sw; sw = sw->next)
@@ -315,7 +315,7 @@ seamless_remove_window(seamless_window * win)
 
 /* Move all windows except wnd to new desktop */
 static void
-seamless_all_to_desktop(Window wnd, unsigned int desktop)
+sw_all_to_desktop(Window wnd, unsigned int desktop)
 {
 	seamless_window *sw;
 	for (sw = g_seamless_windows; sw; sw = sw->next)
@@ -333,7 +333,7 @@ seamless_all_to_desktop(Window wnd, unsigned int desktop)
 
 /* Send our position */
 static void
-seamless_update_position(seamless_window * sw)
+sw_update_position(seamless_window * sw)
 {
 	XWindowAttributes wa;
 	int x, y;
@@ -358,7 +358,7 @@ seamless_update_position(seamless_window * sw)
 
 /* Check if it's time to send our position */
 static void
-seamless_check_timers()
+sw_check_timers()
 {
 	seamless_window *sw;
 	struct timeval now;
@@ -369,14 +369,14 @@ seamless_check_timers()
 		if (timerisset(sw->position_timer) && timercmp(sw->position_timer, &now, <))
 		{
 			timerclear(sw->position_timer);
-			seamless_update_position(sw);
+			sw_update_position(sw);
 		}
 	}
 }
 
 
 static void
-seamless_restack_window(seamless_window * sw, unsigned long behind)
+sw_restack_window(seamless_window * sw, unsigned long behind)
 {
 	seamless_window *sw_above;
 
@@ -402,6 +402,54 @@ seamless_restack_window(seamless_window * sw, unsigned long behind)
 		sw_above->behind = sw->id;
 
 	sw->behind = behind;
+}
+
+
+static void
+sw_handle_restack(seamless_window * sw)
+{
+	Status status;
+	Window root, parent, *children;
+	unsigned int nchildren, i;
+	seamless_window *sw_below;
+
+	status = XQueryTree(g_display, RootWindowOfScreen(g_screen),
+			    &root, &parent, &children, &nchildren);
+	if (!status || !nchildren)
+		return;
+
+	sw_below = NULL;
+
+	i = 0;
+	while (children[i] != sw->wnd)
+	{
+		i++;
+		if (i >= nchildren)
+			return;
+	}
+
+	for (i++; i < nchildren; i++)
+	{
+		sw_below = sw_get_window_by_wnd(children[i]);
+		if (sw_below)
+			break;
+	}
+
+	if (!sw_below && !sw->behind)
+		return;
+	if (sw_below && (sw_below->id == sw->behind))
+		return;
+
+	if (sw_below)
+	{
+		seamless_send_zchange(sw->id, sw_below->id, 0);
+		sw_restack_window(sw, sw_below->id);
+	}
+	else
+	{
+		seamless_send_zchange(sw->id, 0, 0);
+		sw_restack_window(sw, 0);
+	}
 }
 
 
@@ -1826,52 +1874,6 @@ handle_button_event(XEvent xevent, BOOL down)
 	}
 }
 
-static void
-ui_seamless_handle_restack(seamless_window * sw)
-{
-	Status status;
-	Window root, parent, *children;
-	unsigned int nchildren, i;
-	seamless_window *sw_below;
-
-	status = XQueryTree(g_display, RootWindowOfScreen(g_screen),
-			    &root, &parent, &children, &nchildren);
-	if (!status || !nchildren)
-		return;
-
-	sw_below = NULL;
-
-	i = 0;
-	while (children[i] != sw->wnd)
-	{
-		i++;
-		if (i >= nchildren)
-			return;
-	}
-
-	for (i++; i < nchildren; i++)
-	{
-		sw_below = seamless_get_window_by_wnd(children[i]);
-		if (sw_below)
-			break;
-	}
-
-	if (!sw_below && !sw->behind)
-		return;
-	if (sw_below && (sw_below->id == sw->behind))
-		return;
-
-	if (sw_below)
-	{
-		seamless_send_zchange(sw->id, sw_below->id, 0);
-		seamless_restack_window(sw, sw_below->id);
-	}
-	else
-	{
-		seamless_send_zchange(sw->id, 0, 0);
-		seamless_restack_window(sw, 0);
-	}
-}
 
 /* Process events in Xlib queue
    Returns 0 after user quit, 1 otherwise */
@@ -2006,7 +2008,7 @@ xwin_process_events(void)
 					XGrabKeyboard(g_display, g_wnd, True,
 						      GrabModeAsync, GrabModeAsync, CurrentTime);
 
-				sw = seamless_get_window_by_wnd(xevent.xfocus.window);
+				sw = sw_get_window_by_wnd(xevent.xfocus.window);
 				if (!sw)
 					break;
 
@@ -2057,7 +2059,7 @@ xwin_process_events(void)
 				}
 				else
 				{
-					sw = seamless_get_window_by_wnd(xevent.xexpose.window);
+					sw = sw_get_window_by_wnd(xevent.xexpose.window);
 					if (sw)
 						XCopyArea(g_display, g_backstore,
 							  xevent.xexpose.window, g_gc,
@@ -2107,7 +2109,7 @@ xwin_process_events(void)
 					break;
 
 				/* seamless */
-				sw = seamless_get_window_by_wnd(xevent.xproperty.window);
+				sw = sw_get_window_by_wnd(xevent.xproperty.window);
 				if (!sw)
 					break;
 
@@ -2122,7 +2124,7 @@ xwin_process_events(void)
 				    && (xevent.xproperty.state == PropertyNewValue))
 				{
 					sw->desktop = ewmh_get_window_desktop(sw->wnd);
-					seamless_all_to_desktop(sw->wnd, sw->desktop);
+					sw_all_to_desktop(sw->wnd, sw->desktop);
 				}
 
 				break;
@@ -2138,7 +2140,7 @@ xwin_process_events(void)
 				if (!g_seamless_active)
 					break;
 
-				sw = seamless_get_window_by_wnd(xevent.xconfigure.window);
+				sw = sw_get_window_by_wnd(xevent.xconfigure.window);
 				if (!sw)
 				{
 					error("ConfigureNotify for unknown window 0x%lx\n",
@@ -2158,7 +2160,7 @@ xwin_process_events(void)
 					sw->position_timer->tv_usec += SEAMLESSRDP_POSITION_TIMER;
 				}
 
-				ui_seamless_handle_restack(sw);
+				sw_handle_restack(sw);
 				break;
 		}
 	}
@@ -2184,7 +2186,7 @@ ui_select(int rdp_socket)
 			return 0;
 
 		if (g_seamless_active)
-			seamless_check_timers();
+			sw_check_timers();
 
 		FD_ZERO(&rfds);
 		FD_ZERO(&wfds);
@@ -3174,6 +3176,7 @@ ui_end_update(void)
 {
 }
 
+
 void
 ui_seamless_begin()
 {
@@ -3184,9 +3187,9 @@ ui_seamless_begin()
 		return;
 
 	g_seamless_started = True;
-
 	ui_seamless_toggle();
 }
+
 
 void
 ui_seamless_toggle()
@@ -3203,7 +3206,7 @@ ui_seamless_toggle()
 		while (g_seamless_windows)
 		{
 			XDestroyWindow(g_display, g_seamless_windows->wnd);
-			seamless_remove_window(g_seamless_windows);
+			sw_remove_window(g_seamless_windows);
 		}
 		XMapWindow(g_display, g_wnd);
 	}
@@ -3216,6 +3219,7 @@ ui_seamless_toggle()
 
 	g_seamless_active = !g_seamless_active;
 }
+
 
 void
 ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long flags)
@@ -3231,7 +3235,7 @@ ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long 
 		return;
 
 	/* Ignore CREATEs for existing windows */
-	sw = seamless_get_window_by_id(id);
+	sw = sw_get_window_by_id(id);
 	if (sw)
 		return;
 
@@ -3272,7 +3276,7 @@ ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long 
 	/* Set WM_TRANSIENT_FOR, if necessary */
 	else if (parent != 0x00000000)
 	{
-		sw_parent = seamless_get_window_by_id(parent);
+		sw_parent = sw_get_window_by_id(parent);
 		if (sw_parent)
 			XSetTransientForHint(g_display, wnd, sw_parent->wnd);
 		else
@@ -3318,7 +3322,7 @@ ui_seamless_destroy_window(unsigned long id, unsigned long flags)
 	if (!g_seamless_active)
 		return;
 
-	sw = seamless_get_window_by_id(id);
+	sw = sw_get_window_by_id(id);
 	if (!sw)
 	{
 		warning("ui_seamless_destroy_window: No information for window 0x%lx\n", id);
@@ -3326,7 +3330,7 @@ ui_seamless_destroy_window(unsigned long id, unsigned long flags)
 	}
 
 	XDestroyWindow(g_display, sw->wnd);
-	seamless_remove_window(sw);
+	sw_remove_window(sw);
 }
 
 
@@ -3338,7 +3342,7 @@ ui_seamless_move_window(unsigned long id, int x, int y, int width, int height, u
 	if (!g_seamless_active)
 		return;
 
-	sw = seamless_get_window_by_id(id);
+	sw = sw_get_window_by_id(id);
 	if (!sw)
 	{
 		warning("ui_seamless_move_window: No information for window 0x%lx\n", id);
@@ -3371,6 +3375,7 @@ ui_seamless_move_window(unsigned long id, int x, int y, int width, int height, u
 	XMoveResizeWindow(g_display, sw->wnd, sw->xoffset, sw->yoffset, sw->width, sw->height);
 }
 
+
 void
 ui_seamless_restack_window(unsigned long id, unsigned long behind, unsigned long flags)
 {
@@ -3379,7 +3384,7 @@ ui_seamless_restack_window(unsigned long id, unsigned long behind, unsigned long
 	if (!g_seamless_active)
 		return;
 
-	sw = seamless_get_window_by_id(id);
+	sw = sw_get_window_by_id(id);
 	if (!sw)
 	{
 		warning("ui_seamless_restack_window: No information for window 0x%lx\n", id);
@@ -3391,7 +3396,7 @@ ui_seamless_restack_window(unsigned long id, unsigned long behind, unsigned long
 		seamless_window *sw_behind;
 		Window wnds[2];
 
-		sw_behind = seamless_get_window_by_id(behind);
+		sw_behind = sw_get_window_by_id(behind);
 		if (!sw_behind)
 		{
 			warning("ui_seamless_restack_window: No information for window 0x%lx\n",
@@ -3409,8 +3414,9 @@ ui_seamless_restack_window(unsigned long id, unsigned long behind, unsigned long
 		XRaiseWindow(g_display, sw->wnd);
 	}
 
-	seamless_restack_window(sw, behind);
+	sw_restack_window(sw, behind);
 }
+
 
 void
 ui_seamless_settitle(unsigned long id, const char *title, unsigned long flags)
@@ -3420,7 +3426,7 @@ ui_seamless_settitle(unsigned long id, const char *title, unsigned long flags)
 	if (!g_seamless_active)
 		return;
 
-	sw = seamless_get_window_by_id(id);
+	sw = sw_get_window_by_id(id);
 	if (!sw)
 	{
 		warning("ui_seamless_settitle: No information for window 0x%lx\n", id);
@@ -3441,7 +3447,7 @@ ui_seamless_setstate(unsigned long id, unsigned int state, unsigned long flags)
 	if (!g_seamless_active)
 		return;
 
-	sw = seamless_get_window_by_id(id);
+	sw = sw_get_window_by_id(id);
 	if (!sw)
 	{
 		warning("ui_seamless_setstate: No information for window 0x%lx\n", id);
@@ -3493,9 +3499,10 @@ ui_seamless_syncbegin(unsigned long flags)
 	while (g_seamless_windows)
 	{
 		XDestroyWindow(g_display, g_seamless_windows->wnd);
-		seamless_remove_window(g_seamless_windows);
+		sw_remove_window(g_seamless_windows);
 	}
 }
+
 
 void
 ui_seamless_ack(unsigned int serial)
@@ -3509,9 +3516,7 @@ ui_seamless_ack(unsigned int serial)
 			sw->yoffset = sw->outpos_yoffset;
 			sw->width = sw->outpos_width;
 			sw->height = sw->outpos_height;
-
 			sw->outstanding_position = False;
-
 			break;
 		}
 	}

@@ -390,6 +390,7 @@ seamless_select_timeout(struct timeval *tv)
 	}
 }
 
+
 unsigned int
 seamless_send_zchange(unsigned long id, unsigned long below, unsigned long flags)
 {
@@ -398,6 +399,7 @@ seamless_send_zchange(unsigned long id, unsigned long below, unsigned long flags
 
 	return seamless_send("ZCHANGE", "0x%08lx,0x%08lx,0x%lx", id, below, flags);
 }
+
 
 
 unsigned int
