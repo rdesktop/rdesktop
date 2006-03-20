@@ -112,4 +112,3 @@
 #include "proto.h"
 #endif
 
-#define WITH_DEBUG_SEAMLESS 1
