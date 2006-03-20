@@ -3240,12 +3240,9 @@ ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long 
 		return;
 
 	get_window_attribs(&attribs);
-	attribs.override_redirect = False;
-
 	wnd = XCreateWindow(g_display, RootWindowOfScreen(g_screen), -1, -1, 1, 1, 0, g_depth,
 			    InputOutput, g_visual,
-			    CWBackPixel | CWBackingStore | CWOverrideRedirect | CWColormap |
-			    CWBorderPixel, &attribs);
+			    CWBackPixel | CWBackingStore | CWColormap | CWBorderPixel, &attribs);
 
 	XStoreName(g_display, wnd, "SeamlessRDP");
 	ewmh_set_wm_name(wnd, "SeamlessRDP");
