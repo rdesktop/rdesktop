@@ -3517,6 +3517,4 @@ ui_seamless_ack(unsigned int serial)
 			break;
 		}
 	}
-
-	return;
 }
