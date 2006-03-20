@@ -16,7 +16,10 @@ Overview
 
 The protocol is a line based protocol following this simple syntax:
 
-	OPERATION[,ARG1[,ARG2,[...]]]
+	OPERATION,SERIAL[,ARG1[,ARG2,[...]]]
+
+Each operation will have an increasing serial number. The initial value is
+implementation defined.
 
 The goal is to have a generic protocol that can be used for other display
 systems (e.g. VNC) as well.
@@ -26,6 +29,10 @@ One line may not exceed 1024 bytes, including newline.
 The protocol has no concept of hidden or unmapped windows. A window does not
 exist unless it is visible. Note that a minimized window is an exception to
 this rule.
+
+The protocol has no way of indicating failure, meaning that all commands are
+expected to succeed. If a command fails, the receiving end must send a
+corresponding command back, indicating the actual state.
 
 Data types
 ==========
@@ -48,7 +55,7 @@ CREATE
 Allocate structures for a new window.
 
 Syntax:
-	CREATE,<ID>,<PARENT>,<FLAGS>
+	CREATE,<SERIAL>,<ID>,<PARENT>,<FLAGS>
 
 Indicates that a window has appeared on the server. If PARENT is non-zero then
 the new window is a child of that window (it's transient for it). The special
@@ -65,7 +72,7 @@ DESTROY
 Remove a window.
 
 Syntax:
-	DESTROY,<ID>,<FLAGS>
+	DESTROY,<SERIAL>,<ID>,<FLAGS>
 
 Remove the window and deallocate all associated structures.
 
@@ -75,7 +82,7 @@ POSITION
 Move and/or resize a window.
 
 Syntax:
-	POSITION,<ID>,<X>,<Y>,<WIDTH>,<HEIGHT>,<FLAGS>
+	POSITION,<SERIAL>,<ID>,<X>,<Y>,<WIDTH>,<HEIGHT>,<FLAGS>
 
 If the window isn't visible yet (because a
 STATE hasn't been set or because it's minimized), you must store the position
@@ -88,7 +95,7 @@ TITLE
 Sets a window title.
 
 Syntax:
-	TITLE,<ID>,<TITLE>,<FLAGS>
+	TITLE,<SERIAL>,<ID>,<TITLE>,<FLAGS>
 
 The text is guaranteed to be stripped of control characters (< 0x20).
 
@@ -103,7 +110,7 @@ ZCHANGE
 The window moved in z order.
 
 Syntax:
-	ZCHANGE,<ID>,<BEHIND>,<FLAGS>
+	ZCHANGE,<SERIAL>,<ID>,<BEHIND>,<FLAGS>
 
 The window with the id ID is behind the window with the id BEHIND. If
 BEHIND is 0, then this window should be brought to the front. 
@@ -114,7 +121,7 @@ STATE
 Changes the window's state and/or title.
 
 Syntax:
-	STATE,<ID>,<STATE>,<FLAGS>
+	STATE,<SERIAL>,<ID>,<STATE>,<FLAGS>
 
 State can have one of three values:
  0 : "Normal" window.
@@ -130,7 +137,7 @@ DEBUG
 Debug output from the server component.
 
 Syntax:
-	DEBUG,<STRING>
+	DEBUG,<SERIAL>,<STRING>
 
 Used for debugging.
 
@@ -140,7 +147,7 @@ SYNCBEGIN
 Indicates that a synchronisation has begun.
 
 Syntax:
-	SYNCBEGIN,<FLAGS>
+	SYNCBEGIN,<SERIAL>,<FLAGS>
 
 Sent when the server starts a synchronisation. The client should flush all
 information at this point.
@@ -151,7 +158,7 @@ SYNCEND
 Indicates that a synchronisation is complete.
 
 Syntac:
-	SYNCEND,<FLAGS>
+	SYNCEND,<SERIAL>,<FLAGS>
 
 Sent when the last message that is part of the synchronisation has been sent.
 This may be followed by duplicate messages and/or messages referring invalid
@@ -163,11 +170,24 @@ HELLO
 Initial message sent by server.
 
 Syntax:
-	HELLO,<FLAGS>
+	HELLO,<SERIAL>,<FLAGS>
 
 The server starts each connection by sending this message. Normally the client
 will react by sending a SYNC back to the server. The low bit in FLAGS is set if
 this is a new connection to an existing session.
+
+ACK
+---
+
+Acknowledgement of a request to manipulate a window.
+
+Syntax:
+	ACK,<SERIAL>,<ACKSERIAL>
+
+Whenever one of the commands POSITION, ZCHANGE, STATE or FOCUS is executed on
+the server, the server will send an ACK back to the client. The purpose of this
+is to inform the client of when the operation was actually performed, allowing
+high latencies in the channel.
 
 Client to Server Operations
 ===========================
@@ -178,7 +198,7 @@ SYNC
 Request a synchronisation of window information.
 
 Syntax:
-	SYNC,<FLAGS>
+	SYNC,<SERIAL>,<FLAGS>
 
 For each window, the server will send CREATE, POSITION and STATE, in that
 order, just as if the window was created. Note that a TITLE may also,
@@ -210,7 +230,7 @@ FOCUS
 Sets which window has input focus.
 
 Syntax:
-	FOCUS,<ID>,<FLAGS>
+	FOCUS,<SERIAL>,<ID>,<FLAGS>
 
 Changes which window that will recieve the keyboard events. Note that this
 might cause the window to change z order.
