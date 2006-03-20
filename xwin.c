@@ -3305,7 +3305,12 @@ ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long 
 	sw->desktop = 0;
 	sw->position_timer = xmalloc(sizeof(struct timeval));
 	timerclear(sw->position_timer);
+
 	sw->outstanding_position = False;
+	sw->outpos_serial = 0;
+	sw->outpos_xoffset = sw->outpos_yoffset = 0;
+	sw->outpos_width = sw->outpos_height = 0;
+
 	sw->next = g_seamless_windows;
 	g_seamless_windows = sw;
 }
