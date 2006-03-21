@@ -52,3 +52,25 @@
   * More fancy homepage. 
 
   * Enhance documentation. Write a FAQ. 
+
+
+* SeamlessRDP mode
+
+  * Support for Input Contexts. 
+
+  * Enhanced support for WM_DELETE_WINDOW: Instead of terminating
+    rdesktop, close the window on the server side. 
+
+  * Clipboard support needs to be adapted - it uses g_wnd now.
+
+  * Systray support. 
+
+  * Support for transferring the application taskbar icon.
+
+  * Better support for non-EWMH window managers. 
+
+  * Support for non-rectangular windows. 
+
+  * The focus handling of menus is a bit crude. 
+
+  * Support for sending focus information from client to server.
