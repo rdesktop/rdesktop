@@ -8,3 +8,4 @@ int ewmh_move_to_desktop(Window wnd, unsigned int desktop);
 int ewmh_get_window_desktop(Window wnd);
 void ewmh_set_wm_name(Window wnd, const char *title);
 int ewmh_set_window_popup(Window wnd);
+int ewmh_set_window_modal(Window wnd);

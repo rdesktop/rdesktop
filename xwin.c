@@ -28,6 +28,9 @@
 #include "rdesktop.h"
 #include "xproto.h"
 
+/* We can't include Xproto.h because of conflicting defines for BOOL */
+#define X_ConfigureWindow              12
+
 extern int g_width;
 extern int g_height;
 extern int g_xpos;
@@ -50,11 +53,18 @@ static Screen *g_screen;
 Window g_wnd;
 
 /* SeamlessRDP support */
+typedef struct _seamless_group
+{
+	Window wnd;
+	unsigned long id;
+	unsigned int refcnt;
+} seamless_group;
 typedef struct _seamless_window
 {
 	Window wnd;
 	unsigned long id;
 	unsigned long behind;
+	seamless_group *group;
 	int xoffset, yoffset;
 	int width, height;
 	int state;		/* normal/minimized/maximized. */
@@ -304,6 +314,12 @@ sw_remove_window(seamless_window * win)
 		if (sw == win)
 		{
 			*prevnext = sw->next;
+			sw->group->refcnt--;
+			if (sw->group->refcnt == 0)
+			{
+				XDestroyWindow(g_display, sw->group->wnd);
+				xfree(sw->group);
+			}
 			xfree(sw);
 			return;
 		}
@@ -450,6 +466,35 @@ sw_handle_restack(seamless_window * sw)
 		seamless_send_zchange(sw->id, 0, 0);
 		sw_restack_window(sw, 0);
 	}
+}
+
+
+static seamless_group *
+sw_find_group(unsigned long id, BOOL dont_create)
+{
+	seamless_window *sw;
+	seamless_group *sg;
+	XSetWindowAttributes attribs;
+
+	for (sw = g_seamless_windows; sw; sw = sw->next)
+	{
+		if (sw->group->id == id)
+			return sw->group;
+	}
+
+	if (dont_create)
+		return NULL;
+
+	sg = xmalloc(sizeof(seamless_group));
+
+	sg->wnd =
+		XCreateWindow(g_display, RootWindowOfScreen(g_screen), -1, -1, 1, 1, 0,
+			      CopyFromParent, CopyFromParent, CopyFromParent, 0, &attribs);
+
+	sg->id = id;
+	sg->refcnt = 0;
+
+	return sg;
 }
 
 
@@ -1450,6 +1495,22 @@ select_visual()
 	return True;
 }
 
+static XErrorHandler g_old_error_handler;
+
+static int
+error_handler(Display * dpy, XErrorEvent * eev)
+{
+	if ((eev->error_code == BadMatch) && (eev->request_code == X_ConfigureWindow))
+	{
+		fprintf(stderr, "Got \"BadMatch\" when trying to restack windows.\n");
+		fprintf(stderr,
+			"This is most likely caused by a broken window manager (commonly KWin).\n");
+		return 0;
+	}
+
+	return g_old_error_handler(dpy, eev);
+}
+
 BOOL
 ui_init(void)
 {
@@ -1466,6 +1527,8 @@ ui_init(void)
 		uint16 endianess_test = 1;
 		g_host_be = !(BOOL) (*(uint8 *) (&endianess_test));
 	}
+
+	g_old_error_handler = XSetErrorHandler(error_handler);
 
 	g_xserver_be = (ImageByteOrder(g_display) == MSBFirst);
 	screen_num = DefaultScreen(g_display);
@@ -3222,12 +3285,14 @@ ui_seamless_toggle()
 
 
 void
-ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long flags)
+ui_seamless_create_window(unsigned long id, unsigned long group, unsigned long parent,
+			  unsigned long flags)
 {
 	Window wnd;
 	XSetWindowAttributes attribs;
 	XClassHint *classhints;
 	XSizeHints *sizehints;
+	XWMHints *wmhints;
 	long input_mask;
 	seamless_window *sw, *sw_parent;
 
@@ -3267,10 +3332,15 @@ ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long 
 		XFree(sizehints);
 	}
 
-	/* Handle popups without parents through some ewm hints */
+	/* Parent-less transient windows */
 	if (parent == 0xFFFFFFFF)
+	{
+		XSetTransientForHint(g_display, wnd, RootWindowOfScreen(g_screen));
+		/* Some buggy wm:s (kwin) do not handle the above, so fake it
+		   using some other hints. */
 		ewmh_set_window_popup(wnd);
-	/* Set WM_TRANSIENT_FOR, if necessary */
+	}
+	/* Normal transient windows */
 	else if (parent != 0x00000000)
 	{
 		sw_parent = sw_get_window_by_id(parent);
@@ -3280,6 +3350,14 @@ ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long 
 			warning("ui_seamless_create_window: No parent window 0x%lx\n", parent);
 	}
 
+	if (flags & SEAMLESSRDP_CREATE_MODAL)
+	{
+		/* We do this to support buggy wm:s (*cough* metacity *cough*)
+		   somewhat at least */
+		if (parent == 0x00000000)
+			XSetTransientForHint(g_display, wnd, RootWindowOfScreen(g_screen));
+		ewmh_set_window_modal(wnd);
+	}
 
 	/* FIXME: Support for Input Context:s */
 
@@ -3297,6 +3375,8 @@ ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long 
 	sw->wnd = wnd;
 	sw->id = id;
 	sw->behind = 0;
+	sw->group = sw_find_group(group, False);
+	sw->group->refcnt++;
 	sw->xoffset = 0;
 	sw->yoffset = 0;
 	sw->width = 0;
@@ -3313,6 +3393,16 @@ ui_seamless_create_window(unsigned long id, unsigned long parent, unsigned long 
 
 	sw->next = g_seamless_windows;
 	g_seamless_windows = sw;
+
+	/* WM_HINTS */
+	wmhints = XAllocWMHints();
+	if (wmhints)
+	{
+		wmhints->flags = WindowGroupHint;
+		wmhints->window_group = sw->group->wnd;
+		XSetWMHints(g_display, sw->wnd, wmhints);
+		XFree(wmhints);
+	}
 }
 
 
@@ -3472,11 +3562,14 @@ ui_seamless_setstate(unsigned long id, unsigned int state, unsigned long flags)
 			if (sw->state == SEAMLESSRDP_NOTYETMAPPED)
 			{
 				XWMHints *hints;
-				hints = XAllocWMHints();
-				hints->flags = StateHint;
-				hints->initial_state = IconicState;
-				XSetWMHints(g_display, sw->wnd, hints);
-				XFree(hints);
+				hints = XGetWMHints(g_display, sw->wnd);
+				if (hints)
+				{
+					hints->flags |= StateHint;
+					hints->initial_state = IconicState;
+					XSetWMHints(g_display, sw->wnd, hints);
+					XFree(hints);
+				}
 				XMapWindow(g_display, sw->wnd);
 			}
 			else

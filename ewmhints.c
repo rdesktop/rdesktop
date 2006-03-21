@@ -34,7 +34,7 @@ extern Display *g_display;
 
 static Atom g_net_wm_state_maximized_vert_atom, g_net_wm_state_maximized_horz_atom,
 	g_net_wm_state_hidden_atom, g_net_wm_name_atom, g_utf8_string_atom,
-	g_net_wm_state_skip_taskbar_atom, g_net_wm_state_skip_pager_atom;
+	g_net_wm_state_skip_taskbar_atom, g_net_wm_state_skip_pager_atom, g_net_wm_state_modal_atom;
 
 Atom g_net_wm_state_atom, g_net_wm_desktop_atom;
 
@@ -183,6 +183,7 @@ ewmh_init()
 	g_net_wm_state_skip_taskbar_atom =
 		XInternAtom(g_display, "_NET_WM_STATE_SKIP_TASKBAR", False);
 	g_net_wm_state_skip_pager_atom = XInternAtom(g_display, "_NET_WM_STATE_SKIP_PAGER", False);
+	g_net_wm_state_modal_atom = XInternAtom(g_display, "_NET_WM_STATE_MODAL", False);
 	g_net_wm_state_atom = XInternAtom(g_display, "_NET_WM_STATE", False);
 	g_net_wm_desktop_atom = XInternAtom(g_display, "_NET_WM_DESKTOP", False);
 	g_net_wm_name_atom = XInternAtom(g_display, "_NET_WM_NAME", False);
@@ -401,6 +402,14 @@ ewmh_set_window_popup(Window wnd)
 {
 	if (ewmh_modify_state
 	    (wnd, 1, g_net_wm_state_skip_taskbar_atom, g_net_wm_state_skip_pager_atom) < 0)
+		return -1;
+	return 0;
+}
+
+int
+ewmh_set_window_modal(Window wnd)
+{
+	if (ewmh_modify_state(wnd, 1, g_net_wm_state_modal_atom, 0) < 0)
 		return -1;
 	return 0;
 }
