@@ -3605,7 +3605,7 @@ ui_seamless_ack(unsigned int serial)
 	seamless_window *sw;
 	for (sw = g_seamless_windows; sw; sw = sw->next)
 	{
-		if (sw->outpos_serial == serial)
+		if (sw->outstanding_position && (sw->outpos_serial == serial))
 		{
 			sw->xoffset = sw->outpos_xoffset;
 			sw->yoffset = sw->outpos_yoffset;
