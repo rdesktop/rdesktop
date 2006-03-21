@@ -3612,6 +3612,14 @@ ui_seamless_ack(unsigned int serial)
 			sw->width = sw->outpos_width;
 			sw->height = sw->outpos_height;
 			sw->outstanding_position = False;
+
+			/* Do a complete redraw of the window as part of the
+			   completion of the move. This is to remove any
+			   artifacts caused by our lack of synchronization. */
+			XCopyArea(g_display, g_backstore,
+				  sw->wnd, g_gc,
+				  sw->xoffset, sw->yoffset, sw->width, sw->height, 0, 0);
+
 			break;
 		}
 	}
