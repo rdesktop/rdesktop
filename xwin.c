@@ -82,6 +82,7 @@ static seamless_window *g_seamless_windows = NULL;
 static unsigned long g_seamless_focused = 0;
 static BOOL g_seamless_started = False;	/* Server end is up and running */
 static BOOL g_seamless_active = False;	/* We are currently in seamless mode */
+static BOOL g_seamless_hidden = False;	/* Desktop is hidden on server */
 extern BOOL g_seamless_rdp;
 
 extern uint32 g_embed_wnd;
@@ -3244,7 +3245,7 @@ ui_end_update(void)
 
 
 void
-ui_seamless_begin()
+ui_seamless_begin(BOOL hidden)
 {
 	if (!g_seamless_rdp)
 		return;
@@ -3253,6 +3254,40 @@ ui_seamless_begin()
 		return;
 
 	g_seamless_started = True;
+	g_seamless_hidden = hidden;
+
+	if (!hidden)
+		ui_seamless_toggle();
+}
+
+
+void
+ui_seamless_hide_desktop()
+{
+	if (!g_seamless_rdp)
+		return;
+
+	if (!g_seamless_started)
+		return;
+
+	if (g_seamless_active)
+		ui_seamless_toggle();
+
+	g_seamless_hidden = True;
+}
+
+
+void
+ui_seamless_unhide_desktop()
+{
+	if (!g_seamless_rdp)
+		return;
+
+	if (!g_seamless_started)
+		return;
+
+	g_seamless_hidden = False;
+
 	ui_seamless_toggle();
 }
 
@@ -3264,6 +3299,9 @@ ui_seamless_toggle()
 		return;
 
 	if (!g_seamless_started)
+		return;
+
+	if (g_seamless_hidden)
 		return;
 
 	if (g_seamless_active)

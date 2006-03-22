@@ -244,7 +244,7 @@ seamless_process_line(const char *line, void *data)
 		if (*endptr)
 			return False;
 
-		ui_seamless_begin();
+		ui_seamless_begin(!!(flags & SEAMLESSRDP_HELLO_HIDDEN));
 	}
 	else if (!strcmp("ACK", tok1))
 	{
@@ -255,6 +255,28 @@ seamless_process_line(const char *line, void *data)
 			return False;
 
 		ui_seamless_ack(serial);
+	}
+	else if (!strcmp("HIDE", tok1))
+	{
+		if (!tok3)
+			return False;
+
+		flags = strtoul(tok3, &endptr, 0);
+		if (*endptr)
+			return False;
+
+		ui_seamless_hide_desktop();
+	}
+	else if (!strcmp("UNHIDE", tok1))
+	{
+		if (!tok3)
+			return False;
+
+		flags = strtoul(tok3, &endptr, 0);
+		if (*endptr)
+			return False;
+
+		ui_seamless_unhide_desktop();
 	}
 
 
