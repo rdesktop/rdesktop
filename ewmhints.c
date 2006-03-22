@@ -237,16 +237,23 @@ ewmh_modify_state(Window wnd, int add, Atom atom1, Atom atom2)
 	Status status;
 	XEvent xevent;
 
+	int result;
 	unsigned long nitems;
 	unsigned char *props;
-	uint32 *state;
+	uint32 state;
 
 	/* The spec states that the window manager must respect any
 	   _NET_WM_STATE attributes on a withdrawn window. In order words, we
 	   modify the attributes directly for withdrawn windows and ask the WM
 	   to do it for active windows. */
-	if ((get_property_value(wnd, "WM_STATE", 64, &nitems, &props, 1) < 0)
-	    || ((state = (uint32 *) props)[0] == WithdrawnState))
+	result = get_property_value(wnd, "WM_STATE", 64, &nitems, &props, 1);
+	if ((result >= 0) && nitems)
+	{
+		state = *(uint32 *) props;
+		XFree(props);
+	}
+
+	if ((result < 0) || !nitems || (state == WithdrawnState))
 	{
 		if (add)
 		{
@@ -287,6 +294,8 @@ ewmh_modify_state(Window wnd, int add, Atom atom1, Atom atom2)
 
 			XChangeProperty(g_display, wnd, g_net_wm_state_atom, XA_ATOM,
 					32, PropModeReplace, (unsigned char *) atoms, nitems);
+
+			XFree(props);
 		}
 
 		return 0;

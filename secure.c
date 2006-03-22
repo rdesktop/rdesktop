@@ -533,6 +533,7 @@ sec_parse_x509_key(X509 * cert)
 	if (OBJ_obj2nid(cert->cert_info->key->algor->algorithm) == NID_md5WithRSAEncryption)
 	{
 		DEBUG_RDP5(("Re-setting algorithm type to RSA in server certificate\n"));
+		ASN1_OBJECT_free(cert->cert_info->key->algor->algorithm);
 		cert->cert_info->key->algor->algorithm = OBJ_nid2obj(NID_rsaEncryption);
 	}
 	epk = X509_get_pubkey(cert);
@@ -542,7 +543,9 @@ sec_parse_x509_key(X509 * cert)
 		return False;
 	}
 
-	server_public_key = (RSA *) epk->pkey.ptr;
+	server_public_key = RSAPublicKey_dup((RSA *) epk->pkey.ptr);
+
+	EVP_PKEY_free(epk);
 
 	return True;
 }
@@ -680,6 +683,8 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 		   MITM-attacks.
 		 */
 
+		X509_free(cacert);
+
 		in_uint32_le(s, cert_len);
 		DEBUG_RDP5(("Certificate length is %d\n", cert_len));
 		server_cert = d2i_X509(NULL, &(s->p), cert_len);
@@ -698,8 +703,10 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 		if (!sec_parse_x509_key(server_cert))
 		{
 			DEBUG_RDP5(("Didn't parse X509 correctly\n"));
+			X509_free(server_cert);
 			return False;
 		}
+		X509_free(server_cert);
 		return True;	/* There's some garbage here we don't care about */
 	}
 	return s_check_end(s);
@@ -745,6 +752,8 @@ sec_process_crypt_info(STREAM s)
 
 		reverse(sec_crypted_random, SEC_MODULUS_SIZE);
 
+		RSA_free(server_public_key);
+		server_public_key = NULL;
 	}
 	else
 	{			/* RDP4-style encryption */

@@ -320,6 +320,7 @@ sw_remove_window(seamless_window * win)
 				XDestroyWindow(g_display, sw->group->wnd);
 				xfree(sw->group);
 			}
+			xfree(sw->position_timer);
 			xfree(sw);
 			return;
 		}
@@ -441,7 +442,7 @@ sw_handle_restack(seamless_window * sw)
 	{
 		i++;
 		if (i >= nchildren)
-			return;
+			goto end;
 	}
 
 	for (i++; i < nchildren; i++)
@@ -452,9 +453,9 @@ sw_handle_restack(seamless_window * sw)
 	}
 
 	if (!sw_below && !sw->behind)
-		return;
+		goto end;
 	if (sw_below && (sw_below->id == sw->behind))
-		return;
+		goto end;
 
 	if (sw_below)
 	{
@@ -466,6 +467,9 @@ sw_handle_restack(seamless_window * sw)
 		seamless_send_zchange(sw->id, 0, 0);
 		sw_restack_window(sw, 0);
 	}
+
+      end:
+	XFree(children);
 }
 
 
@@ -1626,6 +1630,12 @@ ui_init(void)
 void
 ui_deinit(void)
 {
+	while (g_seamless_windows)
+	{
+		XDestroyWindow(g_display, g_seamless_windows->wnd);
+		sw_remove_window(g_seamless_windows);
+	}
+
 	if (g_IM != NULL)
 		XCloseIM(g_IM);
 
