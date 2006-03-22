@@ -56,6 +56,9 @@
 
 * SeamlessRDP mode
 
+  * Add a client to server message for starting additional
+    applications.
+
   * Detect the "Windows Security" dialog. 
 
   * Support cmd.exe. 
