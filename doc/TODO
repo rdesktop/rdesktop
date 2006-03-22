@@ -56,6 +56,10 @@
 
 * SeamlessRDP mode
 
+  * Detect the "Windows Security" dialog. 
+
+  * Support cmd.exe. 
+
   * Support for Input Contexts. 
 
   * Enhanced support for WM_DELETE_WINDOW: Instead of terminating
