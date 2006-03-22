@@ -173,8 +173,11 @@ Syntax:
 	HELLO,<SERIAL>,<FLAGS>
 
 The server starts each connection by sending this message. Normally the client
-will react by sending a SYNC back to the server. The low bit in FLAGS is set if
-this is a new connection to an existing session.
+will react by sending a SYNC back to the server. 
+
+Flags:
+  0x0001 : This is a reconnect to an existing session.
+  0x0002 : The desktop is currently hidden (see HIDE).
 
 ACK
 ---
@@ -188,6 +191,33 @@ Whenever one of the commands POSITION, ZCHANGE, STATE or FOCUS is executed on
 the server, the server will send an ACK back to the client. The purpose of this
 is to inform the client of when the operation was actually performed, allowing
 high latencies in the channel.
+
+HIDE
+----
+
+The desktop has become hidden on the server.
+
+Syntax:
+	HIDE,<SERIAL>,<FLAGS>
+
+This message is sent when the desktop on the server is obscured by something
+that cannot be tracked. The client should remove all windows and display the
+entire desktop, allowing the user to handle whatever is blocking the view.
+
+Note that updates to windows will still be sent as the windows still exist on
+the server, they are merely not visible.
+
+UNHIDE
+------
+
+The desktop has been restored on the server.
+
+Syntax:
+	UNHIDE,<SERIAL>,<FLAGS>
+
+This message is sent some time after a HIDE, indicating that the windowed view
+has been restored. If the client has dropped all information about windows then
+it can send a SYNC to re-enumerate them.
 
 Client to Server Operations
 ===========================
