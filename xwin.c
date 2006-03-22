@@ -2133,19 +2133,15 @@ xwin_process_events(void)
 				else
 				{
 					sw = sw_get_window_by_wnd(xevent.xexpose.window);
-					if (sw)
-						XCopyArea(g_display, g_backstore,
-							  xevent.xexpose.window, g_gc,
-							  xevent.xexpose.x + sw->xoffset,
-							  xevent.xexpose.y + sw->yoffset,
-							  xevent.xexpose.width,
-							  xevent.xexpose.height, xevent.xexpose.x,
-							  xevent.xexpose.y);
-					else
-					{
-						error("Expose for unknown window 0x%lx\n",
-						      xevent.xexpose.window);
-					}
+					if (!sw)
+						break;
+					XCopyArea(g_display, g_backstore,
+						  xevent.xexpose.window, g_gc,
+						  xevent.xexpose.x + sw->xoffset,
+						  xevent.xexpose.y + sw->yoffset,
+						  xevent.xexpose.width,
+						  xevent.xexpose.height, xevent.xexpose.x,
+						  xevent.xexpose.y);
 				}
 
 				break;
@@ -2215,10 +2211,7 @@ xwin_process_events(void)
 
 				sw = sw_get_window_by_wnd(xevent.xconfigure.window);
 				if (!sw)
-				{
-					error("ConfigureNotify for unknown window 0x%lx\n",
-					      xevent.xconfigure.window);
-				}
+					break;
 
 				gettimeofday(sw->position_timer, NULL);
 				if (sw->position_timer->tv_usec + SEAMLESSRDP_POSITION_TIMER >=
