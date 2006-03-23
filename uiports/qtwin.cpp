@@ -1,7 +1,7 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    User interface services - QT Window System
-   Copyright (C) Jay Sorg 2004-2005
+   Copyright (C) Jay Sorg 2004-2006
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include "../rdesktop.h"
+#include "rdesktop.h"
 
 #include <qapplication.h>
 #include <qmainwindow.h>
@@ -49,7 +49,7 @@ char g_hostname[16];
 char g_username[64];
 int g_height = 600;
 int g_width = 800;
-int g_server_bpp = 8;
+int g_server_depth = 8;
 int g_encryption = 1;
 int g_desktop_save = 1;
 int g_polygon_ellipse_orders = 0;
@@ -168,7 +168,7 @@ uint32 Color24to32(uint32 InColor)
 //*****************************************************************************
 void SetColorx(QColor * Color, uint32 InColor)
 {
-  switch (g_server_bpp)
+  switch (g_server_depth)
   {
     case 8:
       if (g_CM == NULL || InColor > 255)
@@ -762,7 +762,7 @@ HBITMAP ui_create_bitmap(int width, int height, uint8 * data)
   uint16 * s;
   int i;
 
-  switch (g_server_bpp)
+  switch (g_server_depth)
   {
     case 8:
       Image = new QImage(data, width, height, 8, (QRgb*)&g_CM->RGBColors,
@@ -1186,7 +1186,7 @@ void ui_paint_bitmap(int x, int y, int cx, int cy,
   uint16 * s;
   int i;
 
-  switch (g_server_bpp)
+  switch (g_server_depth)
   {
     case 8:
       Image = new QImage(data, width, height, 8, (QRgb*)&g_CM->RGBColors,
@@ -1766,9 +1766,9 @@ int parse_parameters(int in_argc, char ** in_argv)
     }
     else if (strcmp(in_argv[i], "-a") == 0)
     {
-      g_server_bpp = strtol(in_argv[i + 1], &p, 10);
-      if (g_server_bpp != 8 && g_server_bpp != 15 &&
-          g_server_bpp != 16 && g_server_bpp != 24)
+      g_server_depth = strtol(in_argv[i + 1], &p, 10);
+      if (g_server_depth != 8 && g_server_depth != 15 &&
+          g_server_depth != 16 && g_server_depth != 24)
       {
         error("invalid bpp\n");
         return 0;

@@ -1,7 +1,7 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    User interface services - Generic
-   Copyright (C) Jay Sorg 2004-2005
+   Copyright (C) Jay Sorg 2004-2006
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@ char g_hostname[16];
 char g_username[64];
 int g_height = 600;
 int g_width = 800;
-int g_server_bpp = 8;
+int g_server_depth = 8;
 int g_encryption = 1;
 int g_desktop_save = 1;
 int g_polygon_ellipse_orders = 0;
