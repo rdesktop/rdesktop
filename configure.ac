@@ -679,6 +679,15 @@ AC_ARG_WITH(debug-clipboard,
 	fi
     ])
 
+AC_ARG_WITH(debug-channel,
+    [  --with-debug-channel  enable debugging of virtual channel code],
+    [
+        if test $withval != "no";
+        then 
+            AC_DEFINE(WITH_DEBUG_CHANNEL,1)
+	fi
+    ])
+
 
 #
 # target-specific stuff

@@ -57,6 +57,12 @@
 #define DEBUG_CLIPBOARD(args)
 #endif
 
+#ifdef WITH_DEBUG_CHANNEL
+#define DEBUG_CHANNEL(args) printf args;
+#else
+#define DEBUG_CHANNEL(args)
+#endif
+
 #define STRNCPY(dst,src,n)	{ strncpy(dst,src,n-1); dst[n-1] = 0; }
 
 #ifndef MIN
