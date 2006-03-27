@@ -247,6 +247,35 @@ xclip_refuse_selection(XSelectionRequestEvent * req)
 	XSendEvent(g_display, req->requestor, False, NoEventMask, &xev);
 }
 
+/* Examines the special root window property that contains the native Windows
+   formats if another rdesktop process owns the clipboard. */
+static void
+xclip_get_root_property()
+{
+	unsigned long nitems;
+	unsigned long bytes_left;
+	int format, res;
+	uint8 *data;
+	Atom type;
+
+	res = XGetWindowProperty(g_display, DefaultRootWindow(g_display),
+				 rdesktop_clipboard_formats_atom, 0,
+				 XMaxRequestSize(g_display), False, XA_STRING,
+				 &type, &format, &nitems, &bytes_left, &data);
+
+	if ((res == Success) && (nitems > 0))
+	{
+		DEBUG_CLIPBOARD(("xclip_get_root_property: got fellow rdesktop formats\n"));
+		cliprdr_send_native_format_announce(data, nitems);
+		rdesktop_is_selection_owner = 1;
+		return;
+	}
+
+	/* For some reason, we couldn't announce the native formats */
+	cliprdr_send_simple_native_format_announce(RDP_CF_TEXT);
+	rdesktop_is_selection_owner = 0;
+}
+
 /* Wrapper for cliprdr_send_data which also cleans the request state. */
 static void
 helper_cliprdr_send_response(uint8 * data, uint32 length)
@@ -705,7 +734,7 @@ xclip_handle_PropertyNotify(XPropertyEvent * event)
 	unsigned long nitems;
 	unsigned long offset = 0;
 	unsigned long bytes_left = 1;
-	int format, res;
+	int format;
 	XWindowAttributes wa;
 	uint8 *data;
 	Atom type;
@@ -766,28 +795,7 @@ xclip_handle_PropertyNotify(XPropertyEvent * event)
 	if ((event->atom == rdesktop_clipboard_formats_atom) &&
 	    (event->window == DefaultRootWindow(g_display)) &&
 	    !have_primary /* not interested in our own events */ )
-	{
-		if (event->state == PropertyNewValue)
-		{
-			DEBUG_CLIPBOARD(("xclip_handle_PropertyNotify: getting fellow rdesktop formats\n"));
-
-			res = XGetWindowProperty(g_display, DefaultRootWindow(g_display),
-						 rdesktop_clipboard_formats_atom, 0,
-						 XMaxRequestSize(g_display), False, XA_STRING,
-						 &type, &format, &nitems, &bytes_left, &data);
-
-			if ((res == Success) && (nitems > 0))
-			{
-				cliprdr_send_native_format_announce(data, nitems);
-				rdesktop_is_selection_owner = 1;
-				return;
-			}
-		}
-
-		/* For some reason, we couldn't announce the native formats */
-		cliprdr_send_simple_native_format_announce(RDP_CF_TEXT);
-		rdesktop_is_selection_owner = 0;
-	}
+		xclip_get_root_property();
 }
 #endif
 
@@ -967,7 +975,7 @@ ui_clip_request_data(uint32 format)
 void
 ui_clip_sync(void)
 {
-	cliprdr_send_simple_native_format_announce(RDP_CF_TEXT);
+	xclip_get_root_property();
 }
 
 void
