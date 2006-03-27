@@ -332,7 +332,7 @@ xclip_send_data_with_convert(uint8 * source, size_t source_size, Atom target)
 		{
 			DEBUG_CLIPBOARD(("Sending Unicode string of %d bytes\n",
 					 translated_data_size));
-			cliprdr_send_data(translated_data, translated_data_size);
+			helper_cliprdr_send_response(translated_data, translated_data_size);
 			xfree(translated_data);	/* Not the same thing as XFree! */
 		}
 
@@ -353,7 +353,7 @@ xclip_send_data_with_convert(uint8 * source, size_t source_size, Atom target)
 		translated_data = lf2crlf(source, &length);
 		if (translated_data != NULL)
 		{
-			cliprdr_send_data(translated_data, length);
+			helper_cliprdr_send_response(translated_data, length);
 			xfree(translated_data);	/* Not the same thing as XFree! */
 		}
 
@@ -842,7 +842,7 @@ ui_clip_request_data(uint32 format)
 	}
 
 	/* No data available */
-	cliprdr_send_data(NULL, 0);
+	helper_cliprdr_send_empty_response();
 }
 
 void
