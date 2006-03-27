@@ -1,4 +1,5 @@
 rdesktop (1.?.?)
+  * SeamlessRDP - seamless windows support
   * Keymap fixes
   * Fix connection issues with Windows XP RTM
   * Keyboard handling improvements and fixes
