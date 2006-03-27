@@ -53,7 +53,12 @@
 extern Display *g_display;
 extern Window g_wnd;
 extern Time g_last_gesturetime;
+extern BOOL g_rdpclip;
 
+/* Mode of operation.
+   - Auto: Look at both PRIMARY and CLIPBOARD and use the most recent.
+   - Non-auto: Look at just CLIPBOARD. */
+static BOOL auto_mode = True;
 /* Atoms of the two X selections we're dealing with: CLIPBOARD (explicit-copy) and PRIMARY (selection-copy) */
 static Atom clipboard_atom, primary_atom;
 /* Atom of the TARGETS clipboard target */
@@ -902,7 +907,11 @@ ui_clip_request_data(uint32 format)
 		return;
 	}
 
-	primary_owner = XGetSelectionOwner(g_display, primary_atom);
+	if (auto_mode)
+		primary_owner = XGetSelectionOwner(g_display, primary_atom);
+	else
+		primary_owner = None;
+
 	clipboard_owner = XGetSelectionOwner(g_display, clipboard_atom);
 
 	/* Both available */
@@ -943,10 +952,29 @@ ui_clip_sync(void)
 	cliprdr_send_simple_native_format_announce(RDP_CF_TEXT);
 }
 
+void
+ui_clip_set_mode(const char *optarg)
+{
+	g_rdpclip = True;
+
+	if (str_startswith(optarg, "auto") || str_startswith(optarg, "on")
+	    || str_startswith(optarg, "PRIMARYCLIPBOARD"))
+		auto_mode = True;
+	else if (str_startswith(optarg, "CLIPBOARD"))
+		auto_mode = False;
+	else
+	{
+		warning("Invalid clipboard mode '%s'.\n", optarg);
+		g_rdpclip = False;
+	}
+}
 
 void
 xclip_init(void)
 {
+	if (!g_rdpclip)
+		return;
+
 	if (!cliprdr_init())
 		return;
 

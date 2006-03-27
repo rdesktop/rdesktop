@@ -84,6 +84,7 @@ BOOL g_fullscreen = False;
 BOOL g_grab_keyboard = True;
 BOOL g_hide_decorations = False;
 BOOL g_use_rdp5 = True;
+BOOL g_rdpclip = True;
 BOOL g_console_session = False;
 BOOL g_numlock_sync = False;
 BOOL lspci_enabled = False;
@@ -180,6 +181,13 @@ usage(char *program)
 		"             or      mydeskjet=\"HP LaserJet IIIP\" to enter server driver as well\n");
 	fprintf(stderr, "         '-r sound:[local|off|remote]': enable sound redirection\n");
 	fprintf(stderr, "                     remote would leave sound on server\n");
+	fprintf(stderr,
+		"         '-r clipboard:[on|off|auto|PRIMARYCLIPBOARD|CLIPBOARD]': enable clip-\n");
+	fprintf(stderr, "                      board redirection.\n");
+	fprintf(stderr,
+		"                      'on|auto|PRIMARYCLIPBOARD' looks at both PRIMARY and\n");
+	fprintf(stderr, "                      CLIPBOARD when sending data to server.\n");
+	fprintf(stderr, "                      'CLIPBOARD' looks at only CLIPBOARD.\n");
 	fprintf(stderr, "   -0: attach to console\n");
 	fprintf(stderr, "   -4: use RDP version 4\n");
 	fprintf(stderr, "   -5: use RDP version 5 (default)\n");
@@ -705,9 +713,25 @@ main(int argc, char *argv[])
 					g_rdpdr_clientname = xmalloc(strlen(optarg + 11) + 1);
 					strcpy(g_rdpdr_clientname, optarg + 11);
 				}
+				else if (str_startswith(optarg, "clipboard"))
+				{
+					optarg += 9;
+
+					if (*optarg == ':')
+					{
+						optarg++;
+
+						if (str_startswith(optarg, "off"))
+							g_rdpclip = False;
+						else
+							cliprdr_set_mode(optarg);
+					}
+					else
+						g_rdpclip = True;
+				}
 				else
 				{
-					warning("Unknown -r argument\n\n\tPossible arguments are: comport, disk, lptport, printer, sound\n");
+					warning("Unknown -r argument\n\n\tPossible arguments are: comport, disk, lptport, printer, sound, clipboard\n");
 				}
 				break;
 

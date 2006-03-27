@@ -163,6 +163,12 @@ cliprdr_process(STREAM s)
 	}
 }
 
+void
+cliprdr_set_mode(const char *optarg)
+{
+	ui_clip_set_mode(optarg);
+}
+
 BOOL
 cliprdr_init(void)
 {
