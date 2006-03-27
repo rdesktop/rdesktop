@@ -126,15 +126,21 @@ cliprdr_process(STREAM s)
 
 	if (status == CLIPRDR_ERROR)
 	{
-		if (type == CLIPRDR_FORMAT_ACK)
+		switch (type)
 		{
-			/* FIXME: We seem to get this when we send an announce while the server is
-			   still processing a paste. Try sending another announce. */
-			cliprdr_send_native_format_announce(last_formats, last_formats_length);
-			return;
+			case CLIPRDR_FORMAT_ACK:
+				/* FIXME: We seem to get this when we send an announce while the server is
+				   still processing a paste. Try sending another announce. */
+				cliprdr_send_native_format_announce(last_formats,
+								    last_formats_length);
+				break;
+			case CLIPRDR_DATA_RESPONSE:
+				ui_clip_request_failed();
+				break;
+			default:
+				DEBUG_CLIPBOARD(("CLIPRDR error (type=%d)\n", type));
 		}
 
-		DEBUG_CLIPBOARD(("CLIPRDR error (type=%d)\n", type));
 		return;
 	}
 

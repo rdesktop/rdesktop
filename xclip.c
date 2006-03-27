@@ -899,6 +899,13 @@ ui_clip_handle_data(uint8 * data, uint32 length)
 }
 
 void
+ui_clip_request_failed()
+{
+	xclip_refuse_selection(&selection_request);
+	has_selection_request = False;
+}
+
+void
 ui_clip_request_data(uint32 format)
 {
 	Window primary_owner, clipboard_owner;
