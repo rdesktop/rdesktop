@@ -241,9 +241,9 @@ seamless_XDrawLines(Drawable d, XPoint * points, int npoints, int xoffset, int y
 				XDrawArc(g_display, g_backstore, g_gc, x, y, cx, cy, 0, 360*64); \
 			break; \
 		case 1: /* Filled */ \
-			XFillArc(g_display, g_wnd, g_gc, x, y, \
-				 cx, cy, 0, 360*64); \
-                        ON_ALL_SEAMLESS_WINDOWS(XCopyArea, (g_display, g_ownbackstore ? g_backstore : g_wnd, sw->wnd, g_gc, x, y, cx, cy, x-sw->xoffset, y-sw->yoffset)); \
+			XFillArc(g_display, g_wnd, g_gc, x, y, cx, cy, 0, 360*64); \
+                        ON_ALL_SEAMLESS_WINDOWS(XCopyArea, (g_display, g_ownbackstore ? g_backstore : g_wnd, sw->wnd, g_gc, \
+							    x, y, cx, cy, x-sw->xoffset, y-sw->yoffset)); \
 			if (g_ownbackstore) \
 				XFillArc(g_display, g_backstore, g_gc, x, y, cx, cy, 0, 360*64); \
 			break; \
@@ -410,7 +410,6 @@ sw_restack_window(seamless_window * sw, unsigned long behind)
 		sw_above->behind = sw->behind;
 
 	/* And then add it at the new position */
-
 	for (sw_above = g_seamless_windows; sw_above; sw_above = sw_above->next)
 	{
 		if (sw_above->behind == behind)
@@ -1535,7 +1534,6 @@ ui_init(void)
 	}
 
 	g_old_error_handler = XSetErrorHandler(error_handler);
-
 	g_xserver_be = (ImageByteOrder(g_display) == MSBFirst);
 	screen_num = DefaultScreen(g_display);
 	g_x_socket = ConnectionNumber(g_display);
@@ -1772,8 +1770,8 @@ ui_create_window(void)
 	}
 
 	XSelectInput(g_display, g_wnd, input_mask);
-
 	XMapWindow(g_display, g_wnd);
+
 	/* wait for VisibilityNotify */
 	do
 	{
