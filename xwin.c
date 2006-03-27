@@ -28,6 +28,9 @@
 #include "rdesktop.h"
 #include "xproto.h"
 
+/* We can't include Xproto.h because of conflicting defines for BOOL */
+#define X_ConfigureWindow              12
+
 extern int g_width;
 extern int g_height;
 extern int g_xpos;
@@ -48,12 +51,47 @@ Time g_last_gesturetime;
 static int g_x_socket;
 static Screen *g_screen;
 Window g_wnd;
+
+/* SeamlessRDP support */
+typedef struct _seamless_group
+{
+	Window wnd;
+	unsigned long id;
+	unsigned int refcnt;
+} seamless_group;
+typedef struct _seamless_window
+{
+	Window wnd;
+	unsigned long id;
+	unsigned long behind;
+	seamless_group *group;
+	int xoffset, yoffset;
+	int width, height;
+	int state;		/* normal/minimized/maximized. */
+	unsigned int desktop;
+	struct timeval *position_timer;
+
+	BOOL outstanding_position;
+	unsigned int outpos_serial;
+	int outpos_xoffset, outpos_yoffset;
+	int outpos_width, outpos_height;
+
+	struct _seamless_window *next;
+} seamless_window;
+static seamless_window *g_seamless_windows = NULL;
+static unsigned long g_seamless_focused = 0;
+static BOOL g_seamless_started = False;	/* Server end is up and running */
+static BOOL g_seamless_active = False;	/* We are currently in seamless mode */
+static BOOL g_seamless_hidden = False;	/* Desktop is hidden on server */
+extern BOOL g_seamless_rdp;
+
 extern uint32 g_embed_wnd;
 BOOL g_enable_compose = False;
 BOOL g_Unobscured;		/* used for screenblt */
 static GC g_gc = NULL;
 static GC g_create_bitmap_gc = NULL;
 static GC g_create_glyph_gc = NULL;
+static XRectangle g_clip_rectangle;
 static Visual *g_visual;
 /* Color depth of the X11 visual of our window (e.g. 24 for True Color R8G8B visual).
    This may be 32 for R8G8B8 visuals, and then the rest of the bits are undefined
@@ -69,6 +107,8 @@ static XModifierKeymap *g_mod_map;
 static Cursor g_current_cursor;
 static HCURSOR g_null_cursor = NULL;
 static Atom g_protocol_atom, g_kill_atom;
+extern Atom g_net_wm_state_atom;
+extern Atom g_net_wm_desktop_atom;
 static BOOL g_focused;
 static BOOL g_mouse_in_wnd;
 /* Indicates that:
@@ -133,10 +173,46 @@ typedef struct
 }
 PixelColour;
 
+#define ON_ALL_SEAMLESS_WINDOWS(func, args) \
+        do { \
+                seamless_window *sw; \
+                XRectangle rect; \
+		if (!g_seamless_windows) break; \
+                for (sw = g_seamless_windows; sw; sw = sw->next) { \
+                    rect.x = g_clip_rectangle.x - sw->xoffset; \
+                    rect.y = g_clip_rectangle.y - sw->yoffset; \
+                    rect.width = g_clip_rectangle.width; \
+                    rect.height = g_clip_rectangle.height; \
+                    XSetClipRectangles(g_display, g_gc, 0, 0, &rect, 1, YXBanded); \
+                    func args; \
+                } \
+                XSetClipRectangles(g_display, g_gc, 0, 0, &g_clip_rectangle, 1, YXBanded); \
+        } while (0)
+
+static void
+seamless_XFillPolygon(Drawable d, XPoint * points, int npoints, int xoffset, int yoffset)
+{
+	points[0].x -= xoffset;
+	points[0].y -= yoffset;
+	XFillPolygon(g_display, d, g_gc, points, npoints, Complex, CoordModePrevious);
+	points[0].x += xoffset;
+	points[0].y += yoffset;
+}
+
+static void
+seamless_XDrawLines(Drawable d, XPoint * points, int npoints, int xoffset, int yoffset)
+{
+	points[0].x -= xoffset;
+	points[0].y -= yoffset;
+	XDrawLines(g_display, d, g_gc, points, npoints, CoordModePrevious);
+	points[0].x += xoffset;
+	points[0].y += yoffset;
+}
 
 #define FILL_RECTANGLE(x,y,cx,cy)\
 { \
 	XFillRectangle(g_display, g_wnd, g_gc, x, y, cx, cy); \
+        ON_ALL_SEAMLESS_WINDOWS(XFillRectangle, (g_display, sw->wnd, g_gc, x-sw->xoffset, y-sw->yoffset, cx, cy)); \
 	if (g_ownbackstore) \
 		XFillRectangle(g_display, g_backstore, g_gc, x, y, cx, cy); \
 }
@@ -151,6 +227,7 @@ PixelColour;
 	XFillPolygon(g_display, g_wnd, g_gc, p, np, Complex, CoordModePrevious); \
 	if (g_ownbackstore) \
 		XFillPolygon(g_display, g_backstore, g_gc, p, np, Complex, CoordModePrevious); \
+	ON_ALL_SEAMLESS_WINDOWS(seamless_XFillPolygon, (sw->wnd, p, np, sw->xoffset, sw->yoffset)); \
 }
 
 #define DRAW_ELLIPSE(x,y,cx,cy,m)\
@@ -159,11 +236,14 @@ PixelColour;
 	{ \
 		case 0:	/* Outline */ \
 			XDrawArc(g_display, g_wnd, g_gc, x, y, cx, cy, 0, 360*64); \
+                        ON_ALL_SEAMLESS_WINDOWS(XDrawArc, (g_display, sw->wnd, g_gc, x-sw->xoffset, y-sw->yoffset, cx, cy, 0, 360*64)); \
 			if (g_ownbackstore) \
 				XDrawArc(g_display, g_backstore, g_gc, x, y, cx, cy, 0, 360*64); \
 			break; \
 		case 1: /* Filled */ \
 			XFillArc(g_display, g_wnd, g_gc, x, y, cx, cy, 0, 360*64); \
+                        ON_ALL_SEAMLESS_WINDOWS(XCopyArea, (g_display, g_ownbackstore ? g_backstore : g_wnd, sw->wnd, g_gc, \
+							    x, y, cx, cy, x-sw->xoffset, y-sw->yoffset)); \
 			if (g_ownbackstore) \
 				XFillArc(g_display, g_backstore, g_gc, x, y, cx, cy, 0, 360*64); \
 			break; \
@@ -201,8 +281,230 @@ static int rop2_map[] = {
 #define SET_FUNCTION(rop2)	{ if (rop2 != ROP2_COPY) XSetFunction(g_display, g_gc, rop2_map[rop2]); }
 #define RESET_FUNCTION(rop2)	{ if (rop2 != ROP2_COPY) XSetFunction(g_display, g_gc, GXcopy); }
 
+static seamless_window *
+sw_get_window_by_id(unsigned long id)
+{
+	seamless_window *sw;
+	for (sw = g_seamless_windows; sw; sw = sw->next)
+	{
+		if (sw->id == id)
+			return sw;
+	}
+	return NULL;
+}
+
+
+static seamless_window *
+sw_get_window_by_wnd(Window wnd)
+{
+	seamless_window *sw;
+	for (sw = g_seamless_windows; sw; sw = sw->next)
+	{
+		if (sw->wnd == wnd)
+			return sw;
+	}
+	return NULL;
+}
+
+
 static void
-mwm_hide_decorations(void)
+sw_remove_window(seamless_window * win)
+{
+	seamless_window *sw, **prevnext = &g_seamless_windows;
+	for (sw = g_seamless_windows; sw; sw = sw->next)
+	{
+		if (sw == win)
+		{
+			*prevnext = sw->next;
+			sw->group->refcnt--;
+			if (sw->group->refcnt == 0)
+			{
+				XDestroyWindow(g_display, sw->group->wnd);
+				xfree(sw->group);
+			}
+			xfree(sw->position_timer);
+			xfree(sw);
+			return;
+		}
+		prevnext = &sw->next;
+	}
+	return;
+}
+
+
+/* Move all windows except wnd to new desktop */
+static void
+sw_all_to_desktop(Window wnd, unsigned int desktop)
+{
+	seamless_window *sw;
+	for (sw = g_seamless_windows; sw; sw = sw->next)
+	{
+		if (sw->wnd == wnd)
+			continue;
+		if (sw->desktop != desktop)
+		{
+			ewmh_move_to_desktop(sw->wnd, desktop);
+			sw->desktop = desktop;
+		}
+	}
+}
+
+
+/* Send our position */
+static void
+sw_update_position(seamless_window * sw)
+{
+	XWindowAttributes wa;
+	int x, y;
+	Window child_return;
+	unsigned int serial;
+
+	XGetWindowAttributes(g_display, sw->wnd, &wa);
+	XTranslateCoordinates(g_display, sw->wnd, wa.root,
+			      -wa.border_width, -wa.border_width, &x, &y, &child_return);
+
+	serial = seamless_send_position(sw->id, x, y, wa.width, wa.height, 0);
+
+	sw->outstanding_position = True;
+	sw->outpos_serial = serial;
+
+	sw->outpos_xoffset = x;
+	sw->outpos_yoffset = y;
+	sw->outpos_width = wa.width;
+	sw->outpos_height = wa.height;
+}
+
+
+/* Check if it's time to send our position */
+static void
+sw_check_timers()
+{
+	seamless_window *sw;
+	struct timeval now;
+
+	gettimeofday(&now, NULL);
+	for (sw = g_seamless_windows; sw; sw = sw->next)
+	{
+		if (timerisset(sw->position_timer) && timercmp(sw->position_timer, &now, <))
+		{
+			timerclear(sw->position_timer);
+			sw_update_position(sw);
+		}
+	}
+}
+
+
+static void
+sw_restack_window(seamless_window * sw, unsigned long behind)
+{
+	seamless_window *sw_above;
+
+	/* Remove window from stack */
+	for (sw_above = g_seamless_windows; sw_above; sw_above = sw_above->next)
+	{
+		if (sw_above->behind == sw->id)
+			break;
+	}
+
+	if (sw_above)
+		sw_above->behind = sw->behind;
+
+	/* And then add it at the new position */
+	for (sw_above = g_seamless_windows; sw_above; sw_above = sw_above->next)
+	{
+		if (sw_above->behind == behind)
+			break;
+	}
+
+	if (sw_above)
+		sw_above->behind = sw->id;
+
+	sw->behind = behind;
+}
+
+
+static void
+sw_handle_restack(seamless_window * sw)
+{
+	Status status;
+	Window root, parent, *children;
+	unsigned int nchildren, i;
+	seamless_window *sw_below;
+
+	status = XQueryTree(g_display, RootWindowOfScreen(g_screen),
+			    &root, &parent, &children, &nchildren);
+	if (!status || !nchildren)
+		return;
+
+	sw_below = NULL;
+
+	i = 0;
+	while (children[i] != sw->wnd)
+	{
+		i++;
+		if (i >= nchildren)
+			goto end;
+	}
+
+	for (i++; i < nchildren; i++)
+	{
+		sw_below = sw_get_window_by_wnd(children[i]);
+		if (sw_below)
+			break;
+	}
+
+	if (!sw_below && !sw->behind)
+		goto end;
+	if (sw_below && (sw_below->id == sw->behind))
+		goto end;
+
+	if (sw_below)
+	{
+		seamless_send_zchange(sw->id, sw_below->id, 0);
+		sw_restack_window(sw, sw_below->id);
+	}
+	else
+	{
+		seamless_send_zchange(sw->id, 0, 0);
+		sw_restack_window(sw, 0);
+	}
+
+      end:
+	XFree(children);
+}
+
+
+static seamless_group *
+sw_find_group(unsigned long id, BOOL dont_create)
+{
+	seamless_window *sw;
+	seamless_group *sg;
+	XSetWindowAttributes attribs;
+
+	for (sw = g_seamless_windows; sw; sw = sw->next)
+	{
+		if (sw->group->id == id)
+			return sw->group;
+	}
+
+	if (dont_create)
+		return NULL;
+
+	sg = xmalloc(sizeof(seamless_group));
+
+	sg->wnd =
+		XCreateWindow(g_display, RootWindowOfScreen(g_screen), -1, -1, 1, 1, 0,
+			      CopyFromParent, CopyFromParent, CopyFromParent, 0, &attribs);
+
+	sg->id = id;
+	sg->refcnt = 0;
+
+	return sg;
+}
+
+
+static void
+mwm_hide_decorations(Window wnd)
 {
 	PropMotifWmHints motif_hints;
 	Atom hintsatom;
@@ -219,8 +521,9 @@ mwm_hide_decorations(void)
 		return;
 	}
 
-	XChangeProperty(g_display, g_wnd, hintsatom, hintsatom, 32, PropModeReplace,
+	XChangeProperty(g_display, wnd, hintsatom, hintsatom, 32, PropModeReplace,
 			(unsigned char *) &motif_hints, PROP_MOTIF_WM_HINTS_ELEMENTS);
+
 }
 
 #define SPLITCOLOUR15(colour, rv) \
@@ -1197,6 +1500,22 @@ select_visual()
 	return True;
 }
 
+static XErrorHandler g_old_error_handler;
+
+static int
+error_handler(Display * dpy, XErrorEvent * eev)
+{
+	if ((eev->error_code == BadMatch) && (eev->request_code == X_ConfigureWindow))
+	{
+		fprintf(stderr, "Got \"BadMatch\" when trying to restack windows.\n");
+		fprintf(stderr,
+			"This is most likely caused by a broken window manager (commonly KWin).\n");
+		return 0;
+	}
+
+	return g_old_error_handler(dpy, eev);
+}
+
 BOOL
 ui_init(void)
 {
@@ -1214,6 +1533,7 @@ ui_init(void)
 		g_host_be = !(BOOL) (*(uint8 *) (&endianess_test));
 	}
 
+	g_old_error_handler = XSetErrorHandler(error_handler);
 	g_xserver_be = (ImageByteOrder(g_display) == MSBFirst);
 	screen_num = DefaultScreen(g_display);
 	g_x_socket = ConnectionNumber(g_display);
@@ -1298,6 +1618,9 @@ ui_init(void)
 		g_IM = XOpenIM(g_display, NULL, NULL, NULL);
 
 	xclip_init();
+	ewmh_init();
+	if (g_seamless_rdp)
+		seamless_init();
 
 	DEBUG_RDP5(("server bpp %d client bpp %d depth %d\n", g_server_depth, g_bpp, g_depth));
 
@@ -1307,6 +1630,12 @@ ui_init(void)
 void
 ui_deinit(void)
 {
+	while (g_seamless_windows)
+	{
+		XDestroyWindow(g_display, g_seamless_windows->wnd);
+		sw_remove_window(g_seamless_windows);
+	}
+
 	if (g_IM != NULL)
 		XCloseIM(g_IM);
 
@@ -1321,6 +1650,34 @@ ui_deinit(void)
 	XFreeGC(g_display, g_gc);
 	XCloseDisplay(g_display);
 	g_display = NULL;
+}
+
+
+static void
+get_window_attribs(XSetWindowAttributes * attribs)
+{
+	attribs->background_pixel = BlackPixelOfScreen(g_screen);
+	attribs->background_pixel = WhitePixelOfScreen(g_screen);
+	attribs->border_pixel = WhitePixelOfScreen(g_screen);
+	attribs->backing_store = g_ownbackstore ? NotUseful : Always;
+	attribs->override_redirect = g_fullscreen;
+	attribs->colormap = g_xcolmap;
+}
+
+static void
+get_input_mask(long *input_mask)
+{
+	*input_mask = KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask |
+		VisibilityChangeMask | FocusChangeMask | StructureNotifyMask;
+
+	if (g_sendmotion)
+		*input_mask |= PointerMotionMask;
+	if (g_ownbackstore)
+		*input_mask |= ExposureMask;
+	if (g_fullscreen || g_grab_keyboard)
+		*input_mask |= EnterWindowMask;
+	if (g_grab_keyboard)
+		*input_mask |= LeaveWindowMask;
 }
 
 BOOL
@@ -1345,11 +1702,7 @@ ui_create_window(void)
 	if (g_ypos < 0 || (g_ypos == 0 && (g_pos & 4)))
 		g_ypos = HeightOfScreen(g_screen) + g_ypos - g_height;
 
-	attribs.background_pixel = BlackPixelOfScreen(g_screen);
-	attribs.border_pixel = WhitePixelOfScreen(g_screen);
-	attribs.backing_store = g_ownbackstore ? NotUseful : Always;
-	attribs.override_redirect = g_fullscreen;
-	attribs.colormap = g_xcolmap;
+	get_window_attribs(&attribs);
 
 	g_wnd = XCreateWindow(g_display, RootWindowOfScreen(g_screen), g_xpos, g_ypos, wndwidth,
 			      wndheight, 0, g_depth, InputOutput, g_visual,
@@ -1357,7 +1710,10 @@ ui_create_window(void)
 			      CWBorderPixel, &attribs);
 
 	if (g_gc == NULL)
+	{
 		g_gc = XCreateGC(g_display, g_wnd, 0, NULL);
+		ui_reset_clip();
+	}
 
 	if (g_create_bitmap_gc == NULL)
 		g_create_bitmap_gc = XCreateGC(g_display, g_wnd, 0, NULL);
@@ -1374,7 +1730,7 @@ ui_create_window(void)
 	XStoreName(g_display, g_wnd, g_title);
 
 	if (g_hide_decorations)
-		mwm_hide_decorations();
+		mwm_hide_decorations(g_wnd);
 
 	classhints = XAllocClassHint();
 	if (classhints != NULL)
@@ -1401,17 +1757,7 @@ ui_create_window(void)
 		XReparentWindow(g_display, g_wnd, (Window) g_embed_wnd, 0, 0);
 	}
 
-	input_mask = KeyPressMask | KeyReleaseMask | ButtonPressMask | ButtonReleaseMask |
-		VisibilityChangeMask | FocusChangeMask | StructureNotifyMask;
-
-	if (g_sendmotion)
-		input_mask |= PointerMotionMask;
-	if (g_ownbackstore)
-		input_mask |= ExposureMask;
-	if (g_fullscreen || g_grab_keyboard)
-		input_mask |= EnterWindowMask;
-	if (g_grab_keyboard)
-		input_mask |= LeaveWindowMask;
+	get_input_mask(&input_mask);
 
 	if (g_IM != NULL)
 	{
@@ -1495,6 +1841,10 @@ void
 xwin_toggle_fullscreen(void)
 {
 	Pixmap contents = 0;
+
+	if (g_seamless_active)
+		/* Turn off SeamlessRDP mode */
+		ui_seamless_toggle();
 
 	if (!g_ownbackstore)
 	{
@@ -1584,9 +1934,19 @@ handle_button_event(XEvent xevent, BOOL down)
 		}
 	}
 
-	rdp_send_input(time(NULL), RDP_INPUT_MOUSE,
-		       flags | button, xevent.xbutton.x, xevent.xbutton.y);
+	if (xevent.xmotion.window == g_wnd)
+	{
+		rdp_send_input(time(NULL), RDP_INPUT_MOUSE,
+			       flags | button, xevent.xbutton.x, xevent.xbutton.y);
+	}
+	else
+	{
+		/* SeamlessRDP */
+		rdp_send_input(time(NULL), RDP_INPUT_MOUSE,
+			       flags | button, xevent.xbutton.x_root, xevent.xbutton.y_root);
+	}
 }
+
 
 /* Process events in Xlib queue
    Returns 0 after user quit, 1 otherwise */
@@ -1599,6 +1959,7 @@ xwin_process_events(void)
 	char str[256];
 	Status status;
 	int events = 0;
+	seamless_window *sw;
 
 	while ((XPending(g_display) > 0) && events++ < 20)
 	{
@@ -1613,7 +1974,10 @@ xwin_process_events(void)
 		switch (xevent.type)
 		{
 			case VisibilityNotify:
-				g_Unobscured = xevent.xvisibility.state == VisibilityUnobscured;
+				if (xevent.xvisibility.window == g_wnd)
+					g_Unobscured =
+						xevent.xvisibility.state == VisibilityUnobscured;
+
 				break;
 			case ClientMessage:
 				/* the window manager told us to quit */
@@ -1693,8 +2057,19 @@ xwin_process_events(void)
 				if (g_fullscreen && !g_focused)
 					XSetInputFocus(g_display, g_wnd, RevertToPointerRoot,
 						       CurrentTime);
-				rdp_send_input(time(NULL), RDP_INPUT_MOUSE,
-					       MOUSE_FLAG_MOVE, xevent.xmotion.x, xevent.xmotion.y);
+
+				if (xevent.xmotion.window == g_wnd)
+				{
+					rdp_send_input(time(NULL), RDP_INPUT_MOUSE, MOUSE_FLAG_MOVE,
+						       xevent.xmotion.x, xevent.xmotion.y);
+				}
+				else
+				{
+					/* SeamlessRDP */
+					rdp_send_input(time(NULL), RDP_INPUT_MOUSE, MOUSE_FLAG_MOVE,
+						       xevent.xmotion.x_root,
+						       xevent.xmotion.y_root);
+				}
 				break;
 
 			case FocusIn:
@@ -1705,6 +2080,16 @@ xwin_process_events(void)
 				if (g_grab_keyboard && g_mouse_in_wnd)
 					XGrabKeyboard(g_display, g_wnd, True,
 						      GrabModeAsync, GrabModeAsync, CurrentTime);
+
+				sw = sw_get_window_by_wnd(xevent.xfocus.window);
+				if (!sw)
+					break;
+
+				if (sw->id != g_seamless_focused)
+				{
+					seamless_send_focus(sw->id, 0);
+					g_seamless_focused = sw->id;
+				}
 				break;
 
 			case FocusOut:
@@ -1737,11 +2122,28 @@ xwin_process_events(void)
 				break;
 
 			case Expose:
-				XCopyArea(g_display, g_backstore, g_wnd, g_gc,
-					  xevent.xexpose.x, xevent.xexpose.y,
-					  xevent.xexpose.width,
-					  xevent.xexpose.height,
-					  xevent.xexpose.x, xevent.xexpose.y);
+				if (xevent.xexpose.window == g_wnd)
+				{
+					XCopyArea(g_display, g_backstore, xevent.xexpose.window,
+						  g_gc,
+						  xevent.xexpose.x, xevent.xexpose.y,
+						  xevent.xexpose.width, xevent.xexpose.height,
+						  xevent.xexpose.x, xevent.xexpose.y);
+				}
+				else
+				{
+					sw = sw_get_window_by_wnd(xevent.xexpose.window);
+					if (!sw)
+						break;
+					XCopyArea(g_display, g_backstore,
+						  xevent.xexpose.window, g_gc,
+						  xevent.xexpose.x + sw->xoffset,
+						  xevent.xexpose.y + sw->yoffset,
+						  xevent.xexpose.width,
+						  xevent.xexpose.height, xevent.xexpose.x,
+						  xevent.xexpose.y);
+				}
+
 				break;
 
 			case MappingNotify:
@@ -1770,12 +2172,61 @@ xwin_process_events(void)
 				break;
 			case PropertyNotify:
 				xclip_handle_PropertyNotify(&xevent.xproperty);
+				if (xevent.xproperty.window == g_wnd)
+					break;
+				if (xevent.xproperty.window == DefaultRootWindow(g_display))
+					break;
+
+				/* seamless */
+				sw = sw_get_window_by_wnd(xevent.xproperty.window);
+				if (!sw)
+					break;
+
+				if ((xevent.xproperty.atom == g_net_wm_state_atom)
+				    && (xevent.xproperty.state == PropertyNewValue))
+				{
+					sw->state = ewmh_get_window_state(sw->wnd);
+					seamless_send_state(sw->id, sw->state, 0);
+				}
+
+				if ((xevent.xproperty.atom == g_net_wm_desktop_atom)
+				    && (xevent.xproperty.state == PropertyNewValue))
+				{
+					sw->desktop = ewmh_get_window_desktop(sw->wnd);
+					sw_all_to_desktop(sw->wnd, sw->desktop);
+				}
+
 				break;
 			case MapNotify:
-				rdp_send_client_window_status(1);
+				if (!g_seamless_active)
+					rdp_send_client_window_status(1);
 				break;
 			case UnmapNotify:
-				rdp_send_client_window_status(0);
+				if (!g_seamless_active)
+					rdp_send_client_window_status(0);
+				break;
+			case ConfigureNotify:
+				if (!g_seamless_active)
+					break;
+
+				sw = sw_get_window_by_wnd(xevent.xconfigure.window);
+				if (!sw)
+					break;
+
+				gettimeofday(sw->position_timer, NULL);
+				if (sw->position_timer->tv_usec + SEAMLESSRDP_POSITION_TIMER >=
+				    1000000)
+				{
+					sw->position_timer->tv_usec +=
+						SEAMLESSRDP_POSITION_TIMER - 1000000;
+					sw->position_timer->tv_sec += 1;
+				}
+				else
+				{
+					sw->position_timer->tv_usec += SEAMLESSRDP_POSITION_TIMER;
+				}
+
+				sw_handle_restack(sw);
 				break;
 		}
 	}
@@ -1800,6 +2251,9 @@ ui_select(int rdp_socket)
 			/* User quit */
 			return 0;
 
+		if (g_seamless_active)
+			sw_check_timers();
+
 		FD_ZERO(&rfds);
 		FD_ZERO(&wfds);
 		FD_SET(rdp_socket, &rfds);
@@ -1819,6 +2273,7 @@ ui_select(int rdp_socket)
 
 		/* add redirection handles */
 		rdpdr_add_fds(&n, &rfds, &wfds, &tv, &s_timeout);
+		seamless_select_timeout(&tv);
 
 		n++;
 
@@ -1912,10 +2367,16 @@ ui_paint_bitmap(int x, int y, int cx, int cy, int width, int height, uint8 * dat
 	{
 		XPutImage(g_display, g_backstore, g_gc, image, 0, 0, x, y, cx, cy);
 		XCopyArea(g_display, g_backstore, g_wnd, g_gc, x, y, cx, cy, x, y);
+		ON_ALL_SEAMLESS_WINDOWS(XCopyArea,
+					(g_display, g_backstore, sw->wnd, g_gc, x, y, cx, cy,
+					 x - sw->xoffset, y - sw->yoffset));
 	}
 	else
 	{
 		XPutImage(g_display, g_wnd, g_gc, image, 0, 0, x, y, cx, cy);
+		ON_ALL_SEAMLESS_WINDOWS(XCopyArea,
+					(g_display, g_wnd, sw->wnd, g_gc, x, y, cx, cy,
+					 x - sw->xoffset, y - sw->yoffset));
 	}
 
 	XFree(image);
@@ -2036,6 +2497,7 @@ ui_set_cursor(HCURSOR cursor)
 {
 	g_current_cursor = (Cursor) cursor;
 	XDefineCursor(g_display, g_wnd, g_current_cursor);
+	ON_ALL_SEAMLESS_WINDOWS(XDefineCursor, (g_display, sw->wnd, g_current_cursor));
 }
 
 void
@@ -2177,31 +2639,30 @@ ui_set_colourmap(HCOLOURMAP map)
 		g_colmap = (uint32 *) map;
 	}
 	else
+	{
 		XSetWindowColormap(g_display, g_wnd, (Colormap) map);
+		ON_ALL_SEAMLESS_WINDOWS(XSetWindowColormap, (g_display, sw->wnd, (Colormap) map));
+	}
 }
 
 void
 ui_set_clip(int x, int y, int cx, int cy)
 {
-	XRectangle rect;
-
-	rect.x = x;
-	rect.y = y;
-	rect.width = cx;
-	rect.height = cy;
-	XSetClipRectangles(g_display, g_gc, 0, 0, &rect, 1, YXBanded);
+	g_clip_rectangle.x = x;
+	g_clip_rectangle.y = y;
+	g_clip_rectangle.width = cx;
+	g_clip_rectangle.height = cy;
+	XSetClipRectangles(g_display, g_gc, 0, 0, &g_clip_rectangle, 1, YXBanded);
 }
 
 void
 ui_reset_clip(void)
 {
-	XRectangle rect;
-
-	rect.x = 0;
-	rect.y = 0;
-	rect.width = g_width;
-	rect.height = g_height;
-	XSetClipRectangles(g_display, g_gc, 0, 0, &rect, 1, YXBanded);
+	g_clip_rectangle.x = 0;
+	g_clip_rectangle.y = 0;
+	g_clip_rectangle.width = g_width;
+	g_clip_rectangle.height = g_height;
+	XSetClipRectangles(g_display, g_gc, 0, 0, &g_clip_rectangle, 1, YXBanded);
 }
 
 void
@@ -2282,6 +2743,9 @@ ui_patblt(uint8 opcode,
 
 	if (g_ownbackstore)
 		XCopyArea(g_display, g_backstore, g_wnd, g_gc, x, y, cx, cy, x, y);
+	ON_ALL_SEAMLESS_WINDOWS(XCopyArea,
+				(g_display, g_ownbackstore ? g_backstore : g_wnd, sw->wnd, g_gc,
+				 x, y, cx, cy, x - sw->xoffset, y - sw->yoffset));
 }
 
 void
@@ -2292,23 +2756,19 @@ ui_screenblt(uint8 opcode,
 	SET_FUNCTION(opcode);
 	if (g_ownbackstore)
 	{
-		if (g_Unobscured)
-		{
-			XCopyArea(g_display, g_wnd, g_wnd, g_gc, srcx, srcy, cx, cy, x, y);
-			XCopyArea(g_display, g_backstore, g_backstore, g_gc, srcx, srcy, cx, cy, x,
-				  y);
-		}
-		else
-		{
-			XCopyArea(g_display, g_backstore, g_wnd, g_gc, srcx, srcy, cx, cy, x, y);
-			XCopyArea(g_display, g_backstore, g_backstore, g_gc, srcx, srcy, cx, cy, x,
-				  y);
-		}
+		XCopyArea(g_display, g_Unobscured ? g_wnd : g_backstore,
+			  g_wnd, g_gc, srcx, srcy, cx, cy, x, y);
+		XCopyArea(g_display, g_backstore, g_backstore, g_gc, srcx, srcy, cx, cy, x, y);
 	}
 	else
 	{
 		XCopyArea(g_display, g_wnd, g_wnd, g_gc, srcx, srcy, cx, cy, x, y);
 	}
+
+	ON_ALL_SEAMLESS_WINDOWS(XCopyArea,
+				(g_display, g_ownbackstore ? g_backstore : g_wnd,
+				 sw->wnd, g_gc, x, y, cx, cy, x - sw->xoffset, y - sw->yoffset));
+
 	RESET_FUNCTION(opcode);
 }
 
@@ -2319,6 +2779,9 @@ ui_memblt(uint8 opcode,
 {
 	SET_FUNCTION(opcode);
 	XCopyArea(g_display, (Pixmap) src, g_wnd, g_gc, srcx, srcy, cx, cy, x, y);
+	ON_ALL_SEAMLESS_WINDOWS(XCopyArea,
+				(g_display, (Pixmap) src, sw->wnd, g_gc,
+				 srcx, srcy, cx, cy, x - sw->xoffset, y - sw->yoffset));
 	if (g_ownbackstore)
 		XCopyArea(g_display, (Pixmap) src, g_backstore, g_gc, srcx, srcy, cx, cy, x, y);
 	RESET_FUNCTION(opcode);
@@ -2365,6 +2828,9 @@ ui_line(uint8 opcode,
 	SET_FUNCTION(opcode);
 	SET_FOREGROUND(pen->colour);
 	XDrawLine(g_display, g_wnd, g_gc, startx, starty, endx, endy);
+	ON_ALL_SEAMLESS_WINDOWS(XDrawLine, (g_display, sw->wnd, g_gc,
+					    startx - sw->xoffset, starty - sw->yoffset,
+					    endx - sw->xoffset, endy - sw->yoffset));
 	if (g_ownbackstore)
 		XDrawLine(g_display, g_backstore, g_gc, startx, starty, endx, endy);
 	RESET_FUNCTION(opcode);
@@ -2462,6 +2928,10 @@ ui_polyline(uint8 opcode,
 	if (g_ownbackstore)
 		XDrawLines(g_display, g_backstore, g_gc, (XPoint *) points, npoints,
 			   CoordModePrevious);
+
+	ON_ALL_SEAMLESS_WINDOWS(seamless_XDrawLines,
+				(sw->wnd, (XPoint *) points, npoints, sw->xoffset, sw->yoffset));
+
 	RESET_FUNCTION(opcode);
 }
 
@@ -2682,11 +3152,25 @@ ui_draw_text(uint8 font, uint8 flags, uint8 opcode, int mixmode, int x, int y,
 	if (g_ownbackstore)
 	{
 		if (boxcx > 1)
+		{
 			XCopyArea(g_display, g_backstore, g_wnd, g_gc, boxx,
 				  boxy, boxcx, boxcy, boxx, boxy);
+			ON_ALL_SEAMLESS_WINDOWS(XCopyArea,
+						(g_display, g_backstore, sw->wnd, g_gc,
+						 boxx, boxy,
+						 boxcx, boxcy,
+						 boxx - sw->xoffset, boxy - sw->yoffset));
+		}
 		else
+		{
 			XCopyArea(g_display, g_backstore, g_wnd, g_gc, clipx,
 				  clipy, clipcx, clipcy, clipx, clipy);
+			ON_ALL_SEAMLESS_WINDOWS(XCopyArea,
+						(g_display, g_backstore, sw->wnd, g_gc,
+						 clipx, clipy,
+						 clipcx, clipcy, clipx - sw->xoffset,
+						 clipy - sw->yoffset));
+		}
 	}
 }
 
@@ -2732,10 +3216,16 @@ ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy)
 	{
 		XPutImage(g_display, g_backstore, g_gc, image, 0, 0, x, y, cx, cy);
 		XCopyArea(g_display, g_backstore, g_wnd, g_gc, x, y, cx, cy, x, y);
+		ON_ALL_SEAMLESS_WINDOWS(XCopyArea,
+					(g_display, g_backstore, sw->wnd, g_gc,
+					 x, y, cx, cy, x - sw->xoffset, y - sw->yoffset));
 	}
 	else
 	{
 		XPutImage(g_display, g_wnd, g_gc, image, 0, 0, x, y, cx, cy);
+		ON_ALL_SEAMLESS_WINDOWS(XCopyArea,
+					(g_display, g_wnd, sw->wnd, g_gc, x, y, cx, cy,
+					 x - sw->xoffset, y - sw->yoffset));
 	}
 
 	XFree(image);
@@ -2750,4 +3240,427 @@ ui_begin_update(void)
 void
 ui_end_update(void)
 {
+}
+
+
+void
+ui_seamless_begin(BOOL hidden)
+{
+	if (!g_seamless_rdp)
+		return;
+
+	if (g_seamless_started)
+		return;
+
+	g_seamless_started = True;
+	g_seamless_hidden = hidden;
+
+	if (!hidden)
+		ui_seamless_toggle();
+}
+
+
+void
+ui_seamless_hide_desktop()
+{
+	if (!g_seamless_rdp)
+		return;
+
+	if (!g_seamless_started)
+		return;
+
+	if (g_seamless_active)
+		ui_seamless_toggle();
+
+	g_seamless_hidden = True;
+}
+
+
+void
+ui_seamless_unhide_desktop()
+{
+	if (!g_seamless_rdp)
+		return;
+
+	if (!g_seamless_started)
+		return;
+
+	g_seamless_hidden = False;
+
+	ui_seamless_toggle();
+}
+
+
+void
+ui_seamless_toggle()
+{
+	if (!g_seamless_rdp)
+		return;
+
+	if (!g_seamless_started)
+		return;
+
+	if (g_seamless_hidden)
+		return;
+
+	if (g_seamless_active)
+	{
+		/* Deactivate */
+		while (g_seamless_windows)
+		{
+			XDestroyWindow(g_display, g_seamless_windows->wnd);
+			sw_remove_window(g_seamless_windows);
+		}
+		XMapWindow(g_display, g_wnd);
+	}
+	else
+	{
+		/* Activate */
+		XUnmapWindow(g_display, g_wnd);
+		seamless_send_sync();
+	}
+
+	g_seamless_active = !g_seamless_active;
+}
+
+
+void
+ui_seamless_create_window(unsigned long id, unsigned long group, unsigned long parent,
+			  unsigned long flags)
+{
+	Window wnd;
+	XSetWindowAttributes attribs;
+	XClassHint *classhints;
+	XSizeHints *sizehints;
+	XWMHints *wmhints;
+	long input_mask;
+	seamless_window *sw, *sw_parent;
+
+	if (!g_seamless_active)
+		return;
+
+	/* Ignore CREATEs for existing windows */
+	sw = sw_get_window_by_id(id);
+	if (sw)
+		return;
+
+	get_window_attribs(&attribs);
+	wnd = XCreateWindow(g_display, RootWindowOfScreen(g_screen), -1, -1, 1, 1, 0, g_depth,
+			    InputOutput, g_visual,
+			    CWBackPixel | CWBackingStore | CWColormap | CWBorderPixel, &attribs);
+
+	XStoreName(g_display, wnd, "SeamlessRDP");
+	ewmh_set_wm_name(wnd, "SeamlessRDP");
+
+	mwm_hide_decorations(wnd);
+
+	classhints = XAllocClassHint();
+	if (classhints != NULL)
+	{
+		classhints->res_name = "rdesktop";
+		classhints->res_class = "SeamlessRDP";
+		XSetClassHint(g_display, wnd, classhints);
+		XFree(classhints);
+	}
+
+	/* WM_NORMAL_HINTS */
+	sizehints = XAllocSizeHints();
+	if (sizehints != NULL)
+	{
+		sizehints->flags = USPosition;
+		XSetWMNormalHints(g_display, wnd, sizehints);
+		XFree(sizehints);
+	}
+
+	/* Parent-less transient windows */
+	if (parent == 0xFFFFFFFF)
+	{
+		XSetTransientForHint(g_display, wnd, RootWindowOfScreen(g_screen));
+		/* Some buggy wm:s (kwin) do not handle the above, so fake it
+		   using some other hints. */
+		ewmh_set_window_popup(wnd);
+	}
+	/* Normal transient windows */
+	else if (parent != 0x00000000)
+	{
+		sw_parent = sw_get_window_by_id(parent);
+		if (sw_parent)
+			XSetTransientForHint(g_display, wnd, sw_parent->wnd);
+		else
+			warning("ui_seamless_create_window: No parent window 0x%lx\n", parent);
+	}
+
+	if (flags & SEAMLESSRDP_CREATE_MODAL)
+	{
+		/* We do this to support buggy wm:s (*cough* metacity *cough*)
+		   somewhat at least */
+		if (parent == 0x00000000)
+			XSetTransientForHint(g_display, wnd, RootWindowOfScreen(g_screen));
+		ewmh_set_window_modal(wnd);
+	}
+
+	/* FIXME: Support for Input Context:s */
+
+	get_input_mask(&input_mask);
+	input_mask |= PropertyChangeMask;
+
+	XSelectInput(g_display, wnd, input_mask);
+
+	/* handle the WM_DELETE_WINDOW protocol. FIXME: When killing a
+	   seamless window, we could try to close the window on the
+	   serverside, instead of terminating rdesktop */
+	XSetWMProtocols(g_display, wnd, &g_kill_atom, 1);
+
+	sw = xmalloc(sizeof(seamless_window));
+	sw->wnd = wnd;
+	sw->id = id;
+	sw->behind = 0;
+	sw->group = sw_find_group(group, False);
+	sw->group->refcnt++;
+	sw->xoffset = 0;
+	sw->yoffset = 0;
+	sw->width = 0;
+	sw->height = 0;
+	sw->state = SEAMLESSRDP_NOTYETMAPPED;
+	sw->desktop = 0;
+	sw->position_timer = xmalloc(sizeof(struct timeval));
+	timerclear(sw->position_timer);
+
+	sw->outstanding_position = False;
+	sw->outpos_serial = 0;
+	sw->outpos_xoffset = sw->outpos_yoffset = 0;
+	sw->outpos_width = sw->outpos_height = 0;
+
+	sw->next = g_seamless_windows;
+	g_seamless_windows = sw;
+
+	/* WM_HINTS */
+	wmhints = XAllocWMHints();
+	if (wmhints)
+	{
+		wmhints->flags = WindowGroupHint;
+		wmhints->window_group = sw->group->wnd;
+		XSetWMHints(g_display, sw->wnd, wmhints);
+		XFree(wmhints);
+	}
+}
+
+
+void
+ui_seamless_destroy_window(unsigned long id, unsigned long flags)
+{
+	seamless_window *sw;
+
+	if (!g_seamless_active)
+		return;
+
+	sw = sw_get_window_by_id(id);
+	if (!sw)
+	{
+		warning("ui_seamless_destroy_window: No information for window 0x%lx\n", id);
+		return;
+	}
+
+	XDestroyWindow(g_display, sw->wnd);
+	sw_remove_window(sw);
+}
+
+
+void
+ui_seamless_move_window(unsigned long id, int x, int y, int width, int height, unsigned long flags)
+{
+	seamless_window *sw;
+
+	if (!g_seamless_active)
+		return;
+
+	sw = sw_get_window_by_id(id);
+	if (!sw)
+	{
+		warning("ui_seamless_move_window: No information for window 0x%lx\n", id);
+		return;
+	}
+
+	/* We ignore server updates until it has handled our request. */
+	if (sw->outstanding_position)
+		return;
+
+	if (!width || !height)
+		/* X11 windows must be at least 1x1 */
+		return;
+
+	sw->xoffset = x;
+	sw->yoffset = y;
+	sw->width = width;
+	sw->height = height;
+
+	/* If we move the window in a maximized state, then KDE won't
+	   accept restoration */
+	switch (sw->state)
+	{
+		case SEAMLESSRDP_MINIMIZED:
+		case SEAMLESSRDP_MAXIMIZED:
+			return;
+	}
+
+	/* FIXME: Perhaps use ewmh_net_moveresize_window instead */
+	XMoveResizeWindow(g_display, sw->wnd, sw->xoffset, sw->yoffset, sw->width, sw->height);
+}
+
+
+void
+ui_seamless_restack_window(unsigned long id, unsigned long behind, unsigned long flags)
+{
+	seamless_window *sw;
+
+	if (!g_seamless_active)
+		return;
+
+	sw = sw_get_window_by_id(id);
+	if (!sw)
+	{
+		warning("ui_seamless_restack_window: No information for window 0x%lx\n", id);
+		return;
+	}
+
+	if (behind)
+	{
+		seamless_window *sw_behind;
+		Window wnds[2];
+
+		sw_behind = sw_get_window_by_id(behind);
+		if (!sw_behind)
+		{
+			warning("ui_seamless_restack_window: No information for window 0x%lx\n",
+				behind);
+			return;
+		}
+
+		wnds[1] = sw_behind->wnd;
+		wnds[0] = sw->wnd;
+
+		XRestackWindows(g_display, wnds, 2);
+	}
+	else
+	{
+		XRaiseWindow(g_display, sw->wnd);
+	}
+
+	sw_restack_window(sw, behind);
+}
+
+
+void
+ui_seamless_settitle(unsigned long id, const char *title, unsigned long flags)
+{
+	seamless_window *sw;
+
+	if (!g_seamless_active)
+		return;
+
+	sw = sw_get_window_by_id(id);
+	if (!sw)
+	{
+		warning("ui_seamless_settitle: No information for window 0x%lx\n", id);
+		return;
+	}
+
+	/* FIXME: Might want to convert the name for non-EWMH WMs */
+	XStoreName(g_display, sw->wnd, title);
+	ewmh_set_wm_name(sw->wnd, title);
+}
+
+
+void
+ui_seamless_setstate(unsigned long id, unsigned int state, unsigned long flags)
+{
+	seamless_window *sw;
+
+	if (!g_seamless_active)
+		return;
+
+	sw = sw_get_window_by_id(id);
+	if (!sw)
+	{
+		warning("ui_seamless_setstate: No information for window 0x%lx\n", id);
+		return;
+	}
+
+	switch (state)
+	{
+		case SEAMLESSRDP_NORMAL:
+		case SEAMLESSRDP_MAXIMIZED:
+			ewmh_change_state(sw->wnd, state);
+			XMapWindow(g_display, sw->wnd);
+			break;
+		case SEAMLESSRDP_MINIMIZED:
+			/* EWMH says: "if an Application asks to toggle _NET_WM_STATE_HIDDEN
+			   the Window Manager should probably just ignore the request, since
+			   _NET_WM_STATE_HIDDEN is a function of some other aspect of the window
+			   such as minimization, rather than an independent state." Besides,
+			   XIconifyWindow is easier. */
+			if (sw->state == SEAMLESSRDP_NOTYETMAPPED)
+			{
+				XWMHints *hints;
+				hints = XGetWMHints(g_display, sw->wnd);
+				if (hints)
+				{
+					hints->flags |= StateHint;
+					hints->initial_state = IconicState;
+					XSetWMHints(g_display, sw->wnd, hints);
+					XFree(hints);
+				}
+				XMapWindow(g_display, sw->wnd);
+			}
+			else
+				XIconifyWindow(g_display, sw->wnd, DefaultScreen(g_display));
+			break;
+		default:
+			warning("SeamlessRDP: Invalid state %d\n", state);
+			break;
+	}
+
+	sw->state = state;
+}
+
+
+void
+ui_seamless_syncbegin(unsigned long flags)
+{
+	if (!g_seamless_active)
+		return;
+
+	/* Destroy all seamless windows */
+	while (g_seamless_windows)
+	{
+		XDestroyWindow(g_display, g_seamless_windows->wnd);
+		sw_remove_window(g_seamless_windows);
+	}
+}
+
+
+void
+ui_seamless_ack(unsigned int serial)
+{
+	seamless_window *sw;
+	for (sw = g_seamless_windows; sw; sw = sw->next)
+	{
+		if (sw->outstanding_position && (sw->outpos_serial == serial))
+		{
+			sw->xoffset = sw->outpos_xoffset;
+			sw->yoffset = sw->outpos_yoffset;
+			sw->width = sw->outpos_width;
+			sw->height = sw->outpos_height;
+			sw->outstanding_position = False;
+
+			/* Do a complete redraw of the window as part of the
+			   completion of the move. This is to remove any
+			   artifacts caused by our lack of synchronization. */
+			XCopyArea(g_display, g_backstore,
+				  sw->wnd, g_gc,
+				  sw->xoffset, sw->yoffset, sw->width, sw->height, 0, 0);
+
+			break;
+		}
+	}
 }

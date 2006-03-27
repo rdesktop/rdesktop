@@ -67,6 +67,7 @@ NTSTATUS disk_query_directory(NTHANDLE handle, uint32 info_class, char *pattern,
 int mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen);
 /* ewmhints.c */
 int get_current_workarea(uint32 * x, uint32 * y, uint32 * width, uint32 * height);
+void ewmh_init(void);
 /* iso.c */
 STREAM iso_init(int length);
 void iso_send(STREAM s);
@@ -271,8 +272,31 @@ void ui_desktop_save(uint32 offset, int x, int y, int cx, int cy);
 void ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy);
 void ui_begin_update(void);
 void ui_end_update(void);
+void ui_seamless_begin(BOOL hidden);
+void ui_seamless_hide_desktop(void);
+void ui_seamless_unhide_desktop(void);
+void ui_seamless_toggle(void);
+void ui_seamless_create_window(unsigned long id, unsigned long group, unsigned long parent,
+			       unsigned long flags);
+void ui_seamless_destroy_window(unsigned long id, unsigned long flags);
+void ui_seamless_move_window(unsigned long id, int x, int y, int width, int height,
+			     unsigned long flags);
+void ui_seamless_restack_window(unsigned long id, unsigned long behind, unsigned long flags);
+void ui_seamless_settitle(unsigned long id, const char *title, unsigned long flags);
+void ui_seamless_setstate(unsigned long id, unsigned int state, unsigned long flags);
+void ui_seamless_syncbegin(unsigned long flags);
+void ui_seamless_ack(unsigned int serial);
 /* lspci.c */
 BOOL lspci_init(void);
+/* seamless.c */
+BOOL seamless_init(void);
+unsigned int seamless_send_sync(void);
+unsigned int seamless_send_state(unsigned long id, unsigned int state, unsigned long flags);
+unsigned int seamless_send_position(unsigned long id, int x, int y, int width, int height,
+				    unsigned long flags);
+void seamless_select_timeout(struct timeval *tv);
+unsigned int seamless_send_zchange(unsigned long id, unsigned long below, unsigned long flags);
+unsigned int seamless_send_focus(unsigned long id, unsigned long flags);
 
 /* *INDENT-OFF* */
 #ifdef __cplusplus

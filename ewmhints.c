@@ -22,17 +22,29 @@
 */
 
 #include <X11/Xlib.h>
+#include <X11/Xatom.h>
+#include <X11/Xutil.h>
 #include "rdesktop.h"
 
+#define _NET_WM_STATE_REMOVE        0	/* remove/unset property */
+#define _NET_WM_STATE_ADD           1	/* add/set property */
+#define _NET_WM_STATE_TOGGLE        2	/* toggle property  */
+
 extern Display *g_display;
+
+static Atom g_net_wm_state_maximized_vert_atom, g_net_wm_state_maximized_horz_atom,
+	g_net_wm_state_hidden_atom, g_net_wm_name_atom, g_utf8_string_atom,
+	g_net_wm_state_skip_taskbar_atom, g_net_wm_state_skip_pager_atom, g_net_wm_state_modal_atom;
+
+Atom g_net_wm_state_atom, g_net_wm_desktop_atom;
 
 /* 
    Get window property value (32 bit format) 
    Returns zero on success, -1 on error
 */
 static int
-get_property_value(char *propname, long max_length,
-		   unsigned long *nitems_return, unsigned char **prop_return)
+get_property_value(Window wnd, char *propname, long max_length,
+		   unsigned long *nitems_return, unsigned char **prop_return, int nowarn)
 {
 	int result;
 	Atom property;
@@ -47,7 +59,7 @@ get_property_value(char *propname, long max_length,
 		return (-1);
 	}
 
-	result = XGetWindowProperty(g_display, DefaultRootWindow(g_display), property, 0,	/* long_offset */
+	result = XGetWindowProperty(g_display, wnd, property, 0,	/* long_offset */
 				    max_length,	/* long_length */
 				    False,	/* delete */
 				    AnyPropertyType,	/* req_type */
@@ -63,7 +75,8 @@ get_property_value(char *propname, long max_length,
 
 	if (actual_type_return == None || actual_format_return == 0)
 	{
-		fprintf(stderr, "Root window is missing property %s\n", propname);
+		if (!nowarn)
+			fprintf(stderr, "Window is missing property %s\n", propname);
 		return (-1);
 	}
 
@@ -93,7 +106,9 @@ get_current_desktop(void)
 	unsigned char *prop_return;
 	int current_desktop;
 
-	if (get_property_value("_NET_CURRENT_DESKTOP", 1, &nitems_return, &prop_return) < 0)
+	if (get_property_value
+	    (DefaultRootWindow(g_display), "_NET_CURRENT_DESKTOP", 1, &nitems_return,
+	     &prop_return, 0) < 0)
 		return (-1);
 
 	if (nitems_return != 1)
@@ -125,7 +140,9 @@ get_current_workarea(uint32 * x, uint32 * y, uint32 * width, uint32 * height)
 	const uint32 net_workarea_height_offset = 3;
 	const uint32 max_prop_length = 32 * 4;	/* Max 32 desktops */
 
-	if (get_property_value("_NET_WORKAREA", max_prop_length, &nitems_return, &prop_return) < 0)
+	if (get_property_value
+	    (DefaultRootWindow(g_display), "_NET_WORKAREA", max_prop_length, &nitems_return,
+	     &prop_return, 0) < 0)
 		return (-1);
 
 	if (nitems_return % 4)
@@ -151,6 +168,262 @@ get_current_workarea(uint32 * x, uint32 * y, uint32 * width, uint32 * height)
 	return (0);
 
 }
+
+
+
+void
+ewmh_init()
+{
+	/* FIXME: Use XInternAtoms */
+	g_net_wm_state_maximized_vert_atom =
+		XInternAtom(g_display, "_NET_WM_STATE_MAXIMIZED_VERT", False);
+	g_net_wm_state_maximized_horz_atom =
+		XInternAtom(g_display, "_NET_WM_STATE_MAXIMIZED_HORZ", False);
+	g_net_wm_state_hidden_atom = XInternAtom(g_display, "_NET_WM_STATE_HIDDEN", False);
+	g_net_wm_state_skip_taskbar_atom =
+		XInternAtom(g_display, "_NET_WM_STATE_SKIP_TASKBAR", False);
+	g_net_wm_state_skip_pager_atom = XInternAtom(g_display, "_NET_WM_STATE_SKIP_PAGER", False);
+	g_net_wm_state_modal_atom = XInternAtom(g_display, "_NET_WM_STATE_MODAL", False);
+	g_net_wm_state_atom = XInternAtom(g_display, "_NET_WM_STATE", False);
+	g_net_wm_desktop_atom = XInternAtom(g_display, "_NET_WM_DESKTOP", False);
+	g_net_wm_name_atom = XInternAtom(g_display, "_NET_WM_NAME", False);
+	g_utf8_string_atom = XInternAtom(g_display, "UTF8_STRING", False);
+}
+
+
+/* 
+   Get the window state: normal/minimized/maximized. 
+*/
+#ifndef MAKE_PROTO
+int
+ewmh_get_window_state(Window w)
+{
+	unsigned long nitems_return;
+	unsigned char *prop_return;
+	uint32 *return_words;
+	unsigned long item;
+	BOOL maximized_vert, maximized_horz, hidden;
+
+	maximized_vert = maximized_horz = hidden = False;
+
+	if (get_property_value(w, "_NET_WM_STATE", 64, &nitems_return, &prop_return, 0) < 0)
+		return SEAMLESSRDP_NORMAL;
+
+	return_words = (uint32 *) prop_return;
+
+	for (item = 0; item < nitems_return; item++)
+	{
+		if (return_words[item] == g_net_wm_state_maximized_vert_atom)
+			maximized_vert = True;
+		if (return_words[item] == g_net_wm_state_maximized_horz_atom)
+			maximized_horz = True;
+		if (return_words[item] == g_net_wm_state_hidden_atom)
+			hidden = True;
+	}
+
+	XFree(prop_return);
+
+	if (maximized_vert && maximized_horz)
+		return SEAMLESSRDP_MAXIMIZED;
+	else if (hidden)
+		return SEAMLESSRDP_MINIMIZED;
+	else
+		return SEAMLESSRDP_NORMAL;
+}
+
+static int
+ewmh_modify_state(Window wnd, int add, Atom atom1, Atom atom2)
+{
+	Status status;
+	XEvent xevent;
+
+	int result;
+	unsigned long nitems;
+	unsigned char *props;
+	uint32 state;
+
+	/* The spec states that the window manager must respect any
+	   _NET_WM_STATE attributes on a withdrawn window. In order words, we
+	   modify the attributes directly for withdrawn windows and ask the WM
+	   to do it for active windows. */
+	result = get_property_value(wnd, "WM_STATE", 64, &nitems, &props, 1);
+	if ((result >= 0) && nitems)
+	{
+		state = *(uint32 *) props;
+		XFree(props);
+	}
+
+	if ((result < 0) || !nitems || (state == WithdrawnState))
+	{
+		if (add)
+		{
+			Atom atoms[2];
+
+			atoms[0] = atom1;
+			nitems = 1;
+			if (atom2)
+			{
+				atoms[1] = atom2;
+				nitems = 2;
+			}
+
+			XChangeProperty(g_display, wnd, g_net_wm_state_atom, XA_ATOM,
+					32, PropModeAppend, (unsigned char *) atoms, nitems);
+		}
+		else
+		{
+			Atom *atoms;
+			int i;
+
+			if (get_property_value(wnd, "_NET_WM_STATE", 64, &nitems, &props, 1) < 0)
+				return 0;
+
+			atoms = (Atom *) props;
+
+			for (i = 0; i < nitems; i++)
+			{
+				if ((atoms[i] == atom1) || (atom2 && (atoms[i] == atom2)))
+				{
+					if (i != (nitems - 1))
+						memmove(&atoms[i], &atoms[i + 1],
+							sizeof(Atom) * (nitems - i - 1));
+					nitems--;
+					i--;
+				}
+			}
+
+			XChangeProperty(g_display, wnd, g_net_wm_state_atom, XA_ATOM,
+					32, PropModeReplace, (unsigned char *) atoms, nitems);
+
+			XFree(props);
+		}
+
+		return 0;
+	}
+
+	xevent.type = ClientMessage;
+	xevent.xclient.window = wnd;
+	xevent.xclient.message_type = g_net_wm_state_atom;
+	xevent.xclient.format = 32;
+	if (add)
+		xevent.xclient.data.l[0] = _NET_WM_STATE_ADD;
+	else
+		xevent.xclient.data.l[0] = _NET_WM_STATE_REMOVE;
+	xevent.xclient.data.l[1] = atom1;
+	xevent.xclient.data.l[2] = atom2;
+	xevent.xclient.data.l[3] = 0;
+	xevent.xclient.data.l[4] = 0;
+	status = XSendEvent(g_display, DefaultRootWindow(g_display), False,
+			    SubstructureNotifyMask | SubstructureRedirectMask, &xevent);
+	if (!status)
+		return -1;
+
+	return 0;
+}
+
+/* 
+   Set the window state: normal/minimized/maximized. 
+   Returns -1 on failure. 
+*/
+int
+ewmh_change_state(Window wnd, int state)
+{
+	/*
+	 * Deal with the max atoms
+	 */
+	if (state == SEAMLESSRDP_MAXIMIZED)
+	{
+		if (ewmh_modify_state
+		    (wnd, 1, g_net_wm_state_maximized_vert_atom,
+		     g_net_wm_state_maximized_horz_atom) < 0)
+			return -1;
+	}
+	else
+	{
+		if (ewmh_modify_state
+		    (wnd, 0, g_net_wm_state_maximized_vert_atom,
+		     g_net_wm_state_maximized_horz_atom) < 0)
+			return -1;
+	}
+
+	return 0;
+}
+
+
+int
+ewmh_get_window_desktop(Window wnd)
+{
+	unsigned long nitems_return;
+	unsigned char *prop_return;
+	int desktop;
+
+	if (get_property_value(wnd, "_NET_WM_DESKTOP", 1, &nitems_return, &prop_return, 0) < 0)
+		return (-1);
+
+	if (nitems_return != 1)
+	{
+		fprintf(stderr, "_NET_WM_DESKTOP has bad length\n");
+		return (-1);
+	}
+
+	desktop = *prop_return;
+	XFree(prop_return);
+	return desktop;
+}
+
+
+int
+ewmh_move_to_desktop(Window wnd, unsigned int desktop)
+{
+	Status status;
+	XEvent xevent;
+
+	xevent.type = ClientMessage;
+	xevent.xclient.window = wnd;
+	xevent.xclient.message_type = g_net_wm_desktop_atom;
+	xevent.xclient.format = 32;
+	xevent.xclient.data.l[0] = desktop;
+	xevent.xclient.data.l[1] = 0;
+	xevent.xclient.data.l[2] = 0;
+	xevent.xclient.data.l[3] = 0;
+	xevent.xclient.data.l[4] = 0;
+	status = XSendEvent(g_display, DefaultRootWindow(g_display), False,
+			    SubstructureNotifyMask | SubstructureRedirectMask, &xevent);
+	if (!status)
+		return -1;
+
+	return 0;
+}
+
+void
+ewmh_set_wm_name(Window wnd, const char *title)
+{
+	int len;
+
+	len = strlen(title);
+	XChangeProperty(g_display, wnd, g_net_wm_name_atom, g_utf8_string_atom,
+			8, PropModeReplace, (unsigned char *) title, len);
+}
+
+
+int
+ewmh_set_window_popup(Window wnd)
+{
+	if (ewmh_modify_state
+	    (wnd, 1, g_net_wm_state_skip_taskbar_atom, g_net_wm_state_skip_pager_atom) < 0)
+		return -1;
+	return 0;
+}
+
+int
+ewmh_set_window_modal(Window wnd)
+{
+	if (ewmh_modify_state(wnd, 1, g_net_wm_state_modal_atom, 0) < 0)
+		return -1;
+	return 0;
+}
+
+#endif /* MAKE_PROTO */
 
 
 #if 0
