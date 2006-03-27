@@ -33,6 +33,9 @@
 
 static VCHANNEL *cliprdr_channel;
 
+static uint8 *last_formats = NULL;
+static uint32 last_formats_length = 0;
+
 static void
 cliprdr_send_packet(uint16 type, uint16 status, uint8 * data, uint32 length)
 {
@@ -75,8 +78,19 @@ void
 cliprdr_send_native_format_announce(uint8 * formats_data, uint32 formats_data_length)
 {
 	DEBUG_CLIPBOARD(("cliprdr_send_native_format_announce\n"));
+
 	cliprdr_send_packet(CLIPRDR_FORMAT_ANNOUNCE, CLIPRDR_REQUEST, formats_data,
 			    formats_data_length);
+
+	if (formats_data != last_formats)
+	{
+		if (last_formats)
+			xfree(last_formats);
+
+		last_formats = xmalloc(formats_data_length);
+		memcpy(last_formats, formats_data, formats_data_length);
+		last_formats_length = formats_data_length;
+	}
 }
 
 void
@@ -116,7 +130,7 @@ cliprdr_process(STREAM s)
 		{
 			/* FIXME: We seem to get this when we send an announce while the server is
 			   still processing a paste. Try sending another announce. */
-			cliprdr_send_simple_native_format_announce(CF_TEXT);
+			cliprdr_send_native_format_announce(last_formats, last_formats_length);
 			return;
 		}
 
