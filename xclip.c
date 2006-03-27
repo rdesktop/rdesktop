@@ -69,6 +69,12 @@ static Atom timestamp_atom;
      before requesting clipboard data from a fellow rdesktop using
      the _RDESKTOP_CLIPBOARD_FORMATS target. */
 static Atom rdesktop_clipboard_target_atom;
+/* Atoms _RDESKTOP_PRIMARY_TIMESTAMP_TARGET and _RDESKTOP_CLIPBOARD_TIMESTAMP_TARGET
+   are used to store the timestamps for when a window got ownership of the selections.
+   We use these to determine which is more recent and should be used. */
+static Atom rdesktop_primary_timestamp_target_atom, rdesktop_clipboard_timestamp_target_atom;
+/* Storage for timestamps since we get them in two separate notifications. */
+static Time primary_timestamp, clipboard_timestamp;
 /* Atom _RDESKTOP_CLIPBOARD_FORMATS which has multiple uses:
    - The clipboard target (X jargon for "clipboard format") for rdesktop-to-rdesktop interchange
      of Windows native clipboard data.
@@ -372,6 +378,14 @@ xclip_send_data_with_convert(uint8 * source, size_t source_size, Atom target)
 	}
 }
 
+static void
+xclip_clear_target_props()
+{
+	XDeleteProperty(g_display, g_wnd, rdesktop_clipboard_target_atom);
+	XDeleteProperty(g_display, g_wnd, rdesktop_primary_timestamp_target_atom);
+	XDeleteProperty(g_display, g_wnd, rdesktop_clipboard_timestamp_target_atom);
+}
+
 /* This function is called for SelectionNotify events.
    The SelectionNotify event is sent from the clipboard owner to the requestor
    after his request was satisfied.
@@ -395,12 +409,77 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 			 XGetAtomName(g_display, event->target),
 			 XGetAtomName(g_display, event->property)));
 
-	if (event->property == None)
-		goto fail;
+	if (event->target == timestamp_atom)
+	{
+		if (event->selection == primary_atom)
+		{
+			res = XGetWindowProperty(g_display, g_wnd,
+						 rdesktop_primary_timestamp_target_atom, 0,
+						 XMaxRequestSize(g_display), False, XA_INTEGER,
+						 &type, &format, &nitems, &bytes_left, &data);
+		}
+		else
+		{
+			res = XGetWindowProperty(g_display, g_wnd,
+						 rdesktop_clipboard_timestamp_target_atom, 0,
+						 XMaxRequestSize(g_display), False, XA_INTEGER,
+						 &type, &format, &nitems, &bytes_left, &data);
+		}
+
+
+		if ((res != Success) || (nitems != 1))
+		{
+			DEBUG_CLIPBOARD(("XGetWindowProperty failed!\n"));
+			goto fail;
+		}
+
+		if (event->selection == primary_atom)
+		{
+			primary_timestamp = *(Time *) data;
+			if (primary_timestamp == 0)
+				primary_timestamp++;
+			XDeleteProperty(g_display, g_wnd, rdesktop_primary_timestamp_target_atom);
+			DEBUG_CLIPBOARD(("Got PRIMARY timestamp: %u\n",
+					 (unsigned) primary_timestamp));
+		}
+		else
+		{
+			clipboard_timestamp = *(Time *) data;
+			if (clipboard_timestamp == 0)
+				clipboard_timestamp++;
+			XDeleteProperty(g_display, g_wnd, rdesktop_clipboard_timestamp_target_atom);
+			DEBUG_CLIPBOARD(("Got CLIPBOARD timestamp: %u\n",
+					 (unsigned) clipboard_timestamp));
+		}
+
+		XFree(data);
+
+		if (primary_timestamp && clipboard_timestamp)
+		{
+			if (primary_timestamp > clipboard_timestamp)
+			{
+				DEBUG_CLIPBOARD(("PRIMARY is most recent selection.\n"));
+				XConvertSelection(g_display, primary_atom, targets_atom,
+						  rdesktop_clipboard_target_atom, g_wnd,
+						  event->time);
+			}
+			else
+			{
+				DEBUG_CLIPBOARD(("CLIPBOARD is most recent selection.\n"));
+				XConvertSelection(g_display, clipboard_atom, targets_atom,
+						  rdesktop_clipboard_target_atom, g_wnd,
+						  event->time);
+			}
+		}
+
+		return;
+	}
 
 	res = XGetWindowProperty(g_display, g_wnd, rdesktop_clipboard_target_atom,
 				 0, XMaxRequestSize(g_display), False, AnyPropertyType,
 				 &type, &format, &nitems, &bytes_left, &data);
+
+	xclip_clear_target_props();
 
 	if (res != Success)
 	{
@@ -417,14 +496,11 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 		{
 			XSelectInput(g_display, g_wnd, (wa.your_event_mask | PropertyChangeMask));
 		}
-		XDeleteProperty(g_display, g_wnd, rdesktop_clipboard_target_atom);
 		XFree(data);
 		g_incr_target = event->target;
 		g_waiting_for_INCR = 1;
 		return;
 	}
-
-	XDeleteProperty(g_display, g_wnd, rdesktop_clipboard_target_atom);
 
 	/* Negotiate target format */
 	if (event->target == targets_atom)
@@ -502,7 +578,7 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 	return;
 
       fail:
-	XDeleteProperty(g_display, g_wnd, rdesktop_clipboard_target_atom);
+	xclip_clear_target_props();
 	if (data)
 		XFree(data);
 	helper_cliprdr_send_empty_response();
@@ -809,10 +885,12 @@ ui_clip_handle_data(uint8 * data, uint32 length)
 void
 ui_clip_request_data(uint32 format)
 {
-	Window selectionowner;
+	Window primary_owner, clipboard_owner;
 
 	DEBUG_CLIPBOARD(("Request from server for format %d\n", format));
 	rdp_clipboard_request_format = format;
+
+	xclip_clear_target_props();
 
 	if (rdesktop_is_selection_owner)
 	{
@@ -824,17 +902,31 @@ ui_clip_request_data(uint32 format)
 		return;
 	}
 
-	selectionowner = XGetSelectionOwner(g_display, primary_atom);
-	if (selectionowner != None)
+	primary_owner = XGetSelectionOwner(g_display, primary_atom);
+	clipboard_owner = XGetSelectionOwner(g_display, clipboard_atom);
+
+	/* Both available */
+	if ((primary_owner != None) && (clipboard_owner != None))
+	{
+		primary_timestamp = 0;
+		clipboard_timestamp = 0;
+		XConvertSelection(g_display, primary_atom, timestamp_atom,
+				  rdesktop_primary_timestamp_target_atom, g_wnd, CurrentTime);
+		XConvertSelection(g_display, clipboard_atom, timestamp_atom,
+				  rdesktop_clipboard_timestamp_target_atom, g_wnd, CurrentTime);
+		return;
+	}
+
+	/* Just PRIMARY */
+	if (primary_owner != None)
 	{
 		XConvertSelection(g_display, primary_atom, targets_atom,
 				  rdesktop_clipboard_target_atom, g_wnd, CurrentTime);
 		return;
 	}
 
-	/* No PRIMARY, try CLIPBOARD */
-	selectionowner = XGetSelectionOwner(g_display, clipboard_atom);
-	if (selectionowner != None)
+	/* Just CLIPBOARD */
+	if (clipboard_owner != None)
 	{
 		XConvertSelection(g_display, clipboard_atom, targets_atom,
 				  rdesktop_clipboard_target_atom, g_wnd, CurrentTime);
@@ -864,6 +956,10 @@ xclip_init(void)
 	timestamp_atom = XInternAtom(g_display, "TIMESTAMP", False);
 	rdesktop_clipboard_target_atom =
 		XInternAtom(g_display, "_RDESKTOP_CLIPBOARD_TARGET", False);
+	rdesktop_primary_timestamp_target_atom =
+		XInternAtom(g_display, "_RDESKTOP_PRIMARY_TIMESTAMP_TARGET", False);
+	rdesktop_clipboard_timestamp_target_atom =
+		XInternAtom(g_display, "_RDESKTOP_CLIPBOARD_TIMESTAMP_TARGET", False);
 	incr_atom = XInternAtom(g_display, "INCR", False);
 	format_string_atom = XInternAtom(g_display, "STRING", False);
 	format_utf8_string_atom = XInternAtom(g_display, "UTF8_STRING", False);
