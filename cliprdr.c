@@ -60,6 +60,8 @@ cliprdr_send_simple_native_format_announce(uint32 format)
 {
 	uint8 buffer[36];
 
+	DEBUG_CLIPBOARD(("cliprdr_send_simple_native_format_announce\n"));
+
 	buf_out_uint32(buffer, format);
 	memset(buffer + 4, 0, sizeof(buffer) - 4);	/* description */
 	cliprdr_send_native_format_announce(buffer, sizeof(buffer));
@@ -72,6 +74,7 @@ cliprdr_send_simple_native_format_announce(uint32 format)
 void
 cliprdr_send_native_format_announce(uint8 * formats_data, uint32 formats_data_length)
 {
+	DEBUG_CLIPBOARD(("cliprdr_send_native_format_announce\n"));
 	cliprdr_send_packet(CLIPRDR_FORMAT_ANNOUNCE, CLIPRDR_REQUEST, formats_data,
 			    formats_data_length);
 }
@@ -81,6 +84,7 @@ cliprdr_send_data_request(uint32 format)
 {
 	uint8 buffer[4];
 
+	DEBUG_CLIPBOARD(("cliprdr_send_data_request\n"));
 	buf_out_uint32(buffer, format);
 	cliprdr_send_packet(CLIPRDR_DATA_REQUEST, CLIPRDR_REQUEST, buffer, sizeof(buffer));
 }
@@ -88,6 +92,7 @@ cliprdr_send_data_request(uint32 format)
 void
 cliprdr_send_data(uint8 * data, uint32 length)
 {
+	DEBUG_CLIPBOARD(("cliprdr_send_data\n"));
 	cliprdr_send_packet(CLIPRDR_DATA_RESPONSE, CLIPRDR_RESPONSE, data, length);
 }
 
