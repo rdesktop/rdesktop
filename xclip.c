@@ -114,6 +114,8 @@ static int have_primary = 0;
 /* Denotes that an rdesktop (not this rdesktop) is owning the selection,
    allowing us to interchange Windows native clipboard data directly. */
 static int rdesktop_is_selection_owner = 0;
+/* Time when we acquired the selection. */
+static Time acquire_time = 0;
 
 /* Denotes that an INCR ("chunked") transfer is in progress. */
 static int g_waiting_for_INCR = 0;
@@ -614,7 +616,7 @@ xclip_handle_SelectionRequest(XSelectionRequestEvent * event)
 	}
 	else if (event->target == timestamp_atom)
 	{
-		xclip_provide_selection(event, XA_INTEGER, 32, (uint8 *) & g_last_gesturetime, 1);
+		xclip_provide_selection(event, XA_INTEGER, 32, (uint8 *) & acquire_time, 1);
 		return;
 	}
 	else
@@ -798,7 +800,9 @@ xclip_handle_PropertyNotify(XPropertyEvent * event)
 void
 ui_clip_format_announce(uint8 * data, uint32 length)
 {
-	XSetSelectionOwner(g_display, primary_atom, g_wnd, g_last_gesturetime);
+	acquire_time = g_last_gesturetime;
+
+	XSetSelectionOwner(g_display, primary_atom, g_wnd, acquire_time);
 	if (XGetSelectionOwner(g_display, primary_atom) != g_wnd)
 	{
 		warning("Failed to aquire ownership of PRIMARY clipboard\n");
@@ -810,7 +814,7 @@ ui_clip_format_announce(uint8 * data, uint32 length)
 			rdesktop_clipboard_formats_atom, XA_STRING, 8, PropModeReplace, data,
 			length);
 
-	XSetSelectionOwner(g_display, clipboard_atom, g_wnd, g_last_gesturetime);
+	XSetSelectionOwner(g_display, clipboard_atom, g_wnd, acquire_time);
 	if (XGetSelectionOwner(g_display, clipboard_atom) != g_wnd)
 		warning("Failed to aquire ownership of CLIPBOARD clipboard\n");
 }
