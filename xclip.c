@@ -479,7 +479,7 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 		 */
 		if (best_text_target != 0)
 		{
-			XConvertSelection(g_display, clipboard_atom, best_text_target,
+			XConvertSelection(g_display, event->selection, best_text_target,
 					  rdesktop_clipboard_target_atom, g_wnd, event->time);
 			return;
 		}
