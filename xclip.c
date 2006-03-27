@@ -992,20 +992,21 @@ xclip_init(void)
 	format_string_atom = XInternAtom(g_display, "STRING", False);
 	format_utf8_string_atom = XInternAtom(g_display, "UTF8_STRING", False);
 	format_unicode_atom = XInternAtom(g_display, "text/unicode", False);
-	num_targets = 0;
-	targets[num_targets++] = targets_atom;
-	targets[num_targets++] = timestamp_atom;
-	targets[num_targets++] = rdesktop_clipboard_formats_atom;
-	targets[num_targets++] = format_string_atom;
-#ifdef USE_UNICODE_CLIPBOARD
-	targets[num_targets++] = format_utf8_string_atom;
-#endif
-	targets[num_targets++] = format_unicode_atom;
-	targets[num_targets++] = XA_STRING;
 
 	/* rdesktop sets _RDESKTOP_CLIPBOARD_FORMATS on the root window when acquiring the clipboard.
 	   Other interested rdesktops can use this to notify their server of the available formats. */
 	rdesktop_clipboard_formats_atom =
 		XInternAtom(g_display, "_RDESKTOP_CLIPBOARD_FORMATS", False);
 	XSelectInput(g_display, DefaultRootWindow(g_display), PropertyChangeMask);
+
+	num_targets = 0;
+	targets[num_targets++] = targets_atom;
+	targets[num_targets++] = timestamp_atom;
+	targets[num_targets++] = rdesktop_clipboard_formats_atom;
+#ifdef USE_UNICODE_CLIPBOARD
+	targets[num_targets++] = format_utf8_string_atom;
+#endif
+	targets[num_targets++] = format_unicode_atom;
+	targets[num_targets++] = format_string_atom;
+	targets[num_targets++] = XA_STRING;
 }
