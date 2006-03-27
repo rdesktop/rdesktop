@@ -177,6 +177,7 @@ PixelColour;
         do { \
                 seamless_window *sw; \
                 XRectangle rect; \
+		if (!g_seamless_windows) break; \
                 for (sw = g_seamless_windows; sw; sw = sw->next) { \
                     rect.x = g_clip_rectangle.x - sw->xoffset; \
                     rect.y = g_clip_rectangle.y - sw->yoffset; \
