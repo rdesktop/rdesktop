@@ -84,3 +84,10 @@
 
   * Implement something similiar to explhook.dll - support for running
     explorer.exe in non-shell mode. 
+
+  * Better compatibility with Task Manager. 
+
+  * XINERAMA support.  
+
+  * When enumerating windows, make sure to send info about windows
+    that are transient for other windows after the referred window.
