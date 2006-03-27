@@ -821,6 +821,13 @@ ui_clip_handle_data(uint8 * data, uint32 length)
 {
 	BOOL free_data = False;
 
+	if (length == 0)
+	{
+		xclip_refuse_selection(&selection_request);
+		has_selection_request = False;
+		return;
+	}
+
 	if (selection_request.target == format_string_atom || selection_request.target == XA_STRING)
 	{
 		/* We're expecting a CF_TEXT response */
