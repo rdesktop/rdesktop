@@ -1636,6 +1636,8 @@ ui_deinit(void)
 		sw_remove_window(g_seamless_windows);
 	}
 
+	xclip_deinit();
+
 	if (g_IM != NULL)
 		XCloseIM(g_IM);
 

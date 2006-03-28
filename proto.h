@@ -209,6 +209,7 @@ void ui_clip_request_data(uint32 format);
 void ui_clip_sync(void);
 void ui_clip_set_mode(const char *optarg);
 void xclip_init(void);
+void xclip_deinit(void);
 /* xkeymap.c */
 BOOL xkeymap_from_locale(const char *locale);
 FILE *xkeymap_open(const char *filename);

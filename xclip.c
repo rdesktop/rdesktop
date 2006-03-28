@@ -1173,3 +1173,13 @@ xclip_init(void)
 	targets[num_targets++] = format_string_atom;
 	targets[num_targets++] = XA_STRING;
 }
+
+void
+xclip_deinit(void)
+{
+	if (XGetSelectionOwner(g_display, primary_atom) == g_wnd)
+		XSetSelectionOwner(g_display, primary_atom, None, acquire_time);
+	if (XGetSelectionOwner(g_display, clipboard_atom) == g_wnd)
+		XSetSelectionOwner(g_display, clipboard_atom, None, acquire_time);
+	xclip_notify_change();
+}
