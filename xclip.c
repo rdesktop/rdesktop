@@ -1112,8 +1112,7 @@ ui_clip_set_mode(const char *optarg)
 {
 	g_rdpclip = True;
 
-	if (str_startswith(optarg, "auto") || str_startswith(optarg, "on")
-	    || str_startswith(optarg, "PRIMARYCLIPBOARD"))
+	if (str_startswith(optarg, "PRIMARYCLIPBOARD"))
 		auto_mode = True;
 	else if (str_startswith(optarg, "CLIPBOARD"))
 		auto_mode = False;

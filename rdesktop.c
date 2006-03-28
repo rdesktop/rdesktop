@@ -182,11 +182,11 @@ usage(char *program)
 	fprintf(stderr, "         '-r sound:[local|off|remote]': enable sound redirection\n");
 	fprintf(stderr, "                     remote would leave sound on server\n");
 	fprintf(stderr,
-		"         '-r clipboard:[on|off|auto|PRIMARYCLIPBOARD|CLIPBOARD]': enable clip-\n");
-	fprintf(stderr, "                      board redirection.\n");
+		"         '-r clipboard:[off|PRIMARYCLIPBOARD|CLIPBOARD]': enable clipboard\n");
+	fprintf(stderr, "                      redirection.\n");
 	fprintf(stderr,
-		"                      'on|auto|PRIMARYCLIPBOARD' looks at both PRIMARY and\n");
-	fprintf(stderr, "                      CLIPBOARD when sending data to server.\n");
+		"                      'PRIMARYCLIPBOARD' looks at both PRIMARY and CLIPBOARD\n");
+	fprintf(stderr, "                      when sending data to server.\n");
 	fprintf(stderr, "                      'CLIPBOARD' looks at only CLIPBOARD.\n");
 	fprintf(stderr, "   -0: attach to console\n");
 	fprintf(stderr, "   -4: use RDP version 4\n");
