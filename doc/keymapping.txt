@@ -93,6 +93,10 @@ by the local modifier state.
 
 If flags is "inhibit", nothing will be sent to the server. 
 
+If flags is "numlock", rdesktop will make sure that the remote NumLock
+state is on before generating the key event. Otherwise, it will make
+sure NumLock is off.
+
 
 4) enable_compose
 
