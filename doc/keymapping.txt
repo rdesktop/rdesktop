@@ -208,3 +208,36 @@ Special keys
 Links
 =====
 http://www.win.tue.nl/~aeb/linux/kbd/scancodes.html
+
+
+Test cases
+==========
+When changing the keyboard code, make sure all these tests in Notepad
+works:
+
+1. Ctrl+f should bring up Find dialog, with CapsLock both on and off. 
+
+2. Ctrl+Shift+arrows should mark text, with CapsLock both on and off. 
+
+3. Test a sequence, like egrave. 
+
+4. Test a char generated with AltGr, such as @ on a swedish keyboard. 
+
+5. Test Ctrl-Alt-Delete. 
+
+6. Ctrl-Alt-Enter should toggle fullscreen. 
+
+7. Test NumLock synchronization using the -N option. Excel is able to
+   indicate the current NumLock state. Verify that the status is
+   updated correctly on reconnects. 
+
+8. Test the Windows keys, standalone as well as in combination with,
+   say, E.
+
+9. Make sure the system menu (via Alt-space) cannot be accessed in
+   single app mode.
+
+10. Make sure keymaps can be loaded from ~/.rdesktop/keymaps,
+    KEYMAP_PATH, $CWD/keymaps, and from an absolute path. 
+
+
