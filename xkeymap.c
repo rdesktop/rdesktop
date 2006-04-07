@@ -629,13 +629,18 @@ xkeymap_translate_key(uint32 keysym, unsigned int keycode, unsigned int state)
 				}
 			}
 
-			if ((tr.modifiers & MapLeftShiftMask)
-			    && ((remote_modifier_state & MapLeftCtrlMask)
-				|| (remote_modifier_state & MapRightCtrlMask))
-			    && get_key_state(state, XK_Caps_Lock))
+			/* Windows interprets CapsLock+Ctrl+key
+			   differently from Shift+Ctrl+key. Since we
+			   are simulating CapsLock with Shifts, things
+			   like Ctrl+f with CapsLock on breaks. To
+			   solve this, we are releasing Shift if Ctrl
+			   is on, but only if Shift isn't physically pressed. */
+			if (MASK_HAS_BITS(tr.modifiers, MapShiftMask)
+			    && MASK_HAS_BITS(remote_modifier_state, MapCtrlMask)
+			    && !MASK_HAS_BITS(state, ShiftMask))
 			{
-				DEBUG_KBD(("CapsLock + Ctrl pressed, releasing LeftShift\n"));
-				tr.modifiers ^= MapLeftShiftMask;
+				DEBUG_KBD(("Non-physical Shift + Ctrl pressed, releasing Shift\n"));
+				MASK_REMOVE_BITS(tr.modifiers, MapShiftMask);
 			}
 
 			DEBUG_KBD(("Found scancode translation, scancode=0x%x, modifiers=0x%x\n",
