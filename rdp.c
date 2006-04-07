@@ -49,6 +49,7 @@ extern int g_width;
 extern int g_height;
 extern BOOL g_bitmap_cache;
 extern BOOL g_bitmap_cache_persist_enable;
+extern BOOL g_numlock_sync;
 
 uint8 *g_next_packet;
 uint32 g_rdp_shareid;
@@ -971,7 +972,8 @@ process_demand_active(STREAM s)
 	rdp_recv(&type);	/* RDP_PDU_SYNCHRONIZE */
 	rdp_recv(&type);	/* RDP_CTL_COOPERATE */
 	rdp_recv(&type);	/* RDP_CTL_GRANT_CONTROL */
-	rdp_send_input(0, RDP_INPUT_SYNCHRONIZE, 0, ui_get_numlock_state(read_keyboard_state()), 0);
+	rdp_send_input(0, RDP_INPUT_SYNCHRONIZE, 0,
+		       g_numlock_sync ? ui_get_numlock_state(read_keyboard_state()) : 0, 0);
 
 	if (g_use_rdp5)
 	{
