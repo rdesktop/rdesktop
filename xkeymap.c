@@ -612,18 +612,18 @@ xkeymap_translate_key(uint32 keysym, unsigned int keycode, unsigned int state)
 		tr = *ptr;
 		if (tr.seq_keysym == 0)	/* Normal scancode translation */
 		{
-			if (tr.modifiers & MapInhibitMask)
+			if (MASK_HAS_BITS(tr.modifiers, MapInhibitMask))
 			{
 				DEBUG_KBD(("Inhibiting key\n"));
 				tr.scancode = 0;
 				return tr;
 			}
 
-			if (tr.modifiers & MapLocalStateMask)
+			if (MASK_HAS_BITS(tr.modifiers, MapLocalStateMask))
 			{
 				/* The modifiers to send for this key should be obtained
 				   from the local state. Currently, only shift is implemented. */
-				if (state & ShiftMask)
+				if (MASK_HAS_BITS(state, ShiftMask))
 				{
 					tr.modifiers = MapLeftShiftMask;
 				}
@@ -661,7 +661,7 @@ xkeymap_translate_key(uint32 keysym, unsigned int keycode, unsigned int state)
 			/* The modifiers to send for this key should be
 			   obtained from the local state. Currently, only
 			   shift is implemented. */
-			if (state & ShiftMask)
+			if (MASK_HAS_BITS(state, ShiftMask))
 			{
 				tr.modifiers = MapLeftShiftMask;
 			}
