@@ -81,7 +81,7 @@ pstcache_load_bitmap(uint8 cache_id, uint16 cache_idx)
 /* Store a bitmap in the persistent cache */
 BOOL
 pstcache_save_bitmap(uint8 cache_id, uint16 cache_idx, uint8 * key,
-		     uint16 width, uint16 height, uint16 length, uint8 * data)
+		     uint8 width, uint8 height, uint16 length, uint8 * data)
 {
 	int fd;
 	CELLHEADER cellhdr;

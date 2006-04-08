@@ -101,8 +101,8 @@ void printercache_process(STREAM s);
 /* pstcache.c */
 void pstcache_touch_bitmap(uint8 cache_id, uint16 cache_idx, uint32 stamp);
 BOOL pstcache_load_bitmap(uint8 cache_id, uint16 cache_idx);
-BOOL pstcache_save_bitmap(uint8 cache_id, uint16 cache_idx, uint8 * key, uint16 width,
-			  uint16 height, uint16 length, uint8 * data);
+BOOL pstcache_save_bitmap(uint8 cache_id, uint16 cache_idx, uint8 * key, uint8 width,
+			  uint8 height, uint16 length, uint8 * data);
 int pstcache_enumerate(uint8 id, HASH_KEY * keylist);
 BOOL pstcache_init(uint8 cache_id);
 /* rdesktop.c */
