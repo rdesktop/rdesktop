@@ -107,7 +107,8 @@ pstcache_save_bitmap(uint8 cache_id, uint16 cache_idx, uint8 * key,
 int
 pstcache_enumerate(uint8 id, HASH_KEY * keylist)
 {
-	int fd, idx, n;
+	int fd, n;
+	uint16 idx;
 	sint16 mru_idx[0xa00];
 	uint32 mru_stamp[0xa00];
 	CELLHEADER cellhdr;
