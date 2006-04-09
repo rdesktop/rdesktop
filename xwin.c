@@ -1344,6 +1344,8 @@ select_visual()
 		for (i = 0; i < visuals_count; ++i)
 		{
 			XVisualInfo *visual_info = &vmatches[i];
+			BOOL can_translate_to_bpp = False;
+			int j;
 
 			/* Try to find a no-translation visual that'll
 			   allow us to use RDP bitmaps directly as ZPixmaps. */
@@ -1387,8 +1389,6 @@ select_visual()
 
 			/* Only care for visuals, for whose BPPs (not depths!)
 			   we have a translateXtoY function. */
-			BOOL can_translate_to_bpp = False;
-			int j;
 			for (j = 0; j < pixmap_formats_count; ++j)
 			{
 				if (pfm[j].depth == visual_info->depth)

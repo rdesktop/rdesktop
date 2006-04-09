@@ -157,6 +157,7 @@ utf16_lf2crlf(uint8 * data, uint32 * size)
 {
 	uint8 *result;
 	uint16 *inptr, *outptr;
+	Bool swap_endianess;
 
 	/* Worst case: Every char is LF */
 	result = xmalloc((*size * 2) + 2);
@@ -167,7 +168,7 @@ utf16_lf2crlf(uint8 * data, uint32 * size)
 	outptr = (uint16 *) result;
 
 	/* Check for a reversed BOM */
-	Bool swap_endianess = (*inptr == 0xfffe);
+	swap_endianess = (*inptr == 0xfffe);
 
 	while ((uint8 *) inptr < data + *size)
 	{
@@ -292,6 +293,16 @@ xclip_send_data_with_convert(uint8 * source, size_t source_size, Atom target)
 	if (target == format_string_atom ||
 	    target == format_unicode_atom || target == format_utf8_string_atom)
 	{
+		size_t unicode_buffer_size;
+		char *unicode_buffer;
+		iconv_t cd;
+		size_t unicode_buffer_size_remaining;
+		char *unicode_buffer_remaining;
+		char *data_remaining;
+		size_t data_size_remaining;
+		uint32 translated_data_size;
+		uint8 *translated_data;
+
 		if (rdp_clipboard_request_format != RDP_CF_TEXT)
 			return False;
 
@@ -300,10 +311,6 @@ xclip_send_data_with_convert(uint8 * source, size_t source_size, Atom target)
 		   to it, so using CF_TEXT is not safe (and is unnecessary, since all
 		   WinNT versions are Unicode-minded).
 		 */
-		size_t unicode_buffer_size;
-		char *unicode_buffer;
-		iconv_t cd;
-
 		if (target == format_string_atom)
 		{
 			char *locale_charset = nl_langinfo(CODESET);
@@ -342,18 +349,17 @@ xclip_send_data_with_convert(uint8 * source, size_t source_size, Atom target)
 		}
 
 		unicode_buffer = xmalloc(unicode_buffer_size);
-		size_t unicode_buffer_size_remaining = unicode_buffer_size;
-		char *unicode_buffer_remaining = unicode_buffer;
-		char *data_remaining = (char *) source;
-		size_t data_size_remaining = source_size;
+		unicode_buffer_size_remaining = unicode_buffer_size;
+		unicode_buffer_remaining = unicode_buffer;
+		data_remaining = (char *) source;
+		data_size_remaining = source_size;
 		iconv(cd, (ICONV_CONST char **) &data_remaining, &data_size_remaining,
 		      &unicode_buffer_remaining, &unicode_buffer_size_remaining);
 		iconv_close(cd);
 
 		/* translate linebreaks */
-		uint32 translated_data_size = unicode_buffer_size - unicode_buffer_size_remaining;
-		uint8 *translated_data =
-			utf16_lf2crlf((uint8 *) unicode_buffer, &translated_data_size);
+		translated_data_size = unicode_buffer_size - unicode_buffer_size_remaining;
+		translated_data = utf16_lf2crlf((uint8 *) unicode_buffer, &translated_data_size);
 		if (translated_data != NULL)
 		{
 			DEBUG_CLIPBOARD(("Sending Unicode string of %d bytes\n",
