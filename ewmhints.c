@@ -240,7 +240,7 @@ ewmh_modify_state(Window wnd, int add, Atom atom1, Atom atom2)
 	int result;
 	unsigned long nitems;
 	unsigned char *props;
-	uint32 state;
+	uint32 state = WithdrawnState;
 
 	/* The spec states that the window manager must respect any
 	   _NET_WM_STATE attributes on a withdrawn window. In order words, we
@@ -253,7 +253,7 @@ ewmh_modify_state(Window wnd, int add, Atom atom1, Atom atom2)
 		XFree(props);
 	}
 
-	if ((result < 0) || !nitems || (state == WithdrawnState))
+	if (state == WithdrawnState)
 	{
 		if (add)
 		{
