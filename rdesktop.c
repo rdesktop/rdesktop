@@ -655,7 +655,7 @@ main(int argc, char *argv[])
 
 					if (*optarg == ':')
 					{
-						*optarg++;
+						optarg++;
 						while ((p = next_arg(optarg, ',')))
 						{
 							if (str_startswith(optarg, "remote"))
@@ -1211,7 +1211,7 @@ next_arg(char *src, char needle)
 			while (*(mvp + 1) != (char) 0x00)
 			{
 				*mvp = *(mvp + 1);
-				*mvp++;
+				mvp++;
 			}
 			*mvp = (char) 0x00;
 			p = nextval;
