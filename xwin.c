@@ -1325,6 +1325,11 @@ select_visual()
 
 	red_weight = blue_weight = green_weight = 0;
 
+	if (g_server_depth == -1)
+	{
+		g_server_depth = DisplayPlanes(g_display, DefaultScreen(g_display));
+	}
+
 	pfm = XListPixmapFormats(g_display, &pixmap_formats_count);
 	if (pfm == NULL)
 	{

@@ -69,7 +69,7 @@ int g_pos = 0;			/* 0 position unspecified,
 				   2 xpos neg,
 				   4 ypos neg  */
 extern int g_tcp_port_rdp;
-int g_server_depth = 8;
+int g_server_depth = -1;
 int g_win_button_size = 0;	/* If zero, disable single app mode */
 BOOL g_bitmap_compression = True;
 BOOL g_sendmotion = True;
