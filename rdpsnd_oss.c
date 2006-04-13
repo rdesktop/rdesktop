@@ -19,6 +19,14 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+/* 
+   This is a workaround for Esound bug 312665. 
+   FIXME: Remove this when Esound is fixed. 
+*/
+#ifdef _FILE_OFFSET_BITS
+#undef _FILE_OFFSET_BITS
+#endif
+
 #include "rdesktop.h"
 #include <unistd.h>
 #include <fcntl.h>
