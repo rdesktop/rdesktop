@@ -211,7 +211,7 @@ seamless_process_line(const char *line, void *data)
 	}
 	else if (!strcmp("DEBUG", tok1))
 	{
-		printf("SeamlessRDP:%s\n", line);
+		DEBUG_SEAMLESS(("SeamlessRDP:%s\n", line));
 	}
 	else if (!strcmp("SYNCBEGIN", tok1))
 	{
