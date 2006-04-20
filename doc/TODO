@@ -59,16 +59,12 @@
   * Add a client to server message for starting additional
     applications.
 
-  * Detect the "Windows Security" dialog. 
-
   * Support cmd.exe. 
 
   * Support for Input Contexts. 
 
   * Enhanced support for WM_DELETE_WINDOW: Instead of terminating
     rdesktop, close the window on the server side. 
-
-  * Clipboard support needs to be adapted - it uses g_wnd now.
 
   * Systray support. 
 
