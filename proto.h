@@ -101,8 +101,8 @@ void printercache_process(STREAM s);
 /* pstcache.c */
 void pstcache_touch_bitmap(uint8 cache_id, uint16 cache_idx, uint32 stamp);
 BOOL pstcache_load_bitmap(uint8 cache_id, uint16 cache_idx);
-BOOL pstcache_save_bitmap(uint8 cache_id, uint16 cache_idx, uint8 * key, uint8 width,
-			  uint8 height, uint16 length, uint8 * data);
+BOOL pstcache_save_bitmap(uint8 cache_id, uint16 cache_idx, uint8 * key, uint8 width, uint8 height,
+			  uint16 length, uint8 * data);
 int pstcache_enumerate(uint8 id, HASH_KEY * keylist);
 BOOL pstcache_init(uint8 cache_id);
 /* rdesktop.c */
@@ -283,6 +283,7 @@ void ui_seamless_toggle(void);
 void ui_seamless_create_window(unsigned long id, unsigned long group, unsigned long parent,
 			       unsigned long flags);
 void ui_seamless_destroy_window(unsigned long id, unsigned long flags);
+void ui_seamless_destroy_group(unsigned long id, unsigned long flags);
 void ui_seamless_move_window(unsigned long id, int x, int y, int width, int height,
 			     unsigned long flags);
 void ui_seamless_restack_window(unsigned long id, unsigned long behind, unsigned long flags);

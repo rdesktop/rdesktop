@@ -120,6 +120,21 @@ seamless_process_line(const char *line, void *data)
 		ui_seamless_destroy_window(id, flags);
 
 	}
+	else if (!strcmp("DESTROYGRP", tok1))
+	{
+		if (!tok4)
+			return False;
+
+		id = strtoul(tok3, &endptr, 0);
+		if (*endptr)
+			return False;
+
+		flags = strtoul(tok4, &endptr, 0);
+		if (*endptr)
+			return False;
+
+		ui_seamless_destroy_group(id, flags);
+	}
 	else if (!strcmp("SETICON", tok1))
 	{
 		unimpl("SeamlessRDP SETICON1\n");

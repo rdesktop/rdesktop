@@ -3474,6 +3474,27 @@ ui_seamless_destroy_window(unsigned long id, unsigned long flags)
 
 
 void
+ui_seamless_destroy_group(unsigned long id, unsigned long flags)
+{
+	seamless_window *sw, *sw_next;
+
+	if (!g_seamless_active)
+		return;
+
+	for (sw = g_seamless_windows; sw; sw = sw_next)
+	{
+		sw_next = sw->next;
+
+		if (sw->group->id == id)
+		{
+			XDestroyWindow(g_display, sw->wnd);
+			sw_remove_window(sw);
+		}
+	}
+}
+
+
+void
 ui_seamless_move_window(unsigned long id, int x, int y, int width, int height, unsigned long flags)
 {
 	seamless_window *sw;
