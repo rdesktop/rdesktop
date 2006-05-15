@@ -518,19 +518,19 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 		{
 			res = XGetWindowProperty(g_display, g_wnd,
 						 rdesktop_primary_timestamp_target_atom, 0,
-						 XMaxRequestSize(g_display), False, XA_INTEGER,
+						 XMaxRequestSize(g_display), False, AnyPropertyType,
 						 &type, &format, &nitems, &bytes_left, &data);
 		}
 		else
 		{
 			res = XGetWindowProperty(g_display, g_wnd,
 						 rdesktop_clipboard_timestamp_target_atom, 0,
-						 XMaxRequestSize(g_display), False, XA_INTEGER,
+						 XMaxRequestSize(g_display), False, AnyPropertyType,
 						 &type, &format, &nitems, &bytes_left, &data);
 		}
 
 
-		if ((res != Success) || (nitems != 1))
+		if ((res != Success) || (nitems != 1) || (format != 32))
 		{
 			DEBUG_CLIPBOARD(("XGetWindowProperty failed!\n"));
 			goto fail;
