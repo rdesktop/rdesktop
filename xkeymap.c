@@ -206,9 +206,11 @@ xkeymap_from_locale(const char *locale)
 	{
 		fclose(fp);
 		STRNCPY(g_keymapname, str, sizeof(g_keymapname));
+		xfree(str);
 		return True;
 	}
 
+	xfree(str);
 	return False;
 }
 
