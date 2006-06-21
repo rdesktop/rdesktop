@@ -298,7 +298,8 @@ reverse(uint8 * p, int len)
 
 /* Perform an RSA public key encryption operation */
 static void
-sec_rsa_encrypt(uint8 * out, uint8 * in, int len, uint32 modulus_size, uint8 * modulus, uint8 * exponent)
+sec_rsa_encrypt(uint8 * out, uint8 * in, int len, uint32 modulus_size, uint8 * modulus,
+		uint8 * exponent)
 {
 	BN_CTX *ctx;
 	BIGNUM mod, exp, x, y;
@@ -393,7 +394,7 @@ sec_establish_key(void)
 	uint32 flags = SEC_CLIENT_RANDOM;
 	STREAM s;
 
-	s = sec_init(flags, length+4);
+	s = sec_init(flags, length + 4);
 
 	out_uint32_le(s, length);
 	out_uint8p(s, sec_crypted_random, server_public_key_len);
@@ -511,7 +512,7 @@ sec_parse_public_key(STREAM s, uint8 ** modulus, uint8 ** exponent)
 	modulus_len -= SEC_PADDING_SIZE;
 	if ((modulus_len < 64) || (modulus_len > SEC_MAX_MODULUS_SIZE))
 	{
-		error("Bad server public key size (%u bits)\n", modulus_len*8);
+		error("Bad server public key size (%u bits)\n", modulus_len * 8);
 		return False;
 	}
 
@@ -552,7 +553,7 @@ sec_parse_x509_key(X509 * cert)
 	server_public_key_len = RSA_size(server_public_key);
 	if ((server_public_key_len < 64) || (server_public_key_len > SEC_MAX_MODULUS_SIZE))
 	{
-		error("Bad server public key size (%u bits)\n", server_public_key_len*8);
+		error("Bad server public key size (%u bits)\n", server_public_key_len * 8);
 		return False;
 	}
 
@@ -748,10 +749,10 @@ sec_process_crypt_info(STREAM s)
 		memset(inr, 0, padding_len);
 		/*  *ARIGL!* Plaintext attack, anyone?
 		   I tried doing:
-	   	   generate_random(inr);
-	   	   ..but that generates connection errors now and then (yes, 
-	   	   "now and then". Something like 0 to 3 attempts needed before a 
-	   	   successful connection. Nice. Not! 
+		   generate_random(inr);
+		   ..but that generates connection errors now and then (yes, 
+		   "now and then". Something like 0 to 3 attempts needed before a 
+		   successful connection. Nice. Not! 
 		 */
 		memcpy(inr + padding_len, client_random, SEC_RANDOM_SIZE);
 		reverse(inr + padding_len, SEC_RANDOM_SIZE);
@@ -767,7 +768,8 @@ sec_process_crypt_info(STREAM s)
 	else
 	{			/* RDP4-style encryption */
 		sec_rsa_encrypt(sec_crypted_random,
-				client_random, SEC_RANDOM_SIZE, server_public_key_len, modulus, exponent);
+				client_random, SEC_RANDOM_SIZE, server_public_key_len, modulus,
+				exponent);
 	}
 	sec_generate_keys(client_random, server_random, rc4_key_size);
 }
