@@ -225,7 +225,7 @@ licence_parse_authreq(STREAM s, uint8 ** token, uint8 ** signature)
 static void
 licence_process_authreq(STREAM s)
 {
-	uint8 *in_token, *in_sig;
+	uint8 *in_token = NULL, *in_sig;
 	uint8 out_token[LICENCE_TOKEN_SIZE], decrypt_token[LICENCE_TOKEN_SIZE];
 	uint8 hwid[LICENCE_HWID_SIZE], crypt_hwid[LICENCE_HWID_SIZE];
 	uint8 sealed_buffer[LICENCE_TOKEN_SIZE + LICENCE_HWID_SIZE];

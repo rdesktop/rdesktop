@@ -726,7 +726,7 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 static void
 sec_process_crypt_info(STREAM s)
 {
-	uint8 *server_random, *modulus, *exponent;
+	uint8 *server_random, *modulus = NULL, *exponent = NULL;
 	uint8 client_random[SEC_RANDOM_SIZE];
 	uint32 rc4_key_size;
 

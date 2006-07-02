@@ -1016,13 +1016,13 @@ FsVolumeInfo(char *fpath)
 						info.serial =
 							(buf[42] << 24) + (buf[41] << 16) +
 							(buf[40] << 8) + buf[39];
-						strncpy(info.label, buf + 43, 10);
+						strncpy(info.label, (char*)buf + 43, 10);
 						info.label[10] = '\0';
 					}
 					else if (lseek(fd, 32767, SEEK_SET) >= 0)	/* ISO9660 */
 					{
 						read(fd, buf, sizeof(buf));
-						strncpy(info.label, buf + 41, 32);
+						strncpy(info.label, (char*)buf + 41, 32);
 						info.label[32] = '\0';
 						/* info.Serial = (buf[128]<<24)+(buf[127]<<16)+(buf[126]<<8)+buf[125]; */
 					}
