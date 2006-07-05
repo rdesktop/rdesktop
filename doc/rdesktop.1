@@ -79,9 +79,12 @@ higher-level drawing operations.
 .BR "-A"
 Enable SeamlessRDP. In this mode, rdesktop creates a X11 window for
 each window on the server side. This mode requires the SeamlessRDP
-server side component. When using this option, you should specify a
-startup shell which launches the desired application through
-SeamlessRDP. Example: rdesktop -A -s 'seamlessrdpshell notepad'.
+server side component, which is available from 
+\fIhttp://www.cendio.com/seamlessrdp/\fR.
+When using this option, you should specify a startup shell which
+launches the desired application through SeamlessRDP. 
+
+Example: rdesktop -A -s 'seamlessrdpshell notepad'.
 .TP
 .BR "-B"
 Use the BackingStore of the Xserver instead of the integrated one in
