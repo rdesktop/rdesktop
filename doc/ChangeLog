@@ -1,4 +1,4 @@
-rdesktop (1.?.?)
+rdesktop (1.5.0)
   * SeamlessRDP - seamless windows support
   * Keymap fixes
   * Fix connection issues with Windows XP RTM
@@ -10,6 +10,9 @@ rdesktop (1.?.?)
   * XOR ellipse drawing fix
   * Clipboard unicode support (Ilya Konstantinov)
   * Refactoring of color depth code (Ilya Konstantinov)
+  * Large file support
+  * The default color depth is now the depth of the root window
+  * Basic support for Windows Vista Beta 2
 
 rdesktop (1.4.1)
    * persistent bitmap cache optimisations
