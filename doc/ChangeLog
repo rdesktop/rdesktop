@@ -9,7 +9,7 @@ rdesktop (1.5.0)
   * Support for long filenames on redirected drives
   * XOR ellipse drawing fix
   * Clipboard unicode support (Ilya Konstantinov)
-  * Refactoring of color depth code (Ilya Konstantinov)
+  * Fix display issues with exotic color depths (30bpp, 32bpp, etc) (Ilya Konstantinov)
   * Large file support
   * The default color depth is now the depth of the root window
   * Basic support for Windows Vista Beta 2
