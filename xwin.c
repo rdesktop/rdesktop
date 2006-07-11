@@ -1314,7 +1314,7 @@ calculate_mask_weight(uint32 mask)
 }
 
 static BOOL
-select_visual()
+select_visual(int screen_num)
 {
 	XPixmapFormatValues *pfm;
 	int pixmap_formats_count, visuals_count;
@@ -1340,7 +1340,8 @@ select_visual()
 
 	/* Search for best TrueColor visual */
 	template.class = TrueColor;
-	vmatches = XGetVisualInfo(g_display, VisualClassMask, &template, &visuals_count);
+	template.screen = screen_num;
+	vmatches = XGetVisualInfo(g_display, VisualClassMask | VisualScreenMask, &template, &visuals_count);
 	g_visual = NULL;
 	g_no_translate_image = False;
 	g_compatible_arch = False;
@@ -1545,7 +1546,7 @@ ui_init(void)
 	g_screen = ScreenOfDisplay(g_display, screen_num);
 	g_depth = DefaultDepthOfScreen(g_screen);
 
-	if (!select_visual())
+	if (!select_visual(screen_num))
 		return False;
 
 	if (g_no_translate_image)
