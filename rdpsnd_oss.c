@@ -35,13 +35,13 @@
 #include <sys/ioctl.h>
 #include <sys/soundcard.h>
 
+#define MAX_LEN		512
 #define MAX_QUEUE	10
 
 int g_dsp_fd;
 BOOL g_dsp_busy = False;
-static int g_snd_rate;
-static short g_samplewidth;
-static BOOL g_driver_broken = False;
+static int snd_rate;
+static short samplewidth;
 
 static struct audio_packet
 {
@@ -61,14 +61,12 @@ wave_out_open(void)
 		dsp_dev = xstrdup("/dev/dsp");
 	}
 
-	if ((g_dsp_fd = open(dsp_dev, O_WRONLY | O_NONBLOCK)) == -1)
+	if ((g_dsp_fd = open(dsp_dev, O_WRONLY)) == -1)
 	{
 		perror(dsp_dev);
 		return False;
 	}
 
-	/* Non-blocking so that user interface is responsive */
-	fcntl(g_dsp_fd, F_SETFL, fcntl(g_dsp_fd, F_GETFL) | O_NONBLOCK);
 	return True;
 }
 
@@ -95,6 +93,7 @@ BOOL
 wave_out_set_format(WAVEFORMATEX * pwfx)
 {
 	int stereo, format, fragments;
+	static BOOL driver_broken = False;
 
 	ioctl(g_dsp_fd, SNDCTL_DSP_RESET, NULL);
 	ioctl(g_dsp_fd, SNDCTL_DSP_SYNC, NULL);
@@ -104,7 +103,7 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 	else if (pwfx->wBitsPerSample == 16)
 		format = AFMT_S16_LE;
 
-	g_samplewidth = pwfx->wBitsPerSample / 8;
+	samplewidth = pwfx->wBitsPerSample / 8;
 
 	if (ioctl(g_dsp_fd, SNDCTL_DSP_SETFMT, &format) == -1)
 	{
@@ -116,7 +115,7 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 	if (pwfx->nChannels == 2)
 	{
 		stereo = 1;
-		g_samplewidth *= 2;
+		samplewidth *= 2;
 	}
 	else
 	{
@@ -130,19 +129,19 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 		return False;
 	}
 
-	g_snd_rate = pwfx->nSamplesPerSec;
-	if (ioctl(g_dsp_fd, SNDCTL_DSP_SPEED, &g_snd_rate) == -1)
+	snd_rate = pwfx->nSamplesPerSec;
+	if (ioctl(g_dsp_fd, SNDCTL_DSP_SPEED, &snd_rate) == -1)
 	{
 		perror("SNDCTL_DSP_SPEED");
 		close(g_dsp_fd);
 		return False;
 	}
 
-	/* try to get 7 fragments of 2^12 bytes size */
-	fragments = (7 << 16) + 12;
+	/* try to get 12 fragments of 2^12 bytes size */
+	fragments = (12 << 16) + 12;
 	ioctl(g_dsp_fd, SNDCTL_DSP_SETFRAGMENT, &fragments);
 
-	if (!g_driver_broken)
+	if (!driver_broken)
 	{
 		audio_buf_info info;
 
@@ -159,7 +158,7 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 			fprintf(stderr,
 				"Broken OSS-driver detected: fragments: %d, fragstotal: %d, fragsize: %d\n",
 				info.fragments, info.fragstotal, info.fragsize);
-			g_driver_broken = True;
+			driver_broken = True;
 		}
 	}
 
@@ -237,83 +236,58 @@ wave_out_play(void)
 	static long startedat_s;
 	static BOOL started = False;
 	struct timeval tv;
-	audio_buf_info info;
 
-	while (1)
+	if (queue_lo == queue_hi)
 	{
-		if (queue_lo == queue_hi)
+		g_dsp_busy = 0;
+		return;
+	}
+
+	packet = &packet_queue[queue_lo];
+	out = &packet->s;
+
+	if (!started)
+	{
+		gettimeofday(&tv, NULL);
+		startedat_us = tv.tv_usec;
+		startedat_s = tv.tv_sec;
+		started = True;
+	}
+
+	len = out->end - out->p;
+
+	len = write(g_dsp_fd, out->p, (len > MAX_LEN) ? MAX_LEN : len);
+	if (len == -1)
+	{
+		if (errno != EWOULDBLOCK)
+			perror("write audio");
+		g_dsp_busy = 1;
+		return;
+	}
+
+	out->p += len;
+	if (out->p == out->end)
+	{
+		long long duration;
+		long elapsed;
+
+		gettimeofday(&tv, NULL);
+		duration = (out->size * (1000000 / (samplewidth * snd_rate)));
+		elapsed = (tv.tv_sec - startedat_s) * 1000000 + (tv.tv_usec - startedat_us);
+
+		if (elapsed >= (duration * 85) / 100)
 		{
-			g_dsp_busy = 0;
-			return;
+			rdpsnd_send_completion(packet->tick, packet->index);
+			free(out->data);
+			queue_lo = (queue_lo + 1) % MAX_QUEUE;
+			started = False;
 		}
-
-		packet = &packet_queue[queue_lo];
-		out = &packet->s;
-
-		if (!started)
+		else
 		{
-			gettimeofday(&tv, NULL);
-			startedat_us = tv.tv_usec;
-			startedat_s = tv.tv_sec;
-			started = True;
-		}
-
-		len = out->end - out->p;
-
-		if (!g_driver_broken)
-		{
-			memset(&info, 0, sizeof(info));
-			if (ioctl(g_dsp_fd, SNDCTL_DSP_GETOSPACE, &info) == -1)
-			{
-				perror("SNDCTL_DSP_GETOSPACE");
-				return;
-			}
-
-			if (info.fragments == 0)
-			{
-				g_dsp_busy = 1;
-				return;
-			}
-
-			if (info.fragments * info.fragsize < len
-			    && info.fragments * info.fragsize > 0)
-			{
-				len = info.fragments * info.fragsize;
-			}
-		}
-
-
-		len = write(g_dsp_fd, out->p, len);
-		if (len == -1)
-		{
-			if (errno != EWOULDBLOCK)
-				perror("write audio");
 			g_dsp_busy = 1;
 			return;
 		}
-
-		out->p += len;
-		if (out->p == out->end)
-		{
-			long long duration;
-			long elapsed;
-
-			gettimeofday(&tv, NULL);
-			duration = (out->size * (1000000 / (g_samplewidth * g_snd_rate)));
-			elapsed = (tv.tv_sec - startedat_s) * 1000000 + (tv.tv_usec - startedat_us);
-
-			if (elapsed >= (duration * 85) / 100)
-			{
-				rdpsnd_send_completion(packet->tick, packet->index);
-				free(out->data);
-				queue_lo = (queue_lo + 1) % MAX_QUEUE;
-				started = False;
-			}
-			else
-			{
-				g_dsp_busy = 1;
-				return;
-			}
-		}
 	}
+	g_dsp_busy = 1;
+	return;
 }
