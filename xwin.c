@@ -242,8 +242,7 @@ seamless_XDrawLines(Drawable d, XPoint * points, int npoints, int xoffset, int y
 			break; \
 		case 1: /* Filled */ \
 			XFillArc(g_display, g_wnd, g_gc, x, y, cx, cy, 0, 360*64); \
-                        ON_ALL_SEAMLESS_WINDOWS(XCopyArea, (g_display, g_ownbackstore ? g_backstore : g_wnd, sw->wnd, g_gc, \
-							    x, y, cx, cy, x-sw->xoffset, y-sw->yoffset)); \
+			ON_ALL_SEAMLESS_WINDOWS(XFillArc, (g_display, sw->wnd, g_gc, x-sw->xoffset, y-sw->yoffset, cx, cy, 0, 360*64)); \
 			if (g_ownbackstore) \
 				XFillArc(g_display, g_backstore, g_gc, x, y, cx, cy, 0, 360*64); \
 			break; \
