@@ -1340,7 +1340,9 @@ select_visual(int screen_num)
 	/* Search for best TrueColor visual */
 	template.class = TrueColor;
 	template.screen = screen_num;
-	vmatches = XGetVisualInfo(g_display, VisualClassMask | VisualScreenMask, &template, &visuals_count);
+	vmatches =
+		XGetVisualInfo(g_display, VisualClassMask | VisualScreenMask, &template,
+			       &visuals_count);
 	g_visual = NULL;
 	g_no_translate_image = False;
 	g_compatible_arch = False;
