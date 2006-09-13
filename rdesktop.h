@@ -31,7 +31,7 @@
 #endif
 #include <limits.h>		/* PATH_MAX */
 
-#define VERSION "1.4.1"
+#define VERSION "1.5.0"
 
 #ifdef WITH_DEBUG
 #define DEBUG(args)	printf args;
