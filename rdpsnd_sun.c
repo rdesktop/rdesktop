@@ -35,7 +35,6 @@
 #define DEFAULTDEVICE	"/dev/audio"
 
 static BOOL g_reopened;
-static BOOL g_swapaudio;
 static short g_samplewidth;
 static char *dsp_dev;
 
@@ -97,7 +96,6 @@ sun_set_format(WAVEFORMATEX * pwfx)
 	audio_info_t info;
 
 	ioctl(g_dsp_fd, AUDIO_DRAIN, 0);
-	g_swapaudio = False;
 	AUDIO_INITINFO(&info);
 
 
@@ -108,12 +106,6 @@ sun_set_format(WAVEFORMATEX * pwfx)
 	else if (pwfx->wBitsPerSample == 16)
 	{
 		info.play.encoding = AUDIO_ENCODING_LINEAR;
-		/* Do we need to swap the 16bit values? (Are we BigEndian) */
-#ifdef B_ENDIAN
-		g_swapaudio = 1;
-#else
-		g_swapaudio = 0;
-#endif
 	}
 
 	g_samplewidth = pwfx->wBitsPerSample / 8;
@@ -184,9 +176,7 @@ sun_play(void)
 	audio_info_t info;
 	ssize_t len;
 	unsigned int i;
-	uint8 swap;
 	STREAM out;
-	static BOOL swapped = False;
 	static BOOL sentcompletion = True;
 	static uint32 samplecnt = 0;
 	static uint32 numsamples;
@@ -197,7 +187,6 @@ sun_play(void)
 		{
 			/* Device was just (re)openend */
 			samplecnt = 0;
-			swapped = False;
 			sentcompletion = True;
 			g_reopened = False;
 		}
@@ -210,18 +199,6 @@ sun_play(void)
 
 		packet = rdpsnd_queue_current_packet();
 		out = &packet->s;
-
-		/* Swap the current packet, but only once */
-		if (g_swapaudio && !swapped)
-		{
-			for (i = 0; i < out->end - out->p; i += 2)
-			{
-				swap = *(out->p + i);
-				*(out->p + i) = *(out->p + i + 1);
-				*(out->p + i + 1) = swap;
-			}
-			swapped = True;
-		}
 
 		if (sentcompletion)
 		{
@@ -260,7 +237,6 @@ sun_play(void)
 				 * playing this packet */
 				rdpsnd_send_completion(packet->tick + 50, packet->index);
 				rdpsnd_queue_next();
-				swapped = False;
 				sentcompletion = True;
 			}
 			else
@@ -287,6 +263,7 @@ sun_register(char *options)
 	sun_driver.name = xstrdup("sun");
 	sun_driver.description =
 		xstrdup("SUN/BSD output driver, default device: " DEFAULTDEVICE " or $AUDIODEV");
+	sun_driver.need_byteswap_on_be = 1;
 	sun_driver.next = NULL;
 
 	if (options)

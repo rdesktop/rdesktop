@@ -31,9 +31,7 @@
 ALconfig audioconfig;
 ALport output_port;
 
-static BOOL g_swapaudio;
 static int g_snd_rate;
-static BOOL g_swapaudio;
 static int width = AL_SAMPLE_16;
 static char *sgi_output_device = NULL;
 
@@ -141,19 +139,10 @@ sgi_set_format(WAVEFORMATEX * pwfx)
 	fprintf(stderr, "sgi_set_format: init...\n");
 #endif
 
-	g_swapaudio = False;
 	if (pwfx->wBitsPerSample == 8)
 		width = AL_SAMPLE_8;
 	else if (pwfx->wBitsPerSample == 16)
-	{
 		width = AL_SAMPLE_16;
-		/* Do we need to swap the 16bit values? (Are we BigEndian) */
-#if (defined(B_ENDIAN))
-		g_swapaudio = 1;
-#else
-		g_swapaudio = 0;
-#endif
-	}
 
 	/* Limited support to configure an opened audio port in IRIX.  The
 	   number of channels is a static setting and can not be changed after
@@ -253,9 +242,7 @@ sgi_play(void)
 	struct audio_packet *packet;
 	ssize_t len;
 	unsigned int i;
-	uint8 swap;
 	STREAM out;
-	static BOOL swapped = False;
 	int gf;
 
 	while (1)
@@ -269,18 +256,6 @@ sgi_play(void)
 		packet = rdpsnd_queue_current_packet();
 		out = &packet->s;
 
-		/* Swap the current packet, but only once */
-		if (g_swapaudio && !swapped)
-		{
-			for (i = 0; i < out->end - out->p; i += 2)
-			{
-				swap = *(out->p + i);
-				*(out->p + i) = *(out->p + i + 1);
-				*(out->p + i + 1) = swap;
-			}
-			swapped = True;
-		}
-
 		len = out->end - out->p;
 
 		alWriteFrames(output_port, out->p, len / combinedFrameSize);
@@ -293,7 +268,6 @@ sgi_play(void)
 			{
 				rdpsnd_send_completion(packet->tick, packet->index);
 				rdpsnd_queue_next();
-				swapped = False;
 			}
 			else
 			{
@@ -322,6 +296,7 @@ sgi_register(char *options)
 	sgi_driver.wave_out_play = sgi_play;
 	sgi_driver.name = xstrdup("sgi");
 	sgi_driver.description = xstrdup("SGI output driver");
+	sgi_driver.need_byteswap_on_be = 1;
 	sgi_driver.next = NULL;
 
 	if (options)

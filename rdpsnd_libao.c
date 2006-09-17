@@ -243,6 +243,7 @@ libao_register(char *options)
 	libao_driver.wave_out_play = libao_play;
 	libao_driver.name = xstrdup("libao");
 	libao_driver.description = xstrdup("libao output driver");
+	libao_driver.need_byteswap_on_be = 0;
 	libao_driver.next = NULL;
 
 	if (options)

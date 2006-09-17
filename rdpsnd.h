@@ -36,6 +36,7 @@ struct audio_driver
 	void (*wave_out_play) (void);
 	char *name;
 	char *description;
+	int need_byteswap_on_be;
 	struct audio_driver *next;
 };
 

@@ -297,6 +297,7 @@ alsa_register(char *options)
 	alsa_driver.wave_out_play = alsa_play;
 	alsa_driver.name = xstrdup("alsa");
 	alsa_driver.description = xstrdup("ALSA output driver, default device: " DEFAULTDEVICE);
+	alsa_driver.need_byteswap_on_be = 0;
 	alsa_driver.next = NULL;
 
 	if (options)

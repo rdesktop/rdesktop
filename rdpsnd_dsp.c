@@ -35,7 +35,7 @@ rdpsnd_dsp_softvol_set(uint16 left, uint16 right)
 	DEBUG(("rdpsnd_dsp_softvol_set: left: %u, right: %u\n", left, right));
 }
 
-inline void
+void
 rdpsnd_dsp_softvol(unsigned char *buffer, unsigned int size, WAVEFORMATEX * format)
 {
 	unsigned int factor_left, factor_right;
@@ -96,6 +96,23 @@ rdpsnd_dsp_softvol(unsigned char *buffer, unsigned int size, WAVEFORMATEX * form
 	       format->wBitsPerSample, format->nChannels));
 }
 
+void
+rdpsnd_dsp_swapbytes(unsigned char *buffer, unsigned int size, WAVEFORMATEX * format)
+{
+	int i;
+	uint8 swap;
+
+	if (format->wBitsPerSample == 8)
+		return;
+
+	for (i = 0; i < size; i += 2)
+	{
+		swap = *(buffer + i);
+		*(buffer + i) = *(buffer + i + 1);
+		*(buffer + i + 1) = swap;
+	}
+}
+
 unsigned char *
 rdpsnd_dsp_process(unsigned char *inbuffer, unsigned int size, struct audio_driver *current_driver,
 		   WAVEFORMATEX * format)
@@ -108,9 +125,12 @@ rdpsnd_dsp_process(unsigned char *inbuffer, unsigned int size, struct audio_driv
 
 	/* Software volume control */
 	if (current_driver->wave_out_volume == rdpsnd_dsp_softvol_set)
-	{
 		rdpsnd_dsp_softvol(outbuffer, size, format);
-	}
+
+#ifdef B_ENDIAN
+	if (current_driver->need_byteswap_on_be)
+		rdpsnd_dsp_swapbytes(outbuffer, size, format);
+#endif
 
 	return outbuffer;
 }
