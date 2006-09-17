@@ -156,19 +156,54 @@ AC_ARG_WITH(sound,
     sound="$withval" 
     ])
 if test "$sound" = yes; then
-    AC_CHECK_HEADER(ao/ao.h, [sound=libao])
-    AC_CHECK_HEADER(sys/soundcard.h, [sound=oss])
-    AC_CHECK_HEADER(dmedia/audio.h, [sound=sgi])
-    AC_CHECK_HEADER(sys/audioio.h, [sound=sun])
+    AC_CHECK_HEADER(ao/ao.h,
+	[
+	sound=auto
+	SOUNDOBJ="$SOUNDOBJ rdpsnd_libao.o"
+	LDFLAGS="$LDFLAGS -lao"
+	AC_DEFINE(RDPSND_LIBAO)
+	])
+    AC_CHECK_HEADER(sys/soundcard.h,
+	[
+	sound=auto
+	SOUNDOBJ="$SOUNDOBJ rdpsnd_oss.o"
+	AC_DEFINE(RDPSND_OSS)
+	])
+    AC_CHECK_HEADER(dmedia/audio.h,
+	[
+	sound=auto
+	SOUNDOBJ="$SOUNDOBJ rdpsnd_sgi.o"
+	LDFLAGS="$LDFLAGS -laudio"
+	AC_DEFINE(RDPSND_SGI)
+	])
+    AC_CHECK_HEADER(sys/audioio.h,
+	[
+	sound=auto
+	SOUNDOBJ="$SOUNDOBJ rdpsnd_sun.o"
+	AC_DEFINE(RDPSND_SUN)
+	])
+    AC_CHECK_HEADER(alsa/asoundlib.h,
+	[
+	sound=auto
+	SOUNDOBJ="$SOUNDOBJ rdpsnd_alsa.o"
+	LDFLAGS="$LDFLAGS -lasound"
+	AC_DEFINE(RDPSND_ALSA)
+	])
 fi
+
 if test "$sound" = no; then
     break
+elif test "$sound" = auto; then
+    SOUNDOBJ="$SOUNDOBJ rdpsnd.o"
+    AC_DEFINE(WITH_RDPSND)
 elif test "$sound" = oss; then
     SOUNDOBJ="rdpsnd.o rdpsnd_oss.o"
     AC_DEFINE(WITH_RDPSND)
 elif test "$sound" = sgi; then
     SOUNDOBJ="rdpsnd.o rdpsnd_sgi.o"
     LDFLAGS="$LDFLAGS -laudio"
+elif test "$sound" = yes; then
+    SOUNDOBJ="$SOUNDOBJ rdpsnd.o"
     AC_DEFINE(WITH_RDPSND)
 elif test "$sound" = sun; then
     SOUNDOBJ="rdpsnd.o rdpsnd_sun.o"
@@ -176,11 +211,12 @@ elif test "$sound" = sun; then
 elif test "$sound" = libao; then
     SOUNDOBJ="rdpsnd.o rdpsnd_libao.o"
     LDFLAGS="$LDFLAGS -lao"
-    AC_DEFINE(WITH_RDPSND)
+    AC_DEFINE(RDPSND_SUN)
 elif test "$sound" = alsa; then
     SOUNDOBJ="rdpsnd.o rdpsnd_alsa.o"
     LDFLAGS="$LDFLAGS -lasound"
     AC_DEFINE(WITH_RDPSND)
+    AC_DEFINE(RDPSND_ALSA)
 else
    AC_MSG_WARN([sound support disabled])
    AC_MSG_WARN([Currently supported systems are Open Sound System (oss), SGI AL (sgi), Sun/BSD (sun), ALSA (alsa) and libao])

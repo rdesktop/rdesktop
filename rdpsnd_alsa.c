@@ -36,14 +36,12 @@ static snd_pcm_stream_t stream = SND_PCM_STREAM_PLAYBACK;
 static BOOL reopened;
 static short samplewidth;
 static int audiochannels;
+static char *pcm_name;
 
 BOOL
-wave_out_open(void)
+alsa_open(void)
 {
-	char *pcm_name;
 	int err;
-
-	pcm_name = xstrdup(DEFAULTDEVICE);
 
 	if ((err = snd_pcm_open(&pcm_handle, pcm_name, stream, 0)) < 0)
 	{
@@ -60,7 +58,7 @@ wave_out_open(void)
 }
 
 void
-wave_out_close(void)
+alsa_close(void)
 {
 	/* Ack all remaining packets */
 	while (!rdpsnd_queue_empty())
@@ -70,7 +68,6 @@ wave_out_close(void)
 		rdpsnd_queue_next();
 	}
 
-
 	if (pcm_handle)
 	{
 		snd_pcm_drop(pcm_handle);
@@ -79,7 +76,7 @@ wave_out_close(void)
 }
 
 BOOL
-wave_out_format_supported(WAVEFORMATEX * pwfx)
+alsa_format_supported(WAVEFORMATEX * pwfx)
 {
 #if 0
 	int err;
@@ -112,7 +109,7 @@ wave_out_format_supported(WAVEFORMATEX * pwfx)
 }
 
 BOOL
-wave_out_set_format(WAVEFORMATEX * pwfx)
+alsa_set_format(WAVEFORMATEX * pwfx)
 {
 	snd_pcm_hw_params_t *hwparams = NULL;
 	unsigned int rate, exact_rate;
@@ -210,19 +207,19 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 }
 
 void
-wave_out_volume(uint16 left, uint16 right)
+alsa_volume(uint16 left, uint16 right)
 {
 	static int warned = 0;
 
 	if (!warned)
 	{
-		warning("volume changes currently not supported with experimental alsa-output\n");
+		warning("volume changes currently not supported with alsa-output\n");
 		warned = 1;
 	}
 }
 
 void
-wave_out_play(void)
+alsa_play(void)
 {
 	struct audio_packet *packet;
 	STREAM out;
@@ -284,4 +281,32 @@ wave_out_play(void)
 
 	g_dsp_busy = 1;
 	return;
+}
+
+static struct audio_driver alsa_driver = {
+      wave_out_write:rdpsnd_queue_write,
+      wave_out_open:alsa_open,
+      wave_out_close:alsa_close,
+      wave_out_format_supported:alsa_format_supported,
+      wave_out_set_format:alsa_set_format,
+      wave_out_volume:alsa_volume,
+      wave_out_play:alsa_play,
+      name:"alsa",
+      description:"ALSA output driver, default device: " DEFAULTDEVICE,
+      next:NULL,
+};
+
+struct audio_driver *
+alsa_register(char *options)
+{
+	if (options)
+	{
+		pcm_name = xstrdup(options);
+	}
+	else
+	{
+		pcm_name = xstrdup(DEFAULTDEVICE);
+	}
+
+	return &alsa_driver;
 }

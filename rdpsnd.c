@@ -37,6 +37,8 @@ BOOL g_dsp_busy = False;
 int g_dsp_fd;
 
 static VCHANNEL *rdpsnd_channel;
+static struct audio_driver *drivers = NULL;
+static struct audio_driver *current_driver = NULL;
 
 static BOOL device_open;
 static WAVEFORMATEX formats[MAX_FORMATS];
@@ -44,6 +46,8 @@ static unsigned int format_count;
 static unsigned int current_format;
 static unsigned int queue_hi, queue_lo;
 static struct audio_packet packet_queue[MAX_QUEUE];
+
+void (*wave_out_play) (void);
 
 static STREAM
 rdpsnd_init_packet(uint16 type, uint16 size)
@@ -94,9 +98,9 @@ rdpsnd_process_negotiate(STREAM in)
 	in_uint16_le(in, in_format_count);
 	in_uint8s(in, 4);	/* pad, status, pad */
 
-	if (wave_out_open())
+	if (current_driver->wave_out_open())
 	{
-		wave_out_close();
+		current_driver->wave_out_close();
 		device_available = True;
 	}
 
@@ -127,7 +131,7 @@ rdpsnd_process_negotiate(STREAM in)
 			in_uint8a(in, format->cb, readcnt);
 			in_uint8s(in, discardcnt);
 
-			if (device_available && wave_out_format_supported(format))
+			if (device_available && current_driver->wave_out_format_supported(format))
 			{
 				format_count++;
 				if (format_count == MAX_FORMATS)
@@ -205,15 +209,15 @@ rdpsnd_process(STREAM s)
 
 		if (!device_open || (format != current_format))
 		{
-			if (!device_open && !wave_out_open())
+			if (!device_open && !current_driver->wave_out_open())
 			{
 				rdpsnd_send_completion(tick, packet_index);
 				return;
 			}
-			if (!wave_out_set_format(&formats[format]))
+			if (!current_driver->wave_out_set_format(&formats[format]))
 			{
 				rdpsnd_send_completion(tick, packet_index);
-				wave_out_close();
+				current_driver->wave_out_close();
 				device_open = False;
 				return;
 			}
@@ -221,7 +225,7 @@ rdpsnd_process(STREAM s)
 			current_format = format;
 		}
 
-		rdpsnd_queue_write(s, tick, packet_index);
+		current_driver->wave_out_write(s, tick, packet_index);
 		awaiting_data_packet = False;
 		return;
 	}
@@ -239,7 +243,7 @@ rdpsnd_process(STREAM s)
 			awaiting_data_packet = True;
 			break;
 		case RDPSND_CLOSE:
-			wave_out_close();
+			current_driver->wave_out_close();
 			device_open = False;
 			break;
 		case RDPSND_NEGOTIATE:
@@ -252,7 +256,8 @@ rdpsnd_process(STREAM s)
 			in_uint32(s, volume);
 			if (device_open)
 			{
-				wave_out_volume((volume & 0xffff), (volume & 0xffff0000) >> 16);
+				current_driver->wave_out_volume((volume & 0xffff),
+								(volume & 0xffff0000) >> 16);
 			}
 			break;
 		default:
@@ -269,6 +274,108 @@ rdpsnd_init(void)
 				 rdpsnd_process);
 
 	return (rdpsnd_channel != NULL);
+}
+
+BOOL
+rdpsnd_auto_open(void)
+{
+	current_driver = drivers;
+	while (current_driver != NULL)
+	{
+		DEBUG(("trying %s...\n", current_driver->name));
+		if (current_driver->wave_out_open())
+		{
+			DEBUG(("selected %s\n", current_driver->name));
+			return True;
+		}
+		g_dsp_fd = 0;
+		current_driver = current_driver->next;
+	}
+
+	warning("no working audio-driver found\n");
+
+	return False;
+}
+
+void
+rdpsnd_register_drivers(char *options)
+{
+	struct audio_driver **reg;
+
+	/* The order of registrations define the probe-order
+	   when opening the device for the first time */
+	reg = &drivers;
+#if defined(RDPSND_ALSA)
+	*reg = alsa_register(options);
+	reg = &((*reg)->next);
+#endif
+#if defined(RDPSND_OSS)
+	*reg = oss_register(options);
+	reg = &((*reg)->next);
+#endif
+#if defined(RDPSND_SUN)
+	*reg = sun_register(options);
+	reg = &((*reg)->next);
+#endif
+#if defined(RDPSND_SGI)
+	*reg = sgi_register(options);
+	reg = &((*reg)->next);
+#endif
+#if defined(RDPSND_LIBAO)
+	*reg = libao_register(options);
+	reg = &((*reg)->next);
+#endif
+}
+
+BOOL
+rdpsnd_select_driver(char *driver, char *options)
+{
+	static struct audio_driver auto_driver;
+	struct audio_driver *pos;
+
+	drivers = NULL;
+	rdpsnd_register_drivers(options);
+
+	if (!driver)
+	{
+		auto_driver.wave_out_open = &rdpsnd_auto_open;
+		current_driver = &auto_driver;
+		return True;
+	}
+
+	pos = drivers;
+	while (pos != NULL)
+	{
+		if (!strcmp(pos->name, driver))
+		{
+			DEBUG(("selected %s\n", pos->name));
+			current_driver = pos;
+			return True;
+		}
+		pos = pos->next;
+	}
+	return False;
+}
+
+void
+rdpsnd_show_help(void)
+{
+	struct audio_driver *pos;
+
+	rdpsnd_register_drivers(NULL);
+
+	pos = drivers;
+	while (pos != NULL)
+	{
+		fprintf(stderr, "                     %s:\t%s\n", pos->name, pos->description);
+		pos = pos->next;
+	}
+}
+
+inline void
+rdpsnd_play(void)
+{
+	current_driver->wave_out_play();
 }
 
 void
@@ -294,7 +401,7 @@ rdpsnd_queue_write(STREAM s, uint16 tick, uint8 index)
 	s->data = malloc(s->size);
 
 	if (!g_dsp_busy)
-		wave_out_play();
+		current_driver->wave_out_play();
 }
 
 inline struct audio_packet *

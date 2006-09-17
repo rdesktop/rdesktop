@@ -165,14 +165,9 @@ BOOL rdpdr_abort_io(uint32 fd, uint32 major, NTSTATUS status);
 /* rdpsnd.c */
 void rdpsnd_send_completion(uint16 tick, uint8 packet_index);
 BOOL rdpsnd_init(void);
-/* rdpsnd_oss.c */
-BOOL wave_out_open(void);
-void wave_out_close(void);
-BOOL wave_out_format_supported(WAVEFORMATEX * pwfx);
-BOOL wave_out_set_format(WAVEFORMATEX * pwfx);
-void wave_out_volume(uint16 left, uint16 right);
-void wave_out_write(STREAM s, uint16 tick, uint8 index);
-void wave_out_play(void);
+BOOL rdpsnd_select_driver(char *driver, char *options);
+void rdpsnd_show_help(void);
+inline void rdpsnd_play(void);
 /* secure.c */
 void sec_hash_48(uint8 * out, uint8 * in, uint8 * salt1, uint8 * salt2, uint8 salt);
 void sec_hash_16(uint8 * out, uint8 * in, uint8 * salt1, uint8 * salt2);

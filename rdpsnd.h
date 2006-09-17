@@ -25,6 +25,20 @@ struct audio_packet
 	uint8 index;
 };
 
+struct audio_driver
+{
+	void (*wave_out_write) (STREAM s, uint16 tick, uint8 index);
+	  BOOL(*wave_out_open) (void);
+	void (*wave_out_close) (void);
+	  BOOL(*wave_out_format_supported) (WAVEFORMATEX * pwfx);
+	  BOOL(*wave_out_set_format) (WAVEFORMATEX * pwfx);
+	void (*wave_out_volume) (uint16 left, uint16 right);
+	void (*wave_out_play) (void);
+	char *name;
+	char *description;
+	struct audio_driver *next;
+};
+
 extern BOOL g_dsp_busy;
 extern int g_dsp_fd;
 
@@ -34,3 +48,10 @@ inline BOOL rdpsnd_queue_empty(void);
 inline void rdpsnd_queue_init(void);
 inline void rdpsnd_queue_next(void);
 inline int rdpsnd_queue_next_tick(void);
+
+/* Driver register functions */
+struct audio_driver *alsa_register(char *options);
+struct audio_driver *libao_register(char *options);
+struct audio_driver *oss_register(char *options);
+struct audio_driver *sgi_register(char *options);
+struct audio_driver *sun_register(char *options);

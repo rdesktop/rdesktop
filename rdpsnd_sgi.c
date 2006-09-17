@@ -35,19 +35,27 @@ static BOOL g_swapaudio;
 static int g_snd_rate;
 static BOOL g_swapaudio;
 static int width = AL_SAMPLE_16;
+static char *sgi_output_device = NULL;
 
 double min_volume, max_volume, volume_range;
 int resource, maxFillable;
 int combinedFrameSize;
 
 BOOL
-wave_out_open(void)
+sgi_open(void)
 {
 	ALparamInfo pinfo;
+	static int warned = 0;
 
 #if (defined(IRIX_DEBUG))
 	fprintf(stderr, "sgi_open: begin\n");
 #endif
+
+	if (!warned && sgi_output_device)
+	{
+		warning("device-options not supported for libao-driver\n");
+		warned = 1;
+	}
 
 	if (alGetParamInfo(AL_DEFAULT_OUTPUT, AL_GAIN, &pinfo) < 0)
 	{
@@ -85,7 +93,7 @@ wave_out_open(void)
 }
 
 void
-wave_out_close(void)
+sgi_close(void)
 {
 	/* Ack all remaining packets */
 #if (defined(IRIX_DEBUG))
@@ -110,7 +118,7 @@ wave_out_close(void)
 }
 
 BOOL
-wave_out_format_supported(WAVEFORMATEX * pwfx)
+sgi_format_supported(WAVEFORMATEX * pwfx)
 {
 	if (pwfx->wFormatTag != WAVE_FORMAT_PCM)
 		return False;
@@ -123,7 +131,7 @@ wave_out_format_supported(WAVEFORMATEX * pwfx)
 }
 
 BOOL
-wave_out_set_format(WAVEFORMATEX * pwfx)
+sgi_set_format(WAVEFORMATEX * pwfx)
 {
 	int channels;
 	int frameSize, channelCount;
@@ -207,7 +215,7 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 }
 
 void
-wave_out_volume(uint16 left, uint16 right)
+sgi_volume(uint16 left, uint16 right)
 {
 	double gainleft, gainright;
 	ALpv pv[1];
@@ -240,7 +248,7 @@ wave_out_volume(uint16 left, uint16 right)
 }
 
 void
-wave_out_play(void)
+sgi_play(void)
 {
 	struct audio_packet *packet;
 	ssize_t len;
@@ -298,4 +306,27 @@ wave_out_play(void)
 			}
 		}
 	}
+}
+
+static struct audio_driver sgi_driver = {
+      wave_out_write:rdpsnd_queue_write,
+      wave_out_open:sgi_open,
+      wave_out_close:sgi_close,
+      wave_out_format_supported:sgi_format_supported,
+      wave_out_set_format:sgi_set_format,
+      wave_out_volume:sgi_volume,
+      wave_out_play:sgi_play,
+      name:"sgi",
+      description:"SGI output driver",
+      next:NULL,
+};
+
+struct audio_driver *
+sgi_register(char *options)
+{
+	if (options)
+	{
+		sgi_output_device = xstrdup(options);
+	}
+	return &sgi_driver;
 }

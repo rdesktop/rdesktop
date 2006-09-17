@@ -37,17 +37,11 @@
 static BOOL g_reopened;
 static BOOL g_swapaudio;
 static short g_samplewidth;
+static char *dsp_dev;
 
 BOOL
-wave_out_open(void)
+sun_open(void)
 {
-	char *dsp_dev = getenv("AUDIODEV");
-
-	if (dsp_dev == NULL)
-	{
-		dsp_dev = xstrdup(DEFAULTDEVICE);
-	}
-
 	if ((g_dsp_fd = open(dsp_dev, O_WRONLY | O_NONBLOCK)) == -1)
 	{
 		perror(dsp_dev);
@@ -64,7 +58,7 @@ wave_out_open(void)
 }
 
 void
-wave_out_close(void)
+sun_close(void)
 {
 	/* Ack all remaining packets */
 	while (!rdpsnd_queue_empty())
@@ -85,7 +79,7 @@ wave_out_close(void)
 }
 
 BOOL
-wave_out_format_supported(WAVEFORMATEX * pwfx)
+sun_format_supported(WAVEFORMATEX * pwfx)
 {
 	if (pwfx->wFormatTag != WAVE_FORMAT_PCM)
 		return False;
@@ -98,7 +92,7 @@ wave_out_format_supported(WAVEFORMATEX * pwfx)
 }
 
 BOOL
-wave_out_set_format(WAVEFORMATEX * pwfx)
+sun_set_format(WAVEFORMATEX * pwfx)
 {
 	audio_info_t info;
 
@@ -152,7 +146,7 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 }
 
 void
-wave_out_volume(uint16 left, uint16 right)
+sun_volume(uint16 left, uint16 right)
 {
 	audio_info_t info;
 	uint balance;
@@ -184,7 +178,7 @@ wave_out_volume(uint16 left, uint16 right)
 }
 
 void
-wave_out_play(void)
+sun_play(void)
 {
 	struct audio_packet *packet;
 	audio_info_t info;
@@ -276,4 +270,37 @@ wave_out_play(void)
 			}
 		}
 	}
+}
+
+static struct audio_driver sun_driver = {
+      wave_out_write:rdpsnd_queue_write,
+      wave_out_open:sun_open,
+      wave_out_close:sun_close,
+      wave_out_format_supported:sun_format_supported,
+      wave_out_set_format:sun_set_format,
+      wave_out_volume:sun_volume,
+      wave_out_play:sun_play,
+      name:"sun",
+      description:"SUN/BSD output driver, default device: " DEFAULTDEVICE " or $AUDIODEV",
+      next:NULL,
+};
+
+struct audio_driver *
+sun_register(char *options)
+{
+	if (options)
+	{
+		dsp_dev = xstrdup(options);
+	}
+	else
+	{
+		dsp_dev = getenv("AUDIODEV");
+
+		if (dsp_dev == NULL)
+		{
+			dsp_dev = xstrdup(DEFAULTDEVICE);
+		}
+	}
+
+	return &sun_driver;
 }

@@ -36,11 +36,19 @@ static int samplerate;
 static int audiochannels;
 static BOOL reopened;
 static short samplewidth;
+static char *libao_device = NULL;
 
 BOOL
-wave_out_open(void)
+libao_open(void)
 {
 	ao_sample_format format;
+	static int warned = 0;
+
+	if (!warned && libao_device)
+	{
+		warning("device-options not supported for libao-driver\n");
+		warned = 1;
+	}
 
 	ao_initialize();
 	default_driver = ao_default_driver_id();
@@ -67,7 +75,7 @@ wave_out_open(void)
 }
 
 void
-wave_out_close(void)
+libao_close(void)
 {
 	/* Ack all remaining packets */
 	while (!rdpsnd_queue_empty())
@@ -84,7 +92,7 @@ wave_out_close(void)
 }
 
 BOOL
-wave_out_format_supported(WAVEFORMATEX * pwfx)
+libao_format_supported(WAVEFORMATEX * pwfx)
 {
 	if (pwfx->wFormatTag != WAVE_FORMAT_PCM)
 		return False;
@@ -101,7 +109,7 @@ wave_out_format_supported(WAVEFORMATEX * pwfx)
 }
 
 BOOL
-wave_out_set_format(WAVEFORMATEX * pwfx)
+libao_set_format(WAVEFORMATEX * pwfx)
 {
 	ao_sample_format format;
 
@@ -129,13 +137,13 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 }
 
 void
-wave_out_volume(uint16 left, uint16 right)
+libao_volume(uint16 left, uint16 right)
 {
 	warning("volume changes not supported with libao-output\n");
 }
 
 void
-wave_out_play(void)
+libao_play(void)
 {
 	struct audio_packet *packet;
 	STREAM out;
@@ -224,4 +232,28 @@ wave_out_play(void)
 
 	g_dsp_busy = 1;
 	return;
+}
+
+static struct audio_driver libao_driver = {
+      wave_out_write:rdpsnd_queue_write,
+      wave_out_open:libao_open,
+      wave_out_close:libao_close,
+      wave_out_format_supported:libao_format_supported,
+      wave_out_set_format:libao_set_format,
+      wave_out_volume:libao_volume,
+      wave_out_play:libao_play,
+      name:"libao",
+      description:"libao output driver",
+      next:NULL,
+};
+
+struct audio_driver *
+libao_register(char *options)
+{
+	if (options)
+	{
+		libao_device = xstrdup(options);
+	}
+
+	return &libao_driver;
 }

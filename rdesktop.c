@@ -179,8 +179,13 @@ usage(char *program)
 	fprintf(stderr, "         '-r printer:mydeskjet': enable printer redirection\n");
 	fprintf(stderr,
 		"             or      mydeskjet=\"HP LaserJet IIIP\" to enter server driver as well\n");
-	fprintf(stderr, "         '-r sound:[local|off|remote]': enable sound redirection\n");
+#ifdef WITH_RDPSND
+	fprintf(stderr,
+		"         '-r sound:[local[:driver[:device]]|off|remote]': enable sound redirection\n");
 	fprintf(stderr, "                     remote would leave sound on server\n");
+	fprintf(stderr, "                     available drivers for 'local':\n");
+	rdpsnd_show_help();
+#endif
 	fprintf(stderr,
 		"         '-r clipboard:[off|PRIMARYCLIPBOARD|CLIPBOARD]': enable clipboard\n");
 	fprintf(stderr, "                      redirection.\n");
@@ -663,7 +668,36 @@ main(int argc, char *argv[])
 
 							if (str_startswith(optarg, "local"))
 #ifdef WITH_RDPSND
+							{
+								char *driver = NULL, *options =
+									NULL;
+
+								if ((driver =
+								     next_arg(optarg, ':')))
+								{
+									if (!strlen(driver))
+									{
+										driver = NULL;
+									}
+									else if ((options =
+										  next_arg(driver,
+											   ':')))
+									{
+										if (!strlen
+										    (options))
+											options =
+												NULL;
+									}
+								}
+
 								g_rdpsnd = True;
+								if (!rdpsnd_select_driver
+								    (driver, options))
+								{
+									warning("Driver not available\n");
+								}
+							}
+
 #else
 								warning("Not compiled with sound support\n");
 #endif
@@ -682,6 +716,10 @@ main(int argc, char *argv[])
 					{
 #ifdef WITH_RDPSND
 						g_rdpsnd = True;
+						if (!rdpsnd_select_driver(NULL, NULL))
+						{
+							warning("No sound-driver available\n");
+						}
 #else
 						warning("Not compiled with sound support\n");
 #endif

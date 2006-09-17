@@ -41,17 +41,11 @@
 
 static int snd_rate;
 static short samplewidth;
+static char *dsp_dev;
 
 BOOL
-wave_out_open(void)
+oss_open(void)
 {
-	char *dsp_dev = getenv("AUDIODEV");
-
-	if (dsp_dev == NULL)
-	{
-		dsp_dev = xstrdup(DEFAULTDEVICE);
-	}
-
 	if ((g_dsp_fd = open(dsp_dev, O_WRONLY)) == -1)
 	{
 		perror(dsp_dev);
@@ -62,13 +56,13 @@ wave_out_open(void)
 }
 
 void
-wave_out_close(void)
+oss_close(void)
 {
 	close(g_dsp_fd);
 }
 
 BOOL
-wave_out_format_supported(WAVEFORMATEX * pwfx)
+oss_format_supported(WAVEFORMATEX * pwfx)
 {
 	if (pwfx->wFormatTag != WAVE_FORMAT_PCM)
 		return False;
@@ -81,7 +75,7 @@ wave_out_format_supported(WAVEFORMATEX * pwfx)
 }
 
 BOOL
-wave_out_set_format(WAVEFORMATEX * pwfx)
+oss_set_format(WAVEFORMATEX * pwfx)
 {
 	int stereo, format, fragments;
 	static BOOL driver_broken = False;
@@ -157,7 +151,7 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 }
 
 void
-wave_out_volume(uint16 left, uint16 right)
+oss_volume(uint16 left, uint16 right)
 {
 	static BOOL use_dev_mixer = False;
 	uint32 volume;
@@ -192,7 +186,7 @@ wave_out_volume(uint16 left, uint16 right)
 }
 
 void
-wave_out_play(void)
+oss_play(void)
 {
 	struct audio_packet *packet;
 	ssize_t len;
@@ -256,4 +250,37 @@ wave_out_play(void)
 	}
 	g_dsp_busy = 1;
 	return;
+}
+
+static struct audio_driver oss_driver = {
+      wave_out_write:rdpsnd_queue_write,
+      wave_out_open:oss_open,
+      wave_out_close:oss_close,
+      wave_out_format_supported:oss_format_supported,
+      wave_out_set_format:oss_set_format,
+      wave_out_volume:oss_volume,
+      wave_out_play:oss_play,
+      name:"oss",
+      description:"OSS output driver, default device: " DEFAULTDEVICE " or $AUDIODEV",
+      next:NULL,
+};
+
+struct audio_driver *
+oss_register(char *options)
+{
+	if (options)
+	{
+		dsp_dev = xstrdup(options);
+	}
+	else
+	{
+		dsp_dev = getenv("AUDIODEV");
+
+		if (dsp_dev == NULL)
+		{
+			dsp_dev = xstrdup(DEFAULTDEVICE);
+		}
+	}
+
+	return &oss_driver;
 }

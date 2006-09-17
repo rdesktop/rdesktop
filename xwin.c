@@ -2305,7 +2305,7 @@ ui_select(int rdp_socket)
 
 #ifdef WITH_RDPSND
 		if (g_dsp_busy && FD_ISSET(g_dsp_fd, &wfds))
-			wave_out_play();
+			rdpsnd_play();
 #endif
 	}
 }
