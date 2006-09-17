@@ -151,7 +151,7 @@ AC_ARG_WITH(libao,
 
 sound="yes"
 AC_ARG_WITH(sound,
-    [  --with-sound            select sound system ("oss", "sgi", "sun" or "libao") ],
+    [  --with-sound            select sound system ("oss", "sgi", "sun", "alsa" or "libao") ],
     [ 
     sound="$withval" 
     ])
@@ -177,9 +177,13 @@ elif test "$sound" = libao; then
     SOUNDOBJ="rdpsnd.o rdpsnd_libao.o"
     LDFLAGS="$LDFLAGS -lao"
     AC_DEFINE(WITH_RDPSND)
+elif test "$sound" = alsa; then
+    SOUNDOBJ="rdpsnd.o rdpsnd_alsa.o"
+    LDFLAGS="$LDFLAGS -lasound"
+    AC_DEFINE(WITH_RDPSND)
 else
    AC_MSG_WARN([sound support disabled])
-   AC_MSG_WARN([Currently supported systems are Open Sound System (oss), SGI AL (sgi), Sun/BSD (sun) and libao])
+   AC_MSG_WARN([Currently supported systems are Open Sound System (oss), SGI AL (sgi), Sun/BSD (sun), ALSA (alsa) and libao])
 fi
 AC_SUBST(SOUNDOBJ)
 
