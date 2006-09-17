@@ -22,6 +22,7 @@
 
 #include "rdesktop.h"
 #include "rdpsnd.h"
+#include "rdpsnd_dsp.h"
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -137,12 +138,6 @@ libao_set_format(WAVEFORMATEX * pwfx)
 }
 
 void
-libao_volume(uint16 left, uint16 right)
-{
-	warning("volume changes not supported with libao-output\n");
-}
-
-void
 libao_play(void)
 {
 	struct audio_packet *packet;
@@ -244,7 +239,7 @@ libao_register(char *options)
 	libao_driver.wave_out_close = libao_close;
 	libao_driver.wave_out_format_supported = libao_format_supported;
 	libao_driver.wave_out_set_format = libao_set_format;
-	libao_driver.wave_out_volume = libao_volume;
+	libao_driver.wave_out_volume = rdpsnd_dsp_softvol_set;
 	libao_driver.wave_out_play = libao_play;
 	libao_driver.name = xstrdup("libao");
 	libao_driver.description = xstrdup("libao output driver");

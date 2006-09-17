@@ -28,10 +28,10 @@ struct audio_packet
 struct audio_driver
 {
 	void (*wave_out_write) (STREAM s, uint16 tick, uint8 index);
-	  BOOL(*wave_out_open) (void);
+	BOOL(*wave_out_open) (void);
 	void (*wave_out_close) (void);
-	  BOOL(*wave_out_format_supported) (WAVEFORMATEX * pwfx);
-	  BOOL(*wave_out_set_format) (WAVEFORMATEX * pwfx);
+	BOOL(*wave_out_format_supported) (WAVEFORMATEX * pwfx);
+	BOOL(*wave_out_set_format) (WAVEFORMATEX * pwfx);
 	void (*wave_out_volume) (uint16 left, uint16 right);
 	void (*wave_out_play) (void);
 	char *name;

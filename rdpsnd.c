@@ -21,6 +21,7 @@
 
 #include "rdesktop.h"
 #include "rdpsnd.h"
+#include "rdpsnd_dsp.h"
 
 #define RDPSND_CLOSE		1
 #define RDPSND_WRITE		2
@@ -393,12 +394,17 @@ rdpsnd_queue_write(STREAM s, uint16 tick, uint8 index)
 	queue_hi = next_hi;
 
 	packet->s = *s;
+	packet->s.data =
+		rdpsnd_dsp_process(s->data, s->size, current_driver, &formats[current_format]);
+	packet->s.p = packet->s.data + 4;
+	packet->s.end = packet->s.data + s->size;
 	packet->tick = tick;
 	packet->index = index;
-	packet->s.p += 4;
 
+#if 0				/* Handled by DSP */
 	/* we steal the data buffer from s, give it a new one */
-	s->data = malloc(s->size);
+	s->data = xmalloc(s->size);
+#endif
 
 	if (!g_dsp_busy)
 		current_driver->wave_out_play();
@@ -425,7 +431,7 @@ rdpsnd_queue_init(void)
 inline void
 rdpsnd_queue_next(void)
 {
-	free(packet_queue[queue_lo].s.data);
+	xfree(packet_queue[queue_lo].s.data);
 	queue_lo = (queue_lo + 1) % MAX_QUEUE;
 }
 

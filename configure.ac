@@ -194,26 +194,26 @@ fi
 if test "$sound" = no; then
     break
 elif test "$sound" = auto; then
-    SOUNDOBJ="$SOUNDOBJ rdpsnd.o"
+    SOUNDOBJ="$SOUNDOBJ rdpsnd.o rdpsnd_dsp.o"
     AC_DEFINE(WITH_RDPSND)
 elif test "$sound" = oss; then
-    SOUNDOBJ="rdpsnd.o rdpsnd_oss.o"
+    SOUNDOBJ="rdpsnd.o rdpsnd_dsp.o rdpsnd_oss.o"
     AC_DEFINE(WITH_RDPSND)
 elif test "$sound" = sgi; then
-    SOUNDOBJ="rdpsnd.o rdpsnd_sgi.o"
+    SOUNDOBJ="rdpsnd.o rdpsnd_dsp.o rdpsnd_sgi.o"
     LDFLAGS="$LDFLAGS -laudio"
 elif test "$sound" = yes; then
-    SOUNDOBJ="$SOUNDOBJ rdpsnd.o"
+    SOUNDOBJ="$SOUNDOBJ rdpsnd.o rdpsnd_dsp.o"
     AC_DEFINE(WITH_RDPSND)
 elif test "$sound" = sun; then
-    SOUNDOBJ="rdpsnd.o rdpsnd_sun.o"
+    SOUNDOBJ="rdpsnd.o rdpsnd_dsp.o rdpsnd_sun.o"
     AC_DEFINE(WITH_RDPSND)
 elif test "$sound" = libao; then
-    SOUNDOBJ="rdpsnd.o rdpsnd_libao.o"
+    SOUNDOBJ="rdpsnd.o rdpsnd_dsp.o rdpsnd_libao.o"
     LDFLAGS="$LDFLAGS -lao"
     AC_DEFINE(RDPSND_SUN)
 elif test "$sound" = alsa; then
-    SOUNDOBJ="rdpsnd.o rdpsnd_alsa.o"
+    SOUNDOBJ="rdpsnd.o rdpsnd_dsp.o rdpsnd_alsa.o"
     LDFLAGS="$LDFLAGS -lasound"
     AC_DEFINE(WITH_RDPSND)
     AC_DEFINE(RDPSND_ALSA)
