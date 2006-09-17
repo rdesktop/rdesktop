@@ -36,12 +36,14 @@ rdpsnd_dsp_softvol_set(uint16 left, uint16 right)
 }
 
 inline void
-rdpsnd_dsp_softvol(unsigned char *inbuffer, unsigned char *outbuffer, unsigned int size,
-		   WAVEFORMATEX * format)
+rdpsnd_dsp_softvol(unsigned char *buffer, unsigned int size, WAVEFORMATEX * format)
 {
 	unsigned int factor_left, factor_right;
-	unsigned char *posin = inbuffer;
-	unsigned char *posout = outbuffer;
+	unsigned char *posin = buffer;
+	unsigned char *posout = buffer;
+
+	if ((softvol_left == MAX_VOLUME) && (softvol_right == MAX_VOLUME))
+		return;
 
 	factor_left = (softvol_left * 256) / 65535;
 	factor_right = (softvol_right * 256) / 65535;
@@ -55,7 +57,7 @@ rdpsnd_dsp_softvol(unsigned char *inbuffer, unsigned char *outbuffer, unsigned i
 	{
 		char val;
 
-		while (posout < outbuffer + size)
+		while (posout < buffer + size)
 		{
 			/* Left */
 			val = *posin++;
@@ -72,7 +74,7 @@ rdpsnd_dsp_softvol(unsigned char *inbuffer, unsigned char *outbuffer, unsigned i
 	{
 		short val;
 
-		while (posout < outbuffer + size)
+		while (posout < buffer + size)
 		{
 			/* Left */
 			val = *posin++;
@@ -102,14 +104,12 @@ rdpsnd_dsp_process(unsigned char *inbuffer, unsigned int size, struct audio_driv
 
 	outbuffer = xmalloc(size);
 
+	memcpy(outbuffer, inbuffer, size);
+
 	/* Software volume control */
 	if (current_driver->wave_out_volume == rdpsnd_dsp_softvol_set)
 	{
-		rdpsnd_dsp_softvol(inbuffer, outbuffer, size, format);
-	}
-	else
-	{
-		memcpy(outbuffer, inbuffer, size);
+		rdpsnd_dsp_softvol(outbuffer, size, format);
 	}
 
 	return outbuffer;
