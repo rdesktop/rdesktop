@@ -1,3 +1,7 @@
+rdesktop (1.?.?)
+  * ALSA-driver added
+  * sound-drivers can now be selected at runtime
+
 rdesktop (1.5.0)
   * SeamlessRDP - seamless windows support
   * Keymap fixes
@@ -14,6 +18,8 @@ rdesktop (1.5.0)
   * The default color depth is now the depth of the root window
   * Basic support for Windows Vista Beta 2
   * Fix high cpu-usage in OSS-driver
+
+  -- Peter Astrand <astrand@cendio.se>  Wed, 13 Sep 2006 15:11:39 +0200 (CEST)
 
 rdesktop (1.4.1)
    * persistent bitmap cache optimisations
