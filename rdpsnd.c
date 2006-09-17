@@ -313,12 +313,12 @@ rdpsnd_register_drivers(char *options)
 	*reg = alsa_register(options);
 	reg = &((*reg)->next);
 #endif
-#if defined(RDPSND_OSS)
-	*reg = oss_register(options);
-	reg = &((*reg)->next);
-#endif
 #if defined(RDPSND_SUN)
 	*reg = sun_register(options);
+	reg = &((*reg)->next);
+#endif
+#if defined(RDPSND_OSS)
+	*reg = oss_register(options);
 	reg = &((*reg)->next);
 #endif
 #if defined(RDPSND_SGI)
