@@ -21,6 +21,7 @@
 */
 
 #include "rdesktop.h"
+#include "rdpsnd.h"
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -28,24 +29,13 @@
 #include <sys/time.h>
 
 #define DEFAULTDEVICE	"default"
-#define MAX_QUEUE	10
 #define MAX_FRAMES	32
 
-int g_dsp_fd;
-BOOL g_dsp_busy = False;
 static snd_pcm_t *pcm_handle = NULL;
 static snd_pcm_stream_t stream = SND_PCM_STREAM_PLAYBACK;
 static BOOL reopened;
 static short samplewidth;
 static int audiochannels;
-
-static struct audio_packet
-{
-	struct stream s;
-	uint16 tick;
-	uint8 index;
-} packet_queue[MAX_QUEUE];
-static unsigned int queue_hi, queue_lo;
 
 BOOL
 wave_out_open(void)
@@ -62,7 +52,7 @@ wave_out_open(void)
 	}
 
 	g_dsp_fd = 0;
-	queue_lo = queue_hi = 0;
+	rdpsnd_queue_init();
 
 	reopened = True;
 
@@ -73,12 +63,13 @@ void
 wave_out_close(void)
 {
 	/* Ack all remaining packets */
-	while (queue_lo != queue_hi)
+	while (!rdpsnd_queue_empty())
 	{
-		rdpsnd_send_completion(packet_queue[queue_lo].tick, packet_queue[queue_lo].index);
-		free(packet_queue[queue_lo].s.data);
-		queue_lo = (queue_lo + 1) % MAX_QUEUE;
+		rdpsnd_send_completion(rdpsnd_queue_current_packet()->tick,
+				       rdpsnd_queue_current_packet()->index);
+		rdpsnd_queue_next();
 	}
+
 
 	if (pcm_handle)
 	{
@@ -231,32 +222,6 @@ wave_out_volume(uint16 left, uint16 right)
 }
 
 void
-wave_out_write(STREAM s, uint16 tick, uint8 index)
-{
-	struct audio_packet *packet = &packet_queue[queue_hi];
-	unsigned int next_hi = (queue_hi + 1) % MAX_QUEUE;
-
-	if (next_hi == queue_lo)
-	{
-		error("No space to queue audio packet\n");
-		return;
-	}
-
-	queue_hi = next_hi;
-
-	packet->s = *s;
-	packet->tick = tick;
-	packet->index = index;
-	packet->s.p += 4;
-
-	/* we steal the data buffer from s, give it a new one */
-	s->data = (uint8 *) malloc(s->size);
-
-	if (!g_dsp_busy)
-		wave_out_play();
-}
-
-void
 wave_out_play(void)
 {
 	struct audio_packet *packet;
@@ -275,23 +240,16 @@ wave_out_play(void)
 		prev_us = tv.tv_usec;
 	}
 
-	if (queue_lo == queue_hi)
+	if (rdpsnd_queue_empty())
 	{
 		g_dsp_busy = 0;
 		return;
 	}
 
-	packet = &packet_queue[queue_lo];
+	packet = rdpsnd_queue_current_packet();
 	out = &packet->s;
 
-	if (((queue_lo + 1) % MAX_QUEUE) != queue_hi)
-	{
-		next_tick = packet_queue[(queue_lo + 1) % MAX_QUEUE].tick;
-	}
-	else
-	{
-		next_tick = (packet->tick + 65535) % 65536;
-	}
+	next_tick = rdpsnd_queue_next_tick();
 
 	len = (out->end - out->p) / (samplewidth * audiochannels);
 	if ((len = snd_pcm_writei(pcm_handle, out->p, ((MAX_FRAMES < len) ? MAX_FRAMES : len))) < 0)
@@ -320,11 +278,8 @@ wave_out_play(void)
 			       (packet->tick + duration) % 65536, next_tick % 65536));
 		}
 
-		/* Until all drivers are using the windows sound-ticks, we need to
-		   substract the 50 ticks added later by rdpsnd.c */
-		rdpsnd_send_completion(((packet->tick + duration) % 65536) - 50, packet->index);
-		free(out->data);
-		queue_lo = (queue_lo + 1) % MAX_QUEUE;
+		rdpsnd_send_completion(((packet->tick + duration) % 65536), packet->index);
+		rdpsnd_queue_next();
 	}
 
 	g_dsp_busy = 1;

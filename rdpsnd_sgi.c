@@ -28,13 +28,9 @@
 
 #define IRIX_MAX_VOL     65535
 
-#define MAX_QUEUE	10
-
-int g_dsp_fd;
 ALconfig audioconfig;
 ALport output_port;
 
-BOOL g_dsp_busy = False;
 static BOOL g_swapaudio;
 static int g_snd_rate;
 static BOOL g_swapaudio;
@@ -44,56 +40,46 @@ double min_volume, max_volume, volume_range;
 int resource, maxFillable;
 int combinedFrameSize;
 
-static struct audio_packet
-{
-	struct stream s;
-	uint16 tick;
-	uint8 index;
-} packet_queue[MAX_QUEUE];
-static unsigned int queue_hi, queue_lo;
-
 BOOL
 wave_out_open(void)
 {
 	ALparamInfo pinfo;
 
 #if (defined(IRIX_DEBUG))
-	fprintf(stderr, "wave_out_open: begin\n");
+	fprintf(stderr, "sgi_open: begin\n");
 #endif
 
 	if (alGetParamInfo(AL_DEFAULT_OUTPUT, AL_GAIN, &pinfo) < 0)
 	{
-		fprintf(stderr, "wave_out_open: alGetParamInfo failed: %s\n",
+		fprintf(stderr, "sgi_open: alGetParamInfo failed: %s\n",
 			alGetErrorString(oserror()));
 	}
 	min_volume = alFixedToDouble(pinfo.min.ll);
 	max_volume = alFixedToDouble(pinfo.max.ll);
 	volume_range = (max_volume - min_volume);
 #if (defined(IRIX_DEBUG))
-	fprintf(stderr, "wave_out_open: minvol = %lf, maxvol= %lf, range = %lf.\n",
+	fprintf(stderr, "sgi_open: minvol = %lf, maxvol= %lf, range = %lf.\n",
 		min_volume, max_volume, volume_range);
 #endif
 
-	queue_lo = queue_hi = 0;
+	rdpsnd_queue_init();
 
 	audioconfig = alNewConfig();
 	if (audioconfig == (ALconfig) 0)
 	{
-		fprintf(stderr, "wave_out_open: alNewConfig failed: %s\n",
-			alGetErrorString(oserror()));
+		fprintf(stderr, "sgi_open: alNewConfig failed: %s\n", alGetErrorString(oserror()));
 		return False;
 	}
 
 	output_port = alOpenPort("rdpsnd", "w", 0);
 	if (output_port == (ALport) 0)
 	{
-		fprintf(stderr, "wave_out_open: alOpenPort failed: %s\n",
-			alGetErrorString(oserror()));
+		fprintf(stderr, "sgi_open: alOpenPort failed: %s\n", alGetErrorString(oserror()));
 		return False;
 	}
 
 #if (defined(IRIX_DEBUG))
-	fprintf(stderr, "wave_out_open: returning\n");
+	fprintf(stderr, "sgi_open: returning\n");
 #endif
 	return True;
 }
@@ -103,21 +89,23 @@ wave_out_close(void)
 {
 	/* Ack all remaining packets */
 #if (defined(IRIX_DEBUG))
-	fprintf(stderr, "wave_out_close: begin\n");
+	fprintf(stderr, "sgi_close: begin\n");
 #endif
 
-	while (queue_lo != queue_hi)
+	while (!rdpsnd_queue_empty())
 	{
-		rdpsnd_send_completion(packet_queue[queue_lo].tick, packet_queue[queue_lo].index);
-		free(packet_queue[queue_lo].s.data);
-		queue_lo = (queue_lo + 1) % MAX_QUEUE;
+		/* We need to add 50 to tell windows that time has passed while
+		 * playing this packet */
+		rdpsnd_send_completion(rdpsnd_queue_current_packet()->tick + 50,
+				       rdpsnd_queue_current_packet()->index);
+		rdpsnd_queue_next();
 	}
 	alDiscardFrames(output_port, 0);
 
 	alClosePort(output_port);
 	alFreeConfig(audioconfig);
 #if (defined(IRIX_DEBUG))
-	fprintf(stderr, "wave_out_close: returning\n");
+	fprintf(stderr, "sgi_close: returning\n");
 #endif
 }
 
@@ -142,7 +130,7 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 	ALpv params;
 
 #if (defined(IRIX_DEBUG))
-	fprintf(stderr, "wave_out_set_format: init...\n");
+	fprintf(stderr, "sgi_set_format: init...\n");
 #endif
 
 	g_swapaudio = False;
@@ -178,7 +166,7 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 
 		if (output_port == (ALport) 0)
 		{
-			fprintf(stderr, "wave_out_set_format: alOpenPort failed: %s\n",
+			fprintf(stderr, "sgi_set_format: alOpenPort failed: %s\n",
 				alGetErrorString(oserror()));
 			return False;
 		}
@@ -192,7 +180,7 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 
 	if (frameSize == 0 || channelCount == 0)
 	{
-		fprintf(stderr, "wave_out_set_format: bad frameSize or channelCount\n");
+		fprintf(stderr, "sgi_set_format: bad frameSize or channelCount\n");
 		return False;
 	}
 	combinedFrameSize = frameSize * channelCount;
@@ -213,7 +201,7 @@ wave_out_set_format(WAVEFORMATEX * pwfx)
 	}
 
 #if (defined(IRIX_DEBUG))
-	fprintf(stderr, "wave_out_set_format: returning...\n");
+	fprintf(stderr, "sgi_set_format: returning...\n");
 #endif
 	return True;
 }
@@ -226,7 +214,7 @@ wave_out_volume(uint16 left, uint16 right)
 	ALfixed gain[8];
 
 #if (defined(IRIX_DEBUG))
-	fprintf(stderr, "wave_out_volume: begin\n");
+	fprintf(stderr, "sgi_volume: begin\n");
 	fprintf(stderr, "left='%d', right='%d'\n", left, right);
 #endif
 
@@ -241,40 +229,14 @@ wave_out_volume(uint16 left, uint16 right)
 	pv[0].sizeIn = 8;
 	if (alSetParams(AL_DEFAULT_OUTPUT, pv, 1) < 0)
 	{
-		fprintf(stderr, "wave_out_volume: alSetParams failed: %s\n",
+		fprintf(stderr, "sgi_volume: alSetParams failed: %s\n",
 			alGetErrorString(oserror()));
 		return;
 	}
 
 #if (defined(IRIX_DEBUG))
-	fprintf(stderr, "wave_out_volume: returning\n");
+	fprintf(stderr, "sgi_volume: returning\n");
 #endif
-}
-
-void
-wave_out_write(STREAM s, uint16 tick, uint8 index)
-{
-	struct audio_packet *packet = &packet_queue[queue_hi];
-	unsigned int next_hi = (queue_hi + 1) % MAX_QUEUE;
-
-	if (next_hi == queue_lo)
-	{
-		fprintf(stderr, "No space to queue audio packet\n");
-		return;
-	}
-
-	queue_hi = next_hi;
-
-	packet->s = *s;
-	packet->tick = tick;
-	packet->index = index;
-	packet->s.p += 4;
-
-	/* we steal the data buffer from s, give it a new one */
-	s->data = malloc(s->size);
-
-	if (!g_dsp_busy)
-		wave_out_play();
 }
 
 void
@@ -290,13 +252,13 @@ wave_out_play(void)
 
 	while (1)
 	{
-		if (queue_lo == queue_hi)
+		if (rdpsnd_queue_empty())
 		{
 			g_dsp_busy = False;
 			return;
 		}
 
-		packet = &packet_queue[queue_lo];
+		packet = rdpsnd_queue_current_packet();
 		out = &packet->s;
 
 		/* Swap the current packet, but only once */
@@ -322,8 +284,7 @@ wave_out_play(void)
 			if (gf < (4 * maxFillable / 10))
 			{
 				rdpsnd_send_completion(packet->tick, packet->index);
-				free(out->data);
-				queue_lo = (queue_lo + 1) % MAX_QUEUE;
+				rdpsnd_queue_next();
 				swapped = False;
 			}
 			else

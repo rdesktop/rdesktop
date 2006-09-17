@@ -20,6 +20,7 @@
 */
 
 #include "rdesktop.h"
+#include "rdpsnd.h"
 
 #define RDPSND_CLOSE		1
 #define RDPSND_WRITE		2
@@ -30,6 +31,10 @@
 #define RDPSND_NEGOTIATE	7
 
 #define MAX_FORMATS		10
+#define MAX_QUEUE		10
+
+BOOL g_dsp_busy = False;
+int g_dsp_fd;
 
 static VCHANNEL *rdpsnd_channel;
 
@@ -37,6 +42,8 @@ static BOOL device_open;
 static WAVEFORMATEX formats[MAX_FORMATS];
 static unsigned int format_count;
 static unsigned int current_format;
+static unsigned int queue_hi, queue_lo;
+static struct audio_packet packet_queue[MAX_QUEUE];
 
 static STREAM
 rdpsnd_init_packet(uint16 type, uint16 size)
@@ -66,7 +73,7 @@ rdpsnd_send_completion(uint16 tick, uint8 packet_index)
 	STREAM s;
 
 	s = rdpsnd_init_packet(RDPSND_COMPLETION, 4);
-	out_uint16_le(s, tick + 50);
+	out_uint16_le(s, tick);
 	out_uint8(s, packet_index);
 	out_uint8(s, 0);
 	s_mark_end(s);
@@ -214,7 +221,7 @@ rdpsnd_process(STREAM s)
 			current_format = format;
 		}
 
-		wave_out_write(s, tick, packet_index);
+		rdpsnd_queue_write(s, tick, packet_index);
 		awaiting_data_packet = False;
 		return;
 	}
@@ -260,5 +267,70 @@ rdpsnd_init(void)
 	rdpsnd_channel =
 		channel_register("rdpsnd", CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_ENCRYPT_RDP,
 				 rdpsnd_process);
+
 	return (rdpsnd_channel != NULL);
+}
+
+void
+rdpsnd_queue_write(STREAM s, uint16 tick, uint8 index)
+{
+	struct audio_packet *packet = &packet_queue[queue_hi];
+	unsigned int next_hi = (queue_hi + 1) % MAX_QUEUE;
+
+	if (next_hi == queue_lo)
+	{
+		error("No space to queue audio packet\n");
+		return;
+	}
+
+	queue_hi = next_hi;
+
+	packet->s = *s;
+	packet->tick = tick;
+	packet->index = index;
+	packet->s.p += 4;
+
+	/* we steal the data buffer from s, give it a new one */
+	s->data = malloc(s->size);
+
+	if (!g_dsp_busy)
+		wave_out_play();
+}
+
+inline struct audio_packet *
+rdpsnd_queue_current_packet(void)
+{
+	return &packet_queue[queue_lo];
+}
+
+inline BOOL
+rdpsnd_queue_empty(void)
+{
+	return (queue_lo == queue_hi);
+}
+
+inline void
+rdpsnd_queue_init(void)
+{
+	queue_lo = queue_hi = 0;
+}
+
+inline void
+rdpsnd_queue_next(void)
+{
+	free(packet_queue[queue_lo].s.data);
+	queue_lo = (queue_lo + 1) % MAX_QUEUE;
+}
+
+inline int
+rdpsnd_queue_next_tick(void)
+{
+	if (((queue_lo + 1) % MAX_QUEUE) != queue_hi)
+	{
+		return packet_queue[(queue_lo + 1) % MAX_QUEUE].tick;
+	}
+	else
+	{
+		return (packet_queue[queue_lo].tick + 65535) % 65536;
+	}
 }

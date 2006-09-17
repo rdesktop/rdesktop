@@ -28,6 +28,7 @@
 #endif
 
 #include "rdesktop.h"
+#include "rdpsnd.h"
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -35,21 +36,11 @@
 #include <sys/ioctl.h>
 #include <sys/soundcard.h>
 
+#define DEFAULTDEVICE	"/dev/dsp"
 #define MAX_LEN		512
-#define MAX_QUEUE	10
 
-int g_dsp_fd;
-BOOL g_dsp_busy = False;
 static int snd_rate;
 static short samplewidth;
-
-static struct audio_packet
-{
-	struct stream s;
-	uint16 tick;
-	uint8 index;
-} packet_queue[MAX_QUEUE];
-static unsigned int queue_hi, queue_lo;
 
 BOOL
 wave_out_open(void)
@@ -58,7 +49,7 @@ wave_out_open(void)
 
 	if (dsp_dev == NULL)
 	{
-		dsp_dev = xstrdup("/dev/dsp");
+		dsp_dev = xstrdup(DEFAULTDEVICE);
 	}
 
 	if ((g_dsp_fd = open(dsp_dev, O_WRONLY)) == -1)
@@ -201,32 +192,6 @@ wave_out_volume(uint16 left, uint16 right)
 }
 
 void
-wave_out_write(STREAM s, uint16 tick, uint8 index)
-{
-	struct audio_packet *packet = &packet_queue[queue_hi];
-	unsigned int next_hi = (queue_hi + 1) % MAX_QUEUE;
-
-	if (next_hi == queue_lo)
-	{
-		error("No space to queue audio packet\n");
-		return;
-	}
-
-	queue_hi = next_hi;
-
-	packet->s = *s;
-	packet->tick = tick;
-	packet->index = index;
-	packet->s.p += 4;
-
-	/* we steal the data buffer from s, give it a new one */
-	s->data = (uint8 *) malloc(s->size);
-
-	if (!g_dsp_busy)
-		wave_out_play();
-}
-
-void
 wave_out_play(void)
 {
 	struct audio_packet *packet;
@@ -237,13 +202,13 @@ wave_out_play(void)
 	static BOOL started = False;
 	struct timeval tv;
 
-	if (queue_lo == queue_hi)
+	if (rdpsnd_queue_empty())
 	{
 		g_dsp_busy = 0;
 		return;
 	}
 
-	packet = &packet_queue[queue_lo];
+	packet = rdpsnd_queue_current_packet();
 	out = &packet->s;
 
 	if (!started)
@@ -277,9 +242,10 @@ wave_out_play(void)
 
 		if (elapsed >= (duration * 85) / 100)
 		{
-			rdpsnd_send_completion(packet->tick, packet->index);
-			free(out->data);
-			queue_lo = (queue_lo + 1) % MAX_QUEUE;
+			/* We need to add 50 to tell windows that time has passed while
+			 * playing this packet */
+			rdpsnd_send_completion(packet->tick + 50, packet->index);
+			rdpsnd_queue_next();
 			started = False;
 		}
 		else
