@@ -194,6 +194,7 @@ rdpsnd_process(STREAM s)
 	static uint16 tick, format;
 	static uint8 packet_index;
 	static BOOL awaiting_data_packet;
+	static unsigned char missing_bytes[4] = { 0, 0, 0, 0 };
 
 #ifdef RDPSND_DEBUG
 	printf("RDPSND recv:\n");
@@ -226,6 +227,9 @@ rdpsnd_process(STREAM s)
 			current_format = format;
 		}
 
+		/* Insert the 4 missing bytes retrieved from last RDPSND_WRITE */
+		memcpy(s->data, missing_bytes, 4);
+
 		current_driver->
 			wave_out_write(rdpsnd_dsp_process
 				       (s, current_driver, &formats[current_format]), tick,
@@ -244,6 +248,8 @@ rdpsnd_process(STREAM s)
 			in_uint16_le(s, tick);
 			in_uint16_le(s, format);
 			in_uint8(s, packet_index);
+			/* Here are our lost bytes, but why? */
+			memcpy(missing_bytes, s->end - 4, 4);
 			awaiting_data_packet = True;
 			break;
 		case RDPSND_CLOSE:

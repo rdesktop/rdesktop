@@ -129,12 +129,11 @@ rdpsnd_dsp_process(STREAM s, struct audio_driver *current_driver, WAVEFORMATEX *
 		rdpsnd_dsp_swapbytes(s->data, s->size, format);
 #endif
 
-	/* FIXME: where do we lose the 4 bytes referenced here? */
-	out.data = xmalloc(s->size - 4);
+	out.data = xmalloc(s->size);
 
-	memcpy(out.data, s->data + 4, s->size - 4);
+	memcpy(out.data, s->data, s->size);
 
-	out.size = s->size - 4;
+	out.size = s->size;
 	out.p = out.data;
 	out.end = out.p + out.size;
 
