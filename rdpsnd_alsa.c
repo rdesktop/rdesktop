@@ -22,6 +22,7 @@
 
 #include "rdesktop.h"
 #include "rdpsnd.h"
+#include "rdpsnd_dsp.h"
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -207,18 +208,6 @@ alsa_set_format(WAVEFORMATEX * pwfx)
 }
 
 void
-alsa_volume(uint16 left, uint16 right)
-{
-	static int warned = 0;
-
-	if (!warned)
-	{
-		warning("volume changes currently not supported with alsa-output\n");
-		warned = 1;
-	}
-}
-
-void
 alsa_play(void)
 {
 	struct audio_packet *packet;
@@ -293,7 +282,7 @@ alsa_register(char *options)
 	alsa_driver.wave_out_close = alsa_close;
 	alsa_driver.wave_out_format_supported = alsa_format_supported;
 	alsa_driver.wave_out_set_format = alsa_set_format;
-	alsa_driver.wave_out_volume = alsa_volume;
+	alsa_driver.wave_out_volume = rdpsnd_dsp_softvol_set;
 	alsa_driver.wave_out_play = alsa_play;
 	alsa_driver.name = xstrdup("alsa");
 	alsa_driver.description = xstrdup("ALSA output driver, default device: " DEFAULTDEVICE);
