@@ -144,7 +144,7 @@ AC_ARG_WITH(libao,
     [
     CFLAGS="$CFLAGS -I$withval/include"
     CPPFLAGS="$CPPFLAGS -I$withval/include"
-    LIBS="$LIBS -L$withval/lib"
+    LDFLAGS="$LDFLAGS -L$withval/lib"
     rpath="$rpath:$withval/lib"
     ]
 )
@@ -160,7 +160,7 @@ if test "$sound" = yes; then
 	[
 	sound=auto
 	SOUNDOBJ="$SOUNDOBJ rdpsnd_libao.o"
-	LDFLAGS="$LDFLAGS -lao"
+	LIBS="$LIBS -lao"
 	AC_DEFINE(RDPSND_LIBAO)
 	])
     AC_CHECK_HEADER(sys/soundcard.h,
@@ -173,7 +173,7 @@ if test "$sound" = yes; then
 	[
 	sound=auto
 	SOUNDOBJ="$SOUNDOBJ rdpsnd_sgi.o"
-	LDFLAGS="$LDFLAGS -laudio"
+	LIBS="$LIBS -laudio"
 	AC_DEFINE(RDPSND_SGI)
 	])
     AC_CHECK_HEADER(sys/audioio.h,
@@ -186,7 +186,7 @@ if test "$sound" = yes; then
 	[
 	sound=auto
 	SOUNDOBJ="$SOUNDOBJ rdpsnd_alsa.o"
-	LDFLAGS="$LDFLAGS -lasound"
+	LIBS="$LIBS -lasound"
 	AC_DEFINE(RDPSND_ALSA)
 	])
 fi

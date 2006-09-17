@@ -308,22 +308,22 @@ sgi_play(void)
 	}
 }
 
-static struct audio_driver sgi_driver = {
-      wave_out_write:rdpsnd_queue_write,
-      wave_out_open:sgi_open,
-      wave_out_close:sgi_close,
-      wave_out_format_supported:sgi_format_supported,
-      wave_out_set_format:sgi_set_format,
-      wave_out_volume:sgi_volume,
-      wave_out_play:sgi_play,
-      name:"sgi",
-      description:"SGI output driver",
-      next:NULL,
-};
-
 struct audio_driver *
 sgi_register(char *options)
 {
+	static struct audio_driver sgi_driver;
+
+	sgi_driver.wave_out_write = rdpsnd_queue_write;
+	sgi_driver.wave_out_open = sgi_open;
+	sgi_driver.wave_out_close = sgi_close;
+	sgi_driver.wave_out_format_supported = sgi_format_supported;
+	sgi_driver.wave_out_set_format = sgi_set_format;
+	sgi_driver.wave_out_volume = sgi_volume;
+	sgi_driver.wave_out_play = sgi_play;
+	sgi_driver.name = xstrdup("sgi");
+	sgi_driver.description = xstrdup("SGI output driver");
+	sgi_driver.next = NULL;
+
 	if (options)
 	{
 		sgi_output_device = xstrdup(options);

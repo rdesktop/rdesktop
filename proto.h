@@ -167,7 +167,7 @@ void rdpsnd_send_completion(uint16 tick, uint8 packet_index);
 BOOL rdpsnd_init(void);
 BOOL rdpsnd_select_driver(char *driver, char *options);
 void rdpsnd_show_help(void);
-inline void rdpsnd_play(void);
+void rdpsnd_play(void);
 /* secure.c */
 void sec_hash_48(uint8 * out, uint8 * in, uint8 * salt1, uint8 * salt2, uint8 salt);
 void sec_hash_16(uint8 * out, uint8 * in, uint8 * salt1, uint8 * salt2);

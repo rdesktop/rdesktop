@@ -43,11 +43,11 @@ extern BOOL g_dsp_busy;
 extern int g_dsp_fd;
 
 void rdpsnd_queue_write(STREAM s, uint16 tick, uint8 index);
-inline struct audio_packet *rdpsnd_queue_current_packet(void);
-inline BOOL rdpsnd_queue_empty(void);
-inline void rdpsnd_queue_init(void);
-inline void rdpsnd_queue_next(void);
-inline int rdpsnd_queue_next_tick(void);
+struct audio_packet *rdpsnd_queue_current_packet(void);
+BOOL rdpsnd_queue_empty(void);
+void rdpsnd_queue_init(void);
+void rdpsnd_queue_next(void);
+int rdpsnd_queue_next_tick(void);
 
 /* Driver register functions */
 struct audio_driver *alsa_register(char *options);

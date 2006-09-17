@@ -38,14 +38,14 @@ int g_dsp_fd;
 
 static VCHANNEL *rdpsnd_channel;
 static struct audio_driver *drivers = NULL;
-static struct audio_driver *current_driver = NULL;
+struct audio_driver *current_driver = NULL;
 
 static BOOL device_open;
 static WAVEFORMATEX formats[MAX_FORMATS];
 static unsigned int format_count;
 static unsigned int current_format;
-static unsigned int queue_hi, queue_lo;
-static struct audio_packet packet_queue[MAX_QUEUE];
+unsigned int queue_hi, queue_lo;
+struct audio_packet packet_queue[MAX_QUEUE];
 
 void (*wave_out_play) (void);
 

@@ -252,22 +252,23 @@ oss_play(void)
 	return;
 }
 
-static struct audio_driver oss_driver = {
-      wave_out_write:rdpsnd_queue_write,
-      wave_out_open:oss_open,
-      wave_out_close:oss_close,
-      wave_out_format_supported:oss_format_supported,
-      wave_out_set_format:oss_set_format,
-      wave_out_volume:oss_volume,
-      wave_out_play:oss_play,
-      name:"oss",
-      description:"OSS output driver, default device: " DEFAULTDEVICE " or $AUDIODEV",
-      next:NULL,
-};
-
 struct audio_driver *
 oss_register(char *options)
 {
+	static struct audio_driver oss_driver;
+
+	oss_driver.wave_out_write = rdpsnd_queue_write;
+	oss_driver.wave_out_open = oss_open;
+	oss_driver.wave_out_close = oss_close;
+	oss_driver.wave_out_format_supported = oss_format_supported;
+	oss_driver.wave_out_set_format = oss_set_format;
+	oss_driver.wave_out_volume = oss_volume;
+	oss_driver.wave_out_play = oss_play;
+	oss_driver.name = xstrdup("oss");
+	oss_driver.description =
+		xstrdup("OSS output driver, default device: " DEFAULTDEVICE " or $AUDIODEV");
+	oss_driver.next = NULL;
+
 	if (options)
 	{
 		dsp_dev = xstrdup(options);

@@ -234,22 +234,22 @@ libao_play(void)
 	return;
 }
 
-static struct audio_driver libao_driver = {
-      wave_out_write:rdpsnd_queue_write,
-      wave_out_open:libao_open,
-      wave_out_close:libao_close,
-      wave_out_format_supported:libao_format_supported,
-      wave_out_set_format:libao_set_format,
-      wave_out_volume:libao_volume,
-      wave_out_play:libao_play,
-      name:"libao",
-      description:"libao output driver",
-      next:NULL,
-};
-
 struct audio_driver *
 libao_register(char *options)
 {
+	static struct audio_driver libao_driver;
+
+	libao_driver.wave_out_write = rdpsnd_queue_write;
+	libao_driver.wave_out_open = libao_open;
+	libao_driver.wave_out_close = libao_close;
+	libao_driver.wave_out_format_supported = libao_format_supported;
+	libao_driver.wave_out_set_format = libao_set_format;
+	libao_driver.wave_out_volume = libao_volume;
+	libao_driver.wave_out_play = libao_play;
+	libao_driver.name = xstrdup("libao");
+	libao_driver.description = xstrdup("libao output driver");
+	libao_driver.next = NULL;
+
 	if (options)
 	{
 		libao_device = xstrdup(options);
