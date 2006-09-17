@@ -19,5 +19,5 @@
 */
 
 void rdpsnd_dsp_softvol_set(uint16 left, uint16 right);
-unsigned char *rdpsnd_dsp_process(unsigned char *inbuffer, unsigned int size,
-				  struct audio_driver *current_driver, WAVEFORMATEX * format);
+
+STREAM rdpsnd_dsp_process(STREAM s, struct audio_driver *current_driver, WAVEFORMATEX * format);

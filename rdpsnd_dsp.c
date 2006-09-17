@@ -92,8 +92,8 @@ rdpsnd_dsp_softvol(unsigned char *buffer, unsigned int size, WAVEFORMATEX * form
 		}
 	}
 
-	DEBUG(("using softvol with factors left: %d, right: %d (%d/%d)\n", factor_left, factor_right,
-	       format->wBitsPerSample, format->nChannels));
+	DEBUG(("using softvol with factors left: %d, right: %d (%d/%d)\n", factor_left,
+	       factor_right, format->wBitsPerSample, format->nChannels));
 }
 
 void
@@ -113,24 +113,30 @@ rdpsnd_dsp_swapbytes(unsigned char *buffer, unsigned int size, WAVEFORMATEX * fo
 	}
 }
 
-unsigned char *
-rdpsnd_dsp_process(unsigned char *inbuffer, unsigned int size, struct audio_driver *current_driver,
-		   WAVEFORMATEX * format)
+
+STREAM
+rdpsnd_dsp_process(STREAM s, struct audio_driver *current_driver, WAVEFORMATEX * format)
 {
-	unsigned char *outbuffer;
+	static struct stream out;
 
-	outbuffer = xmalloc(size);
-
-	memcpy(outbuffer, inbuffer, size);
-
-	/* Software volume control */
+	/* softvol and byteswap do not change the amount of data they
+	   return, so they can operate on the input-stream */
 	if (current_driver->wave_out_volume == rdpsnd_dsp_softvol_set)
-		rdpsnd_dsp_softvol(outbuffer, size, format);
+		rdpsnd_dsp_softvol(s->data, s->size, format);
 
 #ifdef B_ENDIAN
 	if (current_driver->need_byteswap_on_be)
-		rdpsnd_dsp_swapbytes(outbuffer, size, format);
+		rdpsnd_dsp_swapbytes(s->data, s->size, format);
 #endif
 
-	return outbuffer;
+	/* FIXME: where do we lose the 4 bytes referenced here? */
+	out.data = xmalloc(s->size - 4);
+
+	memcpy(out.data, s->data + 4, s->size - 4);
+
+	out.size = s->size - 4;
+	out.p = out.data;
+	out.end = out.p + out.size;
+
+	return &out;
 }

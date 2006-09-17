@@ -226,7 +226,10 @@ rdpsnd_process(STREAM s)
 			current_format = format;
 		}
 
-		current_driver->wave_out_write(s, tick, packet_index);
+		current_driver->
+			wave_out_write(rdpsnd_dsp_process
+				       (s, current_driver, &formats[current_format]), tick,
+				       packet_index);
 		awaiting_data_packet = False;
 		return;
 	}
@@ -394,17 +397,8 @@ rdpsnd_queue_write(STREAM s, uint16 tick, uint8 index)
 	queue_hi = next_hi;
 
 	packet->s = *s;
-	packet->s.data =
-		rdpsnd_dsp_process(s->data, s->size, current_driver, &formats[current_format]);
-	packet->s.p = packet->s.data + 4;
-	packet->s.end = packet->s.data + s->size;
 	packet->tick = tick;
 	packet->index = index;
-
-#if 0				/* Handled by DSP */
-	/* we steal the data buffer from s, give it a new one */
-	s->data = xmalloc(s->size);
-#endif
 
 	if (!g_dsp_busy)
 		current_driver->wave_out_play();
