@@ -55,7 +55,7 @@ rdpsnd_dsp_softvol(unsigned char *buffer, unsigned int size, WAVEFORMATEX * form
 
 	if (format->wBitsPerSample == 8)
 	{
-		char val;
+		sint8 val;
 
 		while (posout < buffer + size)
 		{
@@ -72,7 +72,7 @@ rdpsnd_dsp_softvol(unsigned char *buffer, unsigned int size, WAVEFORMATEX * form
 	}
 	else
 	{
-		short val;
+		sint16 val;
 
 		while (posout < buffer + size)
 		{
@@ -92,7 +92,7 @@ rdpsnd_dsp_softvol(unsigned char *buffer, unsigned int size, WAVEFORMATEX * form
 		}
 	}
 
-	DEBUG(("using softvol with shifts left: %d, right: %d (%d/%d)\n", factor_left, factor_right,
+	DEBUG(("using softvol with factors left: %d, right: %d (%d/%d)\n", factor_left, factor_right,
 	       format->wBitsPerSample, format->nChannels));
 }
 
