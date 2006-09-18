@@ -249,7 +249,8 @@ libao_register(char *options)
 	libao_driver.next = NULL;
 
 	ao_initialize();
-	snprintf(description, 100, "libao output driver, default device: %s", ao_driver_info(ao_default_driver_id())->short_name);
+	snprintf(description, 100, "libao output driver, default device: %s",
+		 ao_driver_info(ao_default_driver_id())->short_name);
 	ao_shutdown();
 
 	if (options)
