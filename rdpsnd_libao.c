@@ -234,6 +234,7 @@ struct audio_driver *
 libao_register(char *options)
 {
 	static struct audio_driver libao_driver;
+	struct ao_info *libao_info;
 	static char description[101];
 
 	libao_driver.wave_out_write = rdpsnd_queue_write;
@@ -249,8 +250,19 @@ libao_register(char *options)
 	libao_driver.next = NULL;
 
 	ao_initialize();
-	snprintf(description, 100, "libao output driver, default device: %s",
-		 ao_driver_info(ao_default_driver_id())->short_name);
+
+	libao_info = ao_driver_info(ao_default_driver_id());
+
+	if (libao_info)
+	{
+		snprintf(description, 100, "libao output driver, default device: %s",
+				libao_info->short_name);
+	}
+	else
+	{
+		snprintf(description, 100, "libao output driver, default device: none");
+	}
+
 	ao_shutdown();
 
 	if (options)
