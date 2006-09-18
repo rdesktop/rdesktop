@@ -45,8 +45,8 @@ rdpsnd_dsp_softvol(unsigned char *buffer, unsigned int size, WAVEFORMATEX * form
 	if ((softvol_left == MAX_VOLUME) && (softvol_right == MAX_VOLUME))
 		return;
 
-	factor_left = (softvol_left * 256) / 65535;
-	factor_right = (softvol_right * 256) / 65535;
+	factor_left = (softvol_left * 256) / MAX_VOLUME;
+	factor_right = (softvol_right * 256) / MAX_VOLUME;
 
 	if (format->nChannels == 1)
 	{
