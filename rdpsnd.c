@@ -289,20 +289,29 @@ rdpsnd_init(void)
 BOOL
 rdpsnd_auto_open(void)
 {
-	current_driver = drivers;
-	while (current_driver != NULL)
-	{
-		DEBUG(("trying %s...\n", current_driver->name));
-		if (current_driver->wave_out_open())
-		{
-			DEBUG(("selected %s\n", current_driver->name));
-			return True;
-		}
-		g_dsp_fd = 0;
-		current_driver = current_driver->next;
-	}
+	static BOOL failed = False;
 
-	warning("no working audio-driver found\n");
+	if (!failed)
+	{
+		struct audio_driver *auto_driver = current_driver;
+
+		current_driver = drivers;
+		while (current_driver != NULL)
+		{
+			DEBUG(("trying %s...\n", current_driver->name));
+			if (current_driver->wave_out_open())
+			{
+				DEBUG(("selected %s\n", current_driver->name));
+				return True;
+			}
+			g_dsp_fd = 0;
+			current_driver = current_driver->next;
+		}
+
+		warning("no working audio-driver found\n");
+		failed = True;
+		current_driver = auto_driver;
+	}
 
 	return False;
 }

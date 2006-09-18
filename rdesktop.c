@@ -690,11 +690,14 @@ main(int argc, char *argv[])
 									}
 								}
 
-								g_rdpsnd = True;
 								if (!rdpsnd_select_driver
 								    (driver, options))
 								{
 									warning("Driver not available\n");
+								}
+								else
+								{
+									g_rdpsnd = True;
 								}
 							}
 
@@ -715,10 +718,13 @@ main(int argc, char *argv[])
 					else
 					{
 #ifdef WITH_RDPSND
-						g_rdpsnd = True;
 						if (!rdpsnd_select_driver(NULL, NULL))
 						{
 							warning("No sound-driver available\n");
+						}
+						else
+						{
+							g_rdpsnd = True;
 						}
 #else
 						warning("Not compiled with sound support\n");
