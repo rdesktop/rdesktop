@@ -29,6 +29,7 @@
 
 #include "rdesktop.h"
 #include "rdpsnd.h"
+#include "rdpsnd_dsp.h"
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -42,6 +43,7 @@
 static int snd_rate;
 static short samplewidth;
 static char *dsp_dev;
+static struct audio_driver oss_driver;
 
 BOOL
 oss_open(void)
@@ -153,34 +155,15 @@ oss_set_format(WAVEFORMATEX * pwfx)
 void
 oss_volume(uint16 left, uint16 right)
 {
-	static BOOL use_dev_mixer = False;
 	uint32 volume;
-	int fd_mix = -1;
 
 	volume = left / (65536 / 100);
 	volume |= right / (65536 / 100) << 8;
 
-	if (use_dev_mixer)
-	{
-		if ((fd_mix = open("/dev/mixer", O_RDWR | O_NONBLOCK)) == -1)
-		{
-			perror("open /dev/mixer");
-			return;
-		}
-
-		if (ioctl(fd_mix, MIXER_WRITE(SOUND_MIXER_PCM), &volume) == -1)
-		{
-			perror("MIXER_WRITE(SOUND_MIXER_PCM)");
-			return;
-		}
-
-		close(fd_mix);
-	}
-
 	if (ioctl(g_dsp_fd, MIXER_WRITE(SOUND_MIXER_PCM), &volume) == -1)
 	{
 		perror("MIXER_WRITE(SOUND_MIXER_PCM)");
-		use_dev_mixer = True;
+		oss_driver.wave_out_volume = rdpsnd_dsp_softvol_set;
 		return;
 	}
 }
@@ -255,8 +238,6 @@ oss_play(void)
 struct audio_driver *
 oss_register(char *options)
 {
-	static struct audio_driver oss_driver;
-
 	oss_driver.wave_out_write = rdpsnd_queue_write;
 	oss_driver.wave_out_open = oss_open;
 	oss_driver.wave_out_close = oss_close;
