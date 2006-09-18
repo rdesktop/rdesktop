@@ -43,16 +43,17 @@ BOOL
 libao_open(void)
 {
 	ao_sample_format format;
-	static int warned = 0;
-
-	if (!warned && libao_device)
-	{
-		warning("device-options not supported for libao-driver\n");
-		warned = 1;
-	}
 
 	ao_initialize();
-	default_driver = ao_default_driver_id();
+
+	if (libao_device)
+	{
+		default_driver = ao_driver_id(libao_device);
+	}
+	else
+	{
+		default_driver = ao_default_driver_id();
+	}
 
 	format.bits = 16;
 	format.channels = 2;
@@ -233,6 +234,7 @@ struct audio_driver *
 libao_register(char *options)
 {
 	static struct audio_driver libao_driver;
+	static char description[101];
 
 	libao_driver.wave_out_write = rdpsnd_queue_write;
 	libao_driver.wave_out_open = libao_open;
@@ -242,9 +244,13 @@ libao_register(char *options)
 	libao_driver.wave_out_volume = rdpsnd_dsp_softvol_set;
 	libao_driver.wave_out_play = libao_play;
 	libao_driver.name = xstrdup("libao");
-	libao_driver.description = xstrdup("libao output driver");
+	libao_driver.description = description;
 	libao_driver.need_byteswap_on_be = 0;
 	libao_driver.next = NULL;
+
+	ao_initialize();
+	snprintf(description, 100, "libao output driver, default device: %s", ao_driver_info(ao_default_driver_id())->short_name);
+	ao_shutdown();
 
 	if (options)
 	{
