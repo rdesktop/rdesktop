@@ -277,16 +277,6 @@ rdpsnd_process(STREAM s)
 }
 
 BOOL
-rdpsnd_init(void)
-{
-	rdpsnd_channel =
-		channel_register("rdpsnd", CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_ENCRYPT_RDP,
-				 rdpsnd_process);
-
-	return (rdpsnd_channel != NULL);
-}
-
-BOOL
 rdpsnd_auto_open(void)
 {
 	static BOOL failed = False;
@@ -347,12 +337,41 @@ rdpsnd_register_drivers(char *options)
 }
 
 BOOL
-rdpsnd_select_driver(char *driver, char *options)
+rdpsnd_init(char *optarg)
 {
 	static struct audio_driver auto_driver;
 	struct audio_driver *pos;
+	char *driver = NULL, *options = NULL;
 
 	drivers = NULL;
+
+	rdpsnd_channel =
+		channel_register("rdpsnd", CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_ENCRYPT_RDP,
+				 rdpsnd_process);
+
+	if (rdpsnd_channel == NULL)
+	{
+		error("channel_register\n");
+		return False;
+	}
+
+	if (optarg != NULL && strlen(optarg) > 0)
+	{
+		driver = options = optarg;
+
+		while (*options != '\0' && *options != ':')
+			options++;
+
+		if (*options == ':')
+		{
+			*options = '\0';
+			options++;
+		}
+
+		if (*options == '\0')
+			options = NULL;
+	}
+
 	rdpsnd_register_drivers(options);
 
 	if (!driver)

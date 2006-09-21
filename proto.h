@@ -164,8 +164,7 @@ void rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out);
 BOOL rdpdr_abort_io(uint32 fd, uint32 major, NTSTATUS status);
 /* rdpsnd.c */
 void rdpsnd_send_completion(uint16 tick, uint8 packet_index);
-BOOL rdpsnd_init(void);
-BOOL rdpsnd_select_driver(char *driver, char *options);
+BOOL rdpsnd_init(char *optarg);
 void rdpsnd_show_help(void);
 void rdpsnd_play(void);
 /* secure.c */

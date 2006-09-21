@@ -408,6 +408,7 @@ main(int argc, char *argv[])
 	BOOL geometry_option = False;
 	int run_count = 0;	/* Session Directory support */
 	BOOL continue_connect = True;	/* Session Directory support */
+	char *rdpsnd_optarg = NULL;
 
 #ifdef HAVE_LOCALE_H
 	/* Set locale according to environment */
@@ -669,36 +670,9 @@ main(int argc, char *argv[])
 							if (str_startswith(optarg, "local"))
 #ifdef WITH_RDPSND
 							{
-								char *driver = NULL, *options =
-									NULL;
-
-								if ((driver =
-								     next_arg(optarg, ':')))
-								{
-									if (!strlen(driver))
-									{
-										driver = NULL;
-									}
-									else if ((options =
-										  next_arg(driver,
-											   ':')))
-									{
-										if (!strlen
-										    (options))
-											options =
-												NULL;
-									}
-								}
-
-								if (!rdpsnd_select_driver
-								    (driver, options))
-								{
-									warning("Driver not available\n");
-								}
-								else
-								{
-									g_rdpsnd = True;
-								}
+								rdpsnd_optarg =
+									next_arg(optarg, ':');
+								g_rdpsnd = True;
 							}
 
 #else
@@ -718,14 +692,7 @@ main(int argc, char *argv[])
 					else
 					{
 #ifdef WITH_RDPSND
-						if (!rdpsnd_select_driver(NULL, NULL))
-						{
-							warning("No sound-driver available\n");
-						}
-						else
-						{
-							g_rdpsnd = True;
-						}
+						g_rdpsnd = True;
 #else
 						warning("Not compiled with sound support\n");
 #endif
@@ -920,7 +887,12 @@ main(int argc, char *argv[])
 
 #ifdef WITH_RDPSND
 	if (g_rdpsnd)
-		rdpsnd_init();
+	{
+		if (!rdpsnd_init(rdpsnd_optarg))
+		{
+			warning("Initializing sound-support failed!\n");
+		}
+	}
 #endif
 
 	if (lspci_enabled)
