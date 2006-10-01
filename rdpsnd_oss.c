@@ -162,8 +162,9 @@ oss_volume(uint16 left, uint16 right)
 
 	if (ioctl(g_dsp_fd, MIXER_WRITE(SOUND_MIXER_PCM), &volume) == -1)
 	{
-		perror("MIXER_WRITE(SOUND_MIXER_PCM)");
+		warning("hardware volume control unavailable, falling back to software volume control!\n");
 		oss_driver.wave_out_volume = rdpsnd_dsp_softvol_set;
+		rdpsnd_dsp_softvol_set(left, right);
 		return;
 	}
 }
