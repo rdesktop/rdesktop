@@ -150,7 +150,7 @@ AC_ARG_WITH(libao,
 )
 
 AC_ARG_WITH(libsamplerate,
-    [  --with-libsamplerate=DIR look for libsamplerate at DIR/include, DIR/lib],
+    [  --with-libsamplerate=DIR  look for libsamplerate at DIR/include, DIR/lib],
     [
     CFLAGS="$CFLAGS -I$withval/include"
     CPPFLAGS="$CPPFLAGS -I$withval/include"
