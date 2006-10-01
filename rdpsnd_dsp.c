@@ -310,7 +310,7 @@ rdpsnd_dsp_process(STREAM s, struct audio_driver * current_driver, WAVEFORMATEX 
 
 	out.data = NULL;
 
-	if (current_driver->wave_out_format_supported == rdpsnd_dsp_resample_supported)
+	if (current_driver->need_resampling)
 		out.size = rdpsnd_dsp_resample(&out.data, s->data, s->size, format, stream_be);
 
 	if (out.data == NULL)

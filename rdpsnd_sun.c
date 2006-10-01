@@ -264,6 +264,7 @@ sun_register(char *options)
 	sun_driver.description =
 		xstrdup("SUN/BSD output driver, default device: " DEFAULTDEVICE " or $AUDIODEV");
 	sun_driver.need_byteswap_on_be = 1;
+	sun_driver.need_resampling = 0;
 	sun_driver.next = NULL;
 
 	if (options)

@@ -297,6 +297,7 @@ sgi_register(char *options)
 	sgi_driver.name = xstrdup("sgi");
 	sgi_driver.description = xstrdup("SGI output driver");
 	sgi_driver.need_byteswap_on_be = 1;
+	sgi_driver.need_resampling = 0;
 	sgi_driver.next = NULL;
 
 	if (options)

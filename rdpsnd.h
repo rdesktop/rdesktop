@@ -37,6 +37,7 @@ struct audio_driver
 	char *name;
 	char *description;
 	int need_byteswap_on_be;
+	int need_resampling;
 	struct audio_driver *next;
 };
 

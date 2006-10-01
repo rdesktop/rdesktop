@@ -195,6 +195,7 @@ libao_register(char *options)
 	libao_driver.name = xstrdup("libao");
 	libao_driver.description = description;
 	libao_driver.need_byteswap_on_be = 0;
+	libao_driver.need_resampling = 1;
 	libao_driver.next = NULL;
 
 	ao_initialize();

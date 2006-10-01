@@ -250,6 +250,7 @@ oss_register(char *options)
 	oss_driver.description =
 		xstrdup("OSS output driver, default device: " DEFAULTDEVICE " or $AUDIODEV");
 	oss_driver.need_byteswap_on_be = 0;
+	oss_driver.need_resampling = 0;
 	oss_driver.next = NULL;
 
 	if (options)
