@@ -132,16 +132,13 @@ rdpsnd_dsp_resample_set(uint32 device_srate, uint16 device_bitspersample, uint16
 	int err;
 #endif
 
-#ifdef HAVE_LIBSAMPLERATE
-	if (device_bitspersample != 16)
-		return False;
-#else
+#ifndef HAVE_LIBSAMPLERATE
 	if (device_srate != 44100 && device_srate != 22050)
 		return False;
+#endif
 
 	if (device_bitspersample != 16 && device_bitspersample != 8)
 		return False;
-#endif
 
 	if (device_channels != 1 && device_channels != 2)
 		return False;
@@ -171,12 +168,9 @@ rdpsnd_dsp_resample_supported(WAVEFORMATEX * format)
 		return False;
 	if ((format->nChannels != 1) && (format->nChannels != 2))
 		return False;
-#ifdef HAVE_LIBSAMPLERATE
-	if (format->wBitsPerSample != 16)
-		return False;
-#else
 	if ((format->wBitsPerSample != 8) && (format->wBitsPerSample != 16))
 		return False;
+#ifndef HAVE_LIBSAMPLERATE
 	if ((format->nSamplesPerSec != 44100) && (format->nSamplesPerSec != 22050))
 		return False;
 #endif
@@ -194,11 +188,12 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 	int innum, outnum;
 #else
 	int offset;
-	int i;
 #endif
 	static BOOL warned = False;
+	unsigned char *tmpdata = NULL;
 	int samplewidth = format->wBitsPerSample / 8;
 	int outsize = 0;
+	int i;
 
 	if ((resample_to_bitspersample == format->wBitsPerSample) &&
 	    (resample_to_channels == format->nChannels) &&
@@ -207,15 +202,36 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 
 #ifdef B_ENDIAN
 	if (!stream_be)
-		rdpsnd_dsp_swapbytes(in, size, format)
+		rdpsnd_dsp_swapbytes(in, size, format);
 #endif
-			if ((resample_to_channels != format->nChannels) ||
-			    (resample_to_bitspersample != format->wBitsPerSample))
-		{
-			warning("unsupported resample-settings (%u -> %u/%u -> %u/%u -> %u), not resampling!\n", format->nSamplesPerSec, resample_to_srate, format->wBitsPerSample, resample_to_bitspersample, format->nChannels, resample_to_channels);
-			warned = True;
-		}
 
+	/* Expand 8bit input-samples to 16bit */
+#ifndef HAVE_LIBSAMPLERATE	/* libsamplerate needs 16bit samples */
+	if (format->wBitsPerSample != resample_to_bitspersample)
+#endif
+	{
+		/* source: 8 bit, dest: 16bit */
+		if (format->wBitsPerSample == 8)
+		{
+			tmpdata = xmalloc(size * 2);
+			for (i = 0; i < size; i++)
+			{
+				tmpdata[i * 2] = in[i];
+				tmpdata[(i * 2) + 1] = 0x00;
+			}
+			in = tmpdata;
+			samplewidth = 16 / 2;
+			size *= 2;
+		}
+	}
+
+	if (resample_to_channels != format->nChannels)
+	{
+		warning("unsupported resample-settings (%u -> %u/%u -> %u/%u -> %u), not resampling!\n", format->nSamplesPerSec, resample_to_srate, format->wBitsPerSample, resample_to_bitspersample, format->nChannels, resample_to_channels);
+		warned = True;
+	}
+
+	/* Do the resampling */
 #ifdef HAVE_LIBSAMPLERATE
 	if (src_converter == NULL)
 	{
@@ -282,11 +298,30 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 	}
 #endif
 
+	if (tmpdata != NULL)
+		xfree(tmpdata);
+
+	/* Shrink 16bit output-samples to 8bit */
+#ifndef HAVE_LIBSAMPLERATE	/* libsamplerate produces 16bit samples */
+	if (format->wBitsPerSample != resample_to_bitspersample)
+#endif
+	{
+		/* source: 16 bit, dest: 8 bit */
+		if (resample_to_bitspersample == 8)
+		{
+			for (i = 0; i < outsize; i++)
+			{
+				*out[i] = *out[i * 2];
+			}
+			outsize /= 2;
+		}
+	}
+
 #ifdef B_ENDIAN
 	if (!stream_be)
-		rdpsnd_dsp_swapbytes(*out, outsize, format)
+		rdpsnd_dsp_swapbytes(*out, outsize, format);
 #endif
-			return outsize;
+	return outsize;
 }
 
 STREAM
