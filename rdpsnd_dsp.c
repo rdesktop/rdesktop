@@ -183,8 +183,7 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 	int ratio1k = (resample_to_srate * 1000) / format->nSamplesPerSec;
 #endif
 	int innum, outnum;
-	static BOOL warned = False;
-	unsigned char *tmpdata = NULL;
+	unsigned char *tmpdata = NULL, *tmp = NULL;
 	int samplewidth = format->wBitsPerSample / 8;
 	int outsize = 0;
 	int i;
@@ -199,6 +198,31 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 		rdpsnd_dsp_swapbytes(in, size, format);
 #endif
 
+	if (resample_to_channels != format->nChannels)
+	{
+		int newsize = (size / format->nChannels) * resample_to_channels;
+		tmpdata = xmalloc(newsize);
+
+		for (i = 0; i < newsize / samplewidth; i++)
+		{
+			if (format->nChannels > resample_to_channels)
+				memcpy(tmpdata + (i * samplewidth),
+				       in +
+				       (((i * format->nChannels) / resample_to_channels) *
+					samplewidth), samplewidth);
+			else
+				memcpy(tmpdata + (i * samplewidth),
+				       in +
+				       (((i / resample_to_channels) * format->nChannels +
+					 (i % format->nChannels)) * samplewidth), samplewidth);
+
+		}
+
+		in = tmpdata;
+		size = newsize;
+	}
+
+
 	/* Expand 8bit input-samples to 16bit */
 #ifndef HAVE_LIBSAMPLERATE	/* libsamplerate needs 16bit samples */
 	if (format->wBitsPerSample != resample_to_bitspersample)
@@ -207,6 +231,7 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 		/* source: 8 bit, dest: 16bit */
 		if (format->wBitsPerSample == 8)
 		{
+			tmp = tmpdata;
 			tmpdata = xmalloc(size * 2);
 			for (i = 0; i < size; i++)
 			{
@@ -216,13 +241,10 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 			in = tmpdata;
 			samplewidth = 16 / 2;
 			size *= 2;
-		}
-	}
 
-	if (resample_to_channels != format->nChannels)
-	{
-		warning("unsupported resample-settings (%u -> %u/%u -> %u/%u -> %u), not resampling!\n", format->nSamplesPerSec, resample_to_srate, format->wBitsPerSample, resample_to_bitspersample, format->nChannels, resample_to_channels);
-		warned = True;
+			if (tmp != NULL)
+				xfree(tmp);
+		}
 	}
 
 	innum = size / samplewidth;
@@ -286,8 +308,8 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 		for (j = 0; j < resample_to_channels; j++)
 		{
 			memcpy(*out + (i * resample_to_channels * samplewidth) + (samplewidth * j),
-					in + (source * resample_to_channels * samplewidth) + (samplewidth * j),
-					samplewidth);
+			       in + (source * resample_to_channels * samplewidth) +
+			       (samplewidth * j), samplewidth);
 		}
 	}
 	outsize = i * resample_to_channels * samplewidth;
