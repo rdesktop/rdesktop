@@ -149,6 +149,23 @@ AC_ARG_WITH(libao,
     ]
 )
 
+AC_ARG_WITH(libsamplerate,
+    [  --with-libsamplerate=DIR look for libsamplerate at DIR/include, DIR/lib],
+    [
+    CFLAGS="$CFLAGS -I$withval/include"
+    CPPFLAGS="$CPPFLAGS -I$withval/include"
+    LDFLAGS="$LDFLAGS -L$withval/lib"
+    rpath="$rpath:$withval/lib"
+    ]
+)
+
+AC_CHECK_HEADER(samplerate.h,
+    [
+    LIBS="$LIBS -lsamplerate"
+    AC_DEFINE(HAVE_LIBSAMPLERATE)
+    ]
+)
+
 sound="yes"
 AC_ARG_WITH(sound,
     [  --with-sound            select sound system ("oss", "sgi", "sun", "alsa" or "libao") ],

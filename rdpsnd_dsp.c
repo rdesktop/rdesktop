@@ -22,6 +22,12 @@
 #include "rdpsnd.h"
 #include "rdpsnd_dsp.h"
 
+#ifdef HAVE_LIBSAMPLERATE
+#include <samplerate.h>
+
+#define SRC_CONVERTER SRC_SINC_MEDIUM_QUALITY
+#endif
+
 #define MAX_VOLUME 65535
 
 static uint16 softvol_left = MAX_VOLUME;
@@ -29,6 +35,9 @@ static uint16 softvol_right = MAX_VOLUME;
 static uint32 resample_to_srate = 44100;
 static uint16 resample_to_bitspersample = 16;
 static uint16 resample_to_channels = 2;
+#ifdef HAVE_LIBSAMPLERATE
+static SRC_STATE *src_converter = NULL;
+#endif
 
 void
 rdpsnd_dsp_softvol_set(uint16 left, uint16 right)
@@ -119,11 +128,20 @@ rdpsnd_dsp_swapbytes(unsigned char *buffer, unsigned int size, WAVEFORMATEX * fo
 BOOL
 rdpsnd_dsp_resample_set(uint32 device_srate, uint16 device_bitspersample, uint16 device_channels)
 {
+#ifdef HAVE_LIBSAMPLERATE
+	int err;
+#endif
+
+#ifdef HAVE_LIBSAMPLERATE
+	if (device_bitspersample != 16)
+		return False;
+#else
 	if (device_srate != 44100 && device_srate != 22050)
 		return False;
 
 	if (device_bitspersample != 16 && device_bitspersample != 8)
 		return False;
+#endif
 
 	if (device_channels != 1 && device_channels != 2)
 		return False;
@@ -131,6 +149,17 @@ rdpsnd_dsp_resample_set(uint32 device_srate, uint16 device_bitspersample, uint16
 	resample_to_srate = device_srate;
 	resample_to_bitspersample = device_bitspersample;
 	resample_to_channels = device_channels;
+
+#ifdef HAVE_LIBSAMPLERATE
+	if (src_converter != NULL)
+		src_converter = src_delete(src_converter);
+
+	if ((src_converter = src_new(SRC_CONVERTER, device_channels, &err)) == NULL)
+	{
+		warning("src_new failed: %d!\n", err);
+		return False;
+	}
+#endif
 
 	return True;
 }
@@ -142,35 +171,89 @@ rdpsnd_dsp_resample_supported(WAVEFORMATEX * format)
 		return False;
 	if ((format->nChannels != 1) && (format->nChannels != 2))
 		return False;
+#ifdef HAVE_LIBSAMPLERATE
+	if (format->wBitsPerSample != 16)
+		return False;
+#else
 	if ((format->wBitsPerSample != 8) && (format->wBitsPerSample != 16))
 		return False;
 	if ((format->nSamplesPerSec != 44100) && (format->nSamplesPerSec != 22050))
 		return False;
+#endif
 
 	return True;
 }
 
 uint32
 rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
-		    WAVEFORMATEX * format)
+		    WAVEFORMATEX * format, BOOL stream_be)
 {
-	static BOOL warned = False;
-	int outsize, offset;
-	int samplewidth = format->wBitsPerSample / 8;
+#ifdef HAVE_LIBSAMPLERATE
+	SRC_DATA resample_data;
+	float *infloat, *outfloat;
+	int innum, outnum;
+#else
+	int offset;
 	int i;
+#endif
+	static BOOL warned = False;
+	int samplewidth = format->wBitsPerSample / 8;
+	int outsize = 0;
 
 	if ((resample_to_bitspersample == format->wBitsPerSample) &&
 	    (resample_to_channels == format->nChannels) &&
 	    (resample_to_srate == format->nSamplesPerSec))
 		return 0;
 
-	if ((resample_to_bitspersample != format->wBitsPerSample) ||
-	    (resample_to_channels != format->nChannels) || (format->nSamplesPerSec != 22050))
+#ifdef B_ENDIAN
+	if (!stream_be)
+		rdpsnd_dsp_swapbytes(in, size, format)
+#endif
+			if ((resample_to_channels != format->nChannels) ||
+			    (resample_to_bitspersample != format->wBitsPerSample))
+		{
+			warning("unsupported resample-settings (%u -> %u/%u -> %u/%u -> %u), not resampling!\n", format->nSamplesPerSec, resample_to_srate, format->wBitsPerSample, resample_to_bitspersample, format->nChannels, resample_to_channels);
+			warned = True;
+		}
+
+#ifdef HAVE_LIBSAMPLERATE
+	if (src_converter == NULL)
+	{
+		warning("no samplerate converter available!!\n");
+		return 0;
+	}
+
+	innum = size / samplewidth;
+	outnum = innum * (resample_to_srate / format->nSamplesPerSec);
+
+	infloat = xmalloc(sizeof(float) * innum);
+	outfloat = xmalloc(sizeof(float) * outnum);
+
+	src_short_to_float_array((short *) in, infloat, innum);
+
+	bzero(&resample_data, sizeof(resample_data));
+	resample_data.data_in = infloat;
+	resample_data.data_out = outfloat;
+	resample_data.input_frames = innum / resample_to_channels;
+	resample_data.output_frames = outnum / resample_to_channels;
+	resample_data.src_ratio = (double) resample_to_srate / (double) format->nSamplesPerSec;
+	resample_data.end_of_input = 0;
+
+	src_process(src_converter, &resample_data);
+	xfree(infloat);
+
+	outsize = outnum * samplewidth;
+	*out = xmalloc(outsize);
+	src_float_to_short_array(outfloat, (short *) *out, outnum);
+	xfree(outfloat);
+
+#else
+	if (format->nSamplesPerSec != 22050)
 	{
 		if (!warned)
 		{
-			warning("unsupported resample-settings (%u/%u/%u), not resampling!\n",
-				format->nSamplesPerSec, format->wBitsPerSample, format->nChannels);
+			warning("unsupported source samplerate (%u), not resampling!\n",
+				format->nSamplesPerSec);
 			warned = True;
 		}
 		return 0;
@@ -197,14 +280,20 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 		       in + (i * samplewidth), samplewidth);
 
 	}
+#endif
 
-	return outsize;
+#ifdef B_ENDIAN
+	if (!stream_be)
+		rdpsnd_dsp_swapbytes(*out, outsize, format)
+#endif
+			return outsize;
 }
 
 STREAM
 rdpsnd_dsp_process(STREAM s, struct audio_driver * current_driver, WAVEFORMATEX * format)
 {
 	static struct stream out;
+	BOOL stream_be = False;
 
 	/* softvol and byteswap do not change the amount of data they
 	   return, so they can operate on the input-stream */
@@ -213,13 +302,16 @@ rdpsnd_dsp_process(STREAM s, struct audio_driver * current_driver, WAVEFORMATEX 
 
 #ifdef B_ENDIAN
 	if (current_driver->need_byteswap_on_be)
+	{
 		rdpsnd_dsp_swapbytes(s->data, s->size, format);
+		stream_be = True;
+	}
 #endif
 
 	out.data = NULL;
 
 	if (current_driver->wave_out_format_supported == rdpsnd_dsp_resample_supported)
-		out.size = rdpsnd_dsp_resample(&out.data, s->data, s->size, format);
+		out.size = rdpsnd_dsp_resample(&out.data, s->data, s->size, format, stream_be);
 
 	if (out.data == NULL)
 	{
