@@ -186,6 +186,7 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 	SRC_DATA resample_data;
 	float *infloat, *outfloat;
 	int innum, outnum;
+	int err;
 #else
 	int offset;
 #endif
@@ -240,7 +241,7 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 	}
 
 	innum = size / samplewidth;
-	outnum = innum * (resample_to_srate / format->nSamplesPerSec);
+	outnum = ((float)innum * ((float)resample_to_srate / (float)format->nSamplesPerSec)) + 1;
 
 	infloat = xmalloc(sizeof(float) * innum);
 	outfloat = xmalloc(sizeof(float) * outnum);
@@ -255,12 +256,14 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 	resample_data.src_ratio = (double) resample_to_srate / (double) format->nSamplesPerSec;
 	resample_data.end_of_input = 0;
 
-	src_process(src_converter, &resample_data);
+	if ((err = src_process(src_converter, &resample_data)) != 0)
+		error("src_process: %s", src_strerror(err));
+
 	xfree(infloat);
 
-	outsize = outnum * samplewidth;
+	outsize = resample_data.output_frames_gen * resample_to_channels * samplewidth;
 	*out = xmalloc(outsize);
-	src_float_to_short_array(outfloat, (short *) *out, outnum);
+	src_float_to_short_array(outfloat, (short *) *out, resample_data.output_frames_gen * resample_to_channels);
 	xfree(outfloat);
 
 #else
