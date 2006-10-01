@@ -132,11 +132,6 @@ rdpsnd_dsp_resample_set(uint32 device_srate, uint16 device_bitspersample, uint16
 	int err;
 #endif
 
-#ifndef HAVE_LIBSAMPLERATE
-	if (device_srate != 44100 && device_srate != 22050)
-		return False;
-#endif
-
 	if (device_bitspersample != 16 && device_bitspersample != 8)
 		return False;
 
@@ -170,10 +165,6 @@ rdpsnd_dsp_resample_supported(WAVEFORMATEX * format)
 		return False;
 	if ((format->wBitsPerSample != 8) && (format->wBitsPerSample != 16))
 		return False;
-#ifndef HAVE_LIBSAMPLERATE
-	if ((format->nSamplesPerSec != 44100) && (format->nSamplesPerSec != 22050))
-		return False;
-#endif
 
 	return True;
 }
@@ -185,11 +176,11 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 #ifdef HAVE_LIBSAMPLERATE
 	SRC_DATA resample_data;
 	float *infloat, *outfloat;
-	int innum, outnum;
 	int err;
 #else
-	int offset;
+	int ratio1k = (resample_to_srate * 1000) / format->nSamplesPerSec;
 #endif
+	int innum, outnum;
 	static BOOL warned = False;
 	unsigned char *tmpdata = NULL;
 	int samplewidth = format->wBitsPerSample / 8;
@@ -232,6 +223,8 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 		warned = True;
 	}
 
+	innum = size / samplewidth;
+
 	/* Do the resampling */
 #ifdef HAVE_LIBSAMPLERATE
 	if (src_converter == NULL)
@@ -240,8 +233,7 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 		return 0;
 	}
 
-	innum = size / samplewidth;
-	outnum = ((float)innum * ((float)resample_to_srate / (float)format->nSamplesPerSec)) + 1;
+	outnum = ((float) innum * ((float) resample_to_srate / (float) format->nSamplesPerSec)) + 1;
 
 	infloat = xmalloc(sizeof(float) * innum);
 	outfloat = xmalloc(sizeof(float) * outnum);
@@ -263,42 +255,45 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 
 	outsize = resample_data.output_frames_gen * resample_to_channels * samplewidth;
 	*out = xmalloc(outsize);
-	src_float_to_short_array(outfloat, (short *) *out, resample_data.output_frames_gen * resample_to_channels);
+	src_float_to_short_array(outfloat, (short *) *out,
+				 resample_data.output_frames_gen * resample_to_channels);
 	xfree(outfloat);
 
 #else
-	if (format->nSamplesPerSec != 22050)
+	/* Michaels simple linear resampler */
+	if (resample_to_srate < format->nSamplesPerSec)
 	{
-		if (!warned)
-		{
-			warning("unsupported source samplerate (%u), not resampling!\n",
-				format->nSamplesPerSec);
-			warned = True;
-		}
+		warning("downsampling currently not supported!\n");
 		return 0;
 	}
 
-	outsize = size * 2;
+	outnum = (innum * ratio1k) / 1000;
+
+	outsize = outnum * samplewidth;
 	*out = xmalloc(outsize);
+	bzero(*out, outsize);
 
-	/* Resample from 22050 to 44100 */
-	for (i = 0; i < (size / samplewidth); i++)
+	for (i = 0; i < outsize / (resample_to_channels * samplewidth); i++)
 	{
-		/* On a stereo-channel we must make sure that left and right
-		   does not get mixed up, so we need to expand the sample-
-		   data with channels in mind: 1234 -> 12123434
-		   If we have a mono-channel, we can expand the data by simply
-		   doubling the sample-data: 1234 -> 11223344 */
+		int source = ((i + ratio1k / 1000 - 1) * 1000) / ratio1k;
+
+		if (source * resample_to_channels + samplewidth > size)
+			break;
+
 		if (resample_to_channels == 2)
-			offset = ((i * 2) - (i & 1)) * samplewidth;
+		{
+			memcpy(*out + (i * resample_to_channels * samplewidth),
+			       in + (source * resample_to_channels * samplewidth), samplewidth);
+			memcpy(*out + (i * resample_to_channels * samplewidth) + samplewidth,
+			       in + (source * resample_to_channels * samplewidth) + samplewidth,
+			       samplewidth);
+		}
 		else
-			offset = (i * 2) * samplewidth;
-
-		memcpy(*out + offset, in + (i * samplewidth), samplewidth);
-		memcpy(*out + (resample_to_channels * samplewidth + offset),
-		       in + (i * samplewidth), samplewidth);
-
+		{
+			memcpy(*out + (i * samplewidth), in + (source * samplewidth), samplewidth);
+		}
 	}
+	outsize = i * resample_to_channels * samplewidth;
 #endif
 
 	if (tmpdata != NULL)
