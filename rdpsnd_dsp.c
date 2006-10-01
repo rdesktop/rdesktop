@@ -18,6 +18,8 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+#include <strings.h>
+
 #include "rdesktop.h"
 #include "rdpsnd.h"
 #include "rdpsnd_dsp.h"
