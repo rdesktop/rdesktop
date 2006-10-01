@@ -276,7 +276,7 @@ rdpsnd_process(STREAM s)
 	}
 }
 
-BOOL
+inline BOOL
 rdpsnd_auto_open(void)
 {
 	static BOOL failed = False;
@@ -306,7 +306,7 @@ rdpsnd_auto_open(void)
 	return False;
 }
 
-void
+inline void
 rdpsnd_register_drivers(char *options)
 {
 	struct audio_driver **reg;
@@ -410,13 +410,13 @@ rdpsnd_show_help(void)
 	}
 }
 
-inline void
+void
 rdpsnd_play(void)
 {
 	current_driver->wave_out_play();
 }
 
-void
+inline void
 rdpsnd_queue_write(STREAM s, uint16 tick, uint8 index)
 {
 	struct audio_packet *packet = &packet_queue[queue_hi];
