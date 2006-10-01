@@ -29,7 +29,7 @@
 #include <ao/ao.h>
 #include <sys/time.h>
 
-#define WAVEOUTBUF	512
+#define WAVEOUTLEN	1024
 
 static ao_device *o_device = NULL;
 static int default_driver;
@@ -148,7 +148,7 @@ libao_play(void)
 
 	next_tick = rdpsnd_queue_next_tick();
 
-	len = (WAVEOUTBUF > (out->end - out->p)) ? (out->end - out->p) : WAVEOUTBUF;
+	len = (WAVEOUTLEN > (out->end - out->p)) ? (out->end - out->p) : WAVEOUTLEN;
 	ao_play(o_device, (char *) out->p, len);
 	out->p += len;
 
