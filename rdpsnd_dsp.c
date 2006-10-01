@@ -26,6 +26,9 @@
 
 static uint16 softvol_left = MAX_VOLUME;
 static uint16 softvol_right = MAX_VOLUME;
+static uint32 resample_to_srate = 44100;
+static uint16 resample_to_bitspersample = 16;
+static uint16 resample_to_channels = 2;
 
 void
 rdpsnd_dsp_softvol_set(uint16 left, uint16 right)
@@ -113,9 +116,96 @@ rdpsnd_dsp_swapbytes(unsigned char *buffer, unsigned int size, WAVEFORMATEX * fo
 	}
 }
 
+BOOL
+rdpsnd_dsp_resample_set(uint32 device_srate, uint16 device_bitspersample, uint16 device_channels)
+{
+	if (device_srate != 44100 && device_srate != 22050)
+		return False;
+
+	if (device_bitspersample != 16 && device_bitspersample != 8)
+		return False;
+
+	if (device_channels != 1 && device_channels != 2)
+		return False;
+
+	resample_to_srate = device_srate;
+	resample_to_bitspersample = device_bitspersample;
+	resample_to_channels = device_channels;
+
+	return True;
+}
+
+BOOL
+rdpsnd_dsp_resample_supported(WAVEFORMATEX * format)
+{
+	if (format->wFormatTag != WAVE_FORMAT_PCM)
+		return False;
+	if ((format->nChannels != 1) && (format->nChannels != 2))
+		return False;
+	if ((format->wBitsPerSample != 8) && (format->wBitsPerSample != 16))
+		return False;
+	if ((format->nSamplesPerSec != 44100) && (format->nSamplesPerSec != 22050))
+		return False;
+
+	return True;
+}
+
+uint32
+rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
+		    WAVEFORMATEX * format)
+{
+	static BOOL warned = False;
+	int outsize, offset;
+	int samplewidth = format->wBitsPerSample / 8;
+	int i;
+
+	if ((resample_to_bitspersample != format->wBitsPerSample) ||
+	    (resample_to_channels != format->nChannels) ||
+	    ((format->nSamplesPerSec != 44100) && (format->nSamplesPerSec != 22050)))
+	{
+		if (!warned)
+		{
+			warning("unsupported resample-settings (%u/%u/%u), not resampling!\n",
+				format->nSamplesPerSec, format->wBitsPerSample, format->nChannels);
+			warned = True;
+		}
+		return 0;
+	}
+
+	if (format->nSamplesPerSec == 22050)
+	{
+		outsize = size * 2;
+		*out = xmalloc(outsize);
+
+		/* Resample to 44100 */
+		for (i = 0; i < (size / samplewidth); i++)
+		{
+			/* On a stereo-channel we must make sure that left and right
+			   does not get mixed up, so we need to expand the sample-
+			   data with channels in mind: 1234 -> 12123434
+			   If we have a mono-channel, we can expand the data by simply
+			   doubling the sample-data: 1234 -> 11223344 */
+			if (resample_to_channels == 2)
+				offset = ((i * 2) - (i & 1)) * samplewidth;
+			else
+				offset = (i * 2) * samplewidth;
+
+			memcpy(*out + offset, in + (i * samplewidth), samplewidth);
+			memcpy(*out + (resample_to_channels * samplewidth + offset),
+			       in + (i * samplewidth), samplewidth);
+
+		}
+	}
+	else
+	{
+		outsize = 0;
+	}
+
+	return outsize;
+}
 
 STREAM
-rdpsnd_dsp_process(STREAM s, struct audio_driver *current_driver, WAVEFORMATEX * format)
+rdpsnd_dsp_process(STREAM s, struct audio_driver * current_driver, WAVEFORMATEX * format)
 {
 	static struct stream out;
 
@@ -129,11 +219,20 @@ rdpsnd_dsp_process(STREAM s, struct audio_driver *current_driver, WAVEFORMATEX *
 		rdpsnd_dsp_swapbytes(s->data, s->size, format);
 #endif
 
-	out.data = xmalloc(s->size);
+	out.data = NULL;
 
-	memcpy(out.data, s->data, s->size);
+	if (current_driver->wave_out_format_supported == rdpsnd_dsp_resample_supported)
+	{
+		out.size = rdpsnd_dsp_resample(&out.data, s->data, s->size, format);
+	}
 
-	out.size = s->size;
+	if (out.data == NULL)
+	{
+		out.data = xmalloc(s->size);
+		memcpy(out.data, s->data, s->size);
+		out.size = s->size;
+	}
+
 	out.p = out.data;
 	out.end = out.p + out.size;
 

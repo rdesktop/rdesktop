@@ -18,6 +18,12 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+/* Software volume control */
 void rdpsnd_dsp_softvol_set(uint16 left, uint16 right);
+
+/* Resample control */
+BOOL rdpsnd_dsp_resample_set(uint32 device_srate, uint16 device_bitspersample,
+			     uint16 device_channels);
+BOOL rdpsnd_dsp_resample_supported(WAVEFORMATEX * pwfx);
 
 STREAM rdpsnd_dsp_process(STREAM s, struct audio_driver *current_driver, WAVEFORMATEX * format);

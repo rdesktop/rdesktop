@@ -33,10 +33,7 @@
 
 static ao_device *o_device = NULL;
 static int default_driver;
-static int samplerate;
-static int audiochannels;
 static BOOL reopened;
-static short samplewidth;
 static char *libao_device = NULL;
 
 BOOL
@@ -57,9 +54,7 @@ libao_open(void)
 
 	format.bits = 16;
 	format.channels = 2;
-	audiochannels = 2;
 	format.rate = 44100;
-	samplerate = 44100;
 	format.byte_format = AO_FMT_LITTLE;
 
 	o_device = ao_open_live(default_driver, &format, NULL);
@@ -94,41 +89,25 @@ libao_close(void)
 }
 
 BOOL
-libao_format_supported(WAVEFORMATEX * pwfx)
-{
-	if (pwfx->wFormatTag != WAVE_FORMAT_PCM)
-		return False;
-	if ((pwfx->nChannels != 1) && (pwfx->nChannels != 2))
-		return False;
-	if ((pwfx->wBitsPerSample != 8) && (pwfx->wBitsPerSample != 16))
-		return False;
-	/* The only common denominator between libao output drivers is a sample-rate of
-	   44100, we need to upsample 22050 to it */
-	if ((pwfx->nSamplesPerSec != 44100) && (pwfx->nSamplesPerSec != 22050))
-		return False;
-
-	return True;
-}
-
-BOOL
 libao_set_format(WAVEFORMATEX * pwfx)
 {
 	ao_sample_format format;
 
 	format.bits = pwfx->wBitsPerSample;
 	format.channels = pwfx->nChannels;
-	audiochannels = pwfx->nChannels;
 	format.rate = 44100;
-	samplerate = pwfx->nSamplesPerSec;
 	format.byte_format = AO_FMT_LITTLE;
-
-	samplewidth = pwfx->wBitsPerSample / 8;
 
 	if (o_device != NULL)
 		ao_close(o_device);
 
 	o_device = ao_open_live(default_driver, &format, NULL);
 	if (o_device == NULL)
+	{
+		return False;
+	}
+
+	if (rdpsnd_dsp_resample_set(44100, pwfx->wBitsPerSample, pwfx->nChannels) == False)
 	{
 		return False;
 	}
@@ -143,8 +122,7 @@ libao_play(void)
 {
 	struct audio_packet *packet;
 	STREAM out;
-	char outbuf[WAVEOUTBUF];
-	int offset, len, i;
+	int len;
 	static long prev_s, prev_us;
 	unsigned int duration;
 	struct timeval tv;
@@ -169,39 +147,9 @@ libao_play(void)
 
 	next_tick = rdpsnd_queue_next_tick();
 
-	len = 0;
-
-	if (samplerate == 22050)
-	{
-		/* Resample to 44100 */
-		for (i = 0; (i < ((WAVEOUTBUF / 4) * (3 - samplewidth))) && (out->p < out->end);
-		     i++)
-		{
-			/* On a stereo-channel we must make sure that left and right
-			   does not get mixed up, so we need to expand the sample-
-			   data with channels in mind: 1234 -> 12123434
-			   If we have a mono-channel, we can expand the data by simply
-			   doubling the sample-data: 1234 -> 11223344 */
-			if (audiochannels == 2)
-				offset = ((i * 2) - (i & 1)) * samplewidth;
-			else
-				offset = (i * 2) * samplewidth;
-
-			memcpy(&outbuf[offset], out->p, samplewidth);
-			memcpy(&outbuf[audiochannels * samplewidth + offset], out->p, samplewidth);
-
-			out->p += samplewidth;
-			len += 2 * samplewidth;
-		}
-	}
-	else
-	{
-		len = (WAVEOUTBUF > (out->end - out->p)) ? (out->end - out->p) : WAVEOUTBUF;
-		memcpy(outbuf, out->p, len);
-		out->p += len;
-	}
-
-	ao_play(o_device, outbuf, len);
+	len = (WAVEOUTBUF > (out->end - out->p)) ? (out->end - out->p) : WAVEOUTBUF;
+	ao_play(o_device, (char *) out->p, len);
+	out->p += len;
 
 	gettimeofday(&tv, NULL);
 
@@ -240,7 +188,7 @@ libao_register(char *options)
 	libao_driver.wave_out_write = rdpsnd_queue_write;
 	libao_driver.wave_out_open = libao_open;
 	libao_driver.wave_out_close = libao_close;
-	libao_driver.wave_out_format_supported = libao_format_supported;
+	libao_driver.wave_out_format_supported = rdpsnd_dsp_resample_supported;
 	libao_driver.wave_out_set_format = libao_set_format;
 	libao_driver.wave_out_volume = rdpsnd_dsp_softvol_set;
 	libao_driver.wave_out_play = libao_play;
@@ -256,7 +204,7 @@ libao_register(char *options)
 	if (libao_info)
 	{
 		snprintf(description, 100, "libao output driver, default device: %s",
-				libao_info->short_name);
+			 libao_info->short_name);
 	}
 	else
 	{
