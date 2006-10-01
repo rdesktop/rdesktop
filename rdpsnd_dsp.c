@@ -299,7 +299,7 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 
 	for (i = 0; i < outsize / (resample_to_channels * samplewidth); i++)
 	{
-		int source = ((i * 1000) + ratio1k - 1000) / (ratio1k + 1);
+		int source = (i * 1000) / ratio1k;
 		int j;
 
 		if (source * resample_to_channels + samplewidth > size)
