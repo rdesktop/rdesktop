@@ -116,12 +116,39 @@ oss_set_format(WAVEFORMATEX * pwfx)
 		return False;
 	}
 
+	oss_driver.need_resampling = 0;
 	snd_rate = pwfx->nSamplesPerSec;
 	if (ioctl(g_dsp_fd, SNDCTL_DSP_SPEED, &snd_rate) == -1)
 	{
-		perror("SNDCTL_DSP_SPEED");
-		close(g_dsp_fd);
-		return False;
+		int rates[] = { 44100, 48000, 0 };
+		int *prates = rates;
+
+		while (*prates != 0)
+		{
+			if ((pwfx->nSamplesPerSec != *prates)
+			    && (ioctl(g_dsp_fd, SNDCTL_DSP_SPEED, prates) != -1))
+			{
+				oss_driver.need_resampling = 1;
+				snd_rate = *prates;
+				if (rdpsnd_dsp_resample_set
+				    (snd_rate, pwfx->wBitsPerSample, pwfx->nChannels) == False)
+				{
+					error("rdpsnd_dsp_resample_set failed");
+					close(g_dsp_fd);
+					return False;
+				}
+
+				break;
+			}
+			prates++;
+		}
+
+		if (*prates == 0)
+		{
+			perror("SNDCTL_DSP_SPEED");
+			close(g_dsp_fd);
+			return False;
+		}
 	}
 
 	/* try to get 12 fragments of 2^12 bytes size */
