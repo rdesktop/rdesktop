@@ -278,21 +278,16 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 	for (i = 0; i < outsize / (resample_to_channels * samplewidth); i++)
 	{
 		int source = ((i * 1000) + ratio1k - 1000) / (ratio1k + 1);
+		int j;
 
 		if (source * resample_to_channels + samplewidth > size)
 			break;
 
-		if (resample_to_channels == 2)
+		for (j = 0; j < resample_to_channels; j++)
 		{
-			memcpy(*out + (i * resample_to_channels * samplewidth),
-			       in + (source * resample_to_channels * samplewidth), samplewidth);
-			memcpy(*out + (i * resample_to_channels * samplewidth) + samplewidth,
-			       in + (source * resample_to_channels * samplewidth) + samplewidth,
-			       samplewidth);
-		}
-		else
-		{
-			memcpy(*out + (i * samplewidth), in + (source * samplewidth), samplewidth);
+			memcpy(*out + (i * resample_to_channels * samplewidth) + (samplewidth * j),
+					in + (source * resample_to_channels * samplewidth) + (samplewidth * j),
+					samplewidth);
 		}
 	}
 	outsize = i * resample_to_channels * samplewidth;
