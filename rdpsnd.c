@@ -276,7 +276,7 @@ rdpsnd_process(STREAM s)
 	}
 }
 
-inline BOOL
+static BOOL
 rdpsnd_auto_open(void)
 {
 	static BOOL failed = False;
@@ -306,7 +306,7 @@ rdpsnd_auto_open(void)
 	return False;
 }
 
-inline void
+static void
 rdpsnd_register_drivers(char *options)
 {
 	struct audio_driver **reg;
