@@ -159,9 +159,13 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 	int samplewidth = format->wBitsPerSample / 8;
 	int i;
 
+	if ((resample_to_bitspersample == format->wBitsPerSample) &&
+	    (resample_to_channels == format->nChannels) &&
+	    (resample_to_srate == format->nSamplesPerSec))
+		return 0;
+
 	if ((resample_to_bitspersample != format->wBitsPerSample) ||
-	    (resample_to_channels != format->nChannels) ||
-	    ((format->nSamplesPerSec != 44100) && (format->nSamplesPerSec != 22050)))
+	    (resample_to_channels != format->nChannels) || (format->nSamplesPerSec != 22050))
 	{
 		if (!warned)
 		{
@@ -172,33 +176,26 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 		return 0;
 	}
 
-	if (format->nSamplesPerSec == 22050)
+	outsize = size * 2;
+	*out = xmalloc(outsize);
+
+	/* Resample from 22050 to 44100 */
+	for (i = 0; i < (size / samplewidth); i++)
 	{
-		outsize = size * 2;
-		*out = xmalloc(outsize);
+		/* On a stereo-channel we must make sure that left and right
+		   does not get mixed up, so we need to expand the sample-
+		   data with channels in mind: 1234 -> 12123434
+		   If we have a mono-channel, we can expand the data by simply
+		   doubling the sample-data: 1234 -> 11223344 */
+		if (resample_to_channels == 2)
+			offset = ((i * 2) - (i & 1)) * samplewidth;
+		else
+			offset = (i * 2) * samplewidth;
 
-		/* Resample to 44100 */
-		for (i = 0; i < (size / samplewidth); i++)
-		{
-			/* On a stereo-channel we must make sure that left and right
-			   does not get mixed up, so we need to expand the sample-
-			   data with channels in mind: 1234 -> 12123434
-			   If we have a mono-channel, we can expand the data by simply
-			   doubling the sample-data: 1234 -> 11223344 */
-			if (resample_to_channels == 2)
-				offset = ((i * 2) - (i & 1)) * samplewidth;
-			else
-				offset = (i * 2) * samplewidth;
+		memcpy(*out + offset, in + (i * samplewidth), samplewidth);
+		memcpy(*out + (resample_to_channels * samplewidth + offset),
+		       in + (i * samplewidth), samplewidth);
 
-			memcpy(*out + offset, in + (i * samplewidth), samplewidth);
-			memcpy(*out + (resample_to_channels * samplewidth + offset),
-			       in + (i * samplewidth), samplewidth);
-
-		}
-	}
-	else
-	{
-		outsize = 0;
 	}
 
 	return outsize;
@@ -222,9 +219,7 @@ rdpsnd_dsp_process(STREAM s, struct audio_driver * current_driver, WAVEFORMATEX 
 	out.data = NULL;
 
 	if (current_driver->wave_out_format_supported == rdpsnd_dsp_resample_supported)
-	{
 		out.size = rdpsnd_dsp_resample(&out.data, s->data, s->size, format);
-	}
 
 	if (out.data == NULL)
 	{
