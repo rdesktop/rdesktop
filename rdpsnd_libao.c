@@ -29,7 +29,7 @@
 #include <ao/ao.h>
 #include <sys/time.h>
 
-#define WAVEOUTBUF	16
+#define WAVEOUTBUF	512
 
 static ao_device *o_device = NULL;
 static int default_driver;
@@ -55,7 +55,8 @@ libao_open(void)
 	format.bits = 16;
 	format.channels = 2;
 	format.rate = 44100;
-	format.byte_format = AO_FMT_LITTLE;
+	format.byte_format = AO_FMT_NATIVE;
+
 
 	o_device = ao_open_live(default_driver, &format, NULL);
 	if (o_device == NULL)
@@ -96,7 +97,7 @@ libao_set_format(WAVEFORMATEX * pwfx)
 	format.bits = pwfx->wBitsPerSample;
 	format.channels = pwfx->nChannels;
 	format.rate = 44100;
-	format.byte_format = AO_FMT_LITTLE;
+	format.byte_format = AO_FMT_NATIVE;
 
 	if (o_device != NULL)
 		ao_close(o_device);
@@ -194,7 +195,7 @@ libao_register(char *options)
 	libao_driver.wave_out_play = libao_play;
 	libao_driver.name = xstrdup("libao");
 	libao_driver.description = description;
-	libao_driver.need_byteswap_on_be = 0;
+	libao_driver.need_byteswap_on_be = 1;
 	libao_driver.need_resampling = 1;
 	libao_driver.next = NULL;
 
