@@ -300,17 +300,59 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 	for (i = 0; i < outsize / (resample_to_channels * samplewidth); i++)
 	{
 		int source = (i * 1000) / ratio1k;
+#if 0				/* Partial for linear resampler */
+		int part = (i * 100000) / ratio1k - source * 100;
+#endif
 		int j;
 
 		if (source * resample_to_channels + samplewidth > size)
 			break;
 
+#if 0				/* Linear resampling, TODO: soundquality fixes */
+		if (samplewidth == 1)
+		{
+			sint8 cval1, cval2;
+			for (j = 0; j < resample_to_channels; j++)
+			{
+				memcpy(&cval1,
+				       in + (source * resample_to_channels * samplewidth) +
+				       (samplewidth * j), samplewidth);
+				memcpy(&cval2,
+				       in + ((source + 1) * resample_to_channels * samplewidth) +
+				       (samplewidth * j), samplewidth);
+
+				cval1 += (cval2 * part) / 100;
+
+				memcpy(*out + (i * resample_to_channels * samplewidth) +
+				       (samplewidth * j), &cval1, samplewidth);
+			}
+		}
+		else
+		{
+			sint16 sval1, sval2;
+			for (j = 0; j < resample_to_channels; j++)
+			{
+				memcpy(&sval1,
+				       in + (source * resample_to_channels * samplewidth) +
+				       (samplewidth * j), samplewidth);
+				memcpy(&sval2,
+				       in + ((source + 1) * resample_to_channels * samplewidth) +
+				       (samplewidth * j), samplewidth);
+
+				sval1 += (sval2 * part) / 100;
+
+				memcpy(*out + (i * resample_to_channels * samplewidth) +
+				       (samplewidth * j), &sval1, samplewidth);
+			}
+		}
+#else /* Nearest neighbor search */
 		for (j = 0; j < resample_to_channels; j++)
 		{
 			memcpy(*out + (i * resample_to_channels * samplewidth) + (samplewidth * j),
 			       in + (source * resample_to_channels * samplewidth) +
 			       (samplewidth * j), samplewidth);
 		}
+#endif
 	}
 	outsize = i * resample_to_channels * samplewidth;
 #endif
