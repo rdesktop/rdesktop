@@ -495,6 +495,7 @@ send_winkey(uint32 ev_time, BOOL pressed, BOOL leftkey)
 static void
 reset_winkey(uint32 ev_time)
 {
+	printf("reset_winkey\n");
 	if (g_use_rdp5)
 	{
 		/* For some reason, it seems to suffice to release
@@ -952,6 +953,10 @@ reset_modifier_keys()
 
 	if (g_numlock_sync)
 		rdp_send_input(ev_time, RDP_INPUT_SYNCHRONIZE, 0, ui_get_numlock_state(state), 0);
+
+	//sleep(4);
+	//rdp_send_input(time(NULL), RDP_INPUT_SCANCODE, RDP_KEYPRESS, 0x9c, 0);
+	//rdp_send_input(time(NULL), RDP_INPUT_SCANCODE, RDP_KEYRELEASE, 0x9c, 0);
 }
 
 

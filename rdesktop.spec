@@ -2,7 +2,7 @@ Summary: Remote Desktop Protocol client
 Name: rdesktop
 Version: 1.5.0
 Release: 1
-Copyright: GPL; see COPYING
+License: GPL; see COPYING
 Group: Applications/Communications
 Source: rdesktop-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-buildroot
