@@ -282,10 +282,8 @@ cache_get_font(uint8 font, uint16 character)
 	if ((font < NUM_ELEMENTS(g_fontcache)) && (character < NUM_ELEMENTS(g_fontcache[0])))
 	{
 		glyph = &g_fontcache[font][character];
-		if (glyph->pixmap != NULL) {
-			//printf("glyph:%p\n", glyph);
+		if (glyph->pixmap != NULL)
 			return glyph;
-		}
 	}
 
 	error("get font %d:%d\n", font, character);
