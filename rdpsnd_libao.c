@@ -29,7 +29,7 @@
 #include <ao/ao.h>
 #include <sys/time.h>
 
-#define WAVEOUTLEN	1024
+#define WAVEOUTLEN	16
 
 static ao_device *o_device = NULL;
 static int default_driver;
