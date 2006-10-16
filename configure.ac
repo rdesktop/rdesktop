@@ -13,6 +13,8 @@ AC_HEADER_STDC
 AC_C_BIGENDIAN([AC_DEFINE(B_ENDIAN)], [AC_DEFINE(L_ENDIAN)])
 AC_PATH_XTRA
 
+PKG_PROG_PKG_CONFIG
+
 AC_SEARCH_LIBS(socket, socket)
 AC_SEARCH_LIBS(inet_aton, resolv)
 
@@ -139,32 +141,6 @@ AC_ARG_WITH(libvncserver,
 #
 # sound
 #
-AC_ARG_WITH(libao,
-    [  --with-libao=DIR        look for libao at DIR/include, DIR/lib],
-    [
-    CFLAGS="$CFLAGS -I$withval/include"
-    CPPFLAGS="$CPPFLAGS -I$withval/include"
-    LDFLAGS="$LDFLAGS -L$withval/lib"
-    rpath="$rpath:$withval/lib"
-    ]
-)
-
-AC_ARG_WITH(libsamplerate,
-    [  --with-libsamplerate=DIR  look for libsamplerate at DIR/include, DIR/lib],
-    [
-    CFLAGS="$CFLAGS -I$withval/include"
-    CPPFLAGS="$CPPFLAGS -I$withval/include"
-    LDFLAGS="$LDFLAGS -L$withval/lib"
-    rpath="$rpath:$withval/lib"
-    ]
-)
-
-AC_CHECK_HEADER(samplerate.h,
-    [
-    LIBS="$LIBS -lsamplerate"
-    AC_DEFINE(HAVE_LIBSAMPLERATE)
-    ]
-)
 
 sound="yes"
 AC_ARG_WITH(sound,
@@ -172,72 +148,128 @@ AC_ARG_WITH(sound,
     [ 
     sound="$withval" 
     ])
-if test "$sound" = yes; then
-    AC_CHECK_HEADER(ao/ao.h,
-	[
-	sound=auto
-	SOUNDOBJ="$SOUNDOBJ rdpsnd_libao.o"
-	LIBS="$LIBS -lao"
-	AC_DEFINE(RDPSND_LIBAO)
-	])
-    AC_CHECK_HEADER(sys/soundcard.h,
-	[
-	sound=auto
-	SOUNDOBJ="$SOUNDOBJ rdpsnd_oss.o"
-	AC_DEFINE(RDPSND_OSS)
-	])
-    AC_CHECK_HEADER(dmedia/audio.h,
-	[
-	sound=auto
-	SOUNDOBJ="$SOUNDOBJ rdpsnd_sgi.o"
-	LIBS="$LIBS -laudio"
-	AC_DEFINE(RDPSND_SGI)
-	])
-    AC_CHECK_HEADER(sys/audioio.h,
-	[
-	sound=auto
-	SOUNDOBJ="$SOUNDOBJ rdpsnd_sun.o"
-	AC_DEFINE(RDPSND_SUN)
-	])
-    AC_CHECK_HEADER(alsa/asoundlib.h,
-	[
-	sound=auto
-	SOUNDOBJ="$SOUNDOBJ rdpsnd_alsa.o"
-	LIBS="$LIBS -lasound"
-	AC_DEFINE(RDPSND_ALSA)
-	])
+
+AC_CHECK_HEADER(sys/soundcard.h, [HAVE_OSS=1], [HAVE_OSS=0])
+AC_CHECK_HEADER(dmedia/audio.h, [HAVE_SGI=1], [HAVE_SGI=0])
+AC_CHECK_HEADER(sys/audioio.h, [HAVE_SUN=1], [HAVE_SUN=0])
+
+AC_ARG_ENABLE(static-libsamplerate, 
+    [  --enable-static-libsamplerate link libsamplerate statically], 
+    [static_libsamplerate=yes], 
+    [static_libsamplerate=no])
+
+if test -n "$PKG_CONFIG"; then
+    PKG_CHECK_MODULES(LIBAO, ao, [HAVE_LIBAO=1], [HAVE_LIBAO=0])
+    PKG_CHECK_MODULES(ALSA, alsa, [HAVE_ALSA=1], [HAVE_ALSA=0])
+    PKG_CHECK_MODULES(LIBSAMPLERATE, Xsamplerate, [HAVE_LIBSAMPLERATE=1], [HAVE_LIBSAMPLERATE=0])
+    if test x"$HAVE_LIBSAMPLERATE" = "x1"; then
+        AC_DEFINE(HAVE_LIBSAMPLERATE)
+        if test x"$static_libsamplerate" = "xyes"; then
+            _libsamplerate_libdir=`$PKG_CONFIG --errors-to-stdout --variable=libdir samplerate`
+            LIBSAMPLERATE_LIBS="$_libsamplerate_libdir""/libsamplerate.a"
+        fi
+    fi
 fi
 
-if test "$sound" = no; then
-    break
-elif test "$sound" = auto; then
+if test "$sound" != "no"; then
     SOUNDOBJ="$SOUNDOBJ rdpsnd.o rdpsnd_dsp.o"
-    AC_DEFINE(WITH_RDPSND)
-elif test "$sound" = oss; then
-    SOUNDOBJ="rdpsnd.o rdpsnd_dsp.o rdpsnd_oss.o"
-    AC_DEFINE(WITH_RDPSND)
-elif test "$sound" = sgi; then
-    SOUNDOBJ="rdpsnd.o rdpsnd_dsp.o rdpsnd_sgi.o"
-    LDFLAGS="$LDFLAGS -laudio"
-elif test "$sound" = yes; then
-    SOUNDOBJ="$SOUNDOBJ rdpsnd.o rdpsnd_dsp.o"
-    AC_DEFINE(WITH_RDPSND)
-elif test "$sound" = sun; then
-    SOUNDOBJ="rdpsnd.o rdpsnd_dsp.o rdpsnd_sun.o"
-    AC_DEFINE(WITH_RDPSND)
-elif test "$sound" = libao; then
-    SOUNDOBJ="rdpsnd.o rdpsnd_dsp.o rdpsnd_libao.o"
-    LDFLAGS="$LDFLAGS -lao"
-    AC_DEFINE(RDPSND_SUN)
-elif test "$sound" = alsa; then
-    SOUNDOBJ="rdpsnd.o rdpsnd_dsp.o rdpsnd_alsa.o"
-    LDFLAGS="$LDFLAGS -lasound"
-    AC_DEFINE(WITH_RDPSND)
-    AC_DEFINE(RDPSND_ALSA)
-else
-   AC_MSG_WARN([sound support disabled])
-   AC_MSG_WARN([Currently supported systems are Open Sound System (oss), SGI AL (sgi), Sun/BSD (sun), ALSA (alsa) and libao])
+    CFLAGS="$CFLAGS $LIBSAMPLERATE_CFLAGS"
+    LIBS="$LIBS $LIBSAMPLERATE_LIBS"
 fi
+
+case $sound in
+    yes)
+        if test x"$HAVE_OSS" = "x1"; then
+            SOUNDOBJ="$SOUNDOBJ rdpsnd_oss.o"
+            AC_DEFINE(RDPSND_OSS)
+        fi
+
+        if test x"$HAVE_SGI" = "x1"; then
+            SOUNDOBJ="$SOUNDOBJ rdpsnd_sgi.o"
+            LIBS="$LIBS -laudio"
+            AC_DEFINE(RDPSND_SGI)
+        fi
+
+        if test x"$HAVE_SUN" = "x1"; then
+            SOUNDOBJ="$SOUNDOBJ rdpsnd_sun.o"
+            AC_DEFINE(RDPSND_SUN)
+        fi
+
+        if test x"$HAVE_ALSA" = "x1"; then
+            SOUNDOBJ="$SOUNDOBJ rdpsnd_alsa.o"
+            CFLAGS="$CFLAGS $ALSA_CFLAGS"
+            LIBS="$LIBS $ALSA_LIBS"
+            AC_DEFINE(RDPSND_ALSA)
+        fi
+
+        if test x"$HAVE_LIBAO" = "x1"; then
+            SOUNDOBJ="$SOUNDOBJ rdpsnd_libao.o"
+            CFLAGS="$CFLAGS $LIBAO_CFLAGS"
+            LIBS="$LIBS $LIBAO_LIBS"
+            AC_DEFINE(RDPSND_LIBAO)
+        fi
+
+        ;;
+
+    oss)
+        if test x"$HAVE_OSS" = "x1"; then
+            SOUNDOBJ="$SOUNDOBJ rdpsnd_oss.o"
+            AC_DEFINE(RDPSND_OSS)
+        else
+            AC_MSG_ERROR([Selected sound system is not available.])
+        fi
+        ;;
+
+    sgi)
+        if test x"$HAVE_SGI" = "x1"; then
+            SOUNDOBJ="$SOUNDOBJ rdpsnd_sgi.o"
+            LIBS="$LIBS -laudio"
+            AC_DEFINE(RDPSND_SGI)
+        else
+            AC_MSG_ERROR([Selected sound system is not available.])
+        fi
+        ;;
+
+    sun)
+        if test x"$HAVE_SUN" = "x1"; then
+            SOUNDOBJ="$SOUNDOBJ rdpsnd_sun.o"
+            AC_DEFINE(RDPSND_SUN)
+        else
+            AC_MSG_ERROR([Selected sound system is not available.])
+        fi
+        ;;
+
+    alsa)
+        if test x"$HAVE_ALSA" = "x1"; then
+            SOUNDOBJ="$SOUNDOBJ rdpsnd_alsa.o"
+            CFLAGS="$CFLAGS $ALSA_CFLAGS"
+            LIBS="$LIBS $ALSA_LIBS"
+            AC_DEFINE(RDPSND_ALSA)
+        else
+            AC_MSG_ERROR([Selected sound system is not available.])
+        fi
+        ;;
+
+    libao)
+        if test x"$HAVE_LIBAO" = "x1"; then
+            SOUNDOBJ="$SOUNDOBJ rdpsnd_libao.o"
+            CFLAGS="$CFLAGS $LIBAO_CFLAGS"
+            LIBS="$LIBS $LIBAO_LIBS"
+            AC_DEFINE(RDPSND_LIBAO)
+        else
+            AC_MSG_ERROR([Selected sound system is not available.])
+        fi
+        ;;
+
+    no)
+        ;;
+
+    *)
+        AC_MSG_WARN([sound support disabled])
+        AC_MSG_WARN([Currently supported systems are Open Sound System (oss), SGI AL (sgi), Sun/BSD (sun), ALSA (alsa) and libao])
+        ;;
+esac
+
 AC_SUBST(SOUNDOBJ)
 
 #
