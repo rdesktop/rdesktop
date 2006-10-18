@@ -161,7 +161,7 @@ AC_ARG_ENABLE(static-libsamplerate,
 if test -n "$PKG_CONFIG"; then
     PKG_CHECK_MODULES(LIBAO, ao, [HAVE_LIBAO=1], [HAVE_LIBAO=0])
     PKG_CHECK_MODULES(ALSA, alsa, [HAVE_ALSA=1], [HAVE_ALSA=0])
-    PKG_CHECK_MODULES(LIBSAMPLERATE, Xsamplerate, [HAVE_LIBSAMPLERATE=1], [HAVE_LIBSAMPLERATE=0])
+    PKG_CHECK_MODULES(LIBSAMPLERATE, samplerate, [HAVE_LIBSAMPLERATE=1], [HAVE_LIBSAMPLERATE=0])
     if test x"$HAVE_LIBSAMPLERATE" = "x1"; then
         AC_DEFINE(HAVE_LIBSAMPLERATE)
         if test x"$static_libsamplerate" = "xyes"; then
