@@ -423,7 +423,7 @@ rdpsnd_play(void)
 	current_driver->wave_out_play();
 }
 
-inline void
+void
 rdpsnd_queue_write(STREAM s, uint16 tick, uint8 index)
 {
 	struct audio_packet *packet = &packet_queue[queue_hi];
@@ -445,32 +445,32 @@ rdpsnd_queue_write(STREAM s, uint16 tick, uint8 index)
 		current_driver->wave_out_play();
 }
 
-inline struct audio_packet *
+struct audio_packet *
 rdpsnd_queue_current_packet(void)
 {
 	return &packet_queue[queue_lo];
 }
 
-inline BOOL
+BOOL
 rdpsnd_queue_empty(void)
 {
 	return (queue_lo == queue_hi);
 }
 
-inline void
+void
 rdpsnd_queue_init(void)
 {
 	queue_lo = queue_hi = 0;
 }
 
-inline void
+void
 rdpsnd_queue_next(void)
 {
 	xfree(packet_queue[queue_lo].s.data);
 	queue_lo = (queue_lo + 1) % MAX_QUEUE;
 }
 
-inline int
+int
 rdpsnd_queue_next_tick(void)
 {
 	if (((queue_lo + 1) % MAX_QUEUE) != queue_hi)
