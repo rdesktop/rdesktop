@@ -167,6 +167,12 @@ void rdpsnd_send_completion(uint16 tick, uint8 packet_index);
 BOOL rdpsnd_init(char *optarg);
 void rdpsnd_show_help(void);
 void rdpsnd_play(void);
+void rdpsnd_queue_write(STREAM s, uint16 tick, uint8 index);
+struct audio_packet *rdpsnd_queue_current_packet(void);
+BOOL rdpsnd_queue_empty(void);
+void rdpsnd_queue_init(void);
+void rdpsnd_queue_next(void);
+int rdpsnd_queue_next_tick(void);
 /* secure.c */
 void sec_hash_48(uint8 * out, uint8 * in, uint8 * salt1, uint8 * salt2, uint8 salt);
 void sec_hash_16(uint8 * out, uint8 * in, uint8 * salt1, uint8 * salt2);

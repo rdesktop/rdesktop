@@ -28,10 +28,10 @@ struct audio_packet
 struct audio_driver
 {
 	void (*wave_out_write) (STREAM s, uint16 tick, uint8 index);
-	BOOL(*wave_out_open) (void);
+	  BOOL(*wave_out_open) (void);
 	void (*wave_out_close) (void);
-	BOOL(*wave_out_format_supported) (WAVEFORMATEX * pwfx);
-	BOOL(*wave_out_set_format) (WAVEFORMATEX * pwfx);
+	  BOOL(*wave_out_format_supported) (WAVEFORMATEX * pwfx);
+	  BOOL(*wave_out_set_format) (WAVEFORMATEX * pwfx);
 	void (*wave_out_volume) (uint16 left, uint16 right);
 	void (*wave_out_play) (void);
 	char *name;
@@ -43,13 +43,6 @@ struct audio_driver
 
 extern BOOL g_dsp_busy;
 extern int g_dsp_fd;
-
-void rdpsnd_queue_write(STREAM s, uint16 tick, uint8 index);
-struct audio_packet *rdpsnd_queue_current_packet(void);
-BOOL rdpsnd_queue_empty(void);
-void rdpsnd_queue_init(void);
-void rdpsnd_queue_next(void);
-int rdpsnd_queue_next_tick(void);
 
 /* Driver register functions */
 struct audio_driver *alsa_register(char *options);
