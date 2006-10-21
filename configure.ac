@@ -175,6 +175,7 @@ if test "$sound" != "no"; then
     SOUNDOBJ="$SOUNDOBJ rdpsnd.o rdpsnd_dsp.o"
     CFLAGS="$CFLAGS $LIBSAMPLERATE_CFLAGS"
     LIBS="$LIBS $LIBSAMPLERATE_LIBS"
+    AC_DEFINE(WITH_RDPSND)
 fi
 
 case $sound in
