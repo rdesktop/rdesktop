@@ -2268,17 +2268,13 @@ ui_select(int rdp_socket)
 		FD_SET(rdp_socket, &rfds);
 		FD_SET(g_x_socket, &rfds);
 
-#ifdef WITH_RDPSND
-		/* FIXME: there should be an API for registering fds */
-		if (g_dsp_busy)
-		{
-			FD_SET(g_dsp_fd, &wfds);
-			n = (g_dsp_fd > n) ? g_dsp_fd : n;
-		}
-#endif
 		/* default timeout */
 		tv.tv_sec = 60;
 		tv.tv_usec = 0;
+
+#ifdef WITH_RDPSND
+		rdpsnd_add_fds(&n, &rfds, &wfds, &tv);
+#endif
 
 		/* add redirection handles */
 		rdpdr_add_fds(&n, &rfds, &wfds, &tv, &s_timeout);
@@ -2292,21 +2288,25 @@ ui_select(int rdp_socket)
 				error("select: %s\n", strerror(errno));
 
 			case 0:
+#ifdef WITH_RDPSND
+				rdpsnd_check_fds(&rfds, &wfds);
+#endif
+
 				/* Abort serial read calls */
 				if (s_timeout)
 					rdpdr_check_fds(&rfds, &wfds, (BOOL) True);
 				continue;
 		}
 
+#ifdef WITH_RDPSND
+		rdpsnd_check_fds(&rfds, &wfds);
+#endif
+
 		rdpdr_check_fds(&rfds, &wfds, (BOOL) False);
 
 		if (FD_ISSET(rdp_socket, &rfds))
 			return 1;
 
-#ifdef WITH_RDPSND
-		if (g_dsp_busy && FD_ISSET(g_dsp_fd, &wfds))
-			rdpsnd_play();
-#endif
 	}
 }
 

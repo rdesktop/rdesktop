@@ -65,7 +65,6 @@ libao_open(void)
 	}
 
 	g_dsp_fd = 0;
-	rdpsnd_queue_init();
 
 	reopened = True;
 
@@ -78,9 +77,7 @@ libao_close(void)
 	/* Ack all remaining packets */
 	while (!rdpsnd_queue_empty())
 	{
-		rdpsnd_send_completion(rdpsnd_queue_current_packet()->tick,
-				       rdpsnd_queue_current_packet()->index);
-		rdpsnd_queue_next();
+		rdpsnd_queue_next(0);
 	}
 
 	if (o_device != NULL)
@@ -171,8 +168,7 @@ libao_play(void)
 			       (packet->tick + duration) % 65536, next_tick % 65536));
 		}
 
-		rdpsnd_send_completion(((packet->tick + duration) % 65536), packet->index);
-		rdpsnd_queue_next();
+		rdpsnd_queue_next(duration);
 	}
 
 	g_dsp_busy = 1;
@@ -186,7 +182,6 @@ libao_register(char *options)
 	struct ao_info *libao_info;
 	static char description[101];
 
-	libao_driver.wave_out_write = rdpsnd_queue_write;
 	libao_driver.wave_out_open = libao_open;
 	libao_driver.wave_out_close = libao_close;
 	libao_driver.wave_out_format_supported = rdpsnd_dsp_resample_supported;

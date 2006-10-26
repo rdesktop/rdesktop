@@ -23,12 +23,14 @@ struct audio_packet
 	struct stream s;
 	uint16 tick;
 	uint8 index;
+
+	struct timeval arrive_tv;
+	struct timeval completion_tv;
 };
 
 struct audio_driver
 {
-	void (*wave_out_write) (STREAM s, uint16 tick, uint8 index);
-	  BOOL(*wave_out_open) (void);
+	BOOL(*wave_out_open) (void);
 	void (*wave_out_close) (void);
 	  BOOL(*wave_out_format_supported) (WAVEFORMATEX * pwfx);
 	  BOOL(*wave_out_set_format) (WAVEFORMATEX * pwfx);

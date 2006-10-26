@@ -68,8 +68,6 @@ sgi_open(void)
 		min_volume, max_volume, volume_range);
 #endif
 
-	rdpsnd_queue_init();
-
 	audioconfig = alNewConfig();
 	if (audioconfig == (ALconfig) 0)
 	{
@@ -266,8 +264,7 @@ sgi_play(void)
 			gf = alGetFilled(output_port);
 			if (gf < (4 * maxFillable / 10))
 			{
-				rdpsnd_send_completion(packet->tick, packet->index);
-				rdpsnd_queue_next();
+				rdpsnd_queue_next(0);
 			}
 			else
 			{
@@ -287,7 +284,6 @@ sgi_register(char *options)
 {
 	static struct audio_driver sgi_driver;
 
-	sgi_driver.wave_out_write = rdpsnd_queue_write;
 	sgi_driver.wave_out_open = sgi_open;
 	sgi_driver.wave_out_close = sgi_close;
 	sgi_driver.wave_out_format_supported = sgi_format_supported;

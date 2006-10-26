@@ -47,10 +47,15 @@ static BOOL device_open;
 static WAVEFORMATEX formats[MAX_FORMATS];
 static unsigned int format_count;
 static unsigned int current_format;
-unsigned int queue_hi, queue_lo;
+unsigned int queue_hi, queue_lo, queue_pending;
 struct audio_packet packet_queue[MAX_QUEUE];
 
 void (*wave_out_play) (void);
+
+static void rdpsnd_queue_write(STREAM s, uint16 tick, uint8 index);
+static void rdpsnd_queue_init(void);
+static void rdpsnd_queue_complete_pending(void);
+static long rdpsnd_queue_next_completion(void);
 
 static STREAM
 rdpsnd_init_packet(uint16 type, uint16 size)
@@ -74,7 +79,7 @@ rdpsnd_send(STREAM s)
 	channel_send(s, rdpsnd_channel);
 }
 
-void
+static void
 rdpsnd_send_completion(uint16 tick, uint8 packet_index)
 {
 	STREAM s;
@@ -232,10 +237,9 @@ rdpsnd_process(STREAM s)
 		/* Insert the 4 missing bytes retrieved from last RDPSND_WRITE */
 		memcpy(s->data, missing_bytes, 4);
 
-		current_driver->
-			wave_out_write(rdpsnd_dsp_process
-				       (s, current_driver, &formats[current_format]), tick,
-				       packet_index);
+		rdpsnd_queue_write(rdpsnd_dsp_process
+				   (s, current_driver, &formats[current_format]), tick,
+				   packet_index);
 		awaiting_data_packet = False;
 		return;
 	}
@@ -338,7 +342,7 @@ rdpsnd_register_drivers(char *options)
 #endif
 #if defined(RDPSND_LIBAO)
 	*reg = libao_register(options);
-    assert(*reg);
+	assert(*reg);
 	reg = &((*reg)->next);
 #endif
 }
@@ -361,6 +365,8 @@ rdpsnd_init(char *optarg)
 		error("channel_register\n");
 		return False;
 	}
+
+	rdpsnd_queue_init();
 
 	if (optarg != NULL && strlen(optarg) > 0)
 	{
@@ -424,12 +430,46 @@ rdpsnd_play(void)
 }
 
 void
+rdpsnd_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv)
+{
+	long next_pending;
+
+	if (g_dsp_busy)
+	{
+		FD_SET(g_dsp_fd, wfds);
+		*n = (g_dsp_fd > *n) ? g_dsp_fd : *n;
+	}
+
+	next_pending = rdpsnd_queue_next_completion();
+	if (next_pending >= 0)
+	{
+		long cur_timeout;
+
+		cur_timeout = tv->tv_sec * 1000000 + tv->tv_usec;
+		if (cur_timeout > next_pending)
+		{
+			tv->tv_sec = next_pending / 1000000;
+			tv->tv_usec = next_pending % 1000000;
+		}
+	}
+}
+
+void
+rdpsnd_check_fds(fd_set * rfds, fd_set * wfds)
+{
+	rdpsnd_queue_complete_pending();
+
+	if (g_dsp_busy && FD_ISSET(g_dsp_fd, wfds))
+		rdpsnd_play();
+}
+
+static void
 rdpsnd_queue_write(STREAM s, uint16 tick, uint8 index)
 {
 	struct audio_packet *packet = &packet_queue[queue_hi];
 	unsigned int next_hi = (queue_hi + 1) % MAX_QUEUE;
 
-	if (next_hi == queue_lo)
+	if (next_hi == queue_pending)
 	{
 		error("No space to queue audio packet\n");
 		return;
@@ -440,6 +480,8 @@ rdpsnd_queue_write(STREAM s, uint16 tick, uint8 index)
 	packet->s = *s;
 	packet->tick = tick;
 	packet->index = index;
+
+	gettimeofday(&packet->arrive_tv, NULL);
 
 	if (!g_dsp_busy)
 		current_driver->wave_out_play();
@@ -457,17 +499,30 @@ rdpsnd_queue_empty(void)
 	return (queue_lo == queue_hi);
 }
 
-void
+static void
 rdpsnd_queue_init(void)
 {
-	queue_lo = queue_hi = 0;
+	queue_pending = queue_lo = queue_hi = 0;
 }
 
 void
-rdpsnd_queue_next(void)
+rdpsnd_queue_next(unsigned long completed_in_us)
 {
-	xfree(packet_queue[queue_lo].s.data);
+	struct audio_packet *packet;
+
+	assert(!rdpsnd_queue_empty());
+
+	packet = &packet_queue[queue_lo];
+
+	gettimeofday(&packet->completion_tv, NULL);
+
+	packet->completion_tv.tv_usec += completed_in_us;
+	packet->completion_tv.tv_sec += packet->completion_tv.tv_usec / 1000000;
+	packet->completion_tv.tv_usec %= 1000000;
+
 	queue_lo = (queue_lo + 1) % MAX_QUEUE;
+
+	rdpsnd_queue_complete_pending();
 }
 
 int
@@ -481,4 +536,56 @@ rdpsnd_queue_next_tick(void)
 	{
 		return (packet_queue[queue_lo].tick + 65535) % 65536;
 	}
+}
+
+static void
+rdpsnd_queue_complete_pending(void)
+{
+	struct timeval now;
+	long elapsed;
+	struct audio_packet *packet;
+
+	gettimeofday(&now, NULL);
+
+	while (queue_pending != queue_lo)
+	{
+		packet = &packet_queue[queue_pending];
+
+		if (now.tv_sec < packet->completion_tv.tv_sec)
+			break;
+
+		if ((now.tv_sec == packet->completion_tv.tv_sec) &&
+		    (now.tv_usec < packet->completion_tv.tv_usec))
+			break;
+
+		elapsed = (packet->completion_tv.tv_sec - packet->arrive_tv.tv_sec) * 1000000 +
+			(packet->completion_tv.tv_usec - packet->arrive_tv.tv_usec);
+
+		xfree(packet->s.data);
+		rdpsnd_send_completion((packet->tick + elapsed) % 65536, packet->index);
+		queue_pending = (queue_pending + 1) % MAX_QUEUE;
+	}
+}
+
+static long
+rdpsnd_queue_next_completion(void)
+{
+	struct audio_packet *packet;
+	long remaining;
+	struct timeval now;
+
+	if (queue_pending == queue_lo)
+		return -1;
+
+	gettimeofday(&now, NULL);
+
+	packet = &packet_queue[queue_pending];
+
+	remaining = (packet->completion_tv.tv_sec - now.tv_sec) * 1000000 +
+		(packet->completion_tv.tv_usec - now.tv_usec);
+
+	if (remaining < 0)
+		return 0;
+
+	return remaining;
 }

@@ -50,7 +50,6 @@ sun_open(void)
 	/* Non-blocking so that user interface is responsive */
 	fcntl(g_dsp_fd, F_SETFL, fcntl(g_dsp_fd, F_GETFL) | O_NONBLOCK);
 
-	rdpsnd_queue_init();
 	g_reopened = True;
 
 	return True;
@@ -235,8 +234,7 @@ sun_play(void)
 				samplecnt += numsamples;
 				/* We need to add 50 to tell windows that time has passed while
 				 * playing this packet */
-				rdpsnd_send_completion(packet->tick + 50, packet->index);
-				rdpsnd_queue_next();
+				rdpsnd_queue_next(50);
 				sentcompletion = True;
 			}
 			else
@@ -253,7 +251,6 @@ sun_register(char *options)
 {
 	static struct audio_driver sun_driver;
 
-	sun_driver.wave_out_write = rdpsnd_queue_write;
 	sun_driver.wave_out_open = sun_open;
 	sun_driver.wave_out_close = sun_close;
 	sun_driver.wave_out_format_supported = sun_format_supported;

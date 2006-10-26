@@ -33,9 +33,12 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <unistd.h>
 #include <sys/time.h>
 #include <sys/ioctl.h>
 #include <sys/soundcard.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #define DEFAULTDEVICE	"/dev/dsp"
 #define MAX_LEN		512
@@ -44,6 +47,29 @@ static int snd_rate;
 static short samplewidth;
 static char *dsp_dev;
 static struct audio_driver oss_driver;
+static BOOL in_esddsp;
+
+static BOOL
+detect_esddsp(void)
+{
+	struct stat s;
+	char *preload;
+
+	if (fstat(g_dsp_fd, &s) == -1)
+		return False;
+
+	if (S_ISCHR(s.st_mode) || S_ISBLK(s.st_mode))
+		return False;
+
+	preload = getenv("LD_PRELOAD");
+	if (preload == NULL)
+		return False;
+
+	if (strstr(preload, "esddsp") == NULL)
+		return False;
+
+	return True;
+}
 
 BOOL
 oss_open(void)
@@ -53,6 +79,8 @@ oss_open(void)
 		perror(dsp_dev);
 		return False;
 	}
+
+	in_esddsp = detect_esddsp();
 
 	return True;
 }
@@ -202,10 +230,6 @@ oss_play(void)
 	struct audio_packet *packet;
 	ssize_t len;
 	STREAM out;
-	static long startedat_us;
-	static long startedat_s;
-	static BOOL started = False;
-	struct timeval tv;
 
 	if (rdpsnd_queue_empty())
 	{
@@ -215,14 +239,6 @@ oss_play(void)
 
 	packet = rdpsnd_queue_current_packet();
 	out = &packet->s;
-
-	if (!started)
-	{
-		gettimeofday(&tv, NULL);
-		startedat_us = tv.tv_usec;
-		startedat_s = tv.tv_sec;
-		started = True;
-	}
 
 	len = out->end - out->p;
 
@@ -236,37 +252,52 @@ oss_play(void)
 	}
 
 	out->p += len;
+
 	if (out->p == out->end)
 	{
-		long long duration;
-		long elapsed;
+		int delay_bytes;
+		unsigned long delay_us;
+		audio_buf_info info;
 
-		gettimeofday(&tv, NULL);
-		duration = (out->size * (1000000 / (samplewidth * snd_rate)));
-		elapsed = (tv.tv_sec - startedat_s) * 1000000 + (tv.tv_usec - startedat_us);
-
-		if (elapsed >= (duration * 85) / 100)
+		if (in_esddsp)
 		{
-			/* We need to add 50 to tell windows that time has passed while
-			 * playing this packet */
-			rdpsnd_send_completion(packet->tick + 50, packet->index);
-			rdpsnd_queue_next();
-			started = False;
+			/* EsounD has no way of querying buffer status, so we have to
+			 * go with a fixed size. */
+			delay_bytes = out->size;
 		}
 		else
 		{
-			g_dsp_busy = 1;
-			return;
+#ifdef SNDCTL_DSP_GETODELAY
+			delay_bytes = 0;
+			if (ioctl(g_dsp_fd, SNDCTL_DSP_GETODELAY, &delay_bytes) == -1)
+				delay_bytes = -1;
+#else
+			delay_bytes = -1;
+#endif
+
+			if (delay_bytes == -1)
+			{
+				if (ioctl(g_dsp_fd, SNDCTL_DSP_GETOSPACE, &info) != -1)
+					delay_bytes = info.fragstotal * info.fragsize - info.bytes;
+				else
+					delay_bytes = out->size;
+			}
 		}
+
+		delay_us = delay_bytes * (1000000 / (samplewidth * snd_rate));
+		rdpsnd_queue_next(delay_us);
 	}
-	g_dsp_busy = 1;
+	else
+	{
+		g_dsp_busy = 1;
+	}
+
 	return;
 }
 
 struct audio_driver *
 oss_register(char *options)
 {
-	oss_driver.wave_out_write = rdpsnd_queue_write;
 	oss_driver.wave_out_open = oss_open;
 	oss_driver.wave_out_close = oss_close;
 	oss_driver.wave_out_format_supported = oss_format_supported;

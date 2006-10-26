@@ -37,6 +37,7 @@ static snd_pcm_stream_t stream = SND_PCM_STREAM_PLAYBACK;
 static BOOL reopened;
 static short samplewidth;
 static int audiochannels;
+static unsigned int rate;
 static char *pcm_name;
 
 BOOL
@@ -51,7 +52,6 @@ alsa_open(void)
 	}
 
 	g_dsp_fd = 0;
-	rdpsnd_queue_init();
 
 	reopened = True;
 
@@ -63,11 +63,7 @@ alsa_close(void)
 {
 	/* Ack all remaining packets */
 	while (!rdpsnd_queue_empty())
-	{
-		rdpsnd_send_completion(rdpsnd_queue_current_packet()->tick,
-				       rdpsnd_queue_current_packet()->index);
-		rdpsnd_queue_next();
-	}
+		rdpsnd_queue_next(0);
 
 	if (pcm_handle)
 	{
@@ -113,7 +109,6 @@ BOOL
 alsa_set_format(WAVEFORMATEX * pwfx)
 {
 	snd_pcm_hw_params_t *hwparams = NULL;
-	unsigned int rate, exact_rate;
 	int err;
 	unsigned int buffertime;
 
@@ -165,8 +160,8 @@ alsa_set_format(WAVEFORMATEX * pwfx)
 	}
 #endif
 
-	exact_rate = rate = pwfx->nSamplesPerSec;
-	if ((err = snd_pcm_hw_params_set_rate_near(pcm_handle, hwparams, &exact_rate, 0)) < 0)
+	rate = pwfx->nSamplesPerSec;
+	if ((err = snd_pcm_hw_params_set_rate_near(pcm_handle, hwparams, &rate, 0)) < 0)
 	{
 		error("snd_pcm_hw_params_set_rate_near: %s\n", snd_strerror(err));
 		return False;
@@ -254,6 +249,9 @@ alsa_play(void)
 
 	if ((out->p == out->end) || duration > next_tick - packet->tick + 500)
 	{
+		snd_pcm_sframes_t delay_frames;
+		unsigned long delay_us;
+
 		prev_s = tv.tv_sec;
 		prev_us = tv.tv_usec;
 
@@ -264,8 +262,14 @@ alsa_play(void)
 			       (packet->tick + duration) % 65536, next_tick % 65536));
 		}
 
-		rdpsnd_send_completion(((packet->tick + duration) % 65536), packet->index);
-		rdpsnd_queue_next();
+		if (snd_pcm_delay(pcm_handle, &delay_frames) < 0)
+			delay_frames = out->size / (samplewidth * audiochannels);
+		if (delay_frames < 0)
+			delay_frames = 0;
+
+		delay_us = delay_frames * (1000000 / rate);
+
+		rdpsnd_queue_next(delay_us);
 	}
 
 	g_dsp_busy = 1;
@@ -277,7 +281,6 @@ alsa_register(char *options)
 {
 	static struct audio_driver alsa_driver;
 
-	alsa_driver.wave_out_write = rdpsnd_queue_write;
 	alsa_driver.wave_out_open = alsa_open;
 	alsa_driver.wave_out_close = alsa_close;
 	alsa_driver.wave_out_format_supported = alsa_format_supported;
