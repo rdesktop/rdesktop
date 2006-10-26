@@ -308,7 +308,7 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 		if (source * resample_to_channels + samplewidth > size)
 			break;
 
-#if 0				/* Linear resampling, TODO: soundquality fixes */
+#if 0				/* Linear resampling, TODO: soundquality fixes (LP filter) */
 		if (samplewidth == 1)
 		{
 			sint8 cval1, cval2;
@@ -321,7 +321,7 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 				       in + ((source + 1) * resample_to_channels * samplewidth) +
 				       (samplewidth * j), samplewidth);
 
-				cval1 += (cval2 * part) / 100;
+				cval1 += (sint8)(cval2 * part) / 100;
 
 				memcpy(*out + (i * resample_to_channels * samplewidth) +
 				       (samplewidth * j), &cval1, samplewidth);
@@ -339,7 +339,7 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 				       in + ((source + 1) * resample_to_channels * samplewidth) +
 				       (samplewidth * j), samplewidth);
 
-				sval1 += (sval2 * part) / 100;
+				sval1 += (sint16)(sval2 * part) / 100;
 
 				memcpy(*out + (i * resample_to_channels * samplewidth) +
 				       (samplewidth * j), &sval1, samplewidth);
