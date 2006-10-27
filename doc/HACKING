@@ -26,3 +26,12 @@ rdesktop.c
 RDP resources
 -------------
 http://dev.remotenetworktechnology.com/refdata.htm
+
+
+Checking for out of memory conditions
+-------------------------------------
+Try to handle out of memory conditions gracefully. Use the xmalloc
+routines from rdesktop.c, instead of calling malloc manually. Also,
+remember that several Xlib functions can return NULL. This includes
+XGetImage. Use exit_if_null to verify returned pointers. 
+

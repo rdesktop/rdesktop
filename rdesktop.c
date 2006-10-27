@@ -1079,6 +1079,17 @@ xmalloc(int size)
 	return mem;
 }
 
+/* Exit on NULL pointer. Use to verify result from XGetImage etc */
+void
+exit_if_null(void *ptr)
+{
+	if (ptr == NULL)
+	{
+		error("unexpected null pointer. Out of memory?\n");
+		exit(1);
+	}
+}
+
 /* strdup */
 char *
 xstrdup(const char *s)

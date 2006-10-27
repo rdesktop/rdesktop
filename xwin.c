@@ -3192,12 +3192,14 @@ ui_desktop_save(uint32 offset, int x, int y, int cx, int cy)
 	if (g_ownbackstore)
 	{
 		image = XGetImage(g_display, g_backstore, x, y, cx, cy, AllPlanes, ZPixmap);
+		exit_if_null(image);
 	}
 	else
 	{
 		pix = XCreatePixmap(g_display, g_wnd, cx, cy, g_depth);
 		XCopyArea(g_display, g_wnd, pix, g_gc, x, y, cx, cy, 0, 0);
 		image = XGetImage(g_display, pix, 0, 0, cx, cy, AllPlanes, ZPixmap);
+		exit_if_null(image);
 		XFreePixmap(g_display, pix);
 	}
 
