@@ -97,13 +97,7 @@ sgi_close(void)
 #endif
 
 	while (!rdpsnd_queue_empty())
-	{
-		/* We need to add 50 to tell windows that time has passed while
-		 * playing this packet */
-		rdpsnd_send_completion(rdpsnd_queue_current_packet()->tick + 50,
-				       rdpsnd_queue_current_packet()->index);
-		rdpsnd_queue_next();
-	}
+		rdpsnd_queue_next(0);
 	alDiscardFrames(output_port, 0);
 
 	alClosePort(output_port);

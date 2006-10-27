@@ -60,11 +60,7 @@ sun_close(void)
 {
 	/* Ack all remaining packets */
 	while (!rdpsnd_queue_empty())
-	{
-		rdpsnd_send_completion(rdpsnd_queue_current_packet()->tick,
-				       rdpsnd_queue_current_packet()->index);
-		rdpsnd_queue_next();
-	}
+		rdpsnd_queue_next(0);
 
 #if defined I_FLUSH && defined FLUSHW
 	/* Flush the audiobuffer */
