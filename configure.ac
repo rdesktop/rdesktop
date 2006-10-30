@@ -168,6 +168,7 @@ if test -n "$PKG_CONFIG"; then
             _libsamplerate_libdir=`$PKG_CONFIG --errors-to-stdout --variable=libdir samplerate`
             LIBSAMPLERATE_LIBS="$_libsamplerate_libdir""/libsamplerate.a"
         fi
+        LIBSAMPLERATE_LIBS="$LIBSAMPLERATE_LIBS -lm"
     fi
 fi
 
