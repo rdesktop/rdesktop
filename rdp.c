@@ -183,8 +183,8 @@ rdp_out_unistr(STREAM s, char *string, int len)
 			size_t i = 1, o = 4;
 			if ((iconv_h = iconv_open(WINDOWS_CODEPAGE, g_codepage)) == (iconv_t) - 1)
 			{
-				warning("rdp_out_unistr: iconv_open[%s -> %s] fail %d\n",
-					g_codepage, WINDOWS_CODEPAGE, (int) iconv_h);
+				warning("rdp_out_unistr: iconv_open[%s -> %s] fail %p\n",
+					g_codepage, WINDOWS_CODEPAGE, iconv_h);
 
 				g_iconv_works = False;
 				rdp_out_unistr(s, string, len);
@@ -254,8 +254,8 @@ rdp_in_unistr(STREAM s, char *string, int uni_len)
 		{
 			if ((iconv_h = iconv_open(g_codepage, WINDOWS_CODEPAGE)) == (iconv_t) - 1)
 			{
-				warning("rdp_in_unistr: iconv_open[%s -> %s] fail %d\n",
-					WINDOWS_CODEPAGE, g_codepage, (int) iconv_h);
+				warning("rdp_in_unistr: iconv_open[%s -> %s] fail %p\n",
+					WINDOWS_CODEPAGE, g_codepage, iconv_h);
 
 				g_iconv_works = False;
 				return rdp_in_unistr(s, string, uni_len);
