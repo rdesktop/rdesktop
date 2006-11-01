@@ -2158,20 +2158,17 @@ TS_SCardControl(STREAM in, STREAM out)
 	printf("---> Calling SCardControl\n");
 #endif
 
-#ifdef WITH_PCSC120
 	sc_nBytesReturned = nBytesReturned;
 	myHCard = scHandleToMyPCSC(hCard);
+#ifdef WITH_PCSC120
 	rv = SCardControl(myHCard, pInBuffer, (MYPCSC_DWORD) nInBufferSize, pOutBuffer,
 			  &sc_nBytesReturned);
-	nBytesReturned = sc_nBytesReturned;
 #else
-	sc_nBytesReturned = nBytesReturned;
-	myHCard = scHandleToMyPCSC(hCard);
 	rv = SCardControl(myHCard, (MYPCSC_DWORD) dwControlCode, pInBuffer,
 			  (MYPCSC_DWORD) nInBufferSize, pOutBuffer,
 			  (MYPCSC_DWORD) nOutBufferRealSize, &sc_nBytesReturned);
-	nBytesReturned = sc_nBytesReturned;
 #endif
+	nBytesReturned = sc_nBytesReturned;
 
 #ifdef WITH_SCARD_DEBUG
 	if (rv != SCARD_S_SUCCESS)
