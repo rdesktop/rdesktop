@@ -18,7 +18,11 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
+#ifdef WITH_SCARD
+#include <wintypes.h>
+#else
 typedef int BOOL;
+#endif
 
 #ifndef True
 #define True  (1)

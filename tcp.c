@@ -34,22 +34,36 @@
 
 static int sock;
 static struct stream in;
+#ifndef WITH_SCARD
 static struct stream out;
+#endif
 int g_tcp_port_rdp = TCP_PORT_RDP;
 
 /* Initialise TCP transport data packet */
 STREAM
 tcp_init(uint32 maxlen)
 {
-	if (maxlen > out.size)
+	STREAM result = NULL;
+
+#ifdef WITH_SCARD
+	scard_tcp_lock();
+	result = scard_tcp_init();
+#else
+	result = &out;
+#endif
+
+	if (maxlen > result->size)
 	{
-		out.data = (uint8 *) xrealloc(out.data, maxlen);
-		out.size = maxlen;
+		result->data = (uint8 *) xrealloc(result->data, maxlen);
+		result->size = maxlen;
 	}
 
-	out.p = out.data;
-	out.end = out.data + out.size;
-	return &out;
+	result->p = result->data;
+	result->end = result->data + result->size;
+#ifdef WITH_SCARD
+	scard_tcp_unlock();
+#endif
+	return result;
 }
 
 /* Send TCP transport data packet */
@@ -59,6 +73,9 @@ tcp_send(STREAM s)
 	int length = s->end - s->data;
 	int sent, total = 0;
 
+#ifdef WITH_SCARD
+	scard_tcp_lock();
+#endif
 	while (total < length)
 	{
 		sent = send(sock, s->data + total, length - total, 0);
@@ -70,6 +87,9 @@ tcp_send(STREAM s)
 
 		total += sent;
 	}
+#ifdef WITH_SCARD
+	scard_tcp_unlock();
+#endif
 }
 
 /* Receive a message on the TCP layer */
@@ -214,8 +234,12 @@ tcp_connect(char *server)
 	in.size = 4096;
 	in.data = (uint8 *) xmalloc(in.size);
 
+#ifdef WITH_SCARD
+	scard_tcp_connect();
+#else
 	out.size = 4096;
 	out.data = (uint8 *) xmalloc(out.size);
+#endif
 
 	return True;
 }
@@ -263,7 +287,10 @@ tcp_reset_state(void)
 	in.rdp_hdr = NULL;
 	in.channel_hdr = NULL;
 
-	/* Clear the outgoing stream */
+	/* Clear the outgoing stream(s) */
+#ifdef WITH_SCARD
+	scard_tcp_reset_state();
+#else
 	if (out.data != NULL)
 		xfree(out.data);
 	out.p = NULL;
@@ -275,4 +302,5 @@ tcp_reset_state(void)
 	out.sec_hdr = NULL;
 	out.rdp_hdr = NULL;
 	out.channel_hdr = NULL;
+#endif
 }

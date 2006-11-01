@@ -1,6 +1,7 @@
 rdesktop (1.?.?)
   * ALSA-driver added
   * sound-drivers can now be selected at runtime
+  * Smartcard support by Alexi Volkov <alexi@pravex.kiev.ua>
 
 rdesktop (1.5.0)
   * SeamlessRDP - seamless windows support

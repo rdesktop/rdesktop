@@ -193,6 +193,21 @@ usage(char *program)
 		"                      'PRIMARYCLIPBOARD' looks at both PRIMARY and CLIPBOARD\n");
 	fprintf(stderr, "                      when sending data to server.\n");
 	fprintf(stderr, "                      'CLIPBOARD' looks at only CLIPBOARD.\n");
+#ifdef WITH_SCARD
+	fprintf(stderr, "         '-r scard[:\"Scard Name\"=\"Alias Name[;Vendor Name]\"[,...]]\n");
+	fprintf(stderr, "          example: -r scard:\"eToken PRO 00 00\"=\"AKS ifdh 0\"\n");
+	fprintf(stderr,
+		"                   \"eToken PRO 00 00\" -> Device in Linux/Unix enviroment\n");
+	fprintf(stderr,
+		"                   \"AKS ifdh 0\"       -> Device shown in Windows enviroment \n");
+	fprintf(stderr, "          example: -r scard:\"eToken PRO 00 00\"=\"AKS ifdh 0;AKS\"\n");
+	fprintf(stderr,
+		"                   \"eToken PRO 00 00\" -> Device in Linux/Unix enviroment\n");
+	fprintf(stderr,
+		"                   \"AKS ifdh 0\"       -> Device shown in Windows enviroment \n");
+	fprintf(stderr,
+		"                   \"AKS\"              -> Device vendor name                 \n");
+#endif
 	fprintf(stderr, "   -0: attach to console\n");
 	fprintf(stderr, "   -4: use RDP version 4\n");
 	fprintf(stderr, "   -5: use RDP version 5 (default)\n");
@@ -740,9 +755,17 @@ main(int argc, char *argv[])
 					else
 						g_rdpclip = True;
 				}
+				else if (strncmp("scard", optarg, 5) == 0)
+				{
+#ifdef WITH_SCARD
+					scard_enum_devices(&g_num_devices, optarg + 5);
+#else
+					warning("Not compiled with smartcard support\n");
+#endif
+				}
 				else
 				{
-					warning("Unknown -r argument\n\n\tPossible arguments are: comport, disk, lptport, printer, sound, clipboard\n");
+					warning("Unknown -r argument\n\n\tPossible arguments are: comport, disk, lptport, printer, sound, clipboard, scard\n");
 				}
 				break;
 

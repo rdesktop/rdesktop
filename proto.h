@@ -157,6 +157,8 @@ void rdp_disconnect(void);
 /* rdpdr.c */
 int get_device_index(NTHANDLE handle);
 void convert_to_unix_filename(char *filename);
+void rdpdr_send_completion(uint32 device, uint32 id, uint32 status, uint32 result, uint8 * buffer,
+			   uint32 length);
 BOOL rdpdr_init(void);
 void rdpdr_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv, BOOL * timeout);
 struct async_iorequest *rdpdr_remove_iorequest(struct async_iorequest *prev,
@@ -302,6 +304,14 @@ unsigned int seamless_send_position(unsigned long id, int x, int y, int width, i
 void seamless_select_timeout(struct timeval *tv);
 unsigned int seamless_send_zchange(unsigned long id, unsigned long below, unsigned long flags);
 unsigned int seamless_send_focus(unsigned long id, unsigned long flags);
+/* scard.c */
+void scardSetInfo(uint32 device, uint32 id, uint32 bytes_out);
+int scard_enum_devices(uint32 * id, char *optarg);
+void scard_tcp_lock(void);
+void scard_tcp_unlock(void);
+STREAM scard_tcp_init(void);
+void scard_tcp_connect(void);
+void scard_tcp_reset_state(void);
 
 /* *INDENT-OFF* */
 #ifdef __cplusplus

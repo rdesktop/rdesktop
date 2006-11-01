@@ -79,6 +79,22 @@ LIBS="$LIBS -L$ssldir/lib -lcrypto"
 rpath="$rpath:$ssldir/lib"
              ])
 
+AC_ARG_ENABLE(smartcard, 
+             [  --enable-smartcard	  Enables smart-card support.
+	     ],
+             [ 
+		if test -n "$PKG_CONFIG"; then
+			PKG_CHECK_MODULES(PCSCLITE, libpcsclite, [WITH_SCARD=1], [WITH_SCARD=0])
+			if test x"$WITH_SCARD" = "x1"; then
+				SCARDOBJ="scard.o"
+				CFLAGS="$CFLAGS $PCSCLITE_CFLAGS"
+				LIBS="$LIBS $PCSCLITE_LIBS"
+				AC_DEFINE(WITH_SCARD)
+			fi
+		fi
+             ])
+
+AC_SUBST(SCARDOBJ)
 
 #
 # Alignment
@@ -784,6 +800,17 @@ AC_ARG_WITH(debug-channel,
 	fi
     ])
 
+
+AC_ARG_WITH(debug-smartcard,
+    [  --with-debug-smartcard  enable debugging of smart-card code],
+    [
+        if test $withval != "no";
+        then
+		if test x"$WITH_SCARD" = "x1"; then
+			AC_DEFINE(WITH_SCARD_DEBUG,1)
+		fi
+	fi
+    ])
 
 #
 # target-specific stuff

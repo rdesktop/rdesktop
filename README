@@ -30,3 +30,13 @@ Terminal Services enabled, or there is a firewall blocking access.
 
 The rdesktop manual page lists the possible options ("man rdesktop").
 
+Smart-card support notes
+------------------------
+
+Smart-card support module uses PCSC-lite. You should use PCSC-lite 1.2.9 or
+later.
+
+To enable smart-card support in the rdesktop just run "./configure" with the
+"--enable-smartcard" option. Also you can enable smart-card debug with
+additional "--with-debug-smartcard" option.
+

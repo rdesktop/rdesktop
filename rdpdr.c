@@ -60,6 +60,9 @@ extern DEVICE_FNS serial_fns;
 extern DEVICE_FNS printer_fns;
 extern DEVICE_FNS parallel_fns;
 extern DEVICE_FNS disk_fns;
+#ifdef WITH_SCARD
+extern DEVICE_FNS scard_fns;
+#endif
 extern FILEINFO g_fileinfo[];
 extern BOOL g_notify_stamp;
 
@@ -309,7 +312,7 @@ rdpdr_send_available(void)
 	channel_send(s, rdpdr_channel);
 }
 
-static void
+void
 rdpdr_send_completion(uint32 device, uint32 id, uint32 status, uint32 result, uint8 * buffer,
 		      uint32 length)
 {
@@ -395,6 +398,11 @@ rdpdr_process_irp(STREAM s)
 			break;
 
 		case DEVICE_TYPE_SCARD:
+#ifdef WITH_SCARD
+			fns = &scard_fns;
+			rw_blocking = False;
+			break;
+#endif
 		default:
 
 			error("IRP for bad device %ld\n", device);
@@ -671,9 +679,20 @@ rdpdr_process_irp(STREAM s)
 
 			out.data = out.p = buffer;
 			out.size = sizeof(buffer);
+#ifdef  WITH_SCARD_DEBUG
+			printf("[SMART-CARD TRACE]\n");
+			printf("device 0x%.8x\n", device);
+			printf("file   0x%.8x\n", file);
+			printf("id     0x%.8x\n", id);
+#endif
+#ifdef WITH_SCARD
+			scardSetInfo(device, id, bytes_out + 0x14);
+#endif
 			status = fns->device_control(file, request, s, &out);
 			result = buffer_len = out.p - out.data;
-
+#ifdef  WITH_SCARD_DEBUG
+			printf("[SMART-CARD TRACE] OUT 0x%.8x\n", status);
+#endif
 			/* Serial SERIAL_WAIT_ON_MASK */
 			if (status == STATUS_PENDING)
 			{
@@ -684,6 +703,10 @@ rdpdr_process_irp(STREAM s)
 					break;
 				}
 			}
+#ifdef WITH_SCARD
+			else if (status == (STATUS_PENDING | 0xC0000000))
+				status = STATUS_PENDING;
+#endif
 			break;
 
 
