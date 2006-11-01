@@ -13,8 +13,13 @@
 #include <sys/types.h>
 #include <time.h>
 #ifndef MAKE_PROTO
+#ifdef PCSC_OSX
+#include <PCSC/pcsclite.h>
+#include <PCSC/winscard.h>
+#else
 #include <pcsclite.h>
 #include <winscard.h>
+#endif /* PCSC_OSX */
 #include "scard.h"
 
 /* variable segment */
@@ -2079,7 +2084,7 @@ TS_SCardControl(STREAM in, STREAM out)
 	MYPCSC_SCARDHANDLE myHCard;
 	SERVER_DWORD map[3];
 	SERVER_DWORD dwControlCode;
-	char *pInBuffer, *pOutBuffer;
+	unsigned char *pInBuffer, *pOutBuffer;
 	SERVER_DWORD nInBufferSize, nOutBufferSize, nOutBufferRealSize, nBytesReturned;
 	MYPCSC_DWORD sc_nBytesReturned;
 	PMEM_HANDLE lcHandle = NULL;

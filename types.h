@@ -19,7 +19,11 @@
 */
 
 #ifdef WITH_SCARD
+#ifdef PCSC_OSX
+#include <PCSC/wintypes.h>
+#else
 #include <wintypes.h>
+#endif /* PCSC_OSX */
 #else
 typedef int BOOL;
 #endif

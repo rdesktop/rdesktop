@@ -83,14 +83,26 @@ AC_ARG_ENABLE(smartcard,
              [  --enable-smartcard	  Enables smart-card support.
 	     ],
              [ 
-		if test -n "$PKG_CONFIG"; then
-			PKG_CHECK_MODULES(PCSCLITE, libpcsclite, [WITH_SCARD=1], [WITH_SCARD=0])
-			if test x"$WITH_SCARD" = "x1"; then
-				SCARDOBJ="scard.o"
-				CFLAGS="$CFLAGS $PCSCLITE_CFLAGS"
-				LIBS="$LIBS $PCSCLITE_LIBS"
-				AC_DEFINE(WITH_SCARD)
-			fi
+	     	case "$OSTYPE" in
+			darwin*)
+				AC_CHECK_HEADER(PCSC/pcsclite.h, [WITH_SCARD=1], [WITH_SCARD=0])
+				AC_DEFINE(PCSC_OSX)
+				AC_DEFINE(WITH_PCSC120)
+				PCSCLITE_CFLAGS=""
+				PCSCLITE_LIBS="-framework PCSC"
+				;;
+			*)
+				if test -n "$PKG_CONFIG"; then
+					PKG_CHECK_MODULES(PCSCLITE, libpcsclite, [WITH_SCARD=1], [WITH_SCARD=0])
+				fi
+				;;
+		esac
+
+		if test x"$WITH_SCARD" = "x1"; then
+			SCARDOBJ="scard.o"
+			CFLAGS="$CFLAGS $PCSCLITE_CFLAGS"
+			LIBS="$LIBS $PCSCLITE_LIBS"
+			AC_DEFINE(WITH_SCARD)
 		fi
              ])
 
