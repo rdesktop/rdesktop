@@ -26,6 +26,12 @@
 #include <openssl/bn.h>
 #include <openssl/x509v3.h>
 
+#if defined(OPENSSL_VERSION_NUMBER) && (OPENSSL_VERSION_NUMBER >= 0x0090800f)
+#define D2I_X509_CONST const
+#else
+#define D2I_X509_CONST
+#endif
+
 extern char g_hostname[16];
 extern int g_width;
 extern int g_height;
@@ -650,7 +656,9 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 
 			in_uint32_le(s, ignorelen);
 			DEBUG_RDP5(("Ignored Certificate length is %d\n", ignorelen));
-			ignorecert = d2i_X509(NULL, &(s->p), ignorelen);
+			ignorecert =
+				d2i_X509(NULL, (D2I_X509_CONST unsigned char **) &(s->p),
+					 ignorelen);
 
 			if (ignorecert == NULL)
 			{	/* XXX: error out? */
@@ -674,7 +682,7 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 
 		in_uint32_le(s, cacert_len);
 		DEBUG_RDP5(("CA Certificate length is %d\n", cacert_len));
-		cacert = d2i_X509(NULL, &(s->p), cacert_len);
+		cacert = d2i_X509(NULL, (D2I_X509_CONST unsigned char **) &(s->p), cacert_len);
 		/* Note: We don't need to move s->p here - d2i_X509 is
 		   "kind" enough to do it for us */
 		if (NULL == cacert)
@@ -697,7 +705,7 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 
 		in_uint32_le(s, cert_len);
 		DEBUG_RDP5(("Certificate length is %d\n", cert_len));
-		server_cert = d2i_X509(NULL, &(s->p), cert_len);
+		server_cert = d2i_X509(NULL, (D2I_X509_CONST unsigned char **) &(s->p), cert_len);
 		if (NULL == server_cert)
 		{
 			error("Couldn't load Certificate from server\n");
