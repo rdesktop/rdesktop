@@ -810,7 +810,7 @@ TS_SCardConnect(STREAM in, STREAM out, BOOL wide)
 			  (MYPCSC_DWORD) dwPreferredProtocol, &myHCard, &dwActiveProtocol);
 	hCard = scHandleToServer(myHCard);
 #ifdef WITH_SCARD_DEBUG
-	printf("[RECEIVED HCARD 0x%016lx]\n", myHCard);
+	printf("[RECEIVED HCARD 0x%016lx]\n", (unsigned long) myHCard);
 	printf("[MANGLED  HCARD 0x%08x]\n", hCard);
 #endif
 	if (rv != SCARD_S_SUCCESS)
@@ -891,7 +891,7 @@ TS_SCardReconnect(STREAM in, STREAM out)
 	printf("[INIT  = 0x%.8x]\n", (unsigned int) dwInitialization);
 	printf("[hContext = 0x%.8x]\n", (unsigned int) hContext);
 	printf("[hCard = 0x%.8x]\n", (unsigned int) hCard);
-	printf("[myHCard = 0x%016lx]\n", myHCard);
+	printf("[myHCard = 0x%016lx]\n", (unsigned long) myHCard);
 #endif
 	rv = SCardReconnect(myHCard, (MYPCSC_DWORD) dwShareMode, (MYPCSC_DWORD) dwPreferredProtocol,
 			    (MYPCSC_DWORD) dwInitialization, &dwActiveProtocol);
@@ -1372,7 +1372,7 @@ TS_SCardBeginTransaction(STREAM in, STREAM out)
 	myHCard = scHandleToMyPCSC(hCard);
 #ifdef WITH_SCARD_DEBUG
 	printf("[hCard = 0x%.8x]\n", (unsigned int) hCard);
-	printf("[myHCard = 0x%016lx]\n", myHCard);
+	printf("[myHCard = 0x%016lx]\n", (unsigned long) myHCard);
 #endif
 	rv = SCardBeginTransaction(myHCard);
 #ifdef WITH_SCARD_DEBUG
@@ -1400,7 +1400,7 @@ TS_SCardEndTransaction(STREAM in, STREAM out)
 	myHCard = scHandleToMyPCSC(hCard);
 #ifdef WITH_SCARD_DEBUG
 	printf("[hCard = 0x%.8x]\n", (unsigned int) hCard);
-	printf("[myHCard = 0x%016lx]\n", myHCard);
+	printf("[myHCard = 0x%016lx]\n", (unsigned long) myHCard);
 	printf("[dwDisposition = 0x%.8x]\n", (unsigned int) dwDisposition);
 #endif
 	rv = SCardEndTransaction(myHCard, (MYPCSC_DWORD) dwDisposition);
@@ -1557,7 +1557,7 @@ TS_SCardTransmit(STREAM in, STREAM out)
 	printf("[SEND LEN = %d]\n", (unsigned int) cbSendLength);
 	printf("[RECV LEN = %d]\n", (unsigned int) cbRecvLength);
 	printf("[hCard = 0x%.8x]\n", (unsigned int) hCard);
-	printf("[myHCard = 0x%016lx]\n", myHCard);
+	printf("[myHCard = 0x%016lx]\n", (unsigned long) myHCard);
 	printf("[pioSendPci]\n");
 	if (pioSendPci == NULL)
 		printf("NULL\n");
@@ -1674,7 +1674,7 @@ TS_SCardStatus(STREAM in, STREAM out, BOOL wide)
 	myHCard = scHandleToMyPCSC(hCard);
 #ifdef WITH_SCARD_DEBUG
 	printf("[hCard 0x%.8x]\n", (unsigned int) hCard);
-	printf("[myHCard 0x%016lx]\n", myHCard);
+	printf("[myHCard 0x%016lx]\n", (unsigned long) myHCard);
 	printf("[dwReaderLen %d]\n", (unsigned int) dwReaderLen);
 	printf("[dwAtrLen %d]\n", (unsigned int) dwAtrLen);
 #endif
