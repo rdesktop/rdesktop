@@ -2647,7 +2647,7 @@ scard_tcp_lock(void)
 {
 	if (!tcp_sendcontrol_mutex)
 	{
-		tcp_sendcontrol_mutex = (pthread_mutex_t *) malloc(sizeof(pthread_mutex_t));
+		tcp_sendcontrol_mutex = (pthread_mutex_t *) xmalloc(sizeof(pthread_mutex_t));
 		pthread_mutex_init(tcp_sendcontrol_mutex, NULL);
 	}
 
