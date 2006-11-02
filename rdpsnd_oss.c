@@ -89,6 +89,7 @@ void
 oss_close(void)
 {
 	close(g_dsp_fd);
+	g_dsp_busy = 0;
 }
 
 BOOL
@@ -123,7 +124,7 @@ oss_set_format(WAVEFORMATEX * pwfx)
 	if (ioctl(g_dsp_fd, SNDCTL_DSP_SETFMT, &format) == -1)
 	{
 		perror("SNDCTL_DSP_SETFMT");
-		close(g_dsp_fd);
+		oss_close();
 		return False;
 	}
 
@@ -140,7 +141,7 @@ oss_set_format(WAVEFORMATEX * pwfx)
 	if (ioctl(g_dsp_fd, SNDCTL_DSP_STEREO, &stereo) == -1)
 	{
 		perror("SNDCTL_DSP_CHANNELS");
-		close(g_dsp_fd);
+		oss_close();
 		return False;
 	}
 
@@ -162,7 +163,7 @@ oss_set_format(WAVEFORMATEX * pwfx)
 				    (snd_rate, pwfx->wBitsPerSample, pwfx->nChannels) == False)
 				{
 					error("rdpsnd_dsp_resample_set failed");
-					close(g_dsp_fd);
+					oss_close();
 					return False;
 				}
 
@@ -174,7 +175,7 @@ oss_set_format(WAVEFORMATEX * pwfx)
 		if (*prates == 0)
 		{
 			perror("SNDCTL_DSP_SPEED");
-			close(g_dsp_fd);
+			oss_close();
 			return False;
 		}
 	}
@@ -191,7 +192,7 @@ oss_set_format(WAVEFORMATEX * pwfx)
 		if (ioctl(g_dsp_fd, SNDCTL_DSP_GETOSPACE, &info) == -1)
 		{
 			perror("SNDCTL_DSP_GETOSPACE");
-			close(g_dsp_fd);
+			oss_close();
 			return False;
 		}
 
