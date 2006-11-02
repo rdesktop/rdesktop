@@ -497,7 +497,7 @@ outBufferFinish(STREAM out, char *buffer, unsigned int length)
 }
 
 static void
-outForceAllignment(STREAM out, unsigned int seed)
+outForceAlignment(STREAM out, unsigned int seed)
 {
 	SERVER_DWORD add = (seed - (out->p - out->data) % seed) % seed;
 	if (add > 0)
@@ -696,7 +696,7 @@ TS_SCardIsValidContext(STREAM in, STREAM out)
 		DEBUG_SCARD(("<--SUCCESS SCardListReaders (no SCardIsValidContext)-->\n"));
 	}
 
-	outForceAllignment(out, 8);
+	outForceAlignment(out, 16);
 	SC_xfreeallmemory(&lcHandle);
 	return rv;
 }
@@ -769,7 +769,7 @@ TS_SCardListReaders(STREAM in, STREAM out, BOOL wide)
 	out_uint32_le(out, dataLength);
 	out->p = pend;
 
-	outForceAllignment(out, 8);
+	outForceAlignment(out, 16);
 	SC_xfreeallmemory(&lcHandle);
 	return rv;
 }
@@ -844,7 +844,7 @@ TS_SCardConnect(STREAM in, STREAM out, BOOL wide)
 	out_uint32_le(out, 0x00000004);
 	out_uint32_le(out, hCard);
 
-	outForceAllignment(out, 8);
+	outForceAlignment(out, 16);
 	SC_xfreeallmemory(&lcHandle);
 	return rv;
 }
@@ -887,7 +887,7 @@ TS_SCardReconnect(STREAM in, STREAM out)
 		DEBUG_SCARD(("<--SUCCESS SCardReconnect-->\n"));
 	}
 
-	outForceAllignment(out, 8);
+	outForceAlignment(out, 16);
 	out_uint32_le(out, (SERVER_DWORD) dwActiveProtocol);
 	return rv;
 }
@@ -943,7 +943,7 @@ TS_SCardDisconnect(STREAM in, STREAM out)
 		DEBUG_SCARD(("<--SUCCESS SCardDisconnect-->\n"));
 	}
 
-	outForceAllignment(out, 8);
+	outForceAlignment(out, 16);
 	return rv;
 }
 
@@ -1200,7 +1200,7 @@ TS_SCardGetStatusChange(STREAM in, STREAM out, BOOL wide)
 		out_uint8p(out, (void *) ((unsigned char **) cur + 2),
 			   sizeof(SERVER_SCARD_READERSTATE_A) - 2 * sizeof(unsigned char *));
 	}
-	outForceAllignment(out, 8);
+	outForceAlignment(out, 16);
 	SC_xfreeallmemory(&lcHandle);
 	return rv;
 }
@@ -1224,7 +1224,7 @@ TS_SCardCancel(STREAM in, STREAM out)
 	{
 		DEBUG_SCARD(("<--SUCCESS SCardCancel-->\n"));
 	}
-	outForceAllignment(out, 8);
+	outForceAlignment(out, 16);
 	return rv;
 }
 
@@ -1329,7 +1329,7 @@ TS_SCardLocateCardsByATR(STREAM in, STREAM out, BOOL wide)
 			   sizeof(SCARD_READERSTATE_A) - 2 * sizeof(unsigned char *));
 	}
 
-	outForceAllignment(out, 8);
+	outForceAlignment(out, 16);
 	SC_xfreeallmemory(&lcHandle);
 	return rv;
 }
@@ -1355,7 +1355,7 @@ TS_SCardBeginTransaction(STREAM in, STREAM out)
 	{
 		DEBUG_SCARD(("<--SUCCESS SCardBeginTransaction-->\n"));
 	}
-	outForceAllignment(out, 8);
+	outForceAlignment(out, 16);
 	return rv;
 }
 
@@ -1386,7 +1386,7 @@ TS_SCardEndTransaction(STREAM in, STREAM out)
 	{
 		DEBUG_SCARD(("<--SUCCESS SCardEndTransaction-->\n"));
 	}
-	outForceAllignment(out, 8);
+	outForceAlignment(out, 16);
 	return rv;
 }
 
@@ -1629,7 +1629,7 @@ TS_SCardTransmit(STREAM in, STREAM out)
 
 		outBufferFinish(out, (char *) recvBuf, cbRecvLength);
 	}
-	outForceAllignment(out, 8);
+	outForceAlignment(out, 16);
 	SC_xfreeallmemory(&lcHandle);
 	return rv;
 }
@@ -1745,7 +1745,7 @@ TS_SCardStatus(STREAM in, STREAM out, BOOL wide)
 		out_uint32_le(out, dataLength);
 		out->p = psave;
 	}
-	outForceAllignment(out, 8);
+	outForceAlignment(out, 16);
 	SC_xfreeallmemory(&lcHandle);
 	return rv;
 }
@@ -1839,7 +1839,7 @@ TS_SCardState(STREAM in, STREAM out)
 		out_uint8p(out, atr, dwAtrLen);
 		outRepos(out, dwAtrLen);
 	}
-	outForceAllignment(out, 8);
+	outForceAlignment(out, 16);
 	SC_xfreeallmemory(&lcHandle);
 	return rv;
 }
@@ -1892,7 +1892,7 @@ TS_SCardListReaderGroups(STREAM in, STREAM out)
 	outRepos(out, dwGroups);
 	out_uint32_le(out, 0x00000000);
 
-	outForceAllignment(out, 8);
+	outForceAlignment(out, 16);
 	SC_xfreeallmemory(&lcHandle);
 	return rv;
 }
@@ -1993,7 +1993,7 @@ TS_SCardGetAttrib(STREAM in, STREAM out)
 		outRepos(out, dwAttrLen);
 		out_uint32_le(out, 0x00000000);
 	}
-	outForceAllignment(out, 8);
+	outForceAlignment(out, 16);
 	return rv;
 }
 
@@ -2046,7 +2046,7 @@ TS_SCardSetAttrib(STREAM in, STREAM out)
 	out_uint32_le(out, 0x00000200);
 	out_uint32_le(out, 0x00000000);
 	out_uint32_le(out, 0x00000000);
-	outForceAllignment(out, 8);
+	outForceAlignment(out, 16);
 	SC_xfreeallmemory(&lcHandle);
 	return rv;
 }
@@ -2159,7 +2159,7 @@ TS_SCardControl(STREAM in, STREAM out)
 		outRepos(out, nBytesReturned);
 	}
 
-	outForceAllignment(out, 8);
+	outForceAlignment(out, 16);
 	SC_xfreeallmemory(&lcHandle);
 	return rv;
 }
