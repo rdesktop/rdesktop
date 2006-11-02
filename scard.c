@@ -499,11 +499,13 @@ outBufferFinish(STREAM out, char *buffer, unsigned int length)
 static void
 outForceAlignment(STREAM out, unsigned int seed)
 {
+#if 0
 	SERVER_DWORD add = (seed - (out->p - out->data) % seed) % seed;
 	if (add > 0)
-	{
 		out_uint8s(out, add);
-	}
+#else
+	out_uint8s(out, seed);
+#endif
 }
 
 static unsigned int
