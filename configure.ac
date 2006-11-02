@@ -819,7 +819,7 @@ AC_ARG_WITH(debug-smartcard,
         if test $withval != "no";
         then
 		if test x"$WITH_SCARD" = "x1"; then
-			AC_DEFINE(WITH_SCARD_DEBUG,1)
+			AC_DEFINE(WITH_DEBUG_SCARD,1)
 		fi
 	fi
     ])

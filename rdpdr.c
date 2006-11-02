@@ -679,20 +679,19 @@ rdpdr_process_irp(STREAM s)
 
 			out.data = out.p = buffer;
 			out.size = sizeof(buffer);
-#ifdef  WITH_SCARD_DEBUG
-			printf("[SMART-CARD TRACE]\n");
-			printf("device 0x%.8x\n", device);
-			printf("file   0x%.8x\n", file);
-			printf("id     0x%.8x\n", id);
-#endif
+
+			DEBUG_SCARD(("[SMART-CARD TRACE]\n"));
+			DEBUG_SCARD(("device 0x%.8x\n", device));
+			DEBUG_SCARD(("file   0x%.8x\n", file));
+			DEBUG_SCARD(("id     0x%.8x\n", id));
 #ifdef WITH_SCARD
 			scardSetInfo(device, id, bytes_out + 0x14);
 #endif
 			status = fns->device_control(file, request, s, &out);
 			result = buffer_len = out.p - out.data;
-#ifdef  WITH_SCARD_DEBUG
-			printf("[SMART-CARD TRACE] OUT 0x%.8x\n", status);
-#endif
+
+			DEBUG_SCARD(("[SMART-CARD TRACE] OUT 0x%.8x\n", status));
+
 			/* Serial SERIAL_WAIT_ON_MASK */
 			if (status == STATUS_PENDING)
 			{
