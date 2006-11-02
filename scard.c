@@ -1509,16 +1509,6 @@ TS_SCardTransmit(STREAM in, STREAM out)
 
 	if (cbRecvLength)
 	{
-		/* FIXME: handle responses with length > 448 bytes */
-		if (cbRecvLength > 448)
-		{
-#ifdef WITH_SCARD_DEBUG
-			printf("[RECV LEN %d -> %d]\n", (unsigned int) cbRecvLength, 400);
-#endif
-			cbRecvLength = 448;
-		}
-
-
 		recvBuf = SC_xmalloc(&lcHandle, cbRecvLength);
 		if (!recvBuf)
 			return SC_returnNoMemoryError(&lcHandle, in, out);
@@ -1598,6 +1588,17 @@ TS_SCardTransmit(STREAM in, STREAM out)
 	rv = SCardTransmit(myHCard, myPioSendPci, sendBuf, (MYPCSC_DWORD) cbSendLength,
 			   myPioRecvPci, recvBuf, &myCbRecvLength);
 	cbRecvLength = myCbRecvLength;
+
+	/* FIXME: handle responses with length > 448 bytes */
+	if (cbRecvLength > 448)
+	{
+		warning("Card response limited from %d to 448 bytes!\n", cbRecvLength);
+#ifdef WITH_SCARD_DEBUG
+		printf("[RECV LEN %d -> %d]\n", (unsigned int) cbRecvLength, 400);
+#endif
+		cbRecvLength = 448;
+	}
+
 	if (pioRecvPci)
 	{
 		copyIORequest_MyPCSCToServer(myPioRecvPci, pioRecvPci);
