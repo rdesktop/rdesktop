@@ -44,8 +44,7 @@
 
 static struct stream out[STREAM_COUNT];
 static int cur_stream_id = 0;
-static pthread_mutex_t *tcp_sendcontrol_mutex = NULL;
-static pthread_mutex_t *sec_channels_mutex = NULL;
+static pthread_mutex_t **scard_mutex = NULL;
 
 static uint32 curDevice = 0, curId = 0, curBytesOut = 0;
 static PSCNameMapRec nameMapList = NULL;
@@ -2620,39 +2619,27 @@ DEVICE_FNS scard_fns = {
 #endif /* MAKE_PROTO */
 
 void
-scard_tcp_lock(void)
+scard_lock(int lock)
 {
-	if (!tcp_sendcontrol_mutex)
+	if (!scard_mutex)
 	{
-		tcp_sendcontrol_mutex = (pthread_mutex_t *) xmalloc(sizeof(pthread_mutex_t));
-		pthread_mutex_init(tcp_sendcontrol_mutex, NULL);
+		scard_mutex =
+			(pthread_mutex_t **) xmalloc(sizeof(pthread_mutex_t *) * SCARD_LOCK_LAST);
 	}
 
-	pthread_mutex_lock(tcp_sendcontrol_mutex);
-}
-
-void
-scard_tcp_unlock(void)
-{
-	pthread_mutex_unlock(tcp_sendcontrol_mutex);
-}
-
-void
-scard_sec_lock(void)
-{
-	if (!sec_channels_mutex)
+	if (!scard_mutex[lock])
 	{
-		sec_channels_mutex = (pthread_mutex_t *) xmalloc(sizeof(pthread_mutex_t));
-		pthread_mutex_init(sec_channels_mutex, NULL);
+		scard_mutex[lock] = (pthread_mutex_t *) xmalloc(sizeof(pthread_mutex_t));
+		pthread_mutex_init(scard_mutex[lock], NULL);
 	}
 
-	pthread_mutex_lock(sec_channels_mutex);
+	pthread_mutex_lock(scard_mutex[lock]);
 }
 
 void
-scard_sec_unlock(void)
+scard_unlock(int lock)
 {
-	pthread_mutex_unlock(sec_channels_mutex);
+	pthread_mutex_unlock(scard_mutex[lock]);
 }
 
 STREAM

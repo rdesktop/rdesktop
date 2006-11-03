@@ -66,11 +66,7 @@ extern DEVICE_FNS scard_fns;
 extern FILEINFO g_fileinfo[];
 extern BOOL g_notify_stamp;
 
-#ifdef WITH_SCARD
-VCHANNEL *rdpdr_channel;
-#else
 static VCHANNEL *rdpdr_channel;
-#endif
 
 /* If select() times out, the request for the device with handle g_min_timeout_fd is aborted */
 NTHANDLE g_min_timeout_fd;
@@ -323,6 +319,9 @@ rdpdr_send_completion(uint32 device, uint32 id, uint32 status, uint32 result, ui
 	uint8 magic[4] = "rDCI";
 	STREAM s;
 
+#ifdef WITH_SCARD
+	scard_lock(SCARD_LOCK_RDPDR);
+#endif
 	s = channel_init(rdpdr_channel, 20 + length);
 	out_uint8a(s, magic, 4);
 	out_uint32_le(s, device);
@@ -337,6 +336,9 @@ rdpdr_send_completion(uint32 device, uint32 id, uint32 status, uint32 result, ui
 	/* hexdump(s->channel_hdr + 8, s->end - s->channel_hdr - 8); */
 #endif
 	channel_send(s, rdpdr_channel);
+#ifdef WITH_SCARD
+	scard_unlock(SCARD_LOCK_RDPDR);
+#endif
 }
 
 static void

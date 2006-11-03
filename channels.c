@@ -83,6 +83,10 @@ channel_send(STREAM s, VCHANNEL * channel)
 	uint32 thislength, remaining;
 	uint8 *data;
 
+#ifdef WITH_SCARD
+	scard_lock(SCARD_LOCK_CHANNEL);
+#endif
+
 	/* first fragment sent in-place */
 	s_pop_layer(s, channel_hdr);
 	length = s->end - s->p - 8;
@@ -125,6 +129,10 @@ channel_send(STREAM s, VCHANNEL * channel)
 
 		data += thislength;
 	}
+
+#ifdef WITH_SCARD
+	scard_unlock(SCARD_LOCK_CHANNEL);
+#endif
 }
 
 void

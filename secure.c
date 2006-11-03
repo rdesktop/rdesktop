@@ -363,7 +363,7 @@ sec_send_to_channel(STREAM s, uint32 flags, uint16 channel)
 	int datalen;
 
 #ifdef WITH_SCARD
-	scard_sec_lock();
+	scard_lock(SCARD_LOCK_SEC);
 #endif
 
 	s_pop_layer(s, sec_hdr);
@@ -387,7 +387,7 @@ sec_send_to_channel(STREAM s, uint32 flags, uint16 channel)
 	mcs_send_to_channel(s, channel);
 
 #ifdef WITH_SCARD
-	scard_sec_unlock();
+	scard_unlock(SCARD_LOCK_SEC);
 #endif
 }
 

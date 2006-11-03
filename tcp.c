@@ -46,7 +46,7 @@ tcp_init(uint32 maxlen)
 	STREAM result = NULL;
 
 #ifdef WITH_SCARD
-	scard_tcp_lock();
+	scard_lock(SCARD_LOCK_TCP);
 	result = scard_tcp_init();
 #else
 	result = &out;
@@ -61,7 +61,7 @@ tcp_init(uint32 maxlen)
 	result->p = result->data;
 	result->end = result->data + result->size;
 #ifdef WITH_SCARD
-	scard_tcp_unlock();
+	scard_unlock(SCARD_LOCK_TCP);
 #endif
 	return result;
 }
@@ -74,7 +74,7 @@ tcp_send(STREAM s)
 	int sent, total = 0;
 
 #ifdef WITH_SCARD
-	scard_tcp_lock();
+	scard_lock(SCARD_LOCK_TCP);
 #endif
 	while (total < length)
 	{
@@ -88,7 +88,7 @@ tcp_send(STREAM s)
 		total += sent;
 	}
 #ifdef WITH_SCARD
-	scard_tcp_unlock();
+	scard_unlock(SCARD_LOCK_TCP);
 #endif
 }
 
