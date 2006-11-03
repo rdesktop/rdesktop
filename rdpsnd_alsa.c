@@ -69,6 +69,7 @@ alsa_close(void)
 	{
 		snd_pcm_drop(pcm_handle);
 		snd_pcm_close(pcm_handle);
+		pcm_handle = NULL;
 	}
 }
 
