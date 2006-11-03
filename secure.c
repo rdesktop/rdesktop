@@ -362,6 +362,10 @@ sec_send_to_channel(STREAM s, uint32 flags, uint16 channel)
 {
 	int datalen;
 
+#ifdef WITH_SCARD
+	scard_sec_lock();
+#endif
+
 	s_pop_layer(s, sec_hdr);
 	if (!g_licence_issued || (flags & SEC_ENCRYPT))
 		out_uint32_le(s, flags);
@@ -381,6 +385,10 @@ sec_send_to_channel(STREAM s, uint32 flags, uint16 channel)
 	}
 
 	mcs_send_to_channel(s, channel);
+
+#ifdef WITH_SCARD
+	scard_sec_unlock();
+#endif
 }
 
 /* Transmit secure transport packet */

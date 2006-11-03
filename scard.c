@@ -45,6 +45,7 @@
 static struct stream out[STREAM_COUNT];
 static int cur_stream_id = 0;
 static pthread_mutex_t *tcp_sendcontrol_mutex = NULL;
+static pthread_mutex_t *sec_channels_mutex = NULL;
 
 static uint32 curDevice = 0, curId = 0, curBytesOut = 0;
 static PSCNameMapRec nameMapList = NULL;
@@ -54,7 +55,6 @@ static pthread_t queueHandler;
 static pthread_mutex_t queueAccess;
 static pthread_mutex_t queueEmpty;
 static pthread_mutex_t hcardAccess;
-static pthread_mutex_t sendControl;
 
 static PMEM_HANDLE threadListHandle = NULL;
 static PThreadListElement threadList = NULL;
@@ -149,12 +149,6 @@ scard_enum_devices(uint32 * id, char *optarg)
 	if (0 != pthread_mutex_init(&hcardAccess, NULL))
 	{
 		error("[SMART CARD: Can't initialize hcard list access mutex]\n");
-		return 0;
-	}
-
-	if (0 != pthread_mutex_init(&sendControl, NULL))
-	{
-		error("[SMART CARD: Can't initialize send control mutex]\n");
 		return 0;
 	}
 
@@ -2497,9 +2491,7 @@ SC_deviceControl(PSCThreadData data)
 	size_t buffer_len = 0;
 	scard_device_control(data->handle, data->request, data->in, data->out);
 	buffer_len = (size_t) data->out->p - (size_t) data->out->data;
-	pthread_mutex_lock(&sendControl);
 	rdpdr_send_completion(data->device, data->id, 0, buffer_len, data->out->data, buffer_len);
-	pthread_mutex_unlock(&sendControl);
 	SC_destroyThreadData(data);
 }
 
@@ -2643,6 +2635,24 @@ void
 scard_tcp_unlock(void)
 {
 	pthread_mutex_unlock(tcp_sendcontrol_mutex);
+}
+
+void
+scard_sec_lock(void)
+{
+	if (!sec_channels_mutex)
+	{
+		sec_channels_mutex = (pthread_mutex_t *) xmalloc(sizeof(pthread_mutex_t));
+		pthread_mutex_init(sec_channels_mutex, NULL);
+	}
+
+	pthread_mutex_lock(sec_channels_mutex);
+}
+
+void
+scard_sec_unlock(void)
+{
+	pthread_mutex_unlock(sec_channels_mutex);
 }
 
 STREAM

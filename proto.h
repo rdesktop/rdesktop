@@ -309,6 +309,8 @@ void scardSetInfo(uint32 device, uint32 id, uint32 bytes_out);
 int scard_enum_devices(uint32 * id, char *optarg);
 void scard_tcp_lock(void);
 void scard_tcp_unlock(void);
+void scard_sec_lock(void);
+void scard_sec_unlock(void);
 STREAM scard_tcp_init(void);
 void scard_tcp_connect(void);
 void scard_tcp_reset_state(void);

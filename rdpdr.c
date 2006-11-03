@@ -66,7 +66,11 @@ extern DEVICE_FNS scard_fns;
 extern FILEINFO g_fileinfo[];
 extern BOOL g_notify_stamp;
 
+#ifdef WITH_SCARD
+VCHANNEL *rdpdr_channel;
+#else
 static VCHANNEL *rdpdr_channel;
+#endif
 
 /* If select() times out, the request for the device with handle g_min_timeout_fd is aborted */
 NTHANDLE g_min_timeout_fd;
