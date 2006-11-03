@@ -233,12 +233,6 @@ scard_enum_devices(uint32 * id, char *optarg)
 		}
 	}
 
-
-	printf("******************************************************\n");
-	printf("* Smart Card support for RDesktop is initialized.    *\n");
-	printf("* Copyright (C) by Alexi Volkov, alexi@myrealbox.com *\n");
-	printf("******************************************************\n");
-
 	return count;
 }
 
