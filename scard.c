@@ -606,8 +606,8 @@ TS_SCardEstablishContext(STREAM in, STREAM out)
 	rv = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &hContext);
 	if (rv)
 	{
-		DEBUG_SCARD(("<--ERROR SCardEstablishContext Code=0x%.8x]-->\n",
-			     (unsigned int) rv));
+		DEBUG_SCARD(("<--ERROR SCardEstablishContext Code=0x%.8x, %s]-->\n",
+			     (unsigned int) rv, pcsc_stringify_error(rv)));
 	}
 	else
 	{
@@ -636,7 +636,8 @@ TS_SCardReleaseContext(STREAM in, STREAM out)
 
 	if (rv)
 	{
-		DEBUG_SCARD(("<--ERROR SCardReleaseContext Code=0x%.8x-->\n", (unsigned int) rv));
+		DEBUG_SCARD(("<--ERROR SCardReleaseContext Code=0x%.8x, %s-->\n", (unsigned int) rv,
+			     pcsc_stringify_error(rv)));
 	}
 	else
 	{
@@ -669,8 +670,7 @@ TS_SCardIsValidContext(STREAM in, STREAM out)
 
 	if (rv)
 	{
-		DEBUG_SCARD(("<--ERROR SCardListReaders (no SCardIsValidContext) Code=0x%.8x-->\n",
-			     (unsigned int) rv));
+		DEBUG_SCARD(("<--ERROR SCardListReaders (no SCardIsValidContext) Code=0x%.8x, %s-->\n", (unsigned int) rv, pcsc_stringify_error(rv)));
 		rv = SCARD_E_INVALID_HANDLE;
 	}
 	else
@@ -788,7 +788,8 @@ TS_SCardConnect(STREAM in, STREAM out, BOOL wide)
 	DEBUG_SCARD(("[MANGLED  HCARD 0x%08x]\n", hCard));
 	if (rv != SCARD_S_SUCCESS)
 	{
-		DEBUG_SCARD(("<--ERROR SCardConnect Code=0x%.8x-->\n", (unsigned int) rv));
+		DEBUG_SCARD(("<--ERROR SCardConnect Code=0x%.8x, %s-->\n", (unsigned int) rv,
+			     pcsc_stringify_error(rv)));
 	}
 	else
 	{
@@ -862,7 +863,8 @@ TS_SCardReconnect(STREAM in, STREAM out)
 			    (MYPCSC_DWORD) dwInitialization, &dwActiveProtocol);
 	if (rv != SCARD_S_SUCCESS)
 	{
-		DEBUG_SCARD(("<--ERROR SCardReconnect Code=0x%.8x-->\n", (unsigned int) rv));
+		DEBUG_SCARD(("<--ERROR SCardReconnect Code=0x%.8x, %s-->\n", (unsigned int) rv,
+			     pcsc_stringify_error(rv)));
 	}
 	else
 	{
@@ -918,7 +920,8 @@ TS_SCardDisconnect(STREAM in, STREAM out)
 
 	if (rv != SCARD_S_SUCCESS)
 	{
-		DEBUG_SCARD(("<--ERROR SCardDisconnect Code=0x%.8x-->\n", (unsigned int) rv));
+		DEBUG_SCARD(("<--ERROR SCardDisconnect Code=0x%.8x, %s-->\n", (unsigned int) rv,
+			     pcsc_stringify_error(rv)));
 	}
 	else
 	{
@@ -1130,7 +1133,8 @@ TS_SCardGetStatusChange(STREAM in, STREAM out, BOOL wide)
 
 	if (rv != SCARD_S_SUCCESS)
 	{
-		DEBUG_SCARD(("<--ERROR SCardGetStatusChange Code=0x%.8x-->\n", (unsigned int) rv));
+		DEBUG_SCARD(("<--ERROR SCardGetStatusChange Code=0x%.8x, %s-->\n",
+			     (unsigned int) rv, pcsc_stringify_error(rv)));
 	}
 	else
 	{
@@ -1200,7 +1204,8 @@ TS_SCardCancel(STREAM in, STREAM out)
 	rv = SCardCancel((MYPCSC_SCARDCONTEXT) hContext);
 	if (rv != SCARD_S_SUCCESS)
 	{
-		DEBUG_SCARD(("<--ERROR SCardCancel Code=0x%.8x-->\n", (unsigned int) rv));
+		DEBUG_SCARD(("<--ERROR SCardCancel Code=0x%.8x, %s-->\n", (unsigned int) rv,
+			     pcsc_stringify_error(rv)));
 	}
 	else
 	{
@@ -1269,7 +1274,7 @@ TS_SCardLocateCardsByATR(STREAM in, STREAM out, BOOL wide)
 	copyReaderState_MyPCSCToServer(myRsArray, rsArray, readerCount);
 	if (rv != SCARD_S_SUCCESS)
 	{
-		DEBUG_SCARD(("<--ERROR SCardGetStatusChange (no SCardLocateCardsByATR) Code=0x%.8x-->\n", (unsigned int) rv));
+		DEBUG_SCARD(("<--ERROR SCardGetStatusChange (no SCardLocateCardsByATR) Code=0x%.8x, %s-->\n", (unsigned int) rv, pcsc_stringify_error(rv)));
 	}
 	else
 	{
@@ -1331,7 +1336,8 @@ TS_SCardBeginTransaction(STREAM in, STREAM out)
 	rv = SCardBeginTransaction(myHCard);
 	if (rv != SCARD_S_SUCCESS)
 	{
-		DEBUG_SCARD(("<--ERROR SCardBeginTransaction Code=0x%.8x-->\n", (unsigned int) rv));
+		DEBUG_SCARD(("<--ERROR SCardBeginTransaction Code=0x%.8x, %s-->\n",
+			     (unsigned int) rv, pcsc_stringify_error(rv)));
 	}
 	else
 	{
@@ -1362,7 +1368,8 @@ TS_SCardEndTransaction(STREAM in, STREAM out)
 	rv = SCardEndTransaction(myHCard, (MYPCSC_DWORD) dwDisposition);
 	if (rv != SCARD_S_SUCCESS)
 	{
-		DEBUG_SCARD(("<--ERROR SCardEndTransaction Code=0x%.8x-->\n", (unsigned int) rv));
+		DEBUG_SCARD(("<--ERROR SCardEndTransaction Code=0x%.8x, %s-->\n", (unsigned int) rv,
+			     pcsc_stringify_error(rv)));
 	}
 	else
 	{
@@ -1571,7 +1578,8 @@ TS_SCardTransmit(STREAM in, STREAM out)
 
 	if (rv != SCARD_S_SUCCESS)
 	{
-		DEBUG_SCARD(("<--ERROR SCardTransmit Code=0x%.8x-->\n", (unsigned int) rv));
+		DEBUG_SCARD(("<--ERROR SCardTransmit Code=0x%.8x, %s-->\n", (unsigned int) rv,
+			     pcsc_stringify_error(rv)));
 	}
 	else
 	{
@@ -1668,7 +1676,8 @@ TS_SCardStatus(STREAM in, STREAM out, BOOL wide)
 
 	if (rv != SCARD_S_SUCCESS)
 	{
-		DEBUG_SCARD(("<--ERROR SCardStatus Code=0x%.8x-->\n", (unsigned int) rv));
+		DEBUG_SCARD(("<--ERROR SCardStatus Code=0x%.8x, %s-->\n", (unsigned int) rv,
+			     pcsc_stringify_error(rv)));
 		return SC_returnCode(rv, &lcHandle, in, out);
 	}
 	else
@@ -1779,8 +1788,8 @@ TS_SCardState(STREAM in, STREAM out)
 
 	if (rv != SCARD_S_SUCCESS)
 	{
-		DEBUG_SCARD(("<--ERROR SCardStatus (no ScardState) Code=0x%.8x-->\n",
-			     (unsigned int) rv));
+		DEBUG_SCARD(("<--ERROR SCardStatus (no ScardState) Code=0x%.8x, %s-->\n",
+			     (unsigned int) rv, pcsc_stringify_error(rv)));
 		return SC_returnCode(rv, &lcHandle, in, out);
 	}
 	else
@@ -1858,7 +1867,8 @@ TS_SCardListReaderGroups(STREAM in, STREAM out)
 
 	if (rv)
 	{
-		DEBUG_SCARD(("<--ERROR SCardListReaderGroups Code=0x%.8x-->\n", (unsigned int) rv));
+		DEBUG_SCARD(("<--ERROR SCardListReaderGroups Code=0x%.8x, %s-->\n",
+			     (unsigned int) rv, pcsc_stringify_error(rv)));
 		return SC_returnCode(rv, &lcHandle, in, out);
 	}
 	else
@@ -1949,7 +1959,8 @@ TS_SCardGetAttrib(STREAM in, STREAM out)
 
 	if (rv != SCARD_S_SUCCESS)
 	{
-		DEBUG_SCARD(("<--ERROR SCardGetAttrib Code=0x%.8x-->\n", (unsigned int) rv));
+		DEBUG_SCARD(("<--ERROR SCardGetAttrib Code=0x%.8x, %s-->\n", (unsigned int) rv,
+			     pcsc_stringify_error(rv)));
 		return SC_returnCode(rv, &lcHandle, in, out);
 	}
 	else
@@ -2017,7 +2028,8 @@ TS_SCardSetAttrib(STREAM in, STREAM out)
 
 	if (rv)
 	{
-		DEBUG_SCARD(("<--ERROR SCardSetAttrib Code=0x%.8x-->\n", (unsigned int) rv));
+		DEBUG_SCARD(("<--ERROR SCardSetAttrib Code=0x%.8x, %s-->\n", (unsigned int) rv,
+			     pcsc_stringify_error(rv)));
 	}
 	else
 	{
@@ -2120,7 +2132,8 @@ TS_SCardControl(STREAM in, STREAM out)
 #ifdef WITH_DEBUG_SCARD
 	if (rv != SCARD_S_SUCCESS)
 	{
-		DEBUG_SCARD(("<--ERROR SCardControl Code=0x%.8x-->\n", (unsigned int) rv));
+		DEBUG_SCARD(("<--ERROR SCardControl Code=0x%.8x, %s-->\n", (unsigned int) rv,
+			     pcsc_stringify_error(rv)));
 	}
 	else
 	{
