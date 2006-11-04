@@ -2623,8 +2623,15 @@ scard_lock(int lock)
 {
 	if (!scard_mutex)
 	{
+		int i;
+
 		scard_mutex =
 			(pthread_mutex_t **) xmalloc(sizeof(pthread_mutex_t *) * SCARD_LOCK_LAST);
+
+		for (i = 0; i < SCARD_LOCK_LAST; i++)
+		{
+			scard_mutex[i] = NULL;
+		}
 	}
 
 	if (!scard_mutex[lock])
