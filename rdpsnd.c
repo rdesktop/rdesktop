@@ -345,6 +345,7 @@ rdpsnd_register_drivers(char *options)
 	assert(*reg);
 	reg = &((*reg)->next);
 #endif
+	*reg = NULL;
 }
 
 BOOL

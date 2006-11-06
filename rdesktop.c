@@ -423,7 +423,9 @@ main(int argc, char *argv[])
 	BOOL geometry_option = False;
 	int run_count = 0;	/* Session Directory support */
 	BOOL continue_connect = True;	/* Session Directory support */
+#ifdef WITH_RDPSND
 	char *rdpsnd_optarg = NULL;
+#endif
 
 #ifdef HAVE_LOCALE_H
 	/* Set locale according to environment */
