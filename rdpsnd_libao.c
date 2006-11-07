@@ -179,8 +179,6 @@ struct audio_driver *
 libao_register(char *options)
 {
 	static struct audio_driver libao_driver;
-	struct ao_info *libao_info;
-	static char description[101];
 
 	libao_driver.wave_out_open = libao_open;
 	libao_driver.wave_out_close = libao_close;
@@ -189,26 +187,10 @@ libao_register(char *options)
 	libao_driver.wave_out_volume = rdpsnd_dsp_softvol_set;
 	libao_driver.wave_out_play = libao_play;
 	libao_driver.name = xstrdup("libao");
-	libao_driver.description = description;
+	libao_driver.description = xstrdup("libao output driver, default device: system dependent");
 	libao_driver.need_byteswap_on_be = 1;
 	libao_driver.need_resampling = 1;
 	libao_driver.next = NULL;
-
-	ao_initialize();
-
-	libao_info = ao_driver_info(ao_default_driver_id());
-
-	if (libao_info)
-	{
-		snprintf(description, 100, "libao output driver, default device: %s",
-			 libao_info->short_name);
-	}
-	else
-	{
-		snprintf(description, 100, "libao output driver, default device: none");
-	}
-
-	ao_shutdown();
 
 	if (options)
 	{
