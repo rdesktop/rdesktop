@@ -27,6 +27,15 @@ AC_CHECK_HEADER(langinfo.h, AC_DEFINE(HAVE_LANGINFO_H))
 
 AC_CHECK_TOOL(STRIP, strip, :)
 
+dnl Don't depend on pkg-config
+m4_ifdef([PKG_CHECK_MODULES], [], [
+		m4_errprint([warning: pkg-config checks are not available])
+		m4_defun([PKG_CHECK_MODULES], [
+			AC_MSG_WARN([pkg-config not available, cannot check for $2])
+			$4
+		])
+])
+
 rpath=""
 
 #
