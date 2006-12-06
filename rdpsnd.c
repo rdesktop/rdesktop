@@ -30,7 +30,7 @@
 #define RDPSND_SET_VOLUME	3
 #define RDPSND_UNKNOWN4		4
 #define RDPSND_COMPLETION	5
-#define RDPSND_SERVERTICK	6
+#define RDPSND_PING			6
 #define RDPSND_NEGOTIATE	7
 
 #define MAX_FORMATS		10
@@ -176,18 +176,16 @@ rdpsnd_process_negotiate(STREAM in)
 }
 
 static void
-rdpsnd_process_servertick(STREAM in)
+rdpsnd_process_ping(STREAM in)
 {
-	uint16 tick1, tick2;
+	uint16 tick;
 	STREAM out;
 
-	/* in_uint8s(in, 4); unknown */
-	in_uint16_le(in, tick1);
-	in_uint16_le(in, tick2);
+	in_uint16_le(in, tick);
 
-	out = rdpsnd_init_packet(RDPSND_SERVERTICK | 0x2300, 4);
-	out_uint16_le(out, tick1);
-	out_uint16_le(out, tick2);
+	out = rdpsnd_init_packet(RDPSND_PING | 0x2300, 4);
+	out_uint16_le(out, tick);
+	out_uint16_le(out, 0);
 	s_mark_end(out);
 	rdpsnd_send(out);
 }
@@ -265,8 +263,8 @@ rdpsnd_process(STREAM s)
 		case RDPSND_NEGOTIATE:
 			rdpsnd_process_negotiate(s);
 			break;
-		case RDPSND_SERVERTICK:
-			rdpsnd_process_servertick(s);
+		case RDPSND_PING:
+			rdpsnd_process_ping(s);
 			break;
 		case RDPSND_SET_VOLUME:
 			in_uint32(s, volume);
