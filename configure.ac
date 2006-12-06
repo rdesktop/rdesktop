@@ -812,6 +812,15 @@ AC_ARG_WITH(debug-clipboard,
 	fi
     ])
 
+AC_ARG_WITH(debug-sound,
+    [  --with-debug-sound  enable debugging of sound code],
+    [
+        if test $withval != "no";
+        then 
+            AC_DEFINE(WITH_DEBUG_SOUND,1)
+	fi
+    ])
+
 AC_ARG_WITH(debug-channel,
     [  --with-debug-channel  enable debugging of virtual channel code],
     [

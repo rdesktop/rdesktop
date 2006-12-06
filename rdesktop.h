@@ -57,6 +57,12 @@
 #define DEBUG_CLIPBOARD(args)
 #endif
 
+#ifdef WITH_DEBUG_SOUND
+#define DEBUG_SOUND(args) printf args;
+#else
+#define DEBUG_SOUND(args)
+#endif
+
 #ifdef WITH_DEBUG_CHANNEL
 #define DEBUG_CHANNEL(args) printf args;
 #else
