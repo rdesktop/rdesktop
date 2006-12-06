@@ -50,6 +50,9 @@ static unsigned int current_format;
 unsigned int queue_hi, queue_lo, queue_pending;
 struct audio_packet packet_queue[MAX_QUEUE];
 
+static uint8 packet_opcode;
+static struct stream packet;
+
 void (*wave_out_play) (void);
 
 static void rdpsnd_queue_write(STREAM s, uint16 tick, uint8 index);
@@ -195,70 +198,53 @@ rdpsnd_process_ping(STREAM in)
 }
 
 static void
-rdpsnd_process(STREAM s)
+rdpsnd_process_packet(uint8 opcode, STREAM s)
 {
-	uint8 type;
-	uint16 datalen;
 	uint16 vol_left, vol_right;
 	static uint16 tick, format;
 	static uint8 packet_index;
-	static BOOL awaiting_data_packet;
-	static unsigned char missing_bytes[4] = { 0, 0, 0, 0 };
 
 #ifdef RDPSND_DEBUG
 	printf("RDPSND recv:\n");
 	hexdump(s->p, s->end - s->p);
 #endif
 
-	if (awaiting_data_packet)
-	{
-		if (format >= MAX_FORMATS)
-		{
-			error("RDPSND: Invalid format index\n");
-			return;
-		}
-
-		if (!device_open || (format != current_format))
-		{
-			if (!device_open && !current_driver->wave_out_open())
-			{
-				rdpsnd_send_completion(tick, packet_index);
-				return;
-			}
-			if (!current_driver->wave_out_set_format(&formats[format]))
-			{
-				rdpsnd_send_completion(tick, packet_index);
-				current_driver->wave_out_close();
-				device_open = False;
-				return;
-			}
-			device_open = True;
-			current_format = format;
-		}
-
-		/* Insert the 4 missing bytes retrieved from last RDPSND_WRITE */
-		memcpy(s->data, missing_bytes, 4);
-
-		rdpsnd_queue_write(rdpsnd_dsp_process
-				   (s, current_driver, &formats[current_format]), tick,
-				   packet_index);
-		awaiting_data_packet = False;
-		return;
-	}
-
-	in_uint8(s, type);
-	in_uint8s(s, 1);	/* unknown? */
-	in_uint16_le(s, datalen);
-
-	switch (type)
+	switch (opcode)
 	{
 		case RDPSND_WRITE:
 			in_uint16_le(s, tick);
 			in_uint16_le(s, format);
 			in_uint8(s, packet_index);
-			/* Here are our lost bytes, but why? */
-			memcpy(missing_bytes, s->end - 4, 4);
-			awaiting_data_packet = True;
+			in_uint8s(s, 3);
+
+			if (format >= MAX_FORMATS)
+			{
+				error("RDPSND: Invalid format index\n");
+				break;
+			}
+
+			if (!device_open || (format != current_format))
+			{
+				if (!device_open && !current_driver->wave_out_open())
+				{
+					rdpsnd_send_completion(tick, packet_index);
+					break;
+				}
+				if (!current_driver->wave_out_set_format(&formats[format]))
+				{
+					rdpsnd_send_completion(tick, packet_index);
+					current_driver->wave_out_close();
+					device_open = False;
+					break;
+				}
+				device_open = True;
+				current_format = format;
+			}
+
+			rdpsnd_queue_write(rdpsnd_dsp_process
+					   (s->p, s->end - s->p, current_driver,
+					    &formats[current_format]), tick, packet_index);
+			return;
 			break;
 		case RDPSND_CLOSE:
 			current_driver->wave_out_close();
@@ -277,8 +263,61 @@ rdpsnd_process(STREAM s)
 				current_driver->wave_out_volume(vol_left, vol_right);
 			break;
 		default:
-			unimpl("RDPSND packet type %d\n", type);
+			unimpl("RDPSND packet type %x\n", opcode);
 			break;
+	}
+}
+
+static void
+rdpsnd_process(STREAM s)
+{
+	uint16 len;
+
+	while (!s_check_end(s))
+	{
+		/* New packet */
+		if (packet.size == 0)
+		{
+			if ((s->end - s->p) < 4)
+			{
+				error("RDPSND: Split at packet header. Things will go south from here...\n");
+				return;
+			}
+			in_uint8(s, packet_opcode);
+			in_uint8s(s, 1);	/* Padding */
+			in_uint16_le(s, len);
+
+			packet.p = packet.data;
+			packet.end = packet.data + len;
+			packet.size = len;
+		}
+		else
+		{
+			len = MIN(s->end - s->p, packet.end - packet.p);
+
+			/* Microsoft's server is so broken it's not even funny... */
+			if (packet_opcode == RDPSND_WRITE)
+			{
+				if ((packet.p - packet.data) < 12)
+					len = MIN(len, 12 - (packet.p - packet.data));
+				else if ((packet.p - packet.data) == 12)
+				{
+					in_uint8s(s, 4);
+					len -= 4;
+				}
+			}
+
+			in_uint8a(s, packet.p, len);
+			packet.p += len;
+		}
+
+		/* Packet fully assembled */
+		if (packet.p == packet.end)
+		{
+			packet.p = packet.data;
+			rdpsnd_process_packet(packet_opcode, &packet);
+			packet.size = 0;
+		}
 	}
 }
 
@@ -356,6 +395,10 @@ rdpsnd_init(char *optarg)
 	char *driver = NULL, *options = NULL;
 
 	drivers = NULL;
+
+	packet.data = xmalloc(65536);
+	packet.p = packet.end = packet.data;
+	packet.size = 0;
 
 	rdpsnd_channel =
 		channel_register("rdpsnd", CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_ENCRYPT_RDP,

@@ -384,7 +384,8 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 }
 
 STREAM
-rdpsnd_dsp_process(STREAM s, struct audio_driver * current_driver, WAVEFORMATEX * format)
+rdpsnd_dsp_process(unsigned char *data, unsigned int size, struct audio_driver * current_driver,
+		   WAVEFORMATEX * format)
 {
 	static struct stream out;
 	BOOL stream_be = False;
@@ -392,12 +393,12 @@ rdpsnd_dsp_process(STREAM s, struct audio_driver * current_driver, WAVEFORMATEX 
 	/* softvol and byteswap do not change the amount of data they
 	   return, so they can operate on the input-stream */
 	if (current_driver->wave_out_volume == rdpsnd_dsp_softvol_set)
-		rdpsnd_dsp_softvol(s->data, s->size, format);
+		rdpsnd_dsp_softvol(data, size, format);
 
 #ifdef B_ENDIAN
 	if (current_driver->need_byteswap_on_be)
 	{
-		rdpsnd_dsp_swapbytes(s->data, s->size, format);
+		rdpsnd_dsp_swapbytes(data, size, format);
 		stream_be = True;
 	}
 #endif
@@ -405,13 +406,13 @@ rdpsnd_dsp_process(STREAM s, struct audio_driver * current_driver, WAVEFORMATEX 
 	out.data = NULL;
 
 	if (current_driver->need_resampling)
-		out.size = rdpsnd_dsp_resample(&out.data, s->data, s->size, format, stream_be);
+		out.size = rdpsnd_dsp_resample(&out.data, data, size, format, stream_be);
 
 	if (out.data == NULL)
 	{
-		out.data = xmalloc(s->size);
-		memcpy(out.data, s->data, s->size);
-		out.size = s->size;
+		out.data = xmalloc(size);
+		memcpy(out.data, data, size);
+		out.size = size;
 	}
 
 	out.p = out.data;

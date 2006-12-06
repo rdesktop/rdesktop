@@ -26,4 +26,5 @@ BOOL rdpsnd_dsp_resample_set(uint32 device_srate, uint16 device_bitspersample,
 			     uint16 device_channels);
 BOOL rdpsnd_dsp_resample_supported(WAVEFORMATEX * pwfx);
 
-STREAM rdpsnd_dsp_process(STREAM s, struct audio_driver *current_driver, WAVEFORMATEX * format);
+STREAM rdpsnd_dsp_process(unsigned char *data, unsigned int size,
+			  struct audio_driver *current_driver, WAVEFORMATEX * format);
