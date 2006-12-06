@@ -1,6 +1,7 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    Sound Channel Process Functions
+   Copyright 2006 Pierre Ossman <ossman@cendio.se> for Cendio AB
    Copyright (C) Matthew Chapman 2003
    Copyright (C) GuoJunBo guojunbo@ict.ac.cn 2003
 
@@ -74,11 +75,6 @@ rdpsnd_init_packet(uint16 type, uint16 size)
 static void
 rdpsnd_send(STREAM s)
 {
-#ifdef RDPSND_DEBUG
-	printf("RDPSND send:\n");
-	hexdump(s->channel_hdr + 8, s->end - s->channel_hdr - 8);
-#endif
-
 	channel_send(s, rdpsnd_channel);
 }
 
@@ -93,6 +89,9 @@ rdpsnd_send_completion(uint16 tick, uint8 packet_index)
 	out_uint8(s, 0);
 	s_mark_end(s);
 	rdpsnd_send(s);
+
+	DEBUG_SOUND(("RDPSND: -> RDPSND_COMPLETION(tick: %u, index: %u)\n",
+		     (unsigned) tick, (unsigned) packet_index));
 }
 
 static void
@@ -112,6 +111,9 @@ rdpsnd_process_negotiate(STREAM in)
 	in_uint8(in, pad);
 	in_uint16_le(in, version);
 	in_uint8s(in, 1);	/* padding */
+
+	DEBUG_SOUND(("RDPSND: RDPSND_NEGOTIATE(formats: %d, pad1: 0x%02x, version: %x)\n",
+		     (int) in_format_count, (unsigned) pad1, (unsigned) version));
 
 	if (current_driver->wave_out_open())
 	{
@@ -179,6 +181,9 @@ rdpsnd_process_negotiate(STREAM in)
 	}
 
 	s_mark_end(out);
+
+	DEBUG_SOUND(("RDPSND: -> RDPSND_NEGOTIATE(formats: %d)\n", (int) format_count));
+
 	rdpsnd_send(out);
 }
 
@@ -190,11 +195,15 @@ rdpsnd_process_ping(STREAM in)
 
 	in_uint16_le(in, tick);
 
+	DEBUG_SOUND(("RDPSND: RDPSND_PING(tick: 0x%04x)\n", (unsigned) tick));
+
 	out = rdpsnd_init_packet(RDPSND_PING | 0x2300, 4);
 	out_uint16_le(out, tick);
 	out_uint16_le(out, 0);
 	s_mark_end(out);
 	rdpsnd_send(out);
+
+	DEBUG_SOUND(("RDPSND: -> (tick: 0x%04x)\n", (unsigned) tick));
 }
 
 static void
@@ -204,11 +213,6 @@ rdpsnd_process_packet(uint8 opcode, STREAM s)
 	static uint16 tick, format;
 	static uint8 packet_index;
 
-#ifdef RDPSND_DEBUG
-	printf("RDPSND recv:\n");
-	hexdump(s->p, s->end - s->p);
-#endif
-
 	switch (opcode)
 	{
 		case RDPSND_WRITE:
@@ -216,6 +220,7 @@ rdpsnd_process_packet(uint8 opcode, STREAM s)
 			in_uint16_le(s, format);
 			in_uint8(s, packet_index);
 			in_uint8s(s, 3);
+			DEBUG_SOUND(("RDPSND: RDPSND_WRITE(tick: %u, format: %u, index: %u, data: %u bytes)\n", (unsigned) tick, (unsigned) format, (unsigned) packet_index, (unsigned) s->size - 8));
 
 			if (format >= MAX_FORMATS)
 			{
@@ -247,6 +252,7 @@ rdpsnd_process_packet(uint8 opcode, STREAM s)
 			return;
 			break;
 		case RDPSND_CLOSE:
+			DEBUG_SOUND(("RDPSND: RDPSND_CLOSE()\n"));
 			current_driver->wave_out_close();
 			device_open = False;
 			break;
@@ -259,6 +265,7 @@ rdpsnd_process_packet(uint8 opcode, STREAM s)
 		case RDPSND_SET_VOLUME:
 			in_uint16_le(s, vol_left);
 			in_uint16_le(s, vol_right);
+			DEBUG_SOUND(("RDPSND: RDPSND_VOLUME(left: 0x%04x (%u %%), right: 0x%04x (%u %%))\n", (unsigned) vol_left, (unsigned) vol_left / 655, (unsigned) vol_right, (unsigned) vol_right / 655));
 			if (device_open)
 				current_driver->wave_out_volume(vol_left, vol_right);
 			break;
@@ -287,6 +294,9 @@ rdpsnd_process(STREAM s)
 			in_uint8s(s, 1);	/* Padding */
 			in_uint16_le(s, len);
 
+			DEBUG_SOUND(("RDPSND: == Opcode %x Length: %d ==\n",
+				     (int) packet_opcode, (int) len));
+
 			packet.p = packet.data;
 			packet.end = packet.data + len;
 			packet.size = len;
@@ -302,6 +312,8 @@ rdpsnd_process(STREAM s)
 					len = MIN(len, 12 - (packet.p - packet.data));
 				else if ((packet.p - packet.data) == 12)
 				{
+					DEBUG_SOUND(("RDPSND: Eating 4 bytes of %d bytes...\n",
+						     len));
 					in_uint8s(s, 4);
 					len -= 4;
 				}
