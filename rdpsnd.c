@@ -112,8 +112,8 @@ rdpsnd_process_negotiate(STREAM in)
 	in_uint16_le(in, version);
 	in_uint8s(in, 1);	/* padding */
 
-	DEBUG_SOUND(("RDPSND: RDPSND_NEGOTIATE(formats: %d, pad1: 0x%02x, version: %x)\n",
-		     (int) in_format_count, (unsigned) pad1, (unsigned) version));
+	DEBUG_SOUND(("RDPSND: RDPSND_NEGOTIATE(formats: %d, pad: 0x%02x, version: %x)\n",
+		     (int) in_format_count, (unsigned) pad, (unsigned) version));
 
 	if (current_driver->wave_out_open())
 	{
