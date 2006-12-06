@@ -199,7 +199,7 @@ rdpsnd_process(STREAM s)
 {
 	uint8 type;
 	uint16 datalen;
-	uint32 volume;
+	uint16 vol_left, vol_right;
 	static uint16 tick, format;
 	static uint8 packet_index;
 	static BOOL awaiting_data_packet;
@@ -271,12 +271,10 @@ rdpsnd_process(STREAM s)
 			rdpsnd_process_ping(s);
 			break;
 		case RDPSND_SET_VOLUME:
-			in_uint32(s, volume);
+			in_uint16_le(s, vol_left);
+			in_uint16_le(s, vol_right);
 			if (device_open)
-			{
-				current_driver->wave_out_volume((volume & 0xffff),
-								(volume & 0xffff0000) >> 16);
-			}
+				current_driver->wave_out_volume(vol_left, vol_right);
 			break;
 		default:
 			unimpl("RDPSND packet type %d\n", type);
