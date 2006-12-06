@@ -1,0 +1,291 @@
+Overview
+========
+
+The RDPSND protocol is a binary, packet based protocol that maps
+Microsoft's legacy wave API to a RDP channel.
+
+All values are in little endian ordering.
+
+Responses are sent with the same opcode as the request, and usually
+also with the same packet structure.
+
+The basic structure of a packet is:
+
+ 0                   1                   2                   3   
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|     Opcode    |    Unknown    |         Payload size          |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                              ...                              |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Opcode
+
+    Command or response type. Known values:
+
+        0x01    RDPSND_CLOSE
+        0x02    RDPSND_WRITE
+        0x03    RDPSND_SET_VOLUME
+        0x04    Unknown (4 bytes payload, no response)
+        0x05    RDPSND_COMPLETION
+        0x06    RDPSND_PING
+        0x07    RDPSND_NEGOTIATE
+
+Unknown
+
+    Usage not known. Not valid when message comes from server
+
+Payload size
+
+    Number of bytes following the header.
+
+Opcodes
+=======
+
+Following is a list of all known opcodes and the contents in their
+payloads.
+
+RDPSND_CLOSE
+------------
+
+Tells the client that all applications on the server have released
+control of the sound system, allowing the client to free any local
+resources.
+
+No payload and no response.
+
+RDPSND_WRITE
+------------
+
+Request to play a chunk of data. The client is expected to queue up
+the data and send a RDPSND_COMPLETION when playback has finished.
+
+No response.
+
+ 0                   1                   2                   3   
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|             Tick              |         Format index          |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| Packet index  |                     Pad                       |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                         Waveform data                         |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                              ...                              |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Tick
+
+    Low 16 bits of clock tick count when packet was scheduled for
+    playback.
+
+Format index
+
+    Waveform data format in the form of an index to the previously
+    negotiated format list.
+
+Packet index
+
+    Index number of this packet.
+
+Pad
+
+    Unused padding.
+
+Waveform data
+
+    Binary waveform data in the format specified by the format index.
+    Size defined by the packet boundary.
+
+	Because of a strange design in Microsoft's server, the length of
+	the packet will be 4 bytes short and bytes 12 to 15 (4 bytes) of
+	the payload should be removed.
+
+RDPSND_SET_VOLUME
+-----------------
+
+Request from the server to the client to change the output volume.
+No response.
+
+ 0                   1                   2                   3   
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|          Left channel         |         Right channel         |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Left channel
+
+    Volume of left channel in the range [0, 65535].
+
+Right channel
+
+    Volume of right channel in the range [0, 65535].
+
+RDPSND_COMPLETION
+-----------------
+
+Sent by the client to the server when a packet, queued by
+RDPSND_WRITE, has finished playing.
+
+No response is sent by the server.
+
+ 0                   1                   2                   3   
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|             Tick              | Packet index  |    Reserved   |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Tick
+
+    Clock tick count when packet finished playing on device.
+
+Packet index
+
+    Index number of packet played.
+
+Reserved
+
+    Reserved. Always 0.
+
+RDPSND_PING
+-----------
+
+Sent by the server to the client to determine transport latency.
+Response is identical to the request (including an unmodified tick).
+
+ 0                   1                   2                   3   
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|              Tick             |           Reserved            |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                            Garbage                            |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                              ...                              |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Tick
+
+	Clock tick count when sent from server.
+
+Reserved
+
+    Reserved. Always 0.
+
+Garbage
+
+    1016 optional bytes of random data. Purpose unknown.
+    Only sent from server.
+
+RDPSND_NEGOTIATE
+----------------
+
+Initial packet sent by server when the client [re]connects. Allows
+the server to determine the capabilities of the client.
+
+The client should reply with an identical packet, with the relevant
+fields filled in, and a filtered list of formats (based on what the
+client supports).
+
+ 0                   1                   2                   3   
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                             Flags                             |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|          Left channel         |         Right channel         |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                             Pitch                             |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|            UDP port           |         Format count          |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|     Pad1    |              Version            |      Pad2     |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                              ...                              |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|           Format tag          |            Channels           |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                        Frames per sec.                        |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                         Bytes per sec.                        |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|          Block align          |        Bits per sample        |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|          Extra size           |         Extra data ...        |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                              ...                              |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Flags
+
+    Flags for client capabilities. Data not valid when from server.
+
+        0000 0001   Do UDP song and dance (details unknown).
+
+Left channel
+
+    Initial volume for left channel. Data not valid when from server.
+
+Right channel
+
+    Initial volume for right channel. Data not valid when from server.
+
+Pitch
+
+    Initial pitch of the sound device. Data not valid when from server.
+
+UDP port
+
+    Port used for UDP transfers. Data not valid when from server.
+
+Format count
+
+    Number of format structures following the header.
+
+Pad1
+
+    Usage not known. Offset 26 in secret protocol. Data not valid
+    when from client.
+
+Version
+
+    Software version. Server (XP & 2K3) sets this to 5.
+
+Pad2
+
+    Usage not known. Data not valid when from server, nor from
+    client.
+
+Format tag
+
+    Audio format type as registered at Microsoft.
+
+Channels
+
+    Number of channels per frame.
+
+Frames per sec.
+
+    Frames per second in Hz.
+
+Bytes per sec.
+
+    Number of bytes per second. Should be the product of
+    "Frames per sec." and "Block align".
+
+Block align
+
+    The size of each frame. Note that not all bytes may contain
+    useful data.
+
+Bits per sample
+
+    Number of bits per sample. Commonly 8 or 16.
+
+Extra size
+
+	Number of bytes of extra information following this format
+	description.
+
+Extra data
+
+	Optional extra format data. Contents specific to each format
+	type.
