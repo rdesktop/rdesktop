@@ -561,6 +561,7 @@ rdpsnd_queue_complete_pending(void)
 
 		elapsed = (packet->completion_tv.tv_sec - packet->arrive_tv.tv_sec) * 1000000 +
 			(packet->completion_tv.tv_usec - packet->arrive_tv.tv_usec);
+		elapsed /= 1000;
 
 		xfree(packet->s.data);
 		rdpsnd_send_completion((packet->tick + elapsed) % 65536, packet->index);
