@@ -95,16 +95,20 @@ rdpsnd_send_completion(uint16 tick, uint8 packet_index)
 static void
 rdpsnd_process_negotiate(STREAM in)
 {
-	unsigned int in_format_count, i;
+	uint16 in_format_count, i;
+	uint8 pad;
+	uint16 version;
 	WAVEFORMATEX *format;
 	STREAM out;
 	BOOL device_available = False;
 	int readcnt;
 	int discardcnt;
 
-	in_uint8s(in, 14);	/* flags, volume, pitch, UDP port */
+	in_uint8s(in, 14);	/* initial bytes not valid from server */
 	in_uint16_le(in, in_format_count);
-	in_uint8s(in, 4);	/* pad, status, pad */
+	in_uint8(in, pad);
+	in_uint16_le(in, version);
+	in_uint8s(in, 1);	/* padding */
 
 	if (current_driver->wave_out_open())
 	{
@@ -155,9 +159,9 @@ rdpsnd_process_negotiate(STREAM in)
 	out_uint16(out, 0);	/* UDP port */
 
 	out_uint16_le(out, format_count);
-	out_uint8(out, 0x95);	/* pad? */
-	out_uint16_le(out, 2);	/* status */
-	out_uint8(out, 0x77);	/* pad? */
+	out_uint8(out, 0);	/* padding */
+	out_uint16_le(out, 2);	/* version */
+	out_uint8(out, 0);	/* padding */
 
 	for (i = 0; i < format_count; i++)
 	{
