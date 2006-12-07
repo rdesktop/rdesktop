@@ -276,23 +276,24 @@ alsa_play(void)
 	return;
 }
 
+static struct audio_driver alsa_driver = {
+	.name = "alsa",
+	.description = "ALSA output driver, default device: " DEFAULTDEVICE,
+
+	.wave_out_open = alsa_open,
+	.wave_out_close = alsa_close,
+	.wave_out_format_supported = alsa_format_supported,
+	.wave_out_set_format = alsa_set_format,
+	.wave_out_volume = rdpsnd_dsp_softvol_set,
+	.wave_out_play = alsa_play,
+
+	.need_byteswap_on_be = 0,
+	.need_resampling = 0,
+};
+
 struct audio_driver *
 alsa_register(char *options)
 {
-	static struct audio_driver alsa_driver;
-
-	alsa_driver.wave_out_open = alsa_open;
-	alsa_driver.wave_out_close = alsa_close;
-	alsa_driver.wave_out_format_supported = alsa_format_supported;
-	alsa_driver.wave_out_set_format = alsa_set_format;
-	alsa_driver.wave_out_volume = rdpsnd_dsp_softvol_set;
-	alsa_driver.wave_out_play = alsa_play;
-	alsa_driver.name = xstrdup("alsa");
-	alsa_driver.description = xstrdup("ALSA output driver, default device: " DEFAULTDEVICE);
-	alsa_driver.need_byteswap_on_be = 0;
-	alsa_driver.need_resampling = 0;
-	alsa_driver.next = NULL;
-
 	if (options)
 	{
 		pcm_name = xstrdup(options);

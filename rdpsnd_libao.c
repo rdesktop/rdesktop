@@ -175,23 +175,24 @@ libao_play(void)
 	return;
 }
 
+static struct audio_driver libao_driver = {
+	.name = "libao",
+	.description = "libao output driver, default device: system dependent",
+
+	.wave_out_open = libao_open,
+	.wave_out_close = libao_close,
+	.wave_out_format_supported = rdpsnd_dsp_resample_supported,
+	.wave_out_set_format = libao_set_format,
+	.wave_out_volume = rdpsnd_dsp_softvol_set,
+	.wave_out_play = libao_play,
+
+	.need_byteswap_on_be = 1,
+	.need_resampling = 1,
+};
+
 struct audio_driver *
 libao_register(char *options)
 {
-	static struct audio_driver libao_driver;
-
-	libao_driver.wave_out_open = libao_open;
-	libao_driver.wave_out_close = libao_close;
-	libao_driver.wave_out_format_supported = rdpsnd_dsp_resample_supported;
-	libao_driver.wave_out_set_format = libao_set_format;
-	libao_driver.wave_out_volume = rdpsnd_dsp_softvol_set;
-	libao_driver.wave_out_play = libao_play;
-	libao_driver.name = xstrdup("libao");
-	libao_driver.description = xstrdup("libao output driver, default device: system dependent");
-	libao_driver.need_byteswap_on_be = 1;
-	libao_driver.need_resampling = 1;
-	libao_driver.next = NULL;
-
 	if (options)
 	{
 		libao_device = xstrdup(options);

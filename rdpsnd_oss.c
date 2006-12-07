@@ -46,8 +46,10 @@
 static int snd_rate;
 static short samplewidth;
 static char *dsp_dev;
-static struct audio_driver oss_driver;
 static BOOL in_esddsp;
+
+/* This is a just a forward declaration */
+static struct audio_driver oss_driver;
 
 static BOOL
 detect_esddsp(void)
@@ -296,22 +298,24 @@ oss_play(void)
 	return;
 }
 
+static struct audio_driver oss_driver = {
+	.name = "oss",
+	.description = "OSS output driver, default device: " DEFAULTDEVICE " or $AUDIODEV",
+
+	.wave_out_open = oss_open,
+	.wave_out_close = oss_close,
+	.wave_out_format_supported = oss_format_supported,
+	.wave_out_set_format = oss_set_format,
+	.wave_out_volume = oss_volume,
+	.wave_out_play = oss_play,
+
+	.need_byteswap_on_be = 0,
+	.need_resampling = 0,
+};
+
 struct audio_driver *
 oss_register(char *options)
 {
-	oss_driver.wave_out_open = oss_open;
-	oss_driver.wave_out_close = oss_close;
-	oss_driver.wave_out_format_supported = oss_format_supported;
-	oss_driver.wave_out_set_format = oss_set_format;
-	oss_driver.wave_out_volume = oss_volume;
-	oss_driver.wave_out_play = oss_play;
-	oss_driver.name = xstrdup("oss");
-	oss_driver.description =
-		xstrdup("OSS output driver, default device: " DEFAULTDEVICE " or $AUDIODEV");
-	oss_driver.need_byteswap_on_be = 0;
-	oss_driver.need_resampling = 0;
-	oss_driver.next = NULL;
-
 	if (options)
 	{
 		dsp_dev = xstrdup(options);

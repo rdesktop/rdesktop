@@ -242,24 +242,24 @@ sun_play(void)
 	}
 }
 
+static struct audio_driver sun_driver = {
+	.name = "sun",
+	.description = "SUN/BSD output driver, default device: " DEFAULTDEVICE " or $AUDIODEV",
+
+	.wave_out_open = sun_open,
+	.wave_out_close = sun_close,
+	.wave_out_format_supported = sun_format_supported,
+	.wave_out_set_format = sun_set_format,
+	.wave_out_volume = sun_volume,
+	.wave_out_play = sun_play,
+
+	.need_byteswap_on_be = 1,
+	.need_resampling = 0,
+};
+
 struct audio_driver *
 sun_register(char *options)
 {
-	static struct audio_driver sun_driver;
-
-	sun_driver.wave_out_open = sun_open;
-	sun_driver.wave_out_close = sun_close;
-	sun_driver.wave_out_format_supported = sun_format_supported;
-	sun_driver.wave_out_set_format = sun_set_format;
-	sun_driver.wave_out_volume = sun_volume;
-	sun_driver.wave_out_play = sun_play;
-	sun_driver.name = xstrdup("sun");
-	sun_driver.description =
-		xstrdup("SUN/BSD output driver, default device: " DEFAULTDEVICE " or $AUDIODEV");
-	sun_driver.need_byteswap_on_be = 1;
-	sun_driver.need_resampling = 0;
-	sun_driver.next = NULL;
-
 	if (options)
 	{
 		dsp_dev = xstrdup(options);
