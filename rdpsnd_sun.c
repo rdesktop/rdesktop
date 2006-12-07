@@ -41,7 +41,7 @@ static BOOL g_reopened;
 static short g_samplewidth;
 static char *dsp_dev;
 
-void oss_play(void);
+void sun_play(void);
 
 void
 sun_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv)
