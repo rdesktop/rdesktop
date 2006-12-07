@@ -168,7 +168,6 @@ BOOL rdpdr_abort_io(uint32 fd, uint32 major, NTSTATUS status);
 /* rdpsnd.c */
 BOOL rdpsnd_init(char *optarg);
 void rdpsnd_show_help(void);
-void rdpsnd_play(void);
 void rdpsnd_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv);
 void rdpsnd_check_fds(fd_set * rfds, fd_set * wfds);
 struct audio_packet *rdpsnd_queue_current_packet(void);

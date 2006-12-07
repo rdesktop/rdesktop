@@ -43,6 +43,9 @@
 #define DEFAULTDEVICE	"/dev/dsp"
 #define MAX_LEN		512
 
+static int dsp_fd = -1;
+static BOOL dsp_busy;
+
 static int snd_rate;
 static short samplewidth;
 static char *dsp_dev;
@@ -51,13 +54,36 @@ static BOOL in_esddsp;
 /* This is a just a forward declaration */
 static struct audio_driver oss_driver;
 
+void oss_play(void);
+
+void
+oss_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv)
+{
+	if (dsp_fd == -1)
+		return;
+
+	if (rdpsnd_queue_empty())
+		return;
+
+	FD_SET(dsp_fd, wfds);
+	if (dsp_fd > *n)
+		*n = dsp_fd;
+}
+
+void
+oss_check_fds(fd_set * rfds, fd_set * wfds)
+{
+	if (FD_ISSET(dsp_fd, wfds))
+		oss_play();
+}
+
 static BOOL
 detect_esddsp(void)
 {
 	struct stat s;
 	char *preload;
 
-	if (fstat(g_dsp_fd, &s) == -1)
+	if (fstat(dsp_fd, &s) == -1)
 		return False;
 
 	if (S_ISCHR(s.st_mode) || S_ISBLK(s.st_mode))
@@ -76,7 +102,7 @@ detect_esddsp(void)
 BOOL
 oss_open(void)
 {
-	if ((g_dsp_fd = open(dsp_dev, O_WRONLY)) == -1)
+	if ((dsp_fd = open(dsp_dev, O_WRONLY)) == -1)
 	{
 		perror(dsp_dev);
 		return False;
@@ -90,8 +116,9 @@ oss_open(void)
 void
 oss_close(void)
 {
-	close(g_dsp_fd);
-	g_dsp_busy = 0;
+	close(dsp_fd);
+	dsp_fd = -1;
+	dsp_busy = False;
 }
 
 BOOL
@@ -113,8 +140,8 @@ oss_set_format(WAVEFORMATEX * pwfx)
 	int stereo, format, fragments;
 	static BOOL driver_broken = False;
 
-	ioctl(g_dsp_fd, SNDCTL_DSP_RESET, NULL);
-	ioctl(g_dsp_fd, SNDCTL_DSP_SYNC, NULL);
+	ioctl(dsp_fd, SNDCTL_DSP_RESET, NULL);
+	ioctl(dsp_fd, SNDCTL_DSP_SYNC, NULL);
 
 	if (pwfx->wBitsPerSample == 8)
 		format = AFMT_U8;
@@ -123,7 +150,7 @@ oss_set_format(WAVEFORMATEX * pwfx)
 
 	samplewidth = pwfx->wBitsPerSample / 8;
 
-	if (ioctl(g_dsp_fd, SNDCTL_DSP_SETFMT, &format) == -1)
+	if (ioctl(dsp_fd, SNDCTL_DSP_SETFMT, &format) == -1)
 	{
 		perror("SNDCTL_DSP_SETFMT");
 		oss_close();
@@ -140,7 +167,7 @@ oss_set_format(WAVEFORMATEX * pwfx)
 		stereo = 0;
 	}
 
-	if (ioctl(g_dsp_fd, SNDCTL_DSP_STEREO, &stereo) == -1)
+	if (ioctl(dsp_fd, SNDCTL_DSP_STEREO, &stereo) == -1)
 	{
 		perror("SNDCTL_DSP_CHANNELS");
 		oss_close();
@@ -149,7 +176,7 @@ oss_set_format(WAVEFORMATEX * pwfx)
 
 	oss_driver.need_resampling = 0;
 	snd_rate = pwfx->nSamplesPerSec;
-	if (ioctl(g_dsp_fd, SNDCTL_DSP_SPEED, &snd_rate) == -1)
+	if (ioctl(dsp_fd, SNDCTL_DSP_SPEED, &snd_rate) == -1)
 	{
 		int rates[] = { 44100, 48000, 0 };
 		int *prates = rates;
@@ -157,7 +184,7 @@ oss_set_format(WAVEFORMATEX * pwfx)
 		while (*prates != 0)
 		{
 			if ((pwfx->nSamplesPerSec != *prates)
-			    && (ioctl(g_dsp_fd, SNDCTL_DSP_SPEED, prates) != -1))
+			    && (ioctl(dsp_fd, SNDCTL_DSP_SPEED, prates) != -1))
 			{
 				oss_driver.need_resampling = 1;
 				snd_rate = *prates;
@@ -184,14 +211,14 @@ oss_set_format(WAVEFORMATEX * pwfx)
 
 	/* try to get 12 fragments of 2^12 bytes size */
 	fragments = (12 << 16) + 12;
-	ioctl(g_dsp_fd, SNDCTL_DSP_SETFRAGMENT, &fragments);
+	ioctl(dsp_fd, SNDCTL_DSP_SETFRAGMENT, &fragments);
 
 	if (!driver_broken)
 	{
 		audio_buf_info info;
 
 		memset(&info, 0, sizeof(info));
-		if (ioctl(g_dsp_fd, SNDCTL_DSP_GETOSPACE, &info) == -1)
+		if (ioctl(dsp_fd, SNDCTL_DSP_GETOSPACE, &info) == -1)
 		{
 			perror("SNDCTL_DSP_GETOSPACE");
 			oss_close();
@@ -218,7 +245,7 @@ oss_volume(uint16 left, uint16 right)
 	volume = left / (65536 / 100);
 	volume |= right / (65536 / 100) << 8;
 
-	if (ioctl(g_dsp_fd, MIXER_WRITE(SOUND_MIXER_PCM), &volume) == -1)
+	if (ioctl(dsp_fd, MIXER_WRITE(SOUND_MIXER_PCM), &volume) == -1)
 	{
 		warning("hardware volume control unavailable, falling back to software volume control!\n");
 		oss_driver.wave_out_volume = rdpsnd_dsp_softvol_set;
@@ -234,23 +261,20 @@ oss_play(void)
 	ssize_t len;
 	STREAM out;
 
+	/* We shouldn't be called if the queue is empty, but still */
 	if (rdpsnd_queue_empty())
-	{
-		g_dsp_busy = 0;
 		return;
-	}
 
 	packet = rdpsnd_queue_current_packet();
 	out = &packet->s;
 
 	len = out->end - out->p;
 
-	len = write(g_dsp_fd, out->p, (len > MAX_LEN) ? MAX_LEN : len);
+	len = write(dsp_fd, out->p, (len > MAX_LEN) ? MAX_LEN : len);
 	if (len == -1)
 	{
 		if (errno != EWOULDBLOCK)
 			perror("write audio");
-		g_dsp_busy = 1;
 		return;
 	}
 
@@ -272,7 +296,7 @@ oss_play(void)
 		{
 #ifdef SNDCTL_DSP_GETODELAY
 			delay_bytes = 0;
-			if (ioctl(g_dsp_fd, SNDCTL_DSP_GETODELAY, &delay_bytes) == -1)
+			if (ioctl(dsp_fd, SNDCTL_DSP_GETODELAY, &delay_bytes) == -1)
 				delay_bytes = -1;
 #else
 			delay_bytes = -1;
@@ -280,7 +304,7 @@ oss_play(void)
 
 			if (delay_bytes == -1)
 			{
-				if (ioctl(g_dsp_fd, SNDCTL_DSP_GETOSPACE, &info) != -1)
+				if (ioctl(dsp_fd, SNDCTL_DSP_GETOSPACE, &info) != -1)
 					delay_bytes = info.fragstotal * info.fragsize - info.bytes;
 				else
 					delay_bytes = out->size;
@@ -290,24 +314,20 @@ oss_play(void)
 		delay_us = delay_bytes * (1000000 / (samplewidth * snd_rate));
 		rdpsnd_queue_next(delay_us);
 	}
-	else
-	{
-		g_dsp_busy = 1;
-	}
-
-	return;
 }
 
 static struct audio_driver oss_driver = {
 	.name = "oss",
 	.description = "OSS output driver, default device: " DEFAULTDEVICE " or $AUDIODEV",
 
+	.add_fds = oss_add_fds,
+	.check_fds = oss_check_fds,
+
 	.wave_out_open = oss_open,
 	.wave_out_close = oss_close,
 	.wave_out_format_supported = oss_format_supported,
 	.wave_out_set_format = oss_set_format,
 	.wave_out_volume = oss_volume,
-	.wave_out_play = oss_play,
 
 	.need_byteswap_on_be = 0,
 	.need_resampling = 0,

@@ -32,6 +32,9 @@
 #define DEFAULTDEVICE	"default"
 #define MAX_FRAMES	32
 
+static struct pollfd pfds[32];
+static int num_fds;
+
 static snd_pcm_t *pcm_handle = NULL;
 static snd_pcm_stream_t stream = SND_PCM_STREAM_PLAYBACK;
 static BOOL reopened;
@@ -39,6 +42,71 @@ static short samplewidth;
 static int audiochannels;
 static unsigned int rate;
 static char *pcm_name;
+
+void alsa_play(void);
+
+void
+alsa_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv)
+{
+	int err;
+	struct pollfd *f;
+
+	if (!pcm_handle)
+		return;
+
+	if (rdpsnd_queue_empty())
+		return;
+
+	num_fds = snd_pcm_poll_descriptors_count(pcm_handle);
+
+	if (num_fds > sizeof(pfds) / sizeof(*pfds))
+		return;
+
+	err = snd_pcm_poll_descriptors(pcm_handle, pfds, num_fds);
+	if (err < 0)
+		return;
+
+	for (f = pfds; f < &pfds[num_fds]; f++)
+	{
+		if (f->events & POLLIN)
+			FD_SET(f->fd, rfds);
+		if (f->events & POLLOUT)
+			FD_SET(f->fd, wfds);
+		if (f->fd > *n && (f->events & (POLLIN | POLLOUT)))
+			*n = f->fd;
+	}
+}
+
+void
+alsa_check_fds(fd_set * rfds, fd_set * wfds)
+{
+	struct pollfd *f;
+	int err;
+	unsigned short revents;
+
+	if (!pcm_handle)
+		return;
+
+	for (f = pfds; f < &pfds[num_fds]; f++)
+	{
+		f->revents = 0;
+		if (f->fd != -1)
+		{
+			/* Fixme: This doesn't properly deal with things like POLLHUP */
+			if (FD_ISSET(f->fd, rfds))
+				f->revents |= POLLIN;
+			if (FD_ISSET(f->fd, wfds))
+				f->revents |= POLLOUT;
+		}
+	}
+
+	err = snd_pcm_poll_descriptors_revents(pcm_handle, pfds, num_fds, &revents);
+	if (err < 0)
+		return;
+
+	if (revents & POLLOUT)
+		alsa_play();
+}
 
 BOOL
 alsa_open(void)
@@ -50,8 +118,6 @@ alsa_open(void)
 		error("snd_pcm_open: %s\n", snd_strerror(err));
 		return False;
 	}
-
-	g_dsp_fd = 0;
 
 	reopened = True;
 
@@ -221,11 +287,9 @@ alsa_play(void)
 		prev_us = tv.tv_usec;
 	}
 
+	/* We shouldn't be called if the queue is empty, but still */
 	if (rdpsnd_queue_empty())
-	{
-		g_dsp_busy = 0;
 		return;
-	}
 
 	packet = rdpsnd_queue_current_packet();
 	out = &packet->s;
@@ -271,21 +335,20 @@ alsa_play(void)
 
 		rdpsnd_queue_next(delay_us);
 	}
-
-	g_dsp_busy = 1;
-	return;
 }
 
 static struct audio_driver alsa_driver = {
 	.name = "alsa",
 	.description = "ALSA output driver, default device: " DEFAULTDEVICE,
 
+	.add_fds = alsa_add_fds,
+	.check_fds = alsa_check_fds,
+
 	.wave_out_open = alsa_open,
 	.wave_out_close = alsa_close,
 	.wave_out_format_supported = alsa_format_supported,
 	.wave_out_set_format = alsa_set_format,
 	.wave_out_volume = rdpsnd_dsp_softvol_set,
-	.wave_out_play = alsa_play,
 
 	.need_byteswap_on_be = 0,
 	.need_resampling = 0,

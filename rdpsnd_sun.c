@@ -34,21 +34,47 @@
 
 #define DEFAULTDEVICE	"/dev/audio"
 
+static int dsp_fd = -1;
+static BOOL dsp_busy;
+
 static BOOL g_reopened;
 static short g_samplewidth;
 static char *dsp_dev;
 
+void oss_play(void);
+
+void
+sun_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv)
+{
+	if (dsp_fd == -1)
+		return;
+
+	if (rdpsnd_queue_empty())
+		return;
+
+	FD_SET(dsp_fd, wfds);
+	if (dsp_fd > *n)
+		*n = dsp_fd;
+}
+
+void
+sun_check_fds(fd_set * rfds, fd_set * wfds)
+{
+	if (FD_ISSET(dsp_fd, wfds))
+		sun_play();
+}
+
 BOOL
 sun_open(void)
 {
-	if ((g_dsp_fd = open(dsp_dev, O_WRONLY | O_NONBLOCK)) == -1)
+	if ((dsp_fd = open(dsp_dev, O_WRONLY | O_NONBLOCK)) == -1)
 	{
 		perror(dsp_dev);
 		return False;
 	}
 
 	/* Non-blocking so that user interface is responsive */
-	fcntl(g_dsp_fd, F_SETFL, fcntl(g_dsp_fd, F_GETFL) | O_NONBLOCK);
+	fcntl(dsp_fd, F_SETFL, fcntl(dsp_fd, F_GETFL) | O_NONBLOCK);
 
 	g_reopened = True;
 
@@ -64,12 +90,13 @@ sun_close(void)
 
 #if defined I_FLUSH && defined FLUSHW
 	/* Flush the audiobuffer */
-	ioctl(g_dsp_fd, I_FLUSH, FLUSHW);
+	ioctl(dsp_fd, I_FLUSH, FLUSHW);
 #endif
 #if defined AUDIO_FLUSH
-	ioctl(g_dsp_fd, AUDIO_FLUSH, NULL);
+	ioctl(dsp_fd, AUDIO_FLUSH, NULL);
 #endif
-	close(g_dsp_fd);
+	close(dsp_fd);
+	dsp_fd = -1;
 }
 
 BOOL
@@ -90,7 +117,7 @@ sun_set_format(WAVEFORMATEX * pwfx)
 {
 	audio_info_t info;
 
-	ioctl(g_dsp_fd, AUDIO_DRAIN, 0);
+	ioctl(dsp_fd, AUDIO_DRAIN, 0);
 	AUDIO_INITINFO(&info);
 
 
@@ -122,10 +149,10 @@ sun_set_format(WAVEFORMATEX * pwfx)
 	info.play.error = 0;
 	g_reopened = True;
 
-	if (ioctl(g_dsp_fd, AUDIO_SETINFO, &info) == -1)
+	if (ioctl(dsp_fd, AUDIO_SETINFO, &info) == -1)
 	{
 		perror("AUDIO_SETINFO");
-		close(g_dsp_fd);
+		sun_close();
 		return False;
 	}
 
@@ -157,7 +184,7 @@ sun_volume(uint16 left, uint16 right)
 	info.play.gain = volume / (65536 / AUDIO_MAX_GAIN);
 	info.play.balance = balance;
 
-	if (ioctl(g_dsp_fd, AUDIO_SETINFO, &info) == -1)
+	if (ioctl(dsp_fd, AUDIO_SETINFO, &info) == -1)
 	{
 		perror("AUDIO_SETINFO");
 		return;
@@ -187,10 +214,7 @@ sun_play(void)
 		}
 
 		if (rdpsnd_queue_empty())
-		{
-			g_dsp_busy = 0;
 			return;
-		}
 
 		packet = rdpsnd_queue_current_packet();
 		out = &packet->s;
@@ -205,12 +229,11 @@ sun_play(void)
 
 		if (out->end != out->p)
 		{
-			len = write(g_dsp_fd, out->p, out->end - out->p);
+			len = write(dsp_fd, out->p, out->end - out->p);
 			if (len == -1)
 			{
 				if (errno != EWOULDBLOCK)
 					perror("write audio");
-				g_dsp_busy = 1;
 				return;
 			}
 		}
@@ -218,7 +241,7 @@ sun_play(void)
 		out->p += len;
 		if (out->p == out->end)
 		{
-			if (ioctl(g_dsp_fd, AUDIO_GETINFO, &info) == -1)
+			if (ioctl(dsp_fd, AUDIO_GETINFO, &info) == -1)
 			{
 				perror("AUDIO_GETINFO");
 				return;
@@ -235,7 +258,6 @@ sun_play(void)
 			}
 			else
 			{
-				g_dsp_busy = 1;
 				return;
 			}
 		}
@@ -246,12 +268,14 @@ static struct audio_driver sun_driver = {
 	.name = "sun",
 	.description = "SUN/BSD output driver, default device: " DEFAULTDEVICE " or $AUDIODEV",
 
+	.add_fds = sun_add_fds,
+	.check_fds = sun_check_fds,
+
 	.wave_out_open = sun_open,
 	.wave_out_close = sun_close,
 	.wave_out_format_supported = sun_format_supported,
 	.wave_out_set_format = sun_set_format,
 	.wave_out_volume = sun_volume,
-	.wave_out_play = sun_play,
 
 	.need_byteswap_on_be = 1,
 	.need_resampling = 0,

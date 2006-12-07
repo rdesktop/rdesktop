@@ -36,6 +36,23 @@ static int default_driver;
 static BOOL reopened;
 static char *libao_device = NULL;
 
+void libao_play(void);
+
+void
+libao_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv)
+{
+}
+
+void
+libao_check_fds(fd_set * rfds, fd_set * wfds)
+{
+	if (o_device == NULL)
+		return;
+
+	if (!rdpsnd_queue_empty())
+		libao_play();
+}
+
 BOOL
 libao_open(void)
 {
@@ -64,8 +81,6 @@ libao_open(void)
 		return False;
 	}
 
-	g_dsp_fd = 0;
-
 	reopened = True;
 
 	return True;
@@ -82,6 +97,8 @@ libao_close(void)
 
 	if (o_device != NULL)
 		ao_close(o_device);
+
+	o_device = NULL;
 
 	ao_shutdown();
 }
@@ -134,11 +151,9 @@ libao_play(void)
 		prev_us = tv.tv_usec;
 	}
 
+	/* We shouldn't be called if the queue is empty, but still */
 	if (rdpsnd_queue_empty())
-	{
-		g_dsp_busy = 0;
 		return;
-	}
 
 	packet = rdpsnd_queue_current_packet();
 	out = &packet->s;
@@ -170,21 +185,20 @@ libao_play(void)
 
 		rdpsnd_queue_next(duration);
 	}
-
-	g_dsp_busy = 1;
-	return;
 }
 
 static struct audio_driver libao_driver = {
 	.name = "libao",
 	.description = "libao output driver, default device: system dependent",
 
+	.add_fds = libao_add_fds,
+	.check_fds = libao_check_fds,
+
 	.wave_out_open = libao_open,
 	.wave_out_close = libao_close,
 	.wave_out_format_supported = rdpsnd_dsp_resample_supported,
 	.wave_out_set_format = libao_set_format,
 	.wave_out_volume = rdpsnd_dsp_softvol_set,
-	.wave_out_play = libao_play,
 
 	.need_byteswap_on_be = 1,
 	.need_resampling = 1,

@@ -37,9 +37,6 @@
 #define MAX_FORMATS		10
 #define MAX_QUEUE		10
 
-BOOL g_dsp_busy = False;
-int g_dsp_fd;
-
 static VCHANNEL *rdpsnd_channel;
 static struct audio_driver *drivers = NULL;
 struct audio_driver *current_driver = NULL;
@@ -94,6 +91,34 @@ rdpsnd_send_completion(uint16 tick, uint8 packet_index)
 		     (unsigned) tick, (unsigned) packet_index));
 }
 
+
+static BOOL
+rdpsnd_auto_select(void)
+{
+	static BOOL failed = False;
+
+	if (!failed)
+	{
+		current_driver = drivers;
+		while (current_driver != NULL)
+		{
+			DEBUG(("trying %s...\n", current_driver->name));
+			if (current_driver->wave_out_open())
+			{
+				DEBUG(("selected %s\n", current_driver->name));
+				return True;
+			}
+			current_driver = current_driver->next;
+		}
+
+		warning("no working audio-driver found\n");
+		failed = True;
+		current_driver = NULL;
+	}
+
+	return False;
+}
+
 static void
 rdpsnd_process_negotiate(STREAM in)
 {
@@ -115,7 +140,10 @@ rdpsnd_process_negotiate(STREAM in)
 	DEBUG_SOUND(("RDPSND: RDPSND_NEGOTIATE(formats: %d, pad: 0x%02x, version: %x)\n",
 		     (int) in_format_count, (unsigned) pad, (unsigned) version));
 
-	if (current_driver->wave_out_open())
+	if (!current_driver)
+		rdpsnd_auto_select();
+
+	if (current_driver && current_driver->wave_out_open())
 	{
 		current_driver->wave_out_close();
 		device_available = True;
@@ -230,6 +258,16 @@ rdpsnd_process_packet(uint8 opcode, STREAM s)
 
 			if (!device_open || (format != current_format))
 			{
+				/*
+				 * If we haven't selected a device by now, then either
+				 * we've failed to find a working device, or the server
+				 * is sending bogus RDPSND_WRITE.
+				 */
+				if (!current_driver)
+				{
+					rdpsnd_send_completion(tick, packet_index);
+					break;
+				}
 				if (!device_open && !current_driver->wave_out_open())
 				{
 					rdpsnd_send_completion(tick, packet_index);
@@ -253,7 +291,8 @@ rdpsnd_process_packet(uint8 opcode, STREAM s)
 			break;
 		case RDPSND_CLOSE:
 			DEBUG_SOUND(("RDPSND: RDPSND_CLOSE()\n"));
-			current_driver->wave_out_close();
+			if (device_open)
+				current_driver->wave_out_close();
 			device_open = False;
 			break;
 		case RDPSND_NEGOTIATE:
@@ -333,36 +372,6 @@ rdpsnd_process(STREAM s)
 	}
 }
 
-static BOOL
-rdpsnd_auto_open(void)
-{
-	static BOOL failed = False;
-
-	if (!failed)
-	{
-		struct audio_driver *auto_driver = current_driver;
-
-		current_driver = drivers;
-		while (current_driver != NULL)
-		{
-			DEBUG(("trying %s...\n", current_driver->name));
-			if (current_driver->wave_out_open())
-			{
-				DEBUG(("selected %s\n", current_driver->name));
-				return True;
-			}
-			g_dsp_fd = 0;
-			current_driver = current_driver->next;
-		}
-
-		warning("no working audio-driver found\n");
-		failed = True;
-		current_driver = auto_driver;
-	}
-
-	return False;
-}
-
 static void
 rdpsnd_register_drivers(char *options)
 {
@@ -402,7 +411,6 @@ rdpsnd_register_drivers(char *options)
 BOOL
 rdpsnd_init(char *optarg)
 {
-	static struct audio_driver auto_driver;
 	struct audio_driver *pos;
 	char *driver = NULL, *options = NULL;
 
@@ -444,11 +452,7 @@ rdpsnd_init(char *optarg)
 	rdpsnd_register_drivers(options);
 
 	if (!driver)
-	{
-		auto_driver.wave_out_open = &rdpsnd_auto_open;
-		current_driver = &auto_driver;
 		return True;
-	}
 
 	pos = drivers;
 	while (pos != NULL)
@@ -480,21 +484,12 @@ rdpsnd_show_help(void)
 }
 
 void
-rdpsnd_play(void)
-{
-	current_driver->wave_out_play();
-}
-
-void
 rdpsnd_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv)
 {
 	long next_pending;
 
-	if (g_dsp_busy)
-	{
-		FD_SET(g_dsp_fd, wfds);
-		*n = (g_dsp_fd > *n) ? g_dsp_fd : *n;
-	}
+	if (device_open)
+		current_driver->add_fds(n, rfds, wfds, tv);
 
 	next_pending = rdpsnd_queue_next_completion();
 	if (next_pending >= 0)
@@ -515,8 +510,8 @@ rdpsnd_check_fds(fd_set * rfds, fd_set * wfds)
 {
 	rdpsnd_queue_complete_pending();
 
-	if (g_dsp_busy && FD_ISSET(g_dsp_fd, wfds))
-		rdpsnd_play();
+	if (device_open)
+		current_driver->check_fds(rfds, wfds);
 }
 
 static void
@@ -538,9 +533,6 @@ rdpsnd_queue_write(STREAM s, uint16 tick, uint8 index)
 	packet->index = index;
 
 	gettimeofday(&packet->arrive_tv, NULL);
-
-	if (!g_dsp_busy)
-		current_driver->wave_out_play();
 }
 
 struct audio_packet *

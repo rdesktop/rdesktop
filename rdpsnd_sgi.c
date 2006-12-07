@@ -39,6 +39,23 @@ double min_volume, max_volume, volume_range;
 int resource, maxFillable;
 int combinedFrameSize;
 
+void sgi_play(void);
+
+void
+sgi_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv)
+{
+}
+
+void
+sgi_check_fds(fd_set * rfds, fd_set * wfds)
+{
+	if (output_port == (ALport) 0)
+		return;
+
+	if (!rdpsnd_queue_empty())
+		sgi_play();
+}
+
 BOOL
 sgi_open(void)
 {
@@ -101,6 +118,7 @@ sgi_close(void)
 	alDiscardFrames(output_port, 0);
 
 	alClosePort(output_port);
+	output_port = (ALport) 0;
 	alFreeConfig(audioconfig);
 #if (defined(IRIX_DEBUG))
 	fprintf(stderr, "sgi_close: returning\n");
@@ -240,10 +258,7 @@ sgi_play(void)
 	while (1)
 	{
 		if (rdpsnd_queue_empty())
-		{
-			g_dsp_busy = False;
 			return;
-		}
 
 		packet = rdpsnd_queue_current_packet();
 		out = &packet->s;
@@ -265,7 +280,6 @@ sgi_play(void)
 #if (defined(IRIX_DEBUG))
 /*  				fprintf(stderr,"Busy playing...\n"); */
 #endif
-				g_dsp_busy = True;
 				usleep(10);
 				return;
 			}
@@ -277,12 +291,14 @@ static struct audio_driver sgi_driver = {
 	.name = "sgi",
 	.description = "SGI output driver",
 
+	.add_fds = sgi_add_fds,
+	.check_fds = sgi_check_fds,
+
 	.wave_out_open = sgi_open,
 	.wave_out_close = sgi_close,
 	.wave_out_format_supported = sgi_format_supported,
 	.wave_out_set_format = sgi_set_format,
 	.wave_out_volume = sgi_volume,
-	.wave_out_play = sgi_play,
 
 	.need_byteswap_on_be = 1,
 	.need_resampling = 0,

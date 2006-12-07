@@ -147,8 +147,6 @@ static int g_move_y_offset = 0;
 static BOOL g_using_full_workarea = False;
 
 #ifdef WITH_RDPSND
-extern int g_dsp_fd;
-extern BOOL g_dsp_busy;
 extern BOOL g_rdpsnd;
 #endif
 

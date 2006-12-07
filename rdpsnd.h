@@ -30,21 +30,21 @@ struct audio_packet
 
 struct audio_driver
 {
-	BOOL(*wave_out_open) (void);
+	void (*add_fds) (int *n, fd_set * rfds, fd_set * wfds, struct timeval * tv);
+	void (*check_fds) (fd_set * rfds, fd_set * wfds);
+
+	  BOOL(*wave_out_open) (void);
 	void (*wave_out_close) (void);
 	  BOOL(*wave_out_format_supported) (WAVEFORMATEX * pwfx);
 	  BOOL(*wave_out_set_format) (WAVEFORMATEX * pwfx);
 	void (*wave_out_volume) (uint16 left, uint16 right);
-	void (*wave_out_play) (void);
+
 	char *name;
 	char *description;
 	int need_byteswap_on_be;
 	int need_resampling;
 	struct audio_driver *next;
 };
-
-extern BOOL g_dsp_busy;
-extern int g_dsp_fd;
 
 /* Driver register functions */
 struct audio_driver *alsa_register(char *options);
