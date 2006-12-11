@@ -1,3 +1,11 @@
+* General
+
+  * Rework main loop to a generic event handler (i.e. move select() to
+    the top of the stack, not the end). Also means rewriting the connect
+    procedure as a state machine.
+
+  * Stop using static objects for packets and make it more clear when it
+    is in use (explicit allocation and free).
 
 * Clipboard:
 
