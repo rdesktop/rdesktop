@@ -44,6 +44,8 @@ void sgi_play(void);
 void
 sgi_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv)
 {
+	/* We need to be called rather often... */
+	FD_SET(0, wfds);
 }
 
 void
