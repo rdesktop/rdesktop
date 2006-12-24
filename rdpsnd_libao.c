@@ -41,6 +41,8 @@ void libao_play(void);
 void
 libao_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv)
 {
+	/* We need to be called rather often... */
+	FD_SET(0, wfds);
 }
 
 void
@@ -173,6 +175,8 @@ libao_play(void)
 
 	if ((out->p == out->end) || duration > next_tick - packet->tick + 500)
 	{
+		unsigned int delay_us;
+
 		prev_s = tv.tv_sec;
 		prev_us = tv.tv_usec;
 
@@ -183,7 +187,9 @@ libao_play(void)
 			       (packet->tick + duration) % 65536, next_tick % 65536));
 		}
 
-		rdpsnd_queue_next(duration);
+		delay_us = ((out->size/4) * (1000000 / 44100));
+
+		rdpsnd_queue_next(delay_us);
 	}
 }
 
