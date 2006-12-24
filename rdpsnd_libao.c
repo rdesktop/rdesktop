@@ -187,7 +187,7 @@ libao_play(void)
 			       (packet->tick + duration) % 65536, next_tick % 65536));
 		}
 
-		delay_us = ((out->size/4) * (1000000 / 44100));
+		delay_us = ((out->size / 4) * (1000000 / 44100));
 
 		rdpsnd_queue_next(delay_us);
 	}
