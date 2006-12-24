@@ -106,6 +106,7 @@ rdpsnd_auto_select(void)
 			if (current_driver->wave_out_open())
 			{
 				DEBUG(("selected %s\n", current_driver->name));
+				current_driver->wave_out_close();
 				return True;
 			}
 			current_driver = current_driver->next;
@@ -143,9 +144,8 @@ rdpsnd_process_negotiate(STREAM in)
 	if (!current_driver)
 		rdpsnd_auto_select();
 
-	if (current_driver && current_driver->wave_out_open())
+	if (current_driver)
 	{
-		current_driver->wave_out_close();
 		device_available = True;
 	}
 
