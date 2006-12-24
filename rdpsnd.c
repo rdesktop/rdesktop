@@ -142,10 +142,11 @@ rdpsnd_process_negotiate(STREAM in)
 		     (int) in_format_count, (unsigned) pad, (unsigned) version));
 
 	if (!current_driver)
-		rdpsnd_auto_select();
+		device_available = rdpsnd_auto_select();
 
-	if (current_driver)
+	if (current_driver && !device_available && current_driver->wave_out_open())
 	{
+		current_driver->wave_out_close();
 		device_available = True;
 	}
 
