@@ -3,6 +3,7 @@
    Sound Channel Process Functions - Open Sound System
    Copyright (C) Matthew Chapman 2003
    Copyright (C) GuoJunBo guojunbo@ict.ac.cn 2003
+   Copyright 2006 Pierre Ossman <ossman@cendio.se> for Cendio AB
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -44,8 +45,16 @@
 #define MAX_LEN		512
 
 static int dsp_fd = -1;
-static BOOL dsp_busy;
+static int dsp_mode;
+static int dsp_refs;
 
+static BOOL dsp_configured;
+
+static BOOL dsp_out;
+static BOOL dsp_in;
+
+static int stereo;
+static int format;
 static int snd_rate;
 static short samplewidth;
 static char *dsp_dev;
@@ -55,6 +64,7 @@ static BOOL in_esddsp;
 static struct audio_driver oss_driver;
 
 void oss_play(void);
+void oss_record(void);
 
 void
 oss_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv)
@@ -62,10 +72,10 @@ oss_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv)
 	if (dsp_fd == -1)
 		return;
 
-	if (rdpsnd_queue_empty())
-		return;
-
-	FD_SET(dsp_fd, wfds);
+	if (dsp_out && !rdpsnd_queue_empty())
+		FD_SET(dsp_fd, wfds);
+	if (dsp_in)
+		FD_SET(dsp_fd, rfds);
 	if (dsp_fd > *n)
 		*n = dsp_fd;
 }
@@ -75,6 +85,8 @@ oss_check_fds(fd_set * rfds, fd_set * wfds)
 {
 	if (FD_ISSET(dsp_fd, wfds))
 		oss_play();
+	if (FD_ISSET(dsp_fd, rfds))
+		oss_record();
 }
 
 static BOOL
@@ -100,13 +112,52 @@ detect_esddsp(void)
 }
 
 BOOL
-oss_open(void)
+oss_open(int fallback)
 {
-	if ((dsp_fd = open(dsp_dev, O_WRONLY)) == -1)
+	int caps;
+
+	if (dsp_fd != -1)
 	{
-		perror(dsp_dev);
+		dsp_refs++;
+
+		if (dsp_mode == O_RDWR)
+			return True;
+
+		if (dsp_mode == fallback)
+			return True;
+
+		dsp_refs--;
 		return False;
 	}
+
+	dsp_configured = False;
+
+	dsp_mode = O_RDWR;
+	dsp_fd = open(dsp_dev, O_RDWR | O_NONBLOCK);
+	if (dsp_fd != -1)
+	{
+		ioctl(dsp_fd, SNDCTL_DSP_SETDUPLEX, 0);
+
+		if ((ioctl(dsp_fd, SNDCTL_DSP_GETCAPS, &caps) < 0) || !(caps & DSP_CAP_DUPLEX))
+		{
+			close(dsp_fd);
+			dsp_fd = -1;
+		}
+	}
+
+	if (dsp_fd == -1)
+	{
+		dsp_mode = fallback;
+
+		dsp_fd = open(dsp_dev, dsp_mode | O_NONBLOCK);
+		if (dsp_fd == -1)
+		{
+			perror(dsp_dev);
+			return False;
+		}
+	}
+
+	dsp_refs++;
 
 	in_esddsp = detect_esddsp();
 
@@ -116,9 +167,55 @@ oss_open(void)
 void
 oss_close(void)
 {
+	dsp_refs--;
+
+	if (dsp_refs != 0)
+		return;
+
 	close(dsp_fd);
 	dsp_fd = -1;
-	dsp_busy = False;
+}
+
+BOOL
+oss_open_out(void)
+{
+	if (!oss_open(O_WRONLY))
+		return False;
+
+	dsp_out = True;
+
+	return True;
+}
+
+void
+oss_close_out(void)
+{
+	oss_close();
+
+	/* Ack all remaining packets */
+	while (!rdpsnd_queue_empty())
+		rdpsnd_queue_next(0);
+
+	dsp_out = False;
+}
+
+BOOL
+oss_open_in(void)
+{
+	if (!oss_open(O_RDONLY))
+		return False;
+
+	dsp_in = True;
+
+	return True;
+}
+
+void
+oss_close_in(void)
+{
+	oss_close();
+
+	dsp_in = False;
 }
 
 BOOL
@@ -137,8 +234,24 @@ oss_format_supported(WAVEFORMATEX * pwfx)
 BOOL
 oss_set_format(WAVEFORMATEX * pwfx)
 {
-	int stereo, format, fragments;
+	int fragments;
 	static BOOL driver_broken = False;
+
+	if (dsp_configured)
+	{
+		if ((pwfx->wBitsPerSample == 8) && (format != AFMT_U8))
+			return False;
+		if ((pwfx->wBitsPerSample == 16) && (format != AFMT_S16_LE))
+			return False;
+
+		if ((pwfx->nChannels == 2) != !!stereo)
+			return False;
+
+		if (pwfx->nSamplesPerSec != snd_rate)
+			return False;
+
+		return True;
+	}
 
 	ioctl(dsp_fd, SNDCTL_DSP_RESET, NULL);
 	ioctl(dsp_fd, SNDCTL_DSP_SYNC, NULL);
@@ -234,6 +347,8 @@ oss_set_format(WAVEFORMATEX * pwfx)
 		}
 	}
 
+	dsp_configured = True;
+
 	return True;
 }
 
@@ -316,6 +431,23 @@ oss_play(void)
 	}
 }
 
+void
+oss_record(void)
+{
+	char buffer[32768];
+	int len;
+
+	len = read(dsp_fd, buffer, sizeof(buffer));
+	if (len == -1)
+	{
+		if (errno != EWOULDBLOCK)
+			perror("read audio");
+		return;
+	}
+
+	rdpsnd_record(buffer, len);
+}
+
 struct audio_driver *
 oss_register(char *options)
 {
@@ -328,11 +460,17 @@ oss_register(char *options)
 	oss_driver.add_fds = oss_add_fds;
 	oss_driver.check_fds = oss_check_fds;
 
-	oss_driver.wave_out_open = oss_open;
-	oss_driver.wave_out_close = oss_close;
+	oss_driver.wave_out_open = oss_open_out;
+	oss_driver.wave_out_close = oss_close_out;
 	oss_driver.wave_out_format_supported = oss_format_supported;
 	oss_driver.wave_out_set_format = oss_set_format;
 	oss_driver.wave_out_volume = oss_volume;
+
+	oss_driver.wave_in_open = oss_open_in;
+	oss_driver.wave_in_close = oss_close_in;
+	oss_driver.wave_in_format_supported = oss_format_supported;
+	oss_driver.wave_in_set_format = oss_set_format;
+	oss_driver.wave_in_volume = NULL;	/* FIXME */
 
 	oss_driver.need_byteswap_on_be = 0;
 	oss_driver.need_resampling = 0;
