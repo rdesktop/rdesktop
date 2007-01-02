@@ -151,7 +151,8 @@ RDPSND_PING
 -----------
 
 Sent by the server to the client to determine transport latency.
-Response is identical to the request (including an unmodified tick).
+The client must respond by echoing the first four bytes of this
+packet.
 
  0                   1                   2                   3   
  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 
@@ -197,7 +198,7 @@ client supports).
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |            UDP port           |         Format count          |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|     Pad1    |              Version            |      Pad2     |
+| Initial idx |              Version            |    Padding    |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                              ...                              |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -218,7 +219,12 @@ Flags
 
     Flags for client capabilities. Data not valid when from server.
 
-        0000 0001   Do UDP song and dance (details unknown).
+        0000 0001   Do UDP song and dance (details unknown). Must be
+                    set for sound to work.
+        0000 0002   Volume control support. Indicates that volume
+                    fields are valid and that the client understands
+                    RDPSND_SET_VOLUME.
+        0000 0004   Pitch field is valid.
 
 Left channel
 
@@ -240,19 +246,18 @@ Format count
 
     Number of format structures following the header.
 
-Pad1
+Initial index
 
-    Usage not known. Offset 26 in secret protocol. Data not valid
-    when from client.
+    Initial packet index. The first RDPSND_WRITE will have a packet
+    index one larger than this value. Data not valid when from client.
 
 Version
 
     Software version. Server (XP & 2K3) sets this to 5.
 
-Pad2
+Padding
 
-    Usage not known. Data not valid when from server, nor from
-    client.
+    Unused.
 
 Format tag
 
