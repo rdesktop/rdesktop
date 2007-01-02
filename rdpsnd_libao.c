@@ -198,8 +198,10 @@ libao_register(char *options)
 {
 	static struct audio_driver libao_driver;
 
-	libao_driver.name = xstrdup("libao");
-	libao_driver.description = xstrdup("libao output driver, default device: system dependent");
+	memset(&libao_driver, 0, sizeof(libao_driver));
+
+	libao_driver.name = "libao";
+	libao_driver.description = "libao output driver, default device: system dependent";
 
 	libao_driver.add_fds = libao_add_fds;
 	libao_driver.check_fds = libao_check_fds;

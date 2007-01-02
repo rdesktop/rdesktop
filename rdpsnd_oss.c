@@ -319,9 +319,11 @@ oss_play(void)
 struct audio_driver *
 oss_register(char *options)
 {
-	oss_driver.name = xstrdup("oss");
+	memset(&oss_driver, 0, sizeof(oss_driver));
+
+	oss_driver.name = "oss";
 	oss_driver.description =
-		xstrdup("OSS output driver, default device: " DEFAULTDEVICE " or $AUDIODEV");
+		"OSS output driver, default device: " DEFAULTDEVICE " or $AUDIODEV";
 
 	oss_driver.add_fds = oss_add_fds;
 	oss_driver.check_fds = oss_check_fds;
@@ -345,7 +347,7 @@ oss_register(char *options)
 
 		if (dsp_dev == NULL)
 		{
-			dsp_dev = xstrdup(DEFAULTDEVICE);
+			dsp_dev = DEFAULTDEVICE;
 		}
 	}
 

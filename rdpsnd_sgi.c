@@ -294,8 +294,10 @@ sgi_register(char *options)
 {
 	static struct audio_driver sgi_driver;
 
-	sgi_driver.name = xstrdup("sgi");
-	sgi_driver.description = xstrdup("SGI output driver");
+	memset(&sgi_driver, 0, sizeof(sgi_driver));
+
+	sgi_driver.name = "sgi";
+	sgi_driver.description = "SGI output driver";
 
 	sgi_driver.add_fds = sgi_add_fds;
 	sgi_driver.check_fds = sgi_check_fds;

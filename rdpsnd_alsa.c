@@ -342,8 +342,10 @@ alsa_register(char *options)
 {
 	static struct audio_driver alsa_driver;
 
-	alsa_driver.name = xstrdup("alsa");
-	alsa_driver.description = xstrdup("ALSA output driver, default device: " DEFAULTDEVICE);
+	memset(&alsa_driver, 0, sizeof(alsa_driver));
+
+	alsa_driver.name = "alsa";
+	alsa_driver.description = "ALSA output driver, default device: " DEFAULTDEVICE;
 
 	alsa_driver.add_fds = alsa_add_fds;
 	alsa_driver.check_fds = alsa_check_fds;
@@ -363,7 +365,7 @@ alsa_register(char *options)
 	}
 	else
 	{
-		pcm_name = xstrdup(DEFAULTDEVICE);
+		pcm_name = DEFAULTDEVICE;
 	}
 
 	return &alsa_driver;

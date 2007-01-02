@@ -269,9 +269,11 @@ sun_register(char *options)
 {
 	static struct audio_driver sun_driver;
 
-	sun_driver.name = xstrdup("sun");
+	memset(&sun_driver, 0, sizeof(sun_driver));
+
+	sun_driver.name = "sun";
 	sun_driver.description =
-		xstrdup("SUN/BSD output driver, default device: " DEFAULTDEVICE " or $AUDIODEV");
+		"SUN/BSD output driver, default device: " DEFAULTDEVICE " or $AUDIODEV";
 
 	sun_driver.add_fds = sun_add_fds;
 	sun_driver.check_fds = sun_check_fds;
@@ -295,7 +297,7 @@ sun_register(char *options)
 
 		if (dsp_dev == NULL)
 		{
-			dsp_dev = xstrdup(DEFAULTDEVICE);
+			dsp_dev = DEFAULTDEVICE;
 		}
 	}
 
