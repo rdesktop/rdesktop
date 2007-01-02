@@ -240,7 +240,8 @@ Pitch
 
 UDP port
 
-    Port used for UDP transfers. Data not valid when from server.
+    Port used for UDP transfers. Sent in network (big endian) order.
+    Data not valid when from server.
 
 Format count
 
@@ -253,7 +254,8 @@ Initial index
 
 Version
 
-    Software version. Server (XP & 2K3) sets this to 5.
+    Software version. Server (XP & 2K3) sets this to 5. Client (XP)
+    also sets this to 5.
 
 Padding
 
