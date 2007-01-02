@@ -39,6 +39,12 @@ struct audio_driver
 	  BOOL(*wave_out_set_format) (WAVEFORMATEX * pwfx);
 	void (*wave_out_volume) (uint16 left, uint16 right);
 
+	  BOOL(*wave_in_open) (void);
+	void (*wave_in_close) (void);
+	  BOOL(*wave_in_format_supported) (WAVEFORMATEX * pwfx);
+	  BOOL(*wave_in_set_format) (WAVEFORMATEX * pwfx);
+	void (*wave_in_volume) (uint16 left, uint16 right);
+
 	char *name;
 	char *description;
 	int need_byteswap_on_be;

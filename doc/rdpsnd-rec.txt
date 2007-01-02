@@ -1,0 +1,181 @@
+Overview
+========
+
+This is a rdesktop specific extension to the RDPSND protocol to
+support recording.
+
+The basic protocol is the same as RDPSND (described in rdpsnd.txt),
+but with a bunch of new opcodes.
+
+A client indicates to the server that it can support recording by
+setting bit 24 (0x00800000) in "Flags" in RDPSND_NEGOTIATE.
+
+New opcodes
+
+        0x27    RDPSND_REC_NEGOTIATE
+        0x28    RDPSND_REC_START
+        0x29    RDPSND_REC_STOP
+        0x2A    RDPSND_REC_DATA
+        0x2B    RDPSND_REC_SET_VOLUME
+
+Opcodes
+=======
+
+The following is a list of the new opcodes and their payload.
+
+RDPSND_REC_NEGOTIATE
+--------------------
+
+Sent immediatly after RDPSND_NEGOTIATE when the client indicates that
+it supports recording. Allows the server to determine the
+capabilities of the client.
+
+The client should reply with an identical packet, with the relevant
+fields filled in, and a filtered list of formats (based on what the
+client supports).
+
+ 0                   1                   2                   3   
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                             Flags                             |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|          Left channel         |         Right channel         |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|          Format count         |            Version            |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                              ...                              |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|           Format tag          |            Channels           |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                        Frames per sec.                        |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                         Bytes per sec.                        |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|          Block align          |        Bits per sample        |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|          Extra size           |         Extra data ...        |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                              ...                              |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Flags
+
+    Flags for capabilities. Currently unused.
+
+Left channel
+
+    Initial volume for left channel. Reserved when sent from server.
+
+Right channel
+
+    Initial volume for right channel. Reserved when sent from server.
+
+Format count
+
+    Number of format structures following the header.
+
+Version
+
+    Version of the RDPSND record protocol. Current version is 1.
+
+Format tag
+
+    Audio format type as registered at Microsoft.
+
+Channels
+
+    Number of channels per frame.
+
+Frames per sec.
+
+    Frames per second in Hz.
+
+Bytes per sec.
+
+    Number of bytes per second. Should be the product of
+    "Frames per sec." and "Block align".
+
+Block align
+
+    The size of each frame. Note that not all bytes may contain
+    useful data.
+
+Bits per sample
+
+    Number of bits per sample. Commonly 8 or 16.
+
+Extra size
+
+	Number of bytes of extra information following this format
+	description.
+
+Extra data
+
+	Optional extra format data. Contents specific to each format
+	type.
+
+RDPSND_REC_START
+----------------
+
+Sent from the server to tell the client to start recording.
+
+ 0                   1                   2                   3   
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|         Format index          |                               |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Format index
+
+    Waveform data format in the form of an index to the previously
+    negotiated format list.
+
+RDPSND_REC_STOP
+---------------
+
+Tells the client to stop sending record data. Must be sent before a
+new RDPSND_REC_START is sent.
+
+No payload and no response.
+
+RDPSND_REC_DATA
+---------------
+
+Chunk of recorded data. The client is free to choose how much data
+should be queued up before a packet is sent. The payload must not
+exceed 32768 bytes though.
+
+No response.
+
+ 0                   1                   2                   3   
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                         Waveform data                         |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                              ...                              |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Waveform data
+
+    Binary waveform data in the format specified by the format index.
+    Size defined by the packet boundary.
+
+RDPSND_REC_SET_VOLUME
+---------------------
+
+Request from the server to the client to change the input volume.
+No response.
+
+ 0                   1                   2                   3   
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|          Left channel         |         Right channel         |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+Left channel
+
+    Volume of left channel in the range [0, 65535].
+
+Right channel
+
+    Volume of right channel in the range [0, 65535].

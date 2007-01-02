@@ -166,6 +166,7 @@ struct async_iorequest *rdpdr_remove_iorequest(struct async_iorequest *prev,
 void rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out);
 BOOL rdpdr_abort_io(uint32 fd, uint32 major, NTSTATUS status);
 /* rdpsnd.c */
+void rdpsnd_record(const void *data, unsigned int size);
 BOOL rdpsnd_init(char *optarg);
 void rdpsnd_show_help(void);
 void rdpsnd_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv);

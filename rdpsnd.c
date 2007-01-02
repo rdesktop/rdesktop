@@ -34,19 +34,37 @@
 #define RDPSND_PING			6
 #define RDPSND_NEGOTIATE	7
 
+#define RDPSND_REC_NEGOTIATE	39
+#define RDPSND_REC_START		40
+#define RDPSND_REC_STOP			41
+#define RDPSND_REC_DATA			42
+#define RDPSND_REC_SET_VOLUME	43
+
+#define RDPSND_FLAG_RECORD		0x00800000
+
 #define MAX_FORMATS		10
-#define MAX_QUEUE		10
+#define MAX_QUEUE		50
 
 static VCHANNEL *rdpsnd_channel;
+static VCHANNEL *rdpsnddbg_channel;
 static struct audio_driver *drivers = NULL;
 struct audio_driver *current_driver = NULL;
 
 static BOOL device_open;
+static BOOL rec_device_open;
+
 static WAVEFORMATEX formats[MAX_FORMATS];
 static unsigned int format_count;
 static unsigned int current_format;
+
+static WAVEFORMATEX rec_formats[MAX_FORMATS];
+static unsigned int rec_format_count;
+
 unsigned int queue_hi, queue_lo, queue_pending;
 struct audio_packet packet_queue[MAX_QUEUE];
+
+static char record_buffer[8192];
+static int record_buffer_size;
 
 static uint8 packet_opcode;
 static struct stream packet;
@@ -91,6 +109,74 @@ rdpsnd_send_completion(uint16 tick, uint8 packet_index)
 		     (unsigned) tick, (unsigned) packet_index));
 }
 
+static void
+rdpsnd_flush_record(void)
+{
+	STREAM s;
+	unsigned int chunk_size;
+	char *data;
+
+	if (record_buffer_size == 0)
+		return;
+
+	assert(record_buffer_size <= sizeof(record_buffer));
+
+	data = record_buffer;
+
+	/*
+	 * Microsoft's RDP server keeps dropping chunks, so we need to
+	 * transmit everything inside one channel fragment or we risk
+	 * making the rdpsnd server go out of sync with the byte stream.
+	 */
+	while (record_buffer_size)
+	{
+		if (record_buffer_size < 1596)
+			chunk_size = record_buffer_size;
+		else
+			chunk_size = 1596;
+
+		s = rdpsnd_init_packet(RDPSND_REC_DATA, chunk_size);
+		out_uint8p(s, data, chunk_size);
+
+		s_mark_end(s);
+		rdpsnd_send(s);
+
+		data = data + chunk_size;
+		record_buffer_size -= chunk_size;
+
+		DEBUG_SOUND(("RDPSND: -> RDPSND_REC_DATA(length: %u)\n", (unsigned) chunk_size));
+	}
+
+	record_buffer_size = 0;
+}
+
+void
+rdpsnd_record(const void *data, unsigned int size)
+{
+	int remain;
+
+	assert(rec_device_open);
+
+	while (size)
+	{
+		remain = sizeof(record_buffer) - record_buffer_size;
+
+		if (size >= remain)
+		{
+			memcpy(record_buffer + record_buffer_size, data, remain);
+			record_buffer_size += remain;
+			rdpsnd_flush_record();
+			data = (const char *) data + remain;
+			size -= remain;
+		}
+		else
+		{
+			memcpy(record_buffer + record_buffer_size, data, size);
+			record_buffer_size += size;
+			size = 0;
+		}
+	}
+}
 
 static BOOL
 rdpsnd_auto_select(void)
@@ -187,7 +273,7 @@ rdpsnd_process_negotiate(STREAM in)
 	}
 
 	out = rdpsnd_init_packet(RDPSND_NEGOTIATE | 0x200, 20 + 18 * format_count);
-	out_uint32_le(out, 3);	/* flags */
+	out_uint32_le(out, 0x00800003);	/* flags */
 	out_uint32(out, 0xffffffff);	/* volume */
 	out_uint32(out, 0);	/* pitch */
 	out_uint16(out, 0);	/* UDP port */
@@ -233,6 +319,95 @@ rdpsnd_process_ping(STREAM in)
 	rdpsnd_send(out);
 
 	DEBUG_SOUND(("RDPSND: -> (tick: 0x%04x)\n", (unsigned) tick));
+}
+
+static void
+rdpsnd_process_rec_negotiate(STREAM in)
+{
+	uint16 in_format_count, i;
+	uint16 version;
+	WAVEFORMATEX *format;
+	STREAM out;
+	BOOL device_available = False;
+	int readcnt;
+	int discardcnt;
+
+	in_uint8s(in, 8);	/* initial bytes not valid from server */
+	in_uint16_le(in, in_format_count);
+	in_uint16_le(in, version);
+
+	DEBUG_SOUND(("RDPSND: RDPSND_REC_NEGOTIATE(formats: %d, version: %x)\n",
+		     (int) in_format_count, (unsigned) version));
+
+	if (!current_driver)
+		device_available = rdpsnd_auto_select();
+
+	if (current_driver && !device_available && current_driver->wave_in_open
+	    && current_driver->wave_in_open())
+	{
+		current_driver->wave_in_close();
+		device_available = True;
+	}
+
+	rec_format_count = 0;
+	if (s_check_rem(in, 18 * in_format_count))
+	{
+		for (i = 0; i < in_format_count; i++)
+		{
+			format = &rec_formats[rec_format_count];
+			in_uint16_le(in, format->wFormatTag);
+			in_uint16_le(in, format->nChannels);
+			in_uint32_le(in, format->nSamplesPerSec);
+			in_uint32_le(in, format->nAvgBytesPerSec);
+			in_uint16_le(in, format->nBlockAlign);
+			in_uint16_le(in, format->wBitsPerSample);
+			in_uint16_le(in, format->cbSize);
+
+			/* read in the buffer of unknown use */
+			readcnt = format->cbSize;
+			discardcnt = 0;
+			if (format->cbSize > MAX_CBSIZE)
+			{
+				fprintf(stderr, "cbSize too large for buffer: %d\n",
+					format->cbSize);
+				readcnt = MAX_CBSIZE;
+				discardcnt = format->cbSize - MAX_CBSIZE;
+			}
+			in_uint8a(in, format->cb, readcnt);
+			in_uint8s(in, discardcnt);
+
+			if (device_available && current_driver->wave_in_format_supported(format))
+			{
+				rec_format_count++;
+				if (rec_format_count == MAX_FORMATS)
+					break;
+			}
+		}
+	}
+
+	out = rdpsnd_init_packet(RDPSND_REC_NEGOTIATE, 12 + 18 * rec_format_count);
+	out_uint32_le(out, 0x00000000);	/* flags */
+	out_uint32_le(out, 0xffffffff);	/* volume */
+	out_uint16_le(out, rec_format_count);
+	out_uint16_le(out, 1);	/* version */
+
+	for (i = 0; i < rec_format_count; i++)
+	{
+		format = &rec_formats[i];
+		out_uint16_le(out, format->wFormatTag);
+		out_uint16_le(out, format->nChannels);
+		out_uint32_le(out, format->nSamplesPerSec);
+		out_uint32_le(out, format->nAvgBytesPerSec);
+		out_uint16_le(out, format->nBlockAlign);
+		out_uint16_le(out, format->wBitsPerSample);
+		out_uint16(out, 0);	/* cbSize */
+	}
+
+	s_mark_end(out);
+
+	DEBUG_SOUND(("RDPSND: -> RDPSND_REC_NEGOTIATE(formats: %d)\n", (int) rec_format_count));
+
+	rdpsnd_send(out);
 }
 
 static void
@@ -309,6 +484,50 @@ rdpsnd_process_packet(uint8 opcode, STREAM s)
 			if (device_open)
 				current_driver->wave_out_volume(vol_left, vol_right);
 			break;
+		case RDPSND_REC_NEGOTIATE:
+			rdpsnd_process_rec_negotiate(s);
+			break;
+		case RDPSND_REC_START:
+			in_uint16_le(s, format);
+			DEBUG_SOUND(("RDPSND: RDPSND_REC_START(format: %u)\n", (unsigned) format));
+
+			if (format >= MAX_FORMATS)
+			{
+				error("RDPSND: Invalid format index\n");
+				break;
+			}
+
+			if (rec_device_open)
+			{
+				error("RDPSND: Multiple RDPSND_REC_START\n");
+				break;
+			}
+
+			if (!current_driver->wave_in_open())
+				break;
+
+			if (!current_driver->wave_in_set_format(&rec_formats[format]))
+			{
+				error("RDPSND: Device not accepting format\n");
+				current_driver->wave_in_close();
+				break;
+			}
+			rec_device_open = True;
+			break;
+		case RDPSND_REC_STOP:
+			DEBUG_SOUND(("RDPSND: RDPSND_REC_STOP()\n"));
+			rdpsnd_flush_record();
+			if (rec_device_open)
+				current_driver->wave_in_close();
+			rec_device_open = False;
+			break;
+		case RDPSND_REC_SET_VOLUME:
+			in_uint16_le(s, vol_left);
+			in_uint16_le(s, vol_right);
+			DEBUG_SOUND(("RDPSND: RDPSND_REC_VOLUME(left: 0x%04x (%u %%), right: 0x%04x (%u %%))\n", (unsigned) vol_left, (unsigned) vol_left / 655, (unsigned) vol_right, (unsigned) vol_right / 655));
+			if (rec_device_open)
+				current_driver->wave_in_volume(vol_left, vol_right);
+			break;
 		default:
 			unimpl("RDPSND packet type %x\n", opcode);
 			break;
@@ -373,6 +592,32 @@ rdpsnd_process(STREAM s)
 	}
 }
 
+static BOOL
+rdpsnddbg_line_handler(const char *line, void *data)
+{
+#ifdef WITH_DEBUG_SOUND
+	fprintf(stderr, "SNDDBG: %s\n", line);
+#endif
+	return True;
+}
+
+static void
+rdpsnddbg_process(STREAM s)
+{
+	unsigned int pkglen;
+	static char *rest = NULL;
+	char *buf;
+
+	pkglen = s->end - s->p;
+	/* str_handle_lines requires null terminated strings */
+	buf = xmalloc(pkglen + 1);
+	STRNCPY(buf, (char *) s->p, pkglen + 1);
+
+	str_handle_lines(buf, &rest, rdpsnddbg_line_handler, NULL);
+
+	xfree(buf);
+}
+
 static void
 rdpsnd_register_drivers(char *options)
 {
@@ -425,7 +670,11 @@ rdpsnd_init(char *optarg)
 		channel_register("rdpsnd", CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_ENCRYPT_RDP,
 				 rdpsnd_process);
 
-	if (rdpsnd_channel == NULL)
+	rdpsnddbg_channel =
+		channel_register("snddbg", CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_ENCRYPT_RDP,
+				 rdpsnddbg_process);
+
+	if ((rdpsnd_channel == NULL) || (rdpsnddbg_channel == NULL))
 	{
 		error("channel_register\n");
 		return False;
@@ -489,7 +738,7 @@ rdpsnd_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv)
 {
 	long next_pending;
 
-	if (device_open)
+	if (device_open || rec_device_open)
 		current_driver->add_fds(n, rfds, wfds, tv);
 
 	next_pending = rdpsnd_queue_next_completion();
@@ -511,7 +760,7 @@ rdpsnd_check_fds(fd_set * rfds, fd_set * wfds)
 {
 	rdpsnd_queue_complete_pending();
 
-	if (device_open)
+	if (device_open || rec_device_open)
 		current_driver->check_fds(rfds, wfds);
 }
 
