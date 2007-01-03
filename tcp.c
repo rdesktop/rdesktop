@@ -288,7 +288,8 @@ tcp_connect(char *server)
 		{
 			option_value = 1024 * 16;
 			option_len = sizeof(option_value);
-			setsockopt(g_sock, SOL_SOCKET, SO_RCVBUF, (void *) &option_value, option_len);
+			setsockopt(g_sock, SOL_SOCKET, SO_RCVBUF, (void *) &option_value,
+				   option_len);
 		}
 	}
 
@@ -320,7 +321,7 @@ tcp_get_address()
 	socklen_t len = sizeof(sockaddr);
 	if (getsockname(g_sock, (struct sockaddr *) &sockaddr, &len) == 0)
 	{
-		uint8 *ip = (uint8 *) &sockaddr.sin_addr;
+		uint8 *ip = (uint8 *) & sockaddr.sin_addr;
 		sprintf(ipaddr, "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
 	}
 	else
