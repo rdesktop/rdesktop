@@ -20,6 +20,9 @@
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#define BOOL XPROTO_BOOL
+#include <X11/Xproto.h>
+#undef BOOL
 #include <unistd.h>
 #include <sys/time.h>
 #include <time.h>
@@ -27,9 +30,6 @@
 #include <strings.h>
 #include "rdesktop.h"
 #include "xproto.h"
-
-/* We can't include Xproto.h because of conflicting defines for BOOL */
-#define X_ConfigureWindow              12
 
 extern int g_width;
 extern int g_height;
