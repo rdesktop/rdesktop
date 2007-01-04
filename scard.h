@@ -151,7 +151,7 @@ typedef struct _TSCThreadData
 {
 	uint32 device;
 	uint32 id;
-	NTHANDLE handle;
+	RD_NTHANDLE handle;
 	uint32 request;
 	STREAM in;
 	STREAM out;

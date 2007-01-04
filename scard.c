@@ -79,29 +79,29 @@ scardSetInfo(uint32 device, uint32 id, uint32 bytes_out)
 
 #ifndef MAKE_PROTO
 
-static NTSTATUS
+static RD_NTSTATUS
 scard_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create_disposition,
-	     uint32 flags_and_attributes, char *filename, NTHANDLE * phandle)
+	     uint32 flags_and_attributes, char *filename, RD_NTHANDLE * phandle)
 {
-	return STATUS_SUCCESS;
+	return RD_STATUS_SUCCESS;
 }
 
-static NTSTATUS
-scard_close(NTHANDLE handle)
+static RD_NTSTATUS
+scard_close(RD_NTHANDLE handle)
 {
-	return STATUS_SUCCESS;
+	return RD_STATUS_SUCCESS;
 }
 
-static NTSTATUS
-scard_read(NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
+static RD_NTSTATUS
+scard_read(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
 {
-	return STATUS_SUCCESS;
+	return RD_STATUS_SUCCESS;
 }
 
-static NTSTATUS
-scard_write(NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
+static RD_NTSTATUS
+scard_write(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
 {
-	return STATUS_SUCCESS;
+	return RD_STATUS_SUCCESS;
 }
 #endif /* MAKE_PROTO */
 
@@ -2167,8 +2167,8 @@ TS_SCardAccessStartedEvent(STREAM in, STREAM out)
 }
 
 
-static NTSTATUS
-scard_device_control(NTHANDLE handle, uint32 request, STREAM in, STREAM out)
+static RD_NTSTATUS
+scard_device_control(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 {
 	SERVER_DWORD Result = 0x00000000;
 	unsigned char *psize, *pend, *pStatusCode;
@@ -2368,7 +2368,7 @@ scard_device_control(NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 	hexdump(pbeg, (size_t) (out->p) - (size_t) pbeg);
 	DEBUG_SCARD(("--------------------------------\n"));
 #endif
-	return STATUS_SUCCESS;
+	return RD_STATUS_SUCCESS;
 }
 
 /* Thread functions */
@@ -2423,7 +2423,7 @@ freeStream(PMEM_HANDLE * handle, STREAM s)
 }
 
 static PSCThreadData
-SC_addToQueue(NTHANDLE handle, uint32 request, STREAM in, STREAM out)
+SC_addToQueue(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 {
 	PMEM_HANDLE lcHandle = NULL;
 	PSCThreadData data = SC_xmalloc(&lcHandle, sizeof(TSCThreadData));
@@ -2613,13 +2613,13 @@ queue_handler_function(void *data)
 	return NULL;
 }
 
-static NTSTATUS
-thread_wrapper(NTHANDLE handle, uint32 request, STREAM in, STREAM out)
+static RD_NTSTATUS
+thread_wrapper(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 {
 	if (SC_addToQueue(handle, request, in, out))
-		return STATUS_PENDING | 0xC0000000;
+		return RD_STATUS_PENDING | 0xC0000000;
 	else
-		return STATUS_NO_SUCH_FILE;
+		return RD_STATUS_NO_SUCH_FILE;
 }
 
 DEVICE_FNS scard_fns = {
