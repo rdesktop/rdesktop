@@ -18,15 +18,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#ifdef WITH_SCARD
-#ifdef PCSC_OSX
-#include <PCSC/wintypes.h>
-#else
-#include <wintypes.h>
-#endif /* PCSC_OSX */
-#else
 typedef int BOOL;
-#endif
 
 #ifndef True
 #define True  (1)

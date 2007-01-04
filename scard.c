@@ -19,20 +19,26 @@
 */
 
 #include <stdio.h>
-#include "rdesktop.h"
 #include <unistd.h>
 #include <fcntl.h>
 #include <strings.h>
 #include <sys/types.h>
 #include <time.h>
+/* PCSC does not use BOOL as parameters or return values in function calls,
+   so let us just ignore their own definition of BOOL */
+#define BOOL PCSC_BOOL
 #ifndef MAKE_PROTO
 #ifdef PCSC_OSX
+#include <PCSC/wintypes.h>
 #include <PCSC/pcsclite.h>
 #include <PCSC/winscard.h>
 #else
+#include <wintypes.h>
 #include <pcsclite.h>
 #include <winscard.h>
 #endif /* PCSC_OSX */
+#undef BOOL
+#include "rdesktop.h"
 #include "scard.h"
 
 /* variable segment */
