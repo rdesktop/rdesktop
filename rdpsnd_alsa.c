@@ -1,10 +1,10 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    Sound Channel Process Functions - alsa-driver
-   Copyright (C) Matthew Chapman 2003
+   Copyright (C) Matthew Chapman 2003-2007
    Copyright (C) GuoJunBo guojunbo@ict.ac.cn 2003
-   Copyright (C) Michael Gernoth mike@zerfleddert.de 2006
-   Copyright 2006 Pierre Ossman <ossman@cendio.se> for Cendio AB
+   Copyright (C) Michael Gernoth mike@zerfleddert.de 2006-2007
+   Copyright 2006-2007 Pierre Ossman <ossman@cendio.se> for Cendio AB
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by

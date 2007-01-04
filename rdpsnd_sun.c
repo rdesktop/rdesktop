@@ -1,9 +1,9 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    Sound Channel Process Functions - Sun
-   Copyright (C) Matthew Chapman 2003
+   Copyright (C) Matthew Chapman 2003-2007
    Copyright (C) GuoJunBo guojunbo@ict.ac.cn 2003
-   Copyright (C) Michael Gernoth mike@zerfleddert.de 2003-2006
+   Copyright (C) Michael Gernoth mike@zerfleddert.de 2003-2007
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
