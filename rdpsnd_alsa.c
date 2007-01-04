@@ -290,7 +290,7 @@ alsa_close_out(void)
 }
 
 BOOL
-alsa_format_supported(WAVEFORMATEX * pwfx)
+alsa_format_supported(RD_WAVEFORMATEX * pwfx)
 {
 #if 0
 	int err;
@@ -323,7 +323,7 @@ alsa_format_supported(WAVEFORMATEX * pwfx)
 }
 
 BOOL
-alsa_set_format_out(WAVEFORMATEX * pwfx)
+alsa_set_format_out(RD_WAVEFORMATEX * pwfx)
 {
 	if (!alsa_set_format(out_handle, pwfx))
 		return False;
@@ -431,7 +431,7 @@ alsa_close_in(void)
 }
 
 BOOL
-alsa_set_format_in(WAVEFORMATEX * pwfx)
+alsa_set_format_in(RD_WAVEFORMATEX * pwfx)
 {
 	int err;
 
