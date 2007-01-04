@@ -53,11 +53,11 @@ struct audio_driver *current_driver = NULL;
 static BOOL device_open;
 static BOOL rec_device_open;
 
-static WAVEFORMATEX formats[MAX_FORMATS];
+static RD_WAVEFORMATEX formats[MAX_FORMATS];
 static unsigned int format_count;
 static unsigned int current_format;
 
-static WAVEFORMATEX rec_formats[MAX_FORMATS];
+static RD_WAVEFORMATEX rec_formats[MAX_FORMATS];
 static unsigned int rec_format_count;
 
 unsigned int queue_hi, queue_lo, queue_pending;
@@ -212,7 +212,7 @@ rdpsnd_process_negotiate(STREAM in)
 	uint16 in_format_count, i;
 	uint8 pad;
 	uint16 version;
-	WAVEFORMATEX *format;
+	RD_WAVEFORMATEX *format;
 	STREAM out;
 	BOOL device_available = False;
 	int readcnt;
@@ -326,7 +326,7 @@ rdpsnd_process_rec_negotiate(STREAM in)
 {
 	uint16 in_format_count, i;
 	uint16 version;
-	WAVEFORMATEX *format;
+	RD_WAVEFORMATEX *format;
 	STREAM out;
 	BOOL device_available = False;
 	int readcnt;

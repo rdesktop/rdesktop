@@ -105,7 +105,7 @@ static XIM g_IM;
 static XIC g_IC;
 static XModifierKeymap *g_mod_map;
 static Cursor g_current_cursor;
-static HCURSOR g_null_cursor = NULL;
+static RD_HCURSOR g_null_cursor = NULL;
 static Atom g_protocol_atom, g_kill_atom;
 extern Atom g_net_wm_state_atom;
 extern Atom g_net_wm_desktop_atom;
@@ -2314,7 +2314,7 @@ ui_move_pointer(int x, int y)
 	XWarpPointer(g_display, g_wnd, g_wnd, 0, 0, 0, 0, x, y);
 }
 
-HBITMAP
+RD_HBITMAP
 ui_create_bitmap(int width, int height, uint8 * data)
 {
 	XImage *image;
@@ -2344,7 +2344,7 @@ ui_create_bitmap(int width, int height, uint8 * data)
 	XFree(image);
 	if (tdata != data)
 		xfree(tdata);
-	return (HBITMAP) bitmap;
+	return (RD_HBITMAP) bitmap;
 }
 
 void
@@ -2392,12 +2392,12 @@ ui_paint_bitmap(int x, int y, int cx, int cy, int width, int height, uint8 * dat
 }
 
 void
-ui_destroy_bitmap(HBITMAP bmp)
+ui_destroy_bitmap(RD_HBITMAP bmp)
 {
 	XFreePixmap(g_display, (Pixmap) bmp);
 }
 
-HGLYPH
+RD_HGLYPH
 ui_create_glyph(int width, int height, uint8 * data)
 {
 	XImage *image;
@@ -2419,20 +2419,20 @@ ui_create_glyph(int width, int height, uint8 * data)
 	XPutImage(g_display, bitmap, g_create_glyph_gc, image, 0, 0, 0, 0, width, height);
 
 	XFree(image);
-	return (HGLYPH) bitmap;
+	return (RD_HGLYPH) bitmap;
 }
 
 void
-ui_destroy_glyph(HGLYPH glyph)
+ui_destroy_glyph(RD_HGLYPH glyph)
 {
 	XFreePixmap(g_display, (Pixmap) glyph);
 }
 
-HCURSOR
+RD_HCURSOR
 ui_create_cursor(unsigned int x, unsigned int y, int width, int height,
 		 uint8 * andmask, uint8 * xormask)
 {
-	HGLYPH maskglyph, cursorglyph;
+	RD_HGLYPH maskglyph, cursorglyph;
 	XColor bg, fg;
 	Cursor xcursor;
 	uint8 *cursor, *pcursor;
@@ -2496,11 +2496,11 @@ ui_create_cursor(unsigned int x, unsigned int y, int width, int height,
 	ui_destroy_glyph(cursorglyph);
 	xfree(mask);
 	xfree(cursor);
-	return (HCURSOR) xcursor;
+	return (RD_HCURSOR) xcursor;
 }
 
 void
-ui_set_cursor(HCURSOR cursor)
+ui_set_cursor(RD_HCURSOR cursor)
 {
 	g_current_cursor = (Cursor) cursor;
 	XDefineCursor(g_display, g_wnd, g_current_cursor);
@@ -2508,7 +2508,7 @@ ui_set_cursor(HCURSOR cursor)
 }
 
 void
-ui_destroy_cursor(HCURSOR cursor)
+ui_destroy_cursor(RD_HCURSOR cursor)
 {
 	XFreeCursor(g_display, (Cursor) cursor);
 }
@@ -2526,7 +2526,7 @@ ui_set_null_cursor(void)
 		(xc)->flags = DoRed | DoGreen | DoBlue;
 
 
-HCOLOURMAP
+RD_HCOLOURMAP
 ui_create_colourmap(COLOURMAP * colours)
 {
 	COLOURENTRY *entry;
@@ -2622,12 +2622,12 @@ ui_create_colourmap(COLOURMAP * colours)
 		XStoreColors(g_display, map, xcolours, ncolours);
 
 		xfree(xcolours);
-		return (HCOLOURMAP) map;
+		return (RD_HCOLOURMAP) map;
 	}
 }
 
 void
-ui_destroy_colourmap(HCOLOURMAP map)
+ui_destroy_colourmap(RD_HCOLOURMAP map)
 {
 	if (!g_owncolmap)
 		xfree(map);
@@ -2636,7 +2636,7 @@ ui_destroy_colourmap(HCOLOURMAP map)
 }
 
 void
-ui_set_colourmap(HCOLOURMAP map)
+ui_set_colourmap(RD_HCOLOURMAP map)
 {
 	if (!g_owncolmap)
 	{
@@ -2724,7 +2724,7 @@ ui_patblt(uint8 opcode,
 			FILL_RECTANGLE_BACKSTORE(x, y, cx, cy);
 			XSetFillStyle(g_display, g_gc, FillSolid);
 			XSetTSOrigin(g_display, g_gc, 0, 0);
-			ui_destroy_glyph((HGLYPH) fill);
+			ui_destroy_glyph((RD_HGLYPH) fill);
 			break;
 
 		case 3:	/* Pattern */
@@ -2739,7 +2739,7 @@ ui_patblt(uint8 opcode,
 			FILL_RECTANGLE_BACKSTORE(x, y, cx, cy);
 			XSetFillStyle(g_display, g_gc, FillSolid);
 			XSetTSOrigin(g_display, g_gc, 0, 0);
-			ui_destroy_glyph((HGLYPH) fill);
+			ui_destroy_glyph((RD_HGLYPH) fill);
 			break;
 
 		default:
@@ -2782,7 +2782,7 @@ ui_screenblt(uint8 opcode,
 void
 ui_memblt(uint8 opcode,
 	  /* dest */ int x, int y, int cx, int cy,
-	  /* src */ HBITMAP src, int srcx, int srcy)
+	  /* src */ RD_HBITMAP src, int srcx, int srcy)
 {
 	SET_FUNCTION(opcode);
 	XCopyArea(g_display, (Pixmap) src, g_wnd, g_gc, srcx, srcy, cx, cy, x, y);
@@ -2797,7 +2797,7 @@ ui_memblt(uint8 opcode,
 void
 ui_triblt(uint8 opcode,
 	  /* dest */ int x, int y, int cx, int cy,
-	  /* src */ HBITMAP src, int srcx, int srcy,
+	  /* src */ RD_HBITMAP src, int srcx, int srcy,
 	  /* brush */ BRUSH * brush, int bgcolour, int fgcolour)
 {
 	/* This is potentially difficult to do in general. Until someone
@@ -2855,7 +2855,7 @@ ui_rect(
 void
 ui_polygon(uint8 opcode,
 	   /* mode */ uint8 fillmode,
-	   /* dest */ POINT * point, int npoints,
+	   /* dest */ RD_POINT * point, int npoints,
 	   /* brush */ BRUSH * brush, int bgcolour, int fgcolour)
 {
 	uint8 style, i, ipattern[8];
@@ -2898,7 +2898,7 @@ ui_polygon(uint8 opcode,
 			FILL_POLYGON((XPoint *) point, npoints);
 			XSetFillStyle(g_display, g_gc, FillSolid);
 			XSetTSOrigin(g_display, g_gc, 0, 0);
-			ui_destroy_glyph((HGLYPH) fill);
+			ui_destroy_glyph((RD_HGLYPH) fill);
 			break;
 
 		case 3:	/* Pattern */
@@ -2913,7 +2913,7 @@ ui_polygon(uint8 opcode,
 			FILL_POLYGON((XPoint *) point, npoints);
 			XSetFillStyle(g_display, g_gc, FillSolid);
 			XSetTSOrigin(g_display, g_gc, 0, 0);
-			ui_destroy_glyph((HGLYPH) fill);
+			ui_destroy_glyph((RD_HGLYPH) fill);
 			break;
 
 		default:
@@ -2925,7 +2925,7 @@ ui_polygon(uint8 opcode,
 
 void
 ui_polyline(uint8 opcode,
-	    /* dest */ POINT * points, int npoints,
+	    /* dest */ RD_POINT * points, int npoints,
 	    /* pen */ PEN * pen)
 {
 	/* TODO: set join style */
@@ -2976,7 +2976,7 @@ ui_ellipse(uint8 opcode,
 			DRAW_ELLIPSE(x, y, cx, cy, fillmode);
 			XSetFillStyle(g_display, g_gc, FillSolid);
 			XSetTSOrigin(g_display, g_gc, 0, 0);
-			ui_destroy_glyph((HGLYPH) fill);
+			ui_destroy_glyph((RD_HGLYPH) fill);
 			break;
 
 		case 3:	/* Pattern */
@@ -2991,7 +2991,7 @@ ui_ellipse(uint8 opcode,
 			DRAW_ELLIPSE(x, y, cx, cy, fillmode);
 			XSetFillStyle(g_display, g_gc, FillSolid);
 			XSetTSOrigin(g_display, g_gc, 0, 0);
-			ui_destroy_glyph((HGLYPH) fill);
+			ui_destroy_glyph((RD_HGLYPH) fill);
 			break;
 
 		default:
@@ -3005,7 +3005,7 @@ ui_ellipse(uint8 opcode,
 void
 ui_draw_glyph(int mixmode,
 	      /* dest */ int x, int y, int cx, int cy,
-	      /* src */ HGLYPH glyph, int srcx, int srcy,
+	      /* src */ RD_HGLYPH glyph, int srcx, int srcy,
 	      int bgcolour, int fgcolour)
 {
 	SET_FOREGROUND(fgcolour);

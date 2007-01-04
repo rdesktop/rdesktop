@@ -150,7 +150,7 @@ typedef struct
 	char type[PATH_MAX];
 } FsInfoType;
 
-static NTSTATUS NotifyInfo(NTHANDLE handle, uint32 info_class, NOTIFY * p);
+static RD_NTSTATUS NotifyInfo(RD_NTHANDLE handle, uint32 info_class, NOTIFY * p);
 
 static time_t
 get_create_time(struct stat *st)
@@ -337,11 +337,11 @@ disk_enum_devices(uint32 * id, char *optarg)
 }
 
 /* Opens or creates a file or directory */
-static NTSTATUS
+static RD_NTSTATUS
 disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create_disposition,
-	    uint32 flags_and_attributes, char *filename, NTHANDLE * phandle)
+	    uint32 flags_and_attributes, char *filename, RD_NTHANDLE * phandle)
 {
-	NTHANDLE handle;
+	RD_NTHANDLE handle;
 	DIR *dirp;
 	int flags, mode;
 	char path[PATH_MAX];
@@ -395,7 +395,7 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 	if ((stat(path, &filestat) == 0) && (S_ISDIR(filestat.st_mode)))
 	{
 		if (flags_and_attributes & FILE_NON_DIRECTORY_FILE)
-			return STATUS_FILE_IS_A_DIRECTORY;
+			return RD_STATUS_FILE_IS_A_DIRECTORY;
 		else
 			flags_and_attributes |= FILE_DIRECTORY_FILE;
 	}
@@ -414,16 +414,16 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 			{
 				case EACCES:
 
-					return STATUS_ACCESS_DENIED;
+					return RD_STATUS_ACCESS_DENIED;
 
 				case ENOENT:
 
-					return STATUS_NO_SUCH_FILE;
+					return RD_STATUS_NO_SUCH_FILE;
 
 				default:
 
 					perror("opendir");
-					return STATUS_NO_SUCH_FILE;
+					return RD_STATUS_NO_SUCH_FILE;
 			}
 		}
 		handle = DIRFD(dirp);
@@ -452,22 +452,22 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 			{
 				case EISDIR:
 
-					return STATUS_FILE_IS_A_DIRECTORY;
+					return RD_STATUS_FILE_IS_A_DIRECTORY;
 
 				case EACCES:
 
-					return STATUS_ACCESS_DENIED;
+					return RD_STATUS_ACCESS_DENIED;
 
 				case ENOENT:
 
-					return STATUS_NO_SUCH_FILE;
+					return RD_STATUS_NO_SUCH_FILE;
 				case EEXIST:
 
-					return STATUS_OBJECT_NAME_COLLISION;
+					return RD_STATUS_OBJECT_NAME_COLLISION;
 				default:
 
 					perror("open");
-					return STATUS_NO_SUCH_FILE;
+					return RD_STATUS_NO_SUCH_FILE;
 			}
 		}
 
@@ -496,11 +496,11 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 	g_notify_stamp = True;
 
 	*phandle = handle;
-	return STATUS_SUCCESS;
+	return RD_STATUS_SUCCESS;
 }
 
-static NTSTATUS
-disk_close(NTHANDLE handle)
+static RD_NTSTATUS
+disk_close(RD_NTHANDLE handle)
 {
 	struct fileinfo *pfinfo;
 
@@ -508,21 +508,21 @@ disk_close(NTHANDLE handle)
 
 	g_notify_stamp = True;
 
-	rdpdr_abort_io(handle, 0, STATUS_CANCELLED);
+	rdpdr_abort_io(handle, 0, RD_STATUS_CANCELLED);
 
 	if (pfinfo->pdir)
 	{
 		if (closedir(pfinfo->pdir) < 0)
 		{
 			perror("closedir");
-			return STATUS_INVALID_HANDLE;
+			return RD_STATUS_INVALID_HANDLE;
 		}
 
 		if (pfinfo->delete_on_close)
 			if (rmdir(pfinfo->path) < 0)
 			{
 				perror(pfinfo->path);
-				return STATUS_ACCESS_DENIED;
+				return RD_STATUS_ACCESS_DENIED;
 			}
 		pfinfo->delete_on_close = False;
 	}
@@ -531,23 +531,23 @@ disk_close(NTHANDLE handle)
 		if (close(handle) < 0)
 		{
 			perror("close");
-			return STATUS_INVALID_HANDLE;
+			return RD_STATUS_INVALID_HANDLE;
 		}
 		if (pfinfo->delete_on_close)
 			if (unlink(pfinfo->path) < 0)
 			{
 				perror(pfinfo->path);
-				return STATUS_ACCESS_DENIED;
+				return RD_STATUS_ACCESS_DENIED;
 			}
 
 		pfinfo->delete_on_close = False;
 	}
 
-	return STATUS_SUCCESS;
+	return RD_STATUS_SUCCESS;
 }
 
-static NTSTATUS
-disk_read(NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
+static RD_NTSTATUS
+disk_read(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
 {
 	int n;
 
@@ -574,20 +574,20 @@ disk_read(NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * 
 				/* Implement 24 Byte directory read ??
 				   with STATUS_NOT_IMPLEMENTED server doesn't read again */
 				/* return STATUS_FILE_IS_A_DIRECTORY; */
-				return STATUS_NOT_IMPLEMENTED;
+				return RD_STATUS_NOT_IMPLEMENTED;
 			default:
 				perror("read");
-				return STATUS_INVALID_PARAMETER;
+				return RD_STATUS_INVALID_PARAMETER;
 		}
 	}
 
 	*result = n;
 
-	return STATUS_SUCCESS;
+	return RD_STATUS_SUCCESS;
 }
 
-static NTSTATUS
-disk_write(NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
+static RD_NTSTATUS
+disk_write(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
 {
 	int n;
 
@@ -602,19 +602,19 @@ disk_write(NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 *
 		switch (errno)
 		{
 			case ENOSPC:
-				return STATUS_DISK_FULL;
+				return RD_STATUS_DISK_FULL;
 			default:
-				return STATUS_ACCESS_DENIED;
+				return RD_STATUS_ACCESS_DENIED;
 		}
 	}
 
 	*result = n;
 
-	return STATUS_SUCCESS;
+	return RD_STATUS_SUCCESS;
 }
 
-NTSTATUS
-disk_query_information(NTHANDLE handle, uint32 info_class, STREAM out)
+RD_NTSTATUS
+disk_query_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 {
 	uint32 file_attributes, ft_high, ft_low;
 	struct stat filestat;
@@ -627,7 +627,7 @@ disk_query_information(NTHANDLE handle, uint32 info_class, STREAM out)
 	{
 		perror("stat");
 		out_uint8(out, 0);
-		return STATUS_ACCESS_DENIED;
+		return RD_STATUS_ACCESS_DENIED;
 	}
 
 	/* Set file attributes */
@@ -689,13 +689,13 @@ disk_query_information(NTHANDLE handle, uint32 info_class, STREAM out)
 		default:
 
 			unimpl("IRP Query (File) Information class: 0x%x\n", info_class);
-			return STATUS_INVALID_PARAMETER;
+			return RD_STATUS_INVALID_PARAMETER;
 	}
-	return STATUS_SUCCESS;
+	return RD_STATUS_SUCCESS;
 }
 
-NTSTATUS
-disk_set_information(NTHANDLE handle, uint32 info_class, STREAM in, STREAM out)
+RD_NTSTATUS
+disk_set_information(RD_NTHANDLE handle, uint32 info_class, STREAM in, STREAM out)
 {
 	uint32 length, file_attributes, ft_high, ft_low, delete_on_close;
 	char newname[PATH_MAX], fullpath[PATH_MAX];
@@ -742,7 +742,7 @@ disk_set_information(NTHANDLE handle, uint32 info_class, STREAM in, STREAM out)
 			in_uint32_le(in, file_attributes);
 
 			if (fstat(handle, &filestat))
-				return STATUS_ACCESS_DENIED;
+				return RD_STATUS_ACCESS_DENIED;
 
 			tvs.modtime = filestat.st_mtime;
 			tvs.actime = filestat.st_atime;
@@ -768,7 +768,7 @@ disk_set_information(NTHANDLE handle, uint32 info_class, STREAM in, STREAM out)
 				       ctime(&tvs.modtime));
 #endif
 				if (utime(pfinfo->path, &tvs) && errno != EPERM)
-					return STATUS_ACCESS_DENIED;
+					return RD_STATUS_ACCESS_DENIED;
 			}
 
 			if (!file_attributes)
@@ -787,7 +787,7 @@ disk_set_information(NTHANDLE handle, uint32 info_class, STREAM in, STREAM out)
 #endif
 
 			if (fchmod(handle, mode))
-				return STATUS_ACCESS_DENIED;
+				return RD_STATUS_ACCESS_DENIED;
 
 			break;
 
@@ -804,7 +804,7 @@ disk_set_information(NTHANDLE handle, uint32 info_class, STREAM in, STREAM out)
 			}
 			else
 			{
-				return STATUS_INVALID_PARAMETER;
+				return RD_STATUS_INVALID_PARAMETER;
 			}
 
 			sprintf(fullpath, "%s%s", g_rdpdr_device[pfinfo->device_id].local_path,
@@ -813,7 +813,7 @@ disk_set_information(NTHANDLE handle, uint32 info_class, STREAM in, STREAM out)
 			if (rename(pfinfo->path, fullpath) != 0)
 			{
 				perror("rename");
-				return STATUS_ACCESS_DENIED;
+				return RD_STATUS_ACCESS_DENIED;
 			}
 			break;
 
@@ -852,46 +852,46 @@ disk_set_information(NTHANDLE handle, uint32 info_class, STREAM in, STREAM out)
 			/* prevents start of writing if not enough space left on device */
 			if (STATFS_FN(g_rdpdr_device[pfinfo->device_id].local_path, &stat_fs) == 0)
 				if (stat_fs.f_bfree * stat_fs.f_bsize < length)
-					return STATUS_DISK_FULL;
+					return RD_STATUS_DISK_FULL;
 
 			if (ftruncate_growable(handle, length) != 0)
 			{
-				return STATUS_DISK_FULL;
+				return RD_STATUS_DISK_FULL;
 			}
 
 			break;
 		default:
 
 			unimpl("IRP Set File Information class: 0x%x\n", info_class);
-			return STATUS_INVALID_PARAMETER;
+			return RD_STATUS_INVALID_PARAMETER;
 	}
-	return STATUS_SUCCESS;
+	return RD_STATUS_SUCCESS;
 }
 
-NTSTATUS
-disk_check_notify(NTHANDLE handle)
+RD_NTSTATUS
+disk_check_notify(RD_NTHANDLE handle)
 {
 	struct fileinfo *pfinfo;
-	NTSTATUS status = STATUS_PENDING;
+	RD_NTSTATUS status = RD_STATUS_PENDING;
 
 	NOTIFY notify;
 
 	pfinfo = &(g_fileinfo[handle]);
 	if (!pfinfo->pdir)
-		return STATUS_INVALID_DEVICE_REQUEST;
+		return RD_STATUS_INVALID_DEVICE_REQUEST;
 
 
 
 	status = NotifyInfo(handle, pfinfo->info_class, &notify);
 
-	if (status != STATUS_PENDING)
+	if (status != RD_STATUS_PENDING)
 		return status;
 
 	if (memcmp(&pfinfo->notify, &notify, sizeof(NOTIFY)))
 	{
 		/*printf("disk_check_notify found changed event\n"); */
 		memcpy(&pfinfo->notify, &notify, sizeof(NOTIFY));
-		status = STATUS_NOTIFY_ENUM_DIR;
+		status = RD_STATUS_NOTIFY_ENUM_DIR;
 	}
 
 	return status;
@@ -899,12 +899,12 @@ disk_check_notify(NTHANDLE handle)
 
 }
 
-NTSTATUS
-disk_create_notify(NTHANDLE handle, uint32 info_class)
+RD_NTSTATUS
+disk_create_notify(RD_NTHANDLE handle, uint32 info_class)
 {
 
 	struct fileinfo *pfinfo;
-	NTSTATUS ret = STATUS_PENDING;
+	RD_NTSTATUS ret = RD_STATUS_PENDING;
 
 	/* printf("start disk_create_notify info_class %X\n", info_class); */
 
@@ -915,8 +915,8 @@ disk_create_notify(NTHANDLE handle, uint32 info_class)
 
 	if (info_class & 0x1000)
 	{			/* ???? */
-		if (ret == STATUS_PENDING)
-			return STATUS_SUCCESS;
+		if (ret == RD_STATUS_PENDING)
+			return RD_STATUS_SUCCESS;
 	}
 
 	/* printf("disk_create_notify: num_entries %d\n", pfinfo->notify.num_entries); */
@@ -926,8 +926,8 @@ disk_create_notify(NTHANDLE handle, uint32 info_class)
 
 }
 
-static NTSTATUS
-NotifyInfo(NTHANDLE handle, uint32 info_class, NOTIFY * p)
+static RD_NTSTATUS
+NotifyInfo(RD_NTHANDLE handle, uint32 info_class, NOTIFY * p)
 {
 	struct fileinfo *pfinfo;
 	struct stat buf;
@@ -939,7 +939,7 @@ NotifyInfo(NTHANDLE handle, uint32 info_class, NOTIFY * p)
 	if (fstat(handle, &buf) < 0)
 	{
 		perror("NotifyInfo");
-		return STATUS_ACCESS_DENIED;
+		return RD_STATUS_ACCESS_DENIED;
 	}
 	p->modify_time = buf.st_mtime;
 	p->status_time = buf.st_ctime;
@@ -951,7 +951,7 @@ NotifyInfo(NTHANDLE handle, uint32 info_class, NOTIFY * p)
 	if (!dpr)
 	{
 		perror("NotifyInfo");
-		return STATUS_ACCESS_DENIED;
+		return RD_STATUS_ACCESS_DENIED;
 	}
 
 
@@ -972,7 +972,7 @@ NotifyInfo(NTHANDLE handle, uint32 info_class, NOTIFY * p)
 	}
 	closedir(dpr);
 
-	return STATUS_PENDING;
+	return RD_STATUS_PENDING;
 }
 
 static FsInfoType *
@@ -1043,8 +1043,8 @@ FsVolumeInfo(char *fpath)
 }
 
 
-NTSTATUS
-disk_query_volume_information(NTHANDLE handle, uint32 info_class, STREAM out)
+RD_NTSTATUS
+disk_query_volume_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 {
 	struct STATFS_T stat_fs;
 	struct fileinfo *pfinfo;
@@ -1055,7 +1055,7 @@ disk_query_volume_information(NTHANDLE handle, uint32 info_class, STREAM out)
 	if (STATFS_FN(pfinfo->path, &stat_fs) != 0)
 	{
 		perror("statfs");
-		return STATUS_ACCESS_DENIED;
+		return RD_STATUS_ACCESS_DENIED;
 	}
 
 	fsinfo = FsVolumeInfo(pfinfo->path);
@@ -1103,13 +1103,13 @@ disk_query_volume_information(NTHANDLE handle, uint32 info_class, STREAM out)
 		default:
 
 			unimpl("IRP Query Volume Information class: 0x%x\n", info_class);
-			return STATUS_INVALID_PARAMETER;
+			return RD_STATUS_INVALID_PARAMETER;
 	}
-	return STATUS_SUCCESS;
+	return RD_STATUS_SUCCESS;
 }
 
-NTSTATUS
-disk_query_directory(NTHANDLE handle, uint32 info_class, char *pattern, STREAM out)
+RD_NTSTATUS
+disk_query_directory(RD_NTHANDLE handle, uint32 info_class, char *pattern, STREAM out)
 {
 	uint32 file_attributes, ft_low, ft_high;
 	char *dirname, fullpath[PATH_MAX];
@@ -1140,7 +1140,7 @@ disk_query_directory(NTHANDLE handle, uint32 info_class, char *pattern, STREAM o
 				pdirent = readdir(pdir);
 
 			if (pdirent == NULL)
-				return STATUS_NO_MORE_FILES;
+				return RD_STATUS_NO_MORE_FILES;
 
 			/* Get information for directory entry */
 			sprintf(fullpath, "%s/%s", dirname, pdirent->d_name);
@@ -1160,7 +1160,7 @@ disk_query_directory(NTHANDLE handle, uint32 info_class, char *pattern, STREAM o
 						   the directory list operation will be aborted */
 						perror(fullpath);
 						out_uint8(out, 0);
-						return STATUS_NO_SUCH_FILE;
+						return RD_STATUS_NO_SUCH_FILE;
 				}
 			}
 
@@ -1210,19 +1210,19 @@ disk_query_directory(NTHANDLE handle, uint32 info_class, char *pattern, STREAM o
 			   FileNamesInformation */
 
 			unimpl("IRP Query Directory sub: 0x%x\n", info_class);
-			return STATUS_INVALID_PARAMETER;
+			return RD_STATUS_INVALID_PARAMETER;
 	}
 
-	return STATUS_SUCCESS;
+	return RD_STATUS_SUCCESS;
 }
 
 
 
-static NTSTATUS
-disk_device_control(NTHANDLE handle, uint32 request, STREAM in, STREAM out)
+static RD_NTSTATUS
+disk_device_control(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 {
 	if (((request >> 16) != 20) || ((request >> 16) != 9))
-		return STATUS_INVALID_PARAMETER;
+		return RD_STATUS_INVALID_PARAMETER;
 
 	/* extract operation */
 	request >>= 2;
@@ -1236,10 +1236,10 @@ disk_device_control(NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 		case 42:	/* ? */
 		default:
 			unimpl("DISK IOCTL %d\n", request);
-			return STATUS_INVALID_PARAMETER;
+			return RD_STATUS_INVALID_PARAMETER;
 	}
 
-	return STATUS_SUCCESS;
+	return RD_STATUS_SUCCESS;
 }
 
 DEVICE_FNS disk_fns = {

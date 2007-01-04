@@ -106,7 +106,7 @@ libao_close(void)
 }
 
 BOOL
-libao_set_format(WAVEFORMATEX * pwfx)
+libao_set_format(RD_WAVEFORMATEX * pwfx)
 {
 	ao_sample_format format;
 

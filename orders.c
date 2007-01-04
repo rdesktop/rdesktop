@@ -379,7 +379,7 @@ process_desksave(STREAM s, DESKSAVE_ORDER * os, uint32 present, BOOL delta)
 static void
 process_memblt(STREAM s, MEMBLT_ORDER * os, uint32 present, BOOL delta)
 {
-	HBITMAP bitmap;
+	RD_HBITMAP bitmap;
 
 	if (present & 0x0001)
 	{
@@ -425,7 +425,7 @@ process_memblt(STREAM s, MEMBLT_ORDER * os, uint32 present, BOOL delta)
 static void
 process_triblt(STREAM s, TRIBLT_ORDER * os, uint32 present, BOOL delta)
 {
-	HBITMAP bitmap;
+	RD_HBITMAP bitmap;
 
 	if (present & 0x000001)
 	{
@@ -486,7 +486,7 @@ process_polygon(STREAM s, POLYGON_ORDER * os, uint32 present, BOOL delta)
 {
 	int index, data, next;
 	uint8 flags = 0;
-	POINT *points;
+	RD_POINT *points;
 
 	if (present & 0x01)
 		rdp_in_coord(s, &os->x, delta);
@@ -528,8 +528,8 @@ process_polygon(STREAM s, POLYGON_ORDER * os, uint32 present, BOOL delta)
 		return;
 	}
 
-	points = (POINT *) xmalloc((os->npoints + 1) * sizeof(POINT));
-	memset(points, 0, (os->npoints + 1) * sizeof(POINT));
+	points = (RD_POINT *) xmalloc((os->npoints + 1) * sizeof(RD_POINT));
+	memset(points, 0, (os->npoints + 1) * sizeof(RD_POINT));
 
 	points[0].x = os->x;
 	points[0].y = os->y;
@@ -565,7 +565,7 @@ process_polygon2(STREAM s, POLYGON2_ORDER * os, uint32 present, BOOL delta)
 {
 	int index, data, next;
 	uint8 flags = 0;
-	POINT *points;
+	RD_POINT *points;
 
 	if (present & 0x0001)
 		rdp_in_coord(s, &os->x, delta);
@@ -613,8 +613,8 @@ process_polygon2(STREAM s, POLYGON2_ORDER * os, uint32 present, BOOL delta)
 		return;
 	}
 
-	points = (POINT *) xmalloc((os->npoints + 1) * sizeof(POINT));
-	memset(points, 0, (os->npoints + 1) * sizeof(POINT));
+	points = (RD_POINT *) xmalloc((os->npoints + 1) * sizeof(RD_POINT));
+	memset(points, 0, (os->npoints + 1) * sizeof(RD_POINT));
 
 	points[0].x = os->x;
 	points[0].y = os->y;
@@ -651,7 +651,7 @@ process_polyline(STREAM s, POLYLINE_ORDER * os, uint32 present, BOOL delta)
 	int index, next, data;
 	uint8 flags = 0;
 	PEN pen;
-	POINT *points;
+	RD_POINT *points;
 
 	if (present & 0x01)
 		rdp_in_coord(s, &os->x, delta);
@@ -690,8 +690,8 @@ process_polyline(STREAM s, POLYLINE_ORDER * os, uint32 present, BOOL delta)
 		return;
 	}
 
-	points = (POINT *) xmalloc((os->lines + 1) * sizeof(POINT));
-	memset(points, 0, (os->lines + 1) * sizeof(POINT));
+	points = (RD_POINT *) xmalloc((os->lines + 1) * sizeof(RD_POINT));
+	memset(points, 0, (os->lines + 1) * sizeof(RD_POINT));
 
 	points[0].x = os->x;
 	points[0].y = os->y;
@@ -874,7 +874,7 @@ process_text2(STREAM s, TEXT2_ORDER * os, uint32 present, BOOL delta)
 static void
 process_raw_bmpcache(STREAM s)
 {
-	HBITMAP bitmap;
+	RD_HBITMAP bitmap;
 	uint16 cache_idx, bufsize;
 	uint8 cache_id, width, height, bpp, Bpp;
 	uint8 *data, *inverted;
@@ -907,7 +907,7 @@ process_raw_bmpcache(STREAM s)
 static void
 process_bmpcache(STREAM s)
 {
-	HBITMAP bitmap;
+	RD_HBITMAP bitmap;
 	uint16 cache_idx, size;
 	uint8 cache_id, width, height, bpp, Bpp;
 	uint8 *data, *bmpdata;
@@ -963,7 +963,7 @@ process_bmpcache(STREAM s)
 static void
 process_bmpcache2(STREAM s, uint16 flags, BOOL compressed)
 {
-	HBITMAP bitmap;
+	RD_HBITMAP bitmap;
 	int y;
 	uint8 cache_id, cache_idx_low, width, height, Bpp;
 	uint16 cache_idx, bufsize;
@@ -1045,7 +1045,7 @@ process_colcache(STREAM s)
 {
 	COLOURENTRY *entry;
 	COLOURMAP map;
-	HCOLOURMAP hmap;
+	RD_HCOLOURMAP hmap;
 	uint8 cache_id;
 	int i;
 
@@ -1077,7 +1077,7 @@ process_colcache(STREAM s)
 static void
 process_fontcache(STREAM s)
 {
-	HGLYPH bitmap;
+	RD_HGLYPH bitmap;
 	uint8 font, nglyphs;
 	uint16 character, offset, baseline, width, height;
 	int i, datasize;

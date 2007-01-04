@@ -69,7 +69,7 @@ extern BOOL g_notify_stamp;
 static VCHANNEL *rdpdr_channel;
 
 /* If select() times out, the request for the device with handle g_min_timeout_fd is aborted */
-NTHANDLE g_min_timeout_fd;
+RD_NTHANDLE g_min_timeout_fd;
 uint32 g_num_devices;
 
 /* Table with information about rdpdr devices */
@@ -94,7 +94,7 @@ struct async_iorequest *g_iorequest;
 
 /* Return device_id for a given handle */
 int
-get_device_index(NTHANDLE handle)
+get_device_index(RD_NTHANDLE handle)
 {
 	int i;
 	for (i = 0; i < RDPDR_MAX_DEVICES; i++)
@@ -366,7 +366,7 @@ rdpdr_process_irp(STREAM s)
 	struct stream out;
 	DEVICE_FNS *fns;
 	BOOL rw_blocking = True;
-	NTSTATUS status = STATUS_INVALID_DEVICE_REQUEST;
+	RD_NTSTATUS status = RD_STATUS_INVALID_DEVICE_REQUEST;
 
 	in_uint32_le(s, device);
 	in_uint32_le(s, file);
@@ -439,7 +439,7 @@ rdpdr_process_irp(STREAM s)
 
 			if (!fns->create)
 			{
-				status = STATUS_NOT_SUPPORTED;
+				status = RD_STATUS_NOT_SUPPORTED;
 				break;
 			}
 
@@ -451,7 +451,7 @@ rdpdr_process_irp(STREAM s)
 		case IRP_MJ_CLOSE:
 			if (!fns->close)
 			{
-				status = STATUS_NOT_SUPPORTED;
+				status = RD_STATUS_NOT_SUPPORTED;
 				break;
 			}
 
@@ -462,7 +462,7 @@ rdpdr_process_irp(STREAM s)
 
 			if (!fns->read)
 			{
-				status = STATUS_NOT_SUPPORTED;
+				status = RD_STATUS_NOT_SUPPORTED;
 				break;
 			}
 
@@ -473,7 +473,7 @@ rdpdr_process_irp(STREAM s)
 #endif
 			if (!rdpdr_handle_ok(device, file))
 			{
-				status = STATUS_INVALID_HANDLE;
+				status = RD_STATUS_INVALID_HANDLE;
 				break;
 			}
 
@@ -482,7 +482,7 @@ rdpdr_process_irp(STREAM s)
 				buffer = (uint8 *) xrealloc((void *) buffer, length);
 				if (!buffer)
 				{
-					status = STATUS_CANCELLED;
+					status = RD_STATUS_CANCELLED;
 					break;
 				}
 				status = fns->read(file, buffer, length, offset, &result);
@@ -494,7 +494,7 @@ rdpdr_process_irp(STREAM s)
 			pst_buf = (uint8 *) xmalloc(length);
 			if (!pst_buf)
 			{
-				status = STATUS_CANCELLED;
+				status = RD_STATUS_CANCELLED;
 				break;
 			}
 			serial_get_timeout(file, length, &total_timeout, &interval_timeout);
@@ -502,11 +502,11 @@ rdpdr_process_irp(STREAM s)
 			    (device, file, id, major, length, fns, total_timeout, interval_timeout,
 			     pst_buf, offset))
 			{
-				status = STATUS_PENDING;
+				status = RD_STATUS_PENDING;
 				break;
 			}
 
-			status = STATUS_CANCELLED;
+			status = RD_STATUS_CANCELLED;
 			break;
 		case IRP_MJ_WRITE:
 
@@ -514,7 +514,7 @@ rdpdr_process_irp(STREAM s)
 
 			if (!fns->write)
 			{
-				status = STATUS_NOT_SUPPORTED;
+				status = RD_STATUS_NOT_SUPPORTED;
 				break;
 			}
 
@@ -526,7 +526,7 @@ rdpdr_process_irp(STREAM s)
 #endif
 			if (!rdpdr_handle_ok(device, file))
 			{
-				status = STATUS_INVALID_HANDLE;
+				status = RD_STATUS_INVALID_HANDLE;
 				break;
 			}
 
@@ -540,7 +540,7 @@ rdpdr_process_irp(STREAM s)
 			pst_buf = (uint8 *) xmalloc(length);
 			if (!pst_buf)
 			{
-				status = STATUS_CANCELLED;
+				status = RD_STATUS_CANCELLED;
 				break;
 			}
 
@@ -549,18 +549,18 @@ rdpdr_process_irp(STREAM s)
 			if (add_async_iorequest
 			    (device, file, id, major, length, fns, 0, 0, pst_buf, offset))
 			{
-				status = STATUS_PENDING;
+				status = RD_STATUS_PENDING;
 				break;
 			}
 
-			status = STATUS_CANCELLED;
+			status = RD_STATUS_CANCELLED;
 			break;
 
 		case IRP_MJ_QUERY_INFORMATION:
 
 			if (g_rdpdr_device[device].device_type != DEVICE_TYPE_DISK)
 			{
-				status = STATUS_INVALID_HANDLE;
+				status = RD_STATUS_INVALID_HANDLE;
 				break;
 			}
 			in_uint32_le(s, info_level);
@@ -576,7 +576,7 @@ rdpdr_process_irp(STREAM s)
 
 			if (g_rdpdr_device[device].device_type != DEVICE_TYPE_DISK)
 			{
-				status = STATUS_INVALID_HANDLE;
+				status = RD_STATUS_INVALID_HANDLE;
 				break;
 			}
 
@@ -592,7 +592,7 @@ rdpdr_process_irp(STREAM s)
 
 			if (g_rdpdr_device[device].device_type != DEVICE_TYPE_DISK)
 			{
-				status = STATUS_INVALID_HANDLE;
+				status = RD_STATUS_INVALID_HANDLE;
 				break;
 			}
 
@@ -608,7 +608,7 @@ rdpdr_process_irp(STREAM s)
 
 			if (g_rdpdr_device[device].device_type != DEVICE_TYPE_DISK)
 			{
-				status = STATUS_INVALID_HANDLE;
+				status = RD_STATUS_INVALID_HANDLE;
 				break;
 			}
 
@@ -650,14 +650,14 @@ rdpdr_process_irp(STREAM s)
 					status = disk_create_notify(file, info_level);
 					result = 0;
 
-					if (status == STATUS_PENDING)
+					if (status == RD_STATUS_PENDING)
 						add_async_iorequest(device, file, id, major, length,
 								    fns, 0, 0, NULL, 0);
 					break;
 
 				default:
 
-					status = STATUS_INVALID_PARAMETER;
+					status = RD_STATUS_INVALID_PARAMETER;
 					/* JIF */
 					unimpl("IRP major=0x%x minor=0x%x\n", major, minor);
 			}
@@ -667,7 +667,7 @@ rdpdr_process_irp(STREAM s)
 
 			if (!fns->device_control)
 			{
-				status = STATUS_NOT_SUPPORTED;
+				status = RD_STATUS_NOT_SUPPORTED;
 				break;
 			}
 
@@ -679,7 +679,7 @@ rdpdr_process_irp(STREAM s)
 			buffer = (uint8 *) xrealloc((void *) buffer, bytes_out + 0x14);
 			if (!buffer)
 			{
-				status = STATUS_CANCELLED;
+				status = RD_STATUS_CANCELLED;
 				break;
 			}
 
@@ -699,18 +699,18 @@ rdpdr_process_irp(STREAM s)
 			DEBUG_SCARD(("[SMART-CARD TRACE] OUT 0x%.8x\n", status));
 
 			/* Serial SERIAL_WAIT_ON_MASK */
-			if (status == STATUS_PENDING)
+			if (status == RD_STATUS_PENDING)
 			{
 				if (add_async_iorequest
 				    (device, file, id, major, length, fns, 0, 0, NULL, 0))
 				{
-					status = STATUS_PENDING;
+					status = RD_STATUS_PENDING;
 					break;
 				}
 			}
 #ifdef WITH_SCARD
-			else if (status == (STATUS_PENDING | 0xC0000000))
-				status = STATUS_PENDING;
+			else if (status == (RD_STATUS_PENDING | 0xC0000000))
+				status = RD_STATUS_PENDING;
 #endif
 			break;
 
@@ -719,7 +719,7 @@ rdpdr_process_irp(STREAM s)
 
 			if (g_rdpdr_device[device].device_type != DEVICE_TYPE_DISK)
 			{
-				status = STATUS_INVALID_HANDLE;
+				status = RD_STATUS_INVALID_HANDLE;
 				break;
 			}
 
@@ -729,7 +729,7 @@ rdpdr_process_irp(STREAM s)
 			out.size = sizeof(buffer);
 			/* FIXME: Perhaps consider actually *do*
 			   something here :-) */
-			status = STATUS_SUCCESS;
+			status = RD_STATUS_SUCCESS;
 			result = buffer_len = out.p - out.data;
 			break;
 
@@ -738,7 +738,7 @@ rdpdr_process_irp(STREAM s)
 			break;
 	}
 
-	if (status != STATUS_PENDING)
+	if (status != RD_STATUS_PENDING)
 	{
 		rdpdr_send_completion(device, id, status, result, buffer, buffer_len);
 	}
@@ -960,7 +960,7 @@ rdpdr_remove_iorequest(struct async_iorequest *prev, struct async_iorequest *ior
 static void
 _rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
 {
-	NTSTATUS status;
+	RD_NTSTATUS status;
 	uint32 result = 0;
 	DEVICE_FNS *fns;
 	struct async_iorequest *iorq;
@@ -989,7 +989,7 @@ _rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
 					/* iv_timeout between 2 chars, send partial_len */
 					/*printf("RDPDR: IVT total %u bytes read of %u\n", iorq->partial_len, iorq->length); */
 					rdpdr_send_completion(iorq->device,
-							      iorq->id, STATUS_SUCCESS,
+							      iorq->id, RD_STATUS_SUCCESS,
 							      iorq->partial_len,
 							      iorq->buffer, iorq->partial_len);
 					iorq = rdpdr_remove_iorequest(prev, iorq);
@@ -1013,7 +1013,7 @@ _rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
 
 		}
 
-		rdpdr_abort_io(g_min_timeout_fd, 0, STATUS_TIMEOUT);
+		rdpdr_abort_io(g_min_timeout_fd, 0, RD_STATUS_TIMEOUT);
 		return;
 	}
 
@@ -1117,7 +1117,7 @@ _rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
 						out.size = sizeof(buffer);
 						out_uint32_le(&out, result);
 						result = buffer_len = out.p - out.data;
-						status = STATUS_SUCCESS;
+						status = RD_STATUS_SUCCESS;
 						rdpdr_send_completion(iorq->device, iorq->id,
 								      status, result, buffer,
 								      buffer_len);
@@ -1153,7 +1153,7 @@ _rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
 						{
 							g_notify_stamp = False;
 							status = disk_check_notify(iorq->fd);
-							if (status != STATUS_PENDING)
+							if (status != RD_STATUS_PENDING)
 							{
 								rdpdr_send_completion(iorq->device,
 										      iorq->id,
@@ -1198,7 +1198,7 @@ rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
 
 /* Abort a pending io request for a given handle and major */
 BOOL
-rdpdr_abort_io(uint32 fd, uint32 major, NTSTATUS status)
+rdpdr_abort_io(uint32 fd, uint32 major, RD_NTSTATUS status)
 {
 	uint32 result;
 	struct async_iorequest *iorq;

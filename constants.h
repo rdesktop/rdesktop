@@ -312,8 +312,10 @@ enum RDP_INPUT_DEVICE
 #define MASK_CHANGE_BIT(var, mask, active) (var = ((var & ~mask) | (active ? mask : 0)))
 
 /* Clipboard constants, "borrowed" from GCC system headers in 
-   the w32 cross compiler */
+   the w32 cross compiler
+   this is the CF_ set when WINVER is 0x0400 */
 
+#ifndef CF_TEXT
 #define CF_TEXT         1
 #define CF_BITMAP       2
 #define CF_METAFILEPICT 3
@@ -340,6 +342,7 @@ enum RDP_INPUT_DEVICE
 #define CF_PRIVATELAST  767
 #define CF_GDIOBJFIRST  768
 #define CF_GDIOBJLAST   1023
+#endif
 
 /* Sound format constants */
 #define WAVE_FORMAT_PCM		1
@@ -354,28 +357,28 @@ enum RDP_INPUT_DEVICE
 #define CHANNEL_OPTION_SHOW_PROTOCOL	0x00200000
 
 /* NT status codes for RDPDR */
-#define STATUS_SUCCESS			0x00000000
-#define STATUS_NOT_IMPLEMENTED          0x00000001
-#define STATUS_PENDING                  0x00000103
+#define RD_STATUS_SUCCESS                  0x00000000
+#define RD_STATUS_NOT_IMPLEMENTED          0x00000001
+#define RD_STATUS_PENDING                  0x00000103
 
-#define STATUS_NO_MORE_FILES            0x80000006
-#define STATUS_DEVICE_PAPER_EMPTY       0x8000000e
-#define STATUS_DEVICE_POWERED_OFF       0x8000000f
-#define STATUS_DEVICE_OFF_LINE          0x80000010
-#define STATUS_DEVICE_BUSY              0x80000011
+#define RD_STATUS_NO_MORE_FILES            0x80000006
+#define RD_STATUS_DEVICE_PAPER_EMPTY       0x8000000e
+#define RD_STATUS_DEVICE_POWERED_OFF       0x8000000f
+#define RD_STATUS_DEVICE_OFF_LINE          0x80000010
+#define RD_STATUS_DEVICE_BUSY              0x80000011
 
-#define STATUS_INVALID_HANDLE           0xc0000008
-#define STATUS_INVALID_PARAMETER	0xc000000d
-#define STATUS_NO_SUCH_FILE             0xc000000f
-#define STATUS_INVALID_DEVICE_REQUEST	0xc0000010
-#define STATUS_ACCESS_DENIED		0xc0000022
-#define STATUS_OBJECT_NAME_COLLISION    0xc0000035
-#define STATUS_DISK_FULL                0xc000007f
-#define STATUS_FILE_IS_A_DIRECTORY      0xc00000ba
-#define STATUS_NOT_SUPPORTED            0xc00000bb
-#define STATUS_TIMEOUT                  0xc0000102
-#define STATUS_NOTIFY_ENUM_DIR          0xc000010c
-#define STATUS_CANCELLED                0xc0000120
+#define RD_STATUS_INVALID_HANDLE           0xc0000008
+#define RD_STATUS_INVALID_PARAMETER        0xc000000d
+#define RD_STATUS_NO_SUCH_FILE             0xc000000f
+#define RD_STATUS_INVALID_DEVICE_REQUEST   0xc0000010
+#define RD_STATUS_ACCESS_DENIED            0xc0000022
+#define RD_STATUS_OBJECT_NAME_COLLISION    0xc0000035
+#define RD_STATUS_DISK_FULL                0xc000007f
+#define RD_STATUS_FILE_IS_A_DIRECTORY      0xc00000ba
+#define RD_STATUS_NOT_SUPPORTED            0xc00000bb
+#define RD_STATUS_TIMEOUT                  0xc0000102
+#define RD_STATUS_NOTIFY_ENUM_DIR          0xc000010c
+#define RD_STATUS_CANCELLED                0xc0000120
 
 
 /* RDPDR constants */

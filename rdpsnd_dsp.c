@@ -50,7 +50,7 @@ rdpsnd_dsp_softvol_set(uint16 left, uint16 right)
 }
 
 void
-rdpsnd_dsp_softvol(unsigned char *buffer, unsigned int size, WAVEFORMATEX * format)
+rdpsnd_dsp_softvol(unsigned char *buffer, unsigned int size, RD_WAVEFORMATEX * format)
 {
 	unsigned int factor_left, factor_right;
 	unsigned char *posin = buffer;
@@ -111,7 +111,7 @@ rdpsnd_dsp_softvol(unsigned char *buffer, unsigned int size, WAVEFORMATEX * form
 }
 
 void
-rdpsnd_dsp_swapbytes(unsigned char *buffer, unsigned int size, WAVEFORMATEX * format)
+rdpsnd_dsp_swapbytes(unsigned char *buffer, unsigned int size, RD_WAVEFORMATEX * format)
 {
 	int i;
 	uint8 swap;
@@ -159,7 +159,7 @@ rdpsnd_dsp_resample_set(uint32 device_srate, uint16 device_bitspersample, uint16
 }
 
 BOOL
-rdpsnd_dsp_resample_supported(WAVEFORMATEX * format)
+rdpsnd_dsp_resample_supported(RD_WAVEFORMATEX * format)
 {
 	if (format->wFormatTag != WAVE_FORMAT_PCM)
 		return False;
@@ -173,7 +173,7 @@ rdpsnd_dsp_resample_supported(WAVEFORMATEX * format)
 
 uint32
 rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
-		    WAVEFORMATEX * format, BOOL stream_be)
+		    RD_WAVEFORMATEX * format, BOOL stream_be)
 {
 #ifdef HAVE_LIBSAMPLERATE
 	SRC_DATA resample_data;
@@ -385,7 +385,7 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 
 STREAM
 rdpsnd_dsp_process(unsigned char *data, unsigned int size, struct audio_driver * current_driver,
-		   WAVEFORMATEX * format)
+		   RD_WAVEFORMATEX * format)
 {
 	static struct stream out;
 	BOOL stream_be = False;

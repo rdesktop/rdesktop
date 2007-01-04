@@ -128,7 +128,7 @@ sgi_close(void)
 }
 
 BOOL
-sgi_format_supported(WAVEFORMATEX * pwfx)
+sgi_format_supported(RD_WAVEFORMATEX * pwfx)
 {
 	if (pwfx->wFormatTag != WAVE_FORMAT_PCM)
 		return False;
@@ -141,7 +141,7 @@ sgi_format_supported(WAVEFORMATEX * pwfx)
 }
 
 BOOL
-sgi_set_format(WAVEFORMATEX * pwfx)
+sgi_set_format(RD_WAVEFORMATEX * pwfx)
 {
 	int channels;
 	int frameSize, channelCount;

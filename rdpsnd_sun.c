@@ -100,7 +100,7 @@ sun_close(void)
 }
 
 BOOL
-sun_format_supported(WAVEFORMATEX * pwfx)
+sun_format_supported(RD_WAVEFORMATEX * pwfx)
 {
 	if (pwfx->wFormatTag != WAVE_FORMAT_PCM)
 		return False;
@@ -113,7 +113,7 @@ sun_format_supported(WAVEFORMATEX * pwfx)
 }
 
 BOOL
-sun_set_format(WAVEFORMATEX * pwfx)
+sun_set_format(RD_WAVEFORMATEX * pwfx)
 {
 	audio_info_t info;
 

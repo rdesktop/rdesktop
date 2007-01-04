@@ -2,17 +2,17 @@
    rdesktop: A Remote Desktop Protocol client.
    Master include file
    Copyright (C) Matthew Chapman 1999-2005
-   
+
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation; either version 2 of the License, or
    (at your option) any later version.
-   
+
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
-   
+
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -21,6 +21,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#ifdef _WIN32
+#define WINVER 0x0400
+#include <windows.h>
+#include <winsock.h>
+#include <time.h>
+#define DIR int
+#else
 #include <dirent.h>
 #include <sys/time.h>
 #ifdef HAVE_SYS_SELECT_H
@@ -28,6 +35,7 @@
 #else
 #include <sys/types.h>
 #include <unistd.h>
+#endif
 #endif
 #include <limits.h>		/* PATH_MAX */
 

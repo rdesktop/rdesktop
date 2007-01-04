@@ -31,19 +31,19 @@ BOOL bitmap_decompress(uint8 * output, int width, int height, uint8 * input, int
 void cache_rebuild_bmpcache_linked_list(uint8 id, sint16 * idx, int count);
 void cache_bump_bitmap(uint8 id, uint16 idx, int bump);
 void cache_evict_bitmap(uint8 id);
-HBITMAP cache_get_bitmap(uint8 id, uint16 idx);
-void cache_put_bitmap(uint8 id, uint16 idx, HBITMAP bitmap);
+RD_HBITMAP cache_get_bitmap(uint8 id, uint16 idx);
+void cache_put_bitmap(uint8 id, uint16 idx, RD_HBITMAP bitmap);
 void cache_save_state(void);
 FONTGLYPH *cache_get_font(uint8 font, uint16 character);
 void cache_put_font(uint8 font, uint16 character, uint16 offset, uint16 baseline, uint16 width,
-		    uint16 height, HGLYPH pixmap);
+		    uint16 height, RD_HGLYPH pixmap);
 DATABLOB *cache_get_text(uint8 cache_id);
 void cache_put_text(uint8 cache_id, void *data, int length);
 uint8 *cache_get_desktop(uint32 offset, int cx, int cy, int bytes_per_pixel);
 void cache_put_desktop(uint32 offset, int cx, int cy, int scanline, int bytes_per_pixel,
 		       uint8 * data);
-HCURSOR cache_get_cursor(uint16 cache_idx);
-void cache_put_cursor(uint16 cache_idx, HCURSOR cursor);
+RD_HCURSOR cache_get_cursor(uint16 cache_idx);
+void cache_put_cursor(uint16 cache_idx, RD_HCURSOR cursor);
 /* channels.c */
 VCHANNEL *channel_register(char *name, uint32 flags, void (*callback) (STREAM));
 STREAM channel_init(VCHANNEL * channel, uint32 length);
@@ -58,12 +58,12 @@ void cliprdr_set_mode(const char *optarg);
 BOOL cliprdr_init(void);
 /* disk.c */
 int disk_enum_devices(uint32 * id, char *optarg);
-NTSTATUS disk_query_information(NTHANDLE handle, uint32 info_class, STREAM out);
-NTSTATUS disk_set_information(NTHANDLE handle, uint32 info_class, STREAM in, STREAM out);
-NTSTATUS disk_check_notify(NTHANDLE handle);
-NTSTATUS disk_create_notify(NTHANDLE handle, uint32 info_class);
-NTSTATUS disk_query_volume_information(NTHANDLE handle, uint32 info_class, STREAM out);
-NTSTATUS disk_query_directory(NTHANDLE handle, uint32 info_class, char *pattern, STREAM out);
+RD_NTSTATUS disk_query_information(RD_NTHANDLE handle, uint32 info_class, STREAM out);
+RD_NTSTATUS disk_set_information(RD_NTHANDLE handle, uint32 info_class, STREAM in, STREAM out);
+RD_NTSTATUS disk_check_notify(RD_NTHANDLE handle);
+RD_NTSTATUS disk_create_notify(RD_NTHANDLE handle, uint32 info_class);
+RD_NTSTATUS disk_query_volume_information(RD_NTHANDLE handle, uint32 info_class, STREAM out);
+RD_NTSTATUS disk_query_directory(RD_NTHANDLE handle, uint32 info_class, char *pattern, STREAM out);
 /* mppc.c */
 int mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen);
 /* ewmhints.c */
@@ -155,7 +155,7 @@ BOOL rdp_reconnect(char *server, uint32 flags, char *domain, char *password, cha
 void rdp_reset_state(void);
 void rdp_disconnect(void);
 /* rdpdr.c */
-int get_device_index(NTHANDLE handle);
+int get_device_index(RD_NTHANDLE handle);
 void convert_to_unix_filename(char *filename);
 void rdpdr_send_completion(uint32 device, uint32 id, uint32 status, uint32 result, uint8 * buffer,
 			   uint32 length);
@@ -164,7 +164,7 @@ void rdpdr_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv, BOO
 struct async_iorequest *rdpdr_remove_iorequest(struct async_iorequest *prev,
 					       struct async_iorequest *iorq);
 void rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out);
-BOOL rdpdr_abort_io(uint32 fd, uint32 major, NTSTATUS status);
+BOOL rdpdr_abort_io(uint32 fd, uint32 major, RD_NTSTATUS status);
 /* rdpsnd.c */
 void rdpsnd_record(const void *data, unsigned int size);
 BOOL rdpsnd_init(char *optarg);
@@ -193,8 +193,8 @@ void sec_disconnect(void);
 void sec_reset_state(void);
 /* serial.c */
 int serial_enum_devices(uint32 * id, char *optarg);
-BOOL serial_get_event(NTHANDLE handle, uint32 * result);
-BOOL serial_get_timeout(NTHANDLE handle, uint32 length, uint32 * timeout, uint32 * itv_timeout);
+BOOL serial_get_event(RD_NTHANDLE handle, uint32 * result);
+BOOL serial_get_timeout(RD_NTHANDLE handle, uint32 length, uint32 * timeout, uint32 * itv_timeout);
 /* tcp.c */
 STREAM tcp_init(uint32 maxlen);
 void tcp_send(STREAM s);
@@ -239,19 +239,19 @@ void ui_destroy_window(void);
 void xwin_toggle_fullscreen(void);
 int ui_select(int rdp_socket);
 void ui_move_pointer(int x, int y);
-HBITMAP ui_create_bitmap(int width, int height, uint8 * data);
+RD_HBITMAP ui_create_bitmap(int width, int height, uint8 * data);
 void ui_paint_bitmap(int x, int y, int cx, int cy, int width, int height, uint8 * data);
-void ui_destroy_bitmap(HBITMAP bmp);
-HGLYPH ui_create_glyph(int width, int height, uint8 * data);
-void ui_destroy_glyph(HGLYPH glyph);
-HCURSOR ui_create_cursor(unsigned int x, unsigned int y, int width, int height, uint8 * andmask,
-			 uint8 * xormask);
-void ui_set_cursor(HCURSOR cursor);
-void ui_destroy_cursor(HCURSOR cursor);
+void ui_destroy_bitmap(RD_HBITMAP bmp);
+RD_HGLYPH ui_create_glyph(int width, int height, uint8 * data);
+void ui_destroy_glyph(RD_HGLYPH glyph);
+RD_HCURSOR ui_create_cursor(unsigned int x, unsigned int y, int width, int height, uint8 * andmask,
+			    uint8 * xormask);
+void ui_set_cursor(RD_HCURSOR cursor);
+void ui_destroy_cursor(RD_HCURSOR cursor);
 void ui_set_null_cursor(void);
-HCOLOURMAP ui_create_colourmap(COLOURMAP * colours);
-void ui_destroy_colourmap(HCOLOURMAP map);
-void ui_set_colourmap(HCOLOURMAP map);
+RD_HCOLOURMAP ui_create_colourmap(COLOURMAP * colours);
+void ui_destroy_colourmap(RD_HCOLOURMAP map);
+void ui_set_colourmap(RD_HCOLOURMAP map);
 void ui_set_clip(int x, int y, int cx, int cy);
 void ui_reset_clip(void);
 void ui_bell(void);
@@ -259,17 +259,17 @@ void ui_destblt(uint8 opcode, int x, int y, int cx, int cy);
 void ui_patblt(uint8 opcode, int x, int y, int cx, int cy, BRUSH * brush, int bgcolour,
 	       int fgcolour);
 void ui_screenblt(uint8 opcode, int x, int y, int cx, int cy, int srcx, int srcy);
-void ui_memblt(uint8 opcode, int x, int y, int cx, int cy, HBITMAP src, int srcx, int srcy);
-void ui_triblt(uint8 opcode, int x, int y, int cx, int cy, HBITMAP src, int srcx, int srcy,
+void ui_memblt(uint8 opcode, int x, int y, int cx, int cy, RD_HBITMAP src, int srcx, int srcy);
+void ui_triblt(uint8 opcode, int x, int y, int cx, int cy, RD_HBITMAP src, int srcx, int srcy,
 	       BRUSH * brush, int bgcolour, int fgcolour);
 void ui_line(uint8 opcode, int startx, int starty, int endx, int endy, PEN * pen);
 void ui_rect(int x, int y, int cx, int cy, int colour);
-void ui_polygon(uint8 opcode, uint8 fillmode, POINT * point, int npoints, BRUSH * brush,
+void ui_polygon(uint8 opcode, uint8 fillmode, RD_POINT * point, int npoints, BRUSH * brush,
 		int bgcolour, int fgcolour);
-void ui_polyline(uint8 opcode, POINT * points, int npoints, PEN * pen);
+void ui_polyline(uint8 opcode, RD_POINT * points, int npoints, PEN * pen);
 void ui_ellipse(uint8 opcode, uint8 fillmode, int x, int y, int cx, int cy, BRUSH * brush,
 		int bgcolour, int fgcolour);
-void ui_draw_glyph(int mixmode, int x, int y, int cx, int cy, HGLYPH glyph, int srcx, int srcy,
+void ui_draw_glyph(int mixmode, int x, int y, int cx, int cy, RD_HGLYPH glyph, int srcx, int srcy,
 		   int bgcolour, int fgcolour);
 void ui_draw_text(uint8 font, uint8 flags, uint8 opcode, int mixmode, int x, int y, int clipx,
 		  int clipy, int clipcx, int clipcy, int boxx, int boxy, int boxcx, int boxcy,

@@ -1,7 +1,7 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    Copyright (C) Matthew Chapman 1999-2005
-   
+
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation; either version 2 of the License, or
@@ -11,7 +11,7 @@
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
-   
+
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
@@ -75,9 +75,9 @@ parallel_enum_devices(uint32 * id, char *optarg)
 	return count;
 }
 
-static NTSTATUS
+static RD_NTSTATUS
 parallel_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 disposition,
-		uint32 flags, char *filename, NTHANDLE * handle)
+		uint32 flags, char *filename, RD_NTHANDLE * handle)
 {
 	int parallel_fd;
 
@@ -85,7 +85,7 @@ parallel_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 dispo
 	if (parallel_fd == -1)
 	{
 		perror("open");
-		return STATUS_ACCESS_DENIED;
+		return RD_STATUS_ACCESS_DENIED;
 	}
 
 	/* all read and writes should be non blocking */
@@ -101,30 +101,30 @@ parallel_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 dispo
 
 	*handle = parallel_fd;
 
-	return STATUS_SUCCESS;
+	return RD_STATUS_SUCCESS;
 }
 
-static NTSTATUS
-parallel_close(NTHANDLE handle)
+static RD_NTSTATUS
+parallel_close(RD_NTHANDLE handle)
 {
 	int i = get_device_index(handle);
 	if (i >= 0)
 		g_rdpdr_device[i].handle = 0;
 	close(handle);
-	return STATUS_SUCCESS;
+	return RD_STATUS_SUCCESS;
 }
 
-static NTSTATUS
-parallel_read(NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
+static RD_NTSTATUS
+parallel_read(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
 {
 	*result = read(handle, data, length);
-	return STATUS_SUCCESS;
+	return RD_STATUS_SUCCESS;
 }
 
-static NTSTATUS
-parallel_write(NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
+static RD_NTSTATUS
+parallel_write(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
 {
-	int rc = STATUS_SUCCESS;
+	int rc = RD_STATUS_SUCCESS;
 
 	int n = write(handle, data, length);
 	if (n < 0)
@@ -137,13 +137,13 @@ parallel_write(NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint
 		switch (errno)
 		{
 			case EAGAIN:
-				rc = STATUS_DEVICE_OFF_LINE;
+				rc = RD_STATUS_DEVICE_OFF_LINE;
 			case ENOSPC:
-				rc = STATUS_DEVICE_PAPER_EMPTY;
+				rc = RD_STATUS_DEVICE_PAPER_EMPTY;
 			case EIO:
-				rc = STATUS_DEVICE_OFF_LINE;
+				rc = RD_STATUS_DEVICE_OFF_LINE;
 			default:
-				rc = STATUS_DEVICE_POWERED_OFF;
+				rc = RD_STATUS_DEVICE_POWERED_OFF;
 		}
 #if defined(LPGETSTATUS)
 		if (ioctl(handle, LPGETSTATUS, &status) == 0)
@@ -157,11 +157,11 @@ parallel_write(NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint
 	return rc;
 }
 
-static NTSTATUS
-parallel_device_control(NTHANDLE handle, uint32 request, STREAM in, STREAM out)
+static RD_NTSTATUS
+parallel_device_control(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 {
 	if ((request >> 16) != FILE_DEVICE_PARALLEL)
-		return STATUS_INVALID_PARAMETER;
+		return RD_STATUS_INVALID_PARAMETER;
 
 	/* extract operation */
 	request >>= 2;
@@ -178,7 +178,7 @@ parallel_device_control(NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 			printf("\n");
 			unimpl("UNKNOWN IOCTL %d\n", request);
 	}
-	return STATUS_SUCCESS;
+	return RD_STATUS_SUCCESS;
 }
 
 DEVICE_FNS parallel_fns = {

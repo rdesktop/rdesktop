@@ -219,7 +219,7 @@ oss_close_in(void)
 }
 
 BOOL
-oss_format_supported(WAVEFORMATEX * pwfx)
+oss_format_supported(RD_WAVEFORMATEX * pwfx)
 {
 	if (pwfx->wFormatTag != WAVE_FORMAT_PCM)
 		return False;
@@ -232,7 +232,7 @@ oss_format_supported(WAVEFORMATEX * pwfx)
 }
 
 BOOL
-oss_set_format(WAVEFORMATEX * pwfx)
+oss_set_format(RD_WAVEFORMATEX * pwfx)
 {
 	int fragments;
 	static BOOL driver_broken = False;

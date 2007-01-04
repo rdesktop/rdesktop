@@ -164,7 +164,7 @@ alsa_check_fds(fd_set * rfds, fd_set * wfds)
 }
 
 static BOOL
-alsa_set_format(snd_pcm_t * pcm, WAVEFORMATEX * pwfx)
+alsa_set_format(snd_pcm_t * pcm, RD_WAVEFORMATEX * pwfx)
 {
 	snd_pcm_hw_params_t *hwparams = NULL;
 	int err;

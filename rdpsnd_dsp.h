@@ -24,7 +24,7 @@ void rdpsnd_dsp_softvol_set(uint16 left, uint16 right);
 /* Resample control */
 BOOL rdpsnd_dsp_resample_set(uint32 device_srate, uint16 device_bitspersample,
 			     uint16 device_channels);
-BOOL rdpsnd_dsp_resample_supported(WAVEFORMATEX * pwfx);
+BOOL rdpsnd_dsp_resample_supported(RD_WAVEFORMATEX * pwfx);
 
 STREAM rdpsnd_dsp_process(unsigned char *data, unsigned int size,
-			  struct audio_driver *current_driver, WAVEFORMATEX * format);
+			  struct audio_driver *current_driver, RD_WAVEFORMATEX * format);

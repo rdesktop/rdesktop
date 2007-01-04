@@ -19,8 +19,10 @@
 */
 
 #include <time.h>
+#ifndef _WIN32
 #include <errno.h>
 #include <unistd.h>
+#endif
 #include "rdesktop.h"
 
 #ifdef HAVE_ICONV
@@ -996,7 +998,7 @@ process_colour_pointer_pdu(STREAM s)
 {
 	uint16 x, y, width, height, cache_idx, masklen, datalen;
 	uint8 *mask, *data;
-	HCURSOR cursor;
+	RD_HCURSOR cursor;
 
 	in_uint16_le(s, cache_idx);
 	in_uint16_le(s, x);
@@ -1153,7 +1155,7 @@ process_palette(STREAM s)
 {
 	COLOURENTRY *entry;
 	COLOURMAP map;
-	HCOLOURMAP hmap;
+	RD_HCOLOURMAP hmap;
 	int i;
 
 	in_uint8s(s, 2);	/* pad */

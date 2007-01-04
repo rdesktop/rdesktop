@@ -2,12 +2,12 @@
    rdesktop: A Remote Desktop Protocol client.
 
    Copyright (C) Matthew Chapman 1999-2005
-   
+
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation; either version 2 of the License, or
    (at your option) any later version.
-   
+
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -150,7 +150,7 @@
 extern RDPDR_DEVICE g_rdpdr_device[];
 
 static SERIAL_DEVICE *
-get_serial_info(NTHANDLE handle)
+get_serial_info(RD_NTHANDLE handle)
 {
 	int index;
 
@@ -163,7 +163,7 @@ get_serial_info(NTHANDLE handle)
 }
 
 static BOOL
-get_termios(SERIAL_DEVICE * pser_inf, NTHANDLE serial_fd)
+get_termios(SERIAL_DEVICE * pser_inf, RD_NTHANDLE serial_fd)
 {
 	speed_t speed;
 	struct termios *ptermios;
@@ -316,7 +316,7 @@ get_termios(SERIAL_DEVICE * pser_inf, NTHANDLE serial_fd)
 }
 
 static void
-set_termios(SERIAL_DEVICE * pser_inf, NTHANDLE serial_fd)
+set_termios(SERIAL_DEVICE * pser_inf, RD_NTHANDLE serial_fd)
 {
 	speed_t speed;
 
@@ -553,11 +553,11 @@ serial_enum_devices(uint32 * id, char *optarg)
 	return count;
 }
 
-static NTSTATUS
+static RD_NTSTATUS
 serial_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 disposition,
-	      uint32 flags_and_attributes, char *filename, NTHANDLE * handle)
+	      uint32 flags_and_attributes, char *filename, RD_NTHANDLE * handle)
 {
-	NTHANDLE serial_fd;
+	RD_NTHANDLE serial_fd;
 	SERIAL_DEVICE *pser_inf;
 	struct termios *ptermios;
 
@@ -568,14 +568,14 @@ serial_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 disposi
 	if (serial_fd == -1)
 	{
 		perror("open");
-		return STATUS_ACCESS_DENIED;
+		return RD_STATUS_ACCESS_DENIED;
 	}
 
 	if (!get_termios(pser_inf, serial_fd))
 	{
 		printf("INFO: SERIAL %s access denied\n", g_rdpdr_device[device_id].name);
 		fflush(stdout);
-		return STATUS_ACCESS_DENIED;
+		return RD_STATUS_ACCESS_DENIED;
 	}
 
 	/* Store handle for later use */
@@ -607,23 +607,23 @@ serial_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 disposi
 
 	pser_inf->read_total_timeout_constant = 5;
 
-	return STATUS_SUCCESS;
+	return RD_STATUS_SUCCESS;
 }
 
-static NTSTATUS
-serial_close(NTHANDLE handle)
+static RD_NTSTATUS
+serial_close(RD_NTHANDLE handle)
 {
 	int i = get_device_index(handle);
 	if (i >= 0)
 		g_rdpdr_device[i].handle = 0;
 
-	rdpdr_abort_io(handle, 0, STATUS_TIMEOUT);
+	rdpdr_abort_io(handle, 0, RD_STATUS_TIMEOUT);
 	close(handle);
-	return STATUS_SUCCESS;
+	return RD_STATUS_SUCCESS;
 }
 
-static NTSTATUS
-serial_read(NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
+static RD_NTSTATUS
+serial_read(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
 {
 	long timeout;
 	SERIAL_DEVICE *pser_inf;
@@ -678,11 +678,11 @@ serial_read(NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 
 		hexdump(data, *result);
 #endif
 
-	return STATUS_SUCCESS;
+	return RD_STATUS_SUCCESS;
 }
 
-static NTSTATUS
-serial_write(NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
+static RD_NTSTATUS
+serial_write(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
 {
 	SERIAL_DEVICE *pser_inf;
 
@@ -695,11 +695,11 @@ serial_write(NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32
 
 	DEBUG_SERIAL(("serial_write length %d, offset %d result %d\n", length, offset, *result));
 
-	return STATUS_SUCCESS;
+	return RD_STATUS_SUCCESS;
 }
 
-static NTSTATUS
-serial_device_control(NTHANDLE handle, uint32 request, STREAM in, STREAM out)
+static RD_NTSTATUS
+serial_device_control(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 {
 	int flush_mask, purge_mask;
 	uint32 result, modemstate;
@@ -708,7 +708,7 @@ serial_device_control(NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 	struct termios *ptermios;
 
 	if ((request >> 16) != FILE_DEVICE_SERIAL_PORT)
-		return STATUS_INVALID_PARAMETER;
+		return RD_STATUS_INVALID_PARAMETER;
 
 	pser_inf = get_serial_info(handle);
 	ptermios = pser_inf->ptermios;
@@ -904,9 +904,9 @@ serial_device_control(NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 			if (flush_mask != 0)
 				tcflush(handle, flush_mask);
 			if (purge_mask & SERIAL_PURGE_TXABORT)
-				rdpdr_abort_io(handle, 4, STATUS_CANCELLED);
+				rdpdr_abort_io(handle, 4, RD_STATUS_CANCELLED);
 			if (purge_mask & SERIAL_PURGE_RXABORT)
-				rdpdr_abort_io(handle, 3, STATUS_CANCELLED);
+				rdpdr_abort_io(handle, 3, RD_STATUS_CANCELLED);
 			break;
 		case SERIAL_WAIT_ON_MASK:
 			DEBUG_SERIAL(("serial_ioctl -> SERIAL_WAIT_ON_MASK %X\n",
@@ -918,7 +918,7 @@ serial_device_control(NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 				out_uint32_le(out, result);
 				break;
 			}
-			return STATUS_PENDING;
+			return RD_STATUS_PENDING;
 			break;
 		case SERIAL_SET_BREAK_ON:
 			DEBUG_SERIAL(("serial_ioctl -> SERIAL_SET_BREAK_ON\n"));
@@ -939,14 +939,14 @@ serial_device_control(NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 			break;
 		default:
 			unimpl("SERIAL IOCTL %d\n", request);
-			return STATUS_INVALID_PARAMETER;
+			return RD_STATUS_INVALID_PARAMETER;
 	}
 
-	return STATUS_SUCCESS;
+	return RD_STATUS_SUCCESS;
 }
 
 BOOL
-serial_get_event(NTHANDLE handle, uint32 * result)
+serial_get_event(RD_NTHANDLE handle, uint32 * result)
 {
 	int index;
 	SERIAL_DEVICE *pser_inf;
@@ -1044,7 +1044,7 @@ serial_get_event(NTHANDLE handle, uint32 * result)
 
 /* Read timeout for a given file descripter (device) when adding fd's to select() */
 BOOL
-serial_get_timeout(NTHANDLE handle, uint32 length, uint32 * timeout, uint32 * itv_timeout)
+serial_get_timeout(RD_NTHANDLE handle, uint32 length, uint32 * timeout, uint32 * itv_timeout)
 {
 	int index;
 	SERIAL_DEVICE *pser_inf;
