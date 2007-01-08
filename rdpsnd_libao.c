@@ -33,7 +33,7 @@
 
 static ao_device *o_device = NULL;
 static int default_driver;
-static BOOL reopened;
+static RD_BOOL reopened;
 static char *libao_device = NULL;
 
 void libao_play(void);
@@ -55,7 +55,7 @@ libao_check_fds(fd_set * rfds, fd_set * wfds)
 		libao_play();
 }
 
-BOOL
+RD_BOOL
 libao_open(void)
 {
 	ao_sample_format format;
@@ -105,7 +105,7 @@ libao_close(void)
 	ao_shutdown();
 }
 
-BOOL
+RD_BOOL
 libao_set_format(RD_WAVEFORMATEX * pwfx)
 {
 	ao_sample_format format;

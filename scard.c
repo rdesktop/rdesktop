@@ -953,7 +953,7 @@ needStatusRecheck(MYPCSC_DWORD rv, MYPCSC_LPSCARD_READERSTATE_A rsArray, SERVER_
 	return recall;
 }
 
-static D_BOOL
+static RD_BOOL
 mappedStatus(MYPCSC_DWORD code)
 {
 	code >>= 16;
@@ -2221,7 +2221,7 @@ scard_device_control(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 		case SC_LIST_READERS:	/* SCardListReadersA */
 		case SC_LIST_READERS + 4:	/* SCardListReadersW */
 			{
-				D_BOOL wide = request != SC_LIST_READERS;
+				RD_BOOL wide = request != SC_LIST_READERS;
 				DEBUG_SCARD(("<---SCardListReaders---> (%s)\n",
 					     (wide) ? ("WIDE") : ("ASCII")));
 				Result = (SERVER_DWORD) TS_SCardListReaders(in, out, wide);
