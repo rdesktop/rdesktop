@@ -202,7 +202,7 @@ ewmh_get_window_state(Window w)
 	unsigned char *prop_return;
 	uint32 *return_words;
 	unsigned long item;
-	BOOL maximized_vert, maximized_horz, hidden;
+	RD_BOOL maximized_vert, maximized_horz, hidden;
 
 	maximized_vert = maximized_horz = hidden = False;
 

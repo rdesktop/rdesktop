@@ -58,7 +58,7 @@ sgi_check_fds(fd_set * rfds, fd_set * wfds)
 		sgi_play();
 }
 
-BOOL
+RD_BOOL
 sgi_open(void)
 {
 	ALparamInfo pinfo;
@@ -127,7 +127,7 @@ sgi_close(void)
 #endif
 }
 
-BOOL
+RD_BOOL
 sgi_format_supported(RD_WAVEFORMATEX * pwfx)
 {
 	if (pwfx->wFormatTag != WAVE_FORMAT_PCM)
@@ -140,7 +140,7 @@ sgi_format_supported(RD_WAVEFORMATEX * pwfx)
 	return True;
 }
 
-BOOL
+RD_BOOL
 sgi_set_format(RD_WAVEFORMATEX * pwfx)
 {
 	int channels;

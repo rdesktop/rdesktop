@@ -140,7 +140,7 @@ dummy_statfs(struct dummy_statfs_t *buf)
 extern RDPDR_DEVICE g_rdpdr_device[];
 
 FILEINFO g_fileinfo[MAX_OPEN_FILES];
-BOOL g_notify_stamp = False;
+RD_BOOL g_notify_stamp = False;
 
 typedef struct
 {

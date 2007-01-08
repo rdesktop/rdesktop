@@ -27,8 +27,8 @@
 #define CHANNEL_FLAG_LAST		0x02
 #define CHANNEL_FLAG_SHOW_PROTOCOL	0x10
 
-extern BOOL g_use_rdp5;
-extern BOOL g_encryption;
+extern RD_BOOL g_use_rdp5;
+extern RD_BOOL g_encryption;
 
 VCHANNEL g_channels[MAX_CHANNELS];
 unsigned int g_num_channels;

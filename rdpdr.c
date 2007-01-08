@@ -64,7 +64,7 @@ extern DEVICE_FNS disk_fns;
 extern DEVICE_FNS scard_fns;
 #endif
 extern FILEINFO g_fileinfo[];
-extern BOOL g_notify_stamp;
+extern RD_BOOL g_notify_stamp;
 
 static VCHANNEL *rdpdr_channel;
 
@@ -117,7 +117,7 @@ convert_to_unix_filename(char *filename)
 	}
 }
 
-static BOOL
+static RD_BOOL
 rdpdr_handle_ok(int device, int handle)
 {
 	switch (g_rdpdr_device[device].device_type)
@@ -138,7 +138,7 @@ rdpdr_handle_ok(int device, int handle)
 }
 
 /* Add a new io request to the table containing pending io requests so it won't block rdesktop */
-static BOOL
+static RD_BOOL
 add_async_iorequest(uint32 device, uint32 file, uint32 id, uint32 major, uint32 length,
 		    DEVICE_FNS * fns, uint32 total_timeout, uint32 interval_timeout, uint8 * buffer,
 		    uint32 offset)
@@ -365,7 +365,7 @@ rdpdr_process_irp(STREAM s)
 	uint8 *buffer, *pst_buf;
 	struct stream out;
 	DEVICE_FNS *fns;
-	BOOL rw_blocking = True;
+	RD_BOOL rw_blocking = True;
 	RD_NTSTATUS status = RD_STATUS_INVALID_DEVICE_REQUEST;
 
 	in_uint32_le(s, device);
@@ -845,7 +845,7 @@ rdpdr_process(STREAM s)
 	unimpl("RDPDR packet type %c%c%c%c\n", magic[0], magic[1], magic[2], magic[3]);
 }
 
-BOOL
+RD_BOOL
 rdpdr_init()
 {
 	if (g_num_devices > 0)
@@ -861,7 +861,7 @@ rdpdr_init()
 
 /* Add file descriptors of pending io request to select() */
 void
-rdpdr_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv, BOOL * timeout)
+rdpdr_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv, RD_BOOL * timeout)
 {
 	uint32 select_timeout = 0;	/* Timeout value to be used for select() (in millisecons). */
 	struct async_iorequest *iorq;
@@ -958,7 +958,7 @@ rdpdr_remove_iorequest(struct async_iorequest *prev, struct async_iorequest *ior
 
 /* Check if select() returned with one of the rdpdr file descriptors, and complete io if it did */
 static void
-_rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
+_rdpdr_check_fds(fd_set * rfds, fd_set * wfds, RD_BOOL timed_out)
 {
 	RD_NTSTATUS status;
 	uint32 result = 0;
@@ -1179,7 +1179,7 @@ _rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
 }
 
 void
-rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
+rdpdr_check_fds(fd_set * rfds, fd_set * wfds, RD_BOOL timed_out)
 {
 	fd_set dummy;
 
@@ -1197,7 +1197,7 @@ rdpdr_check_fds(fd_set * rfds, fd_set * wfds, BOOL timed_out)
 
 
 /* Abort a pending io request for a given handle and major */
-BOOL
+RD_BOOL
 rdpdr_abort_io(uint32 fd, uint32 major, RD_NTSTATUS status)
 {
 	uint32 result;

@@ -53,12 +53,12 @@
 extern Display *g_display;
 extern Window g_wnd;
 extern Time g_last_gesturetime;
-extern BOOL g_rdpclip;
+extern RD_BOOL g_rdpclip;
 
 /* Mode of operation.
    - Auto: Look at both PRIMARY and CLIPBOARD and use the most recent.
    - Non-auto: Look at just CLIPBOARD. */
-static BOOL auto_mode = True;
+static RD_BOOL auto_mode = True;
 /* Atoms of the two X selections we're dealing with: CLIPBOARD (explicit-copy) and PRIMARY (selection-copy) */
 static Atom clipboard_atom, primary_atom;
 /* Atom of the TARGETS clipboard target */
@@ -92,7 +92,7 @@ static Atom rdesktop_selection_notify_atom;
 /* State variables that indicate if we're currently probing the targets of the
    selection owner. reprobe_selections indicate that the ownership changed in
    the middle of the current probe so it should be restarted. */
-static BOOL probing_selections, reprobe_selections;
+static RD_BOOL probing_selections, reprobe_selections;
 /* Atoms _RDESKTOP_PRIMARY_OWNER and _RDESKTOP_CLIPBOARD_OWNER. Used as properties
    on the root window to indicate which selections that are owned by rdesktop. */
 static Atom rdesktop_primary_owner_atom, rdesktop_clipboard_owner_atom;
@@ -105,7 +105,7 @@ static Atom incr_atom;
    the context to proceed. */
 static XSelectionRequestEvent selection_request;
 /* Denotes we have a pending selection request. */
-static Bool has_selection_request;
+static RD_BOOL has_selection_request;
 /* Stores the clipboard format (CF_TEXT, CF_UNICODETEXT etc.) requested in the last
    CLIPDR_DATA_REQUEST (= the RDP server requesting clipboard data from us).
    When we receive this data from whatever X client offering it, this variable gives us
@@ -117,7 +117,7 @@ static Atom targets[MAX_TARGETS];
 static int num_targets;
 /* Denotes that an rdesktop (not this rdesktop) is owning the selection,
    allowing us to interchange Windows native clipboard data directly. */
-static BOOL rdesktop_is_selection_owner = False;
+static RD_BOOL rdesktop_is_selection_owner = False;
 /* Time when we acquired the selection. */
 static Time acquire_time = 0;
 
@@ -157,7 +157,7 @@ utf16_lf2crlf(uint8 * data, uint32 * size)
 {
 	uint8 *result;
 	uint16 *inptr, *outptr;
-	Bool swap_endianess;
+	RD_BOOL swap_endianess;
 
 	/* Worst case: Every char is LF */
 	result = xmalloc((*size * 2) + 2);
@@ -283,7 +283,7 @@ helper_cliprdr_send_empty_response()
 /* Replies with clipboard data to RDP, converting it from the target format
    to the expected RDP format as necessary. Returns true if data was sent.
  */
-static Bool
+static RD_BOOL
 xclip_send_data_with_convert(uint8 * source, size_t source_size, Atom target)
 {
 	DEBUG_CLIPBOARD(("xclip_send_data_with_convert: target=%s, size=%u\n",
@@ -958,7 +958,7 @@ ui_clip_format_announce(uint8 * data, uint32 length)
 void
 ui_clip_handle_data(uint8 * data, uint32 length)
 {
-	BOOL free_data = False;
+	RD_BOOL free_data = False;
 
 	if (length == 0)
 	{

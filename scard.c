@@ -24,9 +24,6 @@
 #include <strings.h>
 #include <sys/types.h>
 #include <time.h>
-/* PCSC does not use BOOL as parameters or return values in function calls,
-   so let us just ignore their own definition of BOOL */
-#define BOOL PCSC_BOOL
 #ifndef MAKE_PROTO
 #ifdef PCSC_OSX
 #include <PCSC/wintypes.h>
@@ -37,7 +34,6 @@
 #include <pcsclite.h>
 #include <winscard.h>
 #endif /* PCSC_OSX */
-#undef BOOL
 #include "rdesktop.h"
 #include "scard.h"
 
@@ -495,7 +491,7 @@ outForceAlignment(STREAM out, unsigned int seed)
 }
 
 static unsigned int
-inString(PMEM_HANDLE * handle, STREAM in, char **destination, SERVER_DWORD dataLength, BOOL wide)
+inString(PMEM_HANDLE * handle, STREAM in, char **destination, SERVER_DWORD dataLength, RD_BOOL wide)
 {
 	unsigned int Result = (wide) ? (2 * dataLength) : (dataLength);
 	PMEM_HANDLE lcHandle = NULL;
@@ -529,7 +525,7 @@ inString(PMEM_HANDLE * handle, STREAM in, char **destination, SERVER_DWORD dataL
 }
 
 static unsigned int
-outString(STREAM out, char *source, BOOL wide)
+outString(STREAM out, char *source, RD_BOOL wide)
 {
 	PMEM_HANDLE lcHandle = NULL;
 	char *reader = getAlias(source);
@@ -563,7 +559,7 @@ outString(STREAM out, char *source, BOOL wide)
 }
 
 static void
-inReaderName(PMEM_HANDLE * handle, STREAM in, char **destination, BOOL wide)
+inReaderName(PMEM_HANDLE * handle, STREAM in, char **destination, RD_BOOL wide)
 {
 	SERVER_DWORD dataLength;
 	in->p += 0x08;
@@ -691,7 +687,7 @@ TS_SCardIsValidContext(STREAM in, STREAM out)
 
 
 static MYPCSC_DWORD
-TS_SCardListReaders(STREAM in, STREAM out, BOOL wide)
+TS_SCardListReaders(STREAM in, STREAM out, RD_BOOL wide)
 {
 #define readerArraySize 1024
 	MYPCSC_DWORD rv;
@@ -764,7 +760,7 @@ TS_SCardListReaders(STREAM in, STREAM out, BOOL wide)
 
 
 static MYPCSC_DWORD
-TS_SCardConnect(STREAM in, STREAM out, BOOL wide)
+TS_SCardConnect(STREAM in, STREAM out, RD_BOOL wide)
 {
 	MYPCSC_DWORD rv;
 	SCARDCONTEXT hContext;
@@ -957,7 +953,7 @@ needStatusRecheck(MYPCSC_DWORD rv, MYPCSC_LPSCARD_READERSTATE_A rsArray, SERVER_
 	return recall;
 }
 
-static BOOL
+static D_BOOL
 mappedStatus(MYPCSC_DWORD code)
 {
 	code >>= 16;
@@ -966,7 +962,7 @@ mappedStatus(MYPCSC_DWORD code)
 }
 
 static MYPCSC_DWORD
-incStatus(MYPCSC_DWORD code, BOOL mapped)
+incStatus(MYPCSC_DWORD code, RD_BOOL mapped)
 {
 	if (mapped || (code & SCARD_STATE_CHANGED))
 	{
@@ -1020,7 +1016,7 @@ copyReaderState_ServerToMyPCSC(SERVER_LPSCARD_READERSTATE_A src, MYPCSC_LPSCARD_
 
 
 static MYPCSC_DWORD
-TS_SCardGetStatusChange(STREAM in, STREAM out, BOOL wide)
+TS_SCardGetStatusChange(STREAM in, STREAM out, RD_BOOL wide)
 {
 	MYPCSC_DWORD rv;
 	SERVER_SCARDCONTEXT hContext;
@@ -1032,7 +1028,7 @@ TS_SCardGetStatusChange(STREAM in, STREAM out, BOOL wide)
 	long i;
 	PMEM_HANDLE lcHandle = NULL;
 #if 0
-	BOOL mapped = False;
+	RD_BOOL mapped = False;
 #endif
 
 	in->p += 0x18;
@@ -1222,7 +1218,7 @@ TS_SCardCancel(STREAM in, STREAM out)
 }
 
 static MYPCSC_DWORD
-TS_SCardLocateCardsByATR(STREAM in, STREAM out, BOOL wide)
+TS_SCardLocateCardsByATR(STREAM in, STREAM out, RD_BOOL wide)
 {
 	int i, j, k;
 	MYPCSC_DWORD rv;
@@ -1290,7 +1286,7 @@ TS_SCardLocateCardsByATR(STREAM in, STREAM out, BOOL wide)
 		{
 			for (j = 0, rsCur = rsArray; j < readerCount; j++, rsCur++)
 			{
-				BOOL equal = 1;
+				RD_BOOL equal = 1;
 				for (k = 0; k < cur->cbAtr; k++)
 				{
 					/*  This line check if them equal */
@@ -1631,7 +1627,7 @@ TS_SCardTransmit(STREAM in, STREAM out)
 }
 
 static MYPCSC_DWORD
-TS_SCardStatus(STREAM in, STREAM out, BOOL wide)
+TS_SCardStatus(STREAM in, STREAM out, RD_BOOL wide)
 {
 	MYPCSC_DWORD rv;
 	SERVER_SCARDCONTEXT hCard;
@@ -2225,7 +2221,7 @@ scard_device_control(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 		case SC_LIST_READERS:	/* SCardListReadersA */
 		case SC_LIST_READERS + 4:	/* SCardListReadersW */
 			{
-				BOOL wide = request != SC_LIST_READERS;
+				D_BOOL wide = request != SC_LIST_READERS;
 				DEBUG_SCARD(("<---SCardListReaders---> (%s)\n",
 					     (wide) ? ("WIDE") : ("ASCII")));
 				Result = (SERVER_DWORD) TS_SCardListReaders(in, out, wide);
@@ -2235,7 +2231,7 @@ scard_device_control(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 		case SC_CONNECT:	/* ScardConnectA */
 		case SC_CONNECT + 4:	/* SCardConnectW */
 			{
-				BOOL wide = request != SC_CONNECT;
+				RD_BOOL wide = request != SC_CONNECT;
 				DEBUG_SCARD(("<---SCardConnect---> (%s)\n",
 					     (wide) ? ("WIDE") : ("ASCII")));
 				Result = (SERVER_DWORD) TS_SCardConnect(in, out, wide);
@@ -2259,7 +2255,7 @@ scard_device_control(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 		case SC_GET_STATUS_CHANGE:	/* SCardGetStatusChangeA */
 		case SC_GET_STATUS_CHANGE + 4:	/* SCardGetStatusChangeW */
 			{
-				BOOL wide = request != SC_GET_STATUS_CHANGE;
+				RD_BOOL wide = request != SC_GET_STATUS_CHANGE;
 				DEBUG_SCARD(("<---SCardGetStatusChange---> (%s)\n",
 					     (wide) ? ("WIDE") : ("ASCII")));
 				Result = (SERVER_DWORD) TS_SCardGetStatusChange(in, out, wide);
@@ -2276,7 +2272,7 @@ scard_device_control(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 		case SC_LOCATE_CARDS_BY_ATR:	/* SCardLocateCardsByATRA */
 		case SC_LOCATE_CARDS_BY_ATR + 4:	/* SCardLocateCardsByATRW */
 			{
-				BOOL wide = request != SC_LOCATE_CARDS_BY_ATR;
+				RD_BOOL wide = request != SC_LOCATE_CARDS_BY_ATR;
 				DEBUG_SCARD(("<---SCardLocateCardsByATR---> (%s)\n",
 					     (wide) ? ("WIDE") : ("ASCII")));
 				Result = (SERVER_DWORD) TS_SCardLocateCardsByATR(in, out, wide);
@@ -2328,7 +2324,7 @@ scard_device_control(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 		case SC_STATUS:	/* SCardStatusA */
 		case SC_STATUS + 4:	/* SCardStatusW */
 			{
-				BOOL wide = request != SC_STATUS;
+				RD_BOOL wide = request != SC_STATUS;
 				DEBUG_SCARD(("<---SCardStatus---> (%s)\n",
 					     (wide) ? ("WIDE") : ("ASCII")));
 				Result = (SERVER_DWORD) TS_SCardStatus(in, out, wide);
@@ -2380,7 +2376,7 @@ scard_device_control(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 /* Thread functions */
 
 static STREAM
-duplicateStream(PMEM_HANDLE * handle, STREAM s, uint32 buffer_size, BOOL isInputStream)
+duplicateStream(PMEM_HANDLE * handle, STREAM s, uint32 buffer_size, RD_BOOL isInputStream)
 {
 	STREAM d = SC_xmalloc(handle, sizeof(struct stream));
 	if (d != NULL)

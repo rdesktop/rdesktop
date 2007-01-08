@@ -71,31 +71,31 @@ int g_pos = 0;			/* 0 position unspecified,
 extern int g_tcp_port_rdp;
 int g_server_depth = -1;
 int g_win_button_size = 0;	/* If zero, disable single app mode */
-BOOL g_bitmap_compression = True;
-BOOL g_sendmotion = True;
-BOOL g_bitmap_cache = True;
-BOOL g_bitmap_cache_persist_enable = False;
-BOOL g_bitmap_cache_precache = True;
-BOOL g_encryption = True;
-BOOL packet_encryption = True;
-BOOL g_desktop_save = True;	/* desktop save order */
-BOOL g_polygon_ellipse_orders = True;	/* polygon / ellipse orders */
-BOOL g_fullscreen = False;
-BOOL g_grab_keyboard = True;
-BOOL g_hide_decorations = False;
-BOOL g_use_rdp5 = True;
-BOOL g_rdpclip = True;
-BOOL g_console_session = False;
-BOOL g_numlock_sync = False;
-BOOL lspci_enabled = False;
-BOOL g_owncolmap = False;
-BOOL g_ownbackstore = True;	/* We can't rely on external BackingStore */
-BOOL g_seamless_rdp = False;
+RD_BOOL g_bitmap_compression = True;
+RD_BOOL g_sendmotion = True;
+RD_BOOL g_bitmap_cache = True;
+RD_BOOL g_bitmap_cache_persist_enable = False;
+RD_BOOL g_bitmap_cache_precache = True;
+RD_BOOL g_encryption = True;
+RD_BOOL packet_encryption = True;
+RD_BOOL g_desktop_save = True;	/* desktop save order */
+RD_BOOL g_polygon_ellipse_orders = True;	/* polygon / ellipse orders */
+RD_BOOL g_fullscreen = False;
+RD_BOOL g_grab_keyboard = True;
+RD_BOOL g_hide_decorations = False;
+RD_BOOL g_use_rdp5 = True;
+RD_BOOL g_rdpclip = True;
+RD_BOOL g_console_session = False;
+RD_BOOL g_numlock_sync = False;
+RD_BOOL lspci_enabled = False;
+RD_BOOL g_owncolmap = False;
+RD_BOOL g_ownbackstore = True;	/* We can't rely on external BackingStore */
+RD_BOOL g_seamless_rdp = False;
 uint32 g_embed_wnd;
 uint32 g_rdp5_performanceflags =
 	RDP5_NO_WALLPAPER | RDP5_NO_FULLWINDOWDRAG | RDP5_NO_MENUANIMATIONS;
 /* Session Directory redirection */
-BOOL g_redirect = False;
+RD_BOOL g_redirect = False;
 char g_redirect_server[64];
 char g_redirect_domain[16];
 char g_redirect_password[64];
@@ -104,7 +104,7 @@ char g_redirect_cookie[128];
 uint32 g_redirect_flags = 0;
 
 #ifdef WITH_RDPSND
-BOOL g_rdpsnd = False;
+RD_BOOL g_rdpsnd = False;
 #endif
 
 #ifdef HAVE_ICONV
@@ -319,11 +319,11 @@ rdesktop_reset_state(void)
 	rdp_reset_state();
 }
 
-static BOOL
+static RD_BOOL
 read_password(char *password, int size)
 {
 	struct termios tios;
-	BOOL ret = False;
+	RD_BOOL ret = False;
 	int istty = 0;
 	char *p;
 
@@ -413,16 +413,16 @@ main(int argc, char *argv[])
 	char password[64];
 	char shell[256];
 	char directory[256];
-	BOOL prompt_password, deactivated;
+	RD_BOOL prompt_password, deactivated;
 	struct passwd *pw;
 	uint32 flags, ext_disc_reason = 0;
 	char *p;
 	int c;
 	char *locale = NULL;
 	int username_option = 0;
-	BOOL geometry_option = False;
+	RD_BOOL geometry_option = False;
 	int run_count = 0;	/* Session Directory support */
-	BOOL continue_connect = True;	/* Session Directory support */
+	RD_BOOL continue_connect = True;	/* Session Directory support */
 #ifdef WITH_RDPSND
 	char *rdpsnd_optarg = NULL;
 #endif
@@ -1010,11 +1010,11 @@ main(int argc, char *argv[])
 
 #ifdef EGD_SOCKET
 /* Read 32 random bytes from PRNGD or EGD socket (based on OpenSSL RAND_egd) */
-static BOOL
+static RD_BOOL
 generate_random_egd(uint8 * buf)
 {
 	struct sockaddr_un addr;
-	BOOL ret = False;
+	RD_BOOL ret = False;
 	int fd;
 
 	fd = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -1301,7 +1301,7 @@ toupper_str(char *p)
 }
 
 
-BOOL
+RD_BOOL
 str_startswith(const char *s, const char *prefix)
 {
 	return (strncmp(s, prefix, strlen(prefix)) == 0);
@@ -1312,7 +1312,7 @@ str_startswith(const char *s, const char *prefix)
    line. Incomplete lines are saved in the rest variable, which should
    initially point to NULL. When linehandler returns False, stop and
    return False. Otherwise, return True.  */
-BOOL
+RD_BOOL
 str_handle_lines(const char *input, char **rest, str_handle_lines_t linehandler, void *data)
 {
 	char *buf, *p;
@@ -1320,7 +1320,7 @@ str_handle_lines(const char *input, char **rest, str_handle_lines_t linehandler,
 	size_t inputlen;
 	size_t buflen;
 	size_t restlen = 0;
-	BOOL ret = True;
+	RD_BOOL ret = True;
 
 	/* Copy data to buffer */
 	inputlen = strlen(input);
@@ -1368,7 +1368,7 @@ str_handle_lines(const char *input, char **rest, str_handle_lines_t linehandler,
 
 /* Execute the program specified by argv. For each line in
    stdout/stderr output, call linehandler. Returns false on failure. */
-BOOL
+RD_BOOL
 subprocess(char *const argv[], str_handle_lines_t linehandler, void *data)
 {
 	pid_t child;
@@ -1534,7 +1534,7 @@ save_licence(unsigned char *data, int length)
 }
 
 /* Create the bitmap cache directory */
-BOOL
+RD_BOOL
 rd_pstcache_mkdir(void)
 {
 	char *home;
@@ -1611,7 +1611,7 @@ rd_lseek_file(int fd, int offset)
 }
 
 /* do a write lock on a file */
-BOOL
+RD_BOOL
 rd_lock_file(int fd, int start, int len)
 {
 	struct flock lock;

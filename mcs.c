@@ -25,7 +25,7 @@ extern VCHANNEL g_channels[];
 extern unsigned int g_num_channels;
 
 /* Parse an ASN.1 BER header */
-static BOOL
+static RD_BOOL
 ber_parse_header(STREAM s, int tagval, int *length)
 {
 	int tag, len;
@@ -105,7 +105,7 @@ mcs_out_domain_params(STREAM s, int max_channels, int max_users, int max_tokens,
 }
 
 /* Parse a DOMAIN_PARAMS structure (ASN.1 BER) */
-static BOOL
+static RD_BOOL
 mcs_parse_domain_params(STREAM s)
 {
 	int length;
@@ -147,7 +147,7 @@ mcs_send_connect_initial(STREAM mcs_data)
 }
 
 /* Expect a MCS_CONNECT_RESPONSE message (ASN.1 BER) */
-static BOOL
+static RD_BOOL
 mcs_recv_connect_response(STREAM mcs_data)
 {
 	uint8 result;
@@ -221,7 +221,7 @@ mcs_send_aurq(void)
 }
 
 /* Expect a AUcf message (ASN.1 PER) */
-static BOOL
+static RD_BOOL
 mcs_recv_aucf(uint16 * mcs_userid)
 {
 	uint8 opcode, result;
@@ -270,7 +270,7 @@ mcs_send_cjrq(uint16 chanid)
 }
 
 /* Expect a CJcf message (ASN.1 PER) */
-static BOOL
+static RD_BOOL
 mcs_recv_cjcf(void)
 {
 	uint8 opcode, result;
@@ -372,7 +372,7 @@ mcs_recv(uint16 * channel, uint8 * rdpver)
 }
 
 /* Establish a connection up to the MCS layer */
-BOOL
+RD_BOOL
 mcs_connect(char *server, STREAM mcs_data, char *username)
 {
 	unsigned int i;
@@ -413,7 +413,7 @@ mcs_connect(char *server, STREAM mcs_data, char *username)
 }
 
 /* Establish a connection up to the MCS layer */
-BOOL
+RD_BOOL
 mcs_reconnect(char *server, STREAM mcs_data)
 {
 	unsigned int i;

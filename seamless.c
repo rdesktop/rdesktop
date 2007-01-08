@@ -30,7 +30,7 @@
 #define DEBUG_SEAMLESS(args)
 #endif
 
-extern BOOL g_seamless_rdp;
+extern RD_BOOL g_seamless_rdp;
 static VCHANNEL *seamless_channel;
 static unsigned int seamless_serial;
 
@@ -58,7 +58,7 @@ seamless_get_token(char **s)
 }
 
 
-static BOOL
+static RD_BOOL
 seamless_process_line(const char *line, void *data)
 {
 	char *p, *l;
@@ -300,7 +300,7 @@ seamless_process_line(const char *line, void *data)
 }
 
 
-static BOOL
+static RD_BOOL
 seamless_line_handler(const char *line, void *data)
 {
 	if (!seamless_process_line(line, data))
@@ -333,7 +333,7 @@ seamless_process(STREAM s)
 }
 
 
-BOOL
+RD_BOOL
 seamless_init(void)
 {
 	if (!g_seamless_rdp)

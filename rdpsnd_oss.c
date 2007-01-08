@@ -48,17 +48,17 @@ static int dsp_fd = -1;
 static int dsp_mode;
 static int dsp_refs;
 
-static BOOL dsp_configured;
+static RD_BOOL dsp_configured;
 
-static BOOL dsp_out;
-static BOOL dsp_in;
+static RD_BOOL dsp_out;
+static RD_BOOL dsp_in;
 
 static int stereo;
 static int format;
 static int snd_rate;
 static short samplewidth;
 static char *dsp_dev;
-static BOOL in_esddsp;
+static RD_BOOL in_esddsp;
 
 /* This is a just a forward declaration */
 static struct audio_driver oss_driver;
@@ -89,7 +89,7 @@ oss_check_fds(fd_set * rfds, fd_set * wfds)
 		oss_record();
 }
 
-static BOOL
+static RD_BOOL
 detect_esddsp(void)
 {
 	struct stat s;
@@ -111,7 +111,7 @@ detect_esddsp(void)
 	return True;
 }
 
-BOOL
+RD_BOOL
 oss_open(int fallback)
 {
 	int caps;
@@ -176,7 +176,7 @@ oss_close(void)
 	dsp_fd = -1;
 }
 
-BOOL
+RD_BOOL
 oss_open_out(void)
 {
 	if (!oss_open(O_WRONLY))
@@ -199,7 +199,7 @@ oss_close_out(void)
 	dsp_out = False;
 }
 
-BOOL
+RD_BOOL
 oss_open_in(void)
 {
 	if (!oss_open(O_RDONLY))
@@ -218,7 +218,7 @@ oss_close_in(void)
 	dsp_in = False;
 }
 
-BOOL
+RD_BOOL
 oss_format_supported(RD_WAVEFORMATEX * pwfx)
 {
 	if (pwfx->wFormatTag != WAVE_FORMAT_PCM)
@@ -231,11 +231,11 @@ oss_format_supported(RD_WAVEFORMATEX * pwfx)
 	return True;
 }
 
-BOOL
+RD_BOOL
 oss_set_format(RD_WAVEFORMATEX * pwfx)
 {
 	int fragments;
-	static BOOL driver_broken = False;
+	static RD_BOOL driver_broken = False;
 
 	if (dsp_configured)
 	{

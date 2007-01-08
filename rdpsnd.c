@@ -50,8 +50,8 @@ static VCHANNEL *rdpsnddbg_channel;
 static struct audio_driver *drivers = NULL;
 struct audio_driver *current_driver = NULL;
 
-static BOOL device_open;
-static BOOL rec_device_open;
+static RD_BOOL device_open;
+static RD_BOOL rec_device_open;
 
 static RD_WAVEFORMATEX formats[MAX_FORMATS];
 static unsigned int format_count;
@@ -178,10 +178,10 @@ rdpsnd_record(const void *data, unsigned int size)
 	}
 }
 
-static BOOL
+static RD_BOOL
 rdpsnd_auto_select(void)
 {
-	static BOOL failed = False;
+	static RD_BOOL failed = False;
 
 	if (!failed)
 	{
@@ -214,7 +214,7 @@ rdpsnd_process_negotiate(STREAM in)
 	uint16 version;
 	RD_WAVEFORMATEX *format;
 	STREAM out;
-	BOOL device_available = False;
+	RD_BOOL device_available = False;
 	int readcnt;
 	int discardcnt;
 
@@ -328,7 +328,7 @@ rdpsnd_process_rec_negotiate(STREAM in)
 	uint16 version;
 	RD_WAVEFORMATEX *format;
 	STREAM out;
-	BOOL device_available = False;
+	RD_BOOL device_available = False;
 	int readcnt;
 	int discardcnt;
 
@@ -592,7 +592,7 @@ rdpsnd_process(STREAM s)
 	}
 }
 
-static BOOL
+static RD_BOOL
 rdpsnddbg_line_handler(const char *line, void *data)
 {
 #ifdef WITH_DEBUG_SOUND
@@ -654,7 +654,7 @@ rdpsnd_register_drivers(char *options)
 	*reg = NULL;
 }
 
-BOOL
+RD_BOOL
 rdpsnd_init(char *optarg)
 {
 	struct audio_driver *pos;
@@ -791,7 +791,7 @@ rdpsnd_queue_current_packet(void)
 	return &packet_queue[queue_lo];
 }
 
-BOOL
+RD_BOOL
 rdpsnd_queue_empty(void)
 {
 	return (queue_lo == queue_hi);

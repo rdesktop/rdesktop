@@ -20,9 +20,7 @@
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
-#define BOOL XPROTO_BOOL
 #include <X11/Xproto.h>
-#undef BOOL
 #include <unistd.h>
 #include <sys/time.h>
 #include <time.h>
@@ -36,10 +34,10 @@ extern int g_height;
 extern int g_xpos;
 extern int g_ypos;
 extern int g_pos;
-extern BOOL g_sendmotion;
-extern BOOL g_fullscreen;
-extern BOOL g_grab_keyboard;
-extern BOOL g_hide_decorations;
+extern RD_BOOL g_sendmotion;
+extern RD_BOOL g_fullscreen;
+extern RD_BOOL g_grab_keyboard;
+extern RD_BOOL g_hide_decorations;
 extern char g_title[];
 /* Color depth of the RDP session.
    As of RDP 5.1, it may be 8, 15, 16 or 24. */
@@ -71,7 +69,7 @@ typedef struct _seamless_window
 	unsigned int desktop;
 	struct timeval *position_timer;
 
-	BOOL outstanding_position;
+	RD_BOOL outstanding_position;
 	unsigned int outpos_serial;
 	int outpos_xoffset, outpos_yoffset;
 	int outpos_width, outpos_height;
@@ -80,14 +78,14 @@ typedef struct _seamless_window
 } seamless_window;
 static seamless_window *g_seamless_windows = NULL;
 static unsigned long g_seamless_focused = 0;
-static BOOL g_seamless_started = False;	/* Server end is up and running */
-static BOOL g_seamless_active = False;	/* We are currently in seamless mode */
-static BOOL g_seamless_hidden = False;	/* Desktop is hidden on server */
-extern BOOL g_seamless_rdp;
+static RD_BOOL g_seamless_started = False;	/* Server end is up and running */
+static RD_BOOL g_seamless_active = False;	/* We are currently in seamless mode */
+static RD_BOOL g_seamless_hidden = False;	/* Desktop is hidden on server */
+extern RD_BOOL g_seamless_rdp;
 
 extern uint32 g_embed_wnd;
-BOOL g_enable_compose = False;
-BOOL g_Unobscured;		/* used for screenblt */
+RD_BOOL g_enable_compose = False;
+RD_BOOL g_Unobscured;		/* used for screenblt */
 static GC g_gc = NULL;
 static GC g_create_bitmap_gc = NULL;
 static GC g_create_glyph_gc = NULL;
@@ -109,15 +107,15 @@ static RD_HCURSOR g_null_cursor = NULL;
 static Atom g_protocol_atom, g_kill_atom;
 extern Atom g_net_wm_state_atom;
 extern Atom g_net_wm_desktop_atom;
-static BOOL g_focused;
-static BOOL g_mouse_in_wnd;
+static RD_BOOL g_focused;
+static RD_BOOL g_mouse_in_wnd;
 /* Indicates that:
    1) visual has 15, 16 or 24 depth and the same color channel masks
       as its RDP equivalent (implies X server is LE),
    2) host is LE
    This will trigger an optimization whose real value is questionable.
 */
-static BOOL g_compatible_arch;
+static RD_BOOL g_compatible_arch;
 /* Indicates whether RDP's bitmaps and our XImages have the same
    binary format. If so, we can avoid an expensive translation.
    Note that this can be true when g_compatible_arch is false,
@@ -128,26 +126,26 @@ static BOOL g_compatible_arch;
    ('host' is the machine running rdesktop; the host simply memcpy's
     so its endianess doesn't matter)
  */
-static BOOL g_no_translate_image = False;
+static RD_BOOL g_no_translate_image = False;
 
 /* endianness */
-static BOOL g_host_be;
-static BOOL g_xserver_be;
+static RD_BOOL g_host_be;
+static RD_BOOL g_xserver_be;
 static int g_red_shift_r, g_blue_shift_r, g_green_shift_r;
 static int g_red_shift_l, g_blue_shift_l, g_green_shift_l;
 
 /* software backing store */
-extern BOOL g_ownbackstore;
+extern RD_BOOL g_ownbackstore;
 static Pixmap g_backstore = 0;
 
 /* Moving in single app mode */
-static BOOL g_moving_wnd;
+static RD_BOOL g_moving_wnd;
 static int g_move_x_offset = 0;
 static int g_move_y_offset = 0;
-static BOOL g_using_full_workarea = False;
+static RD_BOOL g_using_full_workarea = False;
 
 #ifdef WITH_RDPSND
-extern BOOL g_rdpsnd;
+extern RD_BOOL g_rdpsnd;
 #endif
 
 /* MWM decorations */
@@ -248,7 +246,7 @@ seamless_XDrawLines(Drawable d, XPoint * points, int npoints, int xoffset, int y
 }
 
 /* colour maps */
-extern BOOL g_owncolmap;
+extern RD_BOOL g_owncolmap;
 static Colormap g_xcolmap;
 static uint32 *g_colmap = NULL;
 
@@ -472,7 +470,7 @@ sw_handle_restack(seamless_window * sw)
 
 
 static seamless_group *
-sw_find_group(unsigned long id, BOOL dont_create)
+sw_find_group(unsigned long id, RD_BOOL dont_create)
 {
 	seamless_window *sw;
 	seamless_group *sg;
@@ -1262,7 +1260,7 @@ translate_image(int width, int height, uint8 * data)
 	return out;
 }
 
-BOOL
+RD_BOOL
 get_key_state(unsigned int state, uint32 keysym)
 {
 	int modifierpos, key, keysymMask = 0;
@@ -1310,7 +1308,7 @@ calculate_mask_weight(uint32 mask)
 	return weight;
 }
 
-static BOOL
+static RD_BOOL
 select_visual(int screen_num)
 {
 	XPixmapFormatValues *pfm;
@@ -1349,7 +1347,7 @@ select_visual(int screen_num)
 		for (i = 0; i < visuals_count; ++i)
 		{
 			XVisualInfo *visual_info = &vmatches[i];
-			BOOL can_translate_to_bpp = False;
+			RD_BOOL can_translate_to_bpp = False;
 			int j;
 
 			/* Try to find a no-translation visual that'll
@@ -1521,7 +1519,7 @@ error_handler(Display * dpy, XErrorEvent * eev)
 	return g_old_error_handler(dpy, eev);
 }
 
-BOOL
+RD_BOOL
 ui_init(void)
 {
 	int screen_num;
@@ -1535,7 +1533,7 @@ ui_init(void)
 
 	{
 		uint16 endianess_test = 1;
-		g_host_be = !(BOOL) (*(uint8 *) (&endianess_test));
+		g_host_be = !(RD_BOOL) (*(uint8 *) (&endianess_test));
 	}
 
 	g_old_error_handler = XSetErrorHandler(error_handler);
@@ -1687,7 +1685,7 @@ get_input_mask(long *input_mask)
 		*input_mask |= LeaveWindowMask;
 }
 
-BOOL
+RD_BOOL
 ui_create_window(void)
 {
 	uint8 null_pointer_mask[1] = { 0x80 };
@@ -1874,7 +1872,7 @@ xwin_toggle_fullscreen(void)
 }
 
 static void
-handle_button_event(XEvent xevent, BOOL down)
+handle_button_event(XEvent xevent, RD_BOOL down)
 {
 	uint16 button, flags = 0;
 	g_last_gesturetime = xevent.xbutton.time;
@@ -2248,7 +2246,7 @@ ui_select(int rdp_socket)
 	int n;
 	fd_set rfds, wfds;
 	struct timeval tv;
-	BOOL s_timeout = False;
+	RD_BOOL s_timeout = False;
 
 	while (True)
 	{
@@ -2292,7 +2290,7 @@ ui_select(int rdp_socket)
 
 				/* Abort serial read calls */
 				if (s_timeout)
-					rdpdr_check_fds(&rfds, &wfds, (BOOL) True);
+					rdpdr_check_fds(&rfds, &wfds, (RD_BOOL) True);
 				continue;
 		}
 
@@ -2300,7 +2298,7 @@ ui_select(int rdp_socket)
 		rdpsnd_check_fds(&rfds, &wfds);
 #endif
 
-		rdpdr_check_fds(&rfds, &wfds, (BOOL) False);
+		rdpdr_check_fds(&rfds, &wfds, (RD_BOOL) False);
 
 		if (FD_ISSET(rdp_socket, &rfds))
 			return 1;
@@ -3253,7 +3251,7 @@ ui_end_update(void)
 
 
 void
-ui_seamless_begin(BOOL hidden)
+ui_seamless_begin(RD_BOOL hidden)
 {
 	if (!g_seamless_rdp)
 		return;

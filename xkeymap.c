@@ -46,17 +46,17 @@ extern int g_keyboard_type;
 extern int g_keyboard_subtype;
 extern int g_keyboard_functionkeys;
 extern int g_win_button_size;
-extern BOOL g_enable_compose;
-extern BOOL g_use_rdp5;
-extern BOOL g_numlock_sync;
+extern RD_BOOL g_enable_compose;
+extern RD_BOOL g_use_rdp5;
+extern RD_BOOL g_numlock_sync;
 
-static BOOL keymap_loaded;
+static RD_BOOL keymap_loaded;
 static key_translation *keymap[KEYMAP_SIZE];
 static int min_keycode;
 static uint16 remote_modifier_state = 0;
 static uint16 saved_remote_modifier_state = 0;
 
-static void update_modifier_state(uint8 scancode, BOOL pressed);
+static void update_modifier_state(uint8 scancode, RD_BOOL pressed);
 
 /* Free key_translation structure, including linked list */
 static void
@@ -159,7 +159,7 @@ add_sequence(char *rest, char *mapname)
 	DEBUG_KBD(("\n"));
 }
 
-BOOL
+RD_BOOL
 xkeymap_from_locale(const char *locale)
 {
 	char *str, *ptr;
@@ -275,7 +275,7 @@ xkeymap_open(const char *filename)
 	return NULL;
 }
 
-static BOOL
+static RD_BOOL
 xkeymap_read(char *mapname)
 {
 	FILE *fp;
@@ -455,7 +455,7 @@ xkeymap_init(void)
 }
 
 static void
-send_winkey(uint32 ev_time, BOOL pressed, BOOL leftkey)
+send_winkey(uint32 ev_time, RD_BOOL pressed, RD_BOOL leftkey)
 {
 	uint8 winkey;
 
@@ -504,8 +504,8 @@ reset_winkey(uint32 ev_time)
 }
 
 /* Handle special key combinations */
-BOOL
-handle_special_keys(uint32 keysym, unsigned int state, uint32 ev_time, BOOL pressed)
+RD_BOOL
+handle_special_keys(uint32 keysym, unsigned int state, uint32 ev_time, RD_BOOL pressed)
 {
 	switch (keysym)
 	{
@@ -681,7 +681,7 @@ xkeymap_translate_key(uint32 keysym, unsigned int keycode, unsigned int state)
 
 void
 xkeymap_send_keys(uint32 keysym, unsigned int keycode, unsigned int state, uint32 ev_time,
-		  BOOL pressed, uint8 nesting)
+		  RD_BOOL pressed, uint8 nesting)
 {
 	key_translation tr, *ptr;
 	tr = xkeymap_translate_key(keysym, keycode, state);
@@ -762,7 +762,7 @@ get_ksname(uint32 keysym)
 	return ksname;
 }
 
-static BOOL
+static RD_BOOL
 is_modifier(uint8 scancode)
 {
 	switch (scancode)
@@ -956,7 +956,7 @@ reset_modifier_keys()
 
 
 static void
-update_modifier_state(uint8 scancode, BOOL pressed)
+update_modifier_state(uint8 scancode, RD_BOOL pressed)
 {
 #ifdef WITH_DEBUG_KBD
 	uint16 old_modifier_state;
@@ -995,7 +995,7 @@ update_modifier_state(uint8 scancode, BOOL pressed)
 			   modifier state only on Keypress */
 			if (pressed && !g_numlock_sync)
 			{
-				BOOL newNumLockState;
+				RD_BOOL newNumLockState;
 				newNumLockState =
 					(MASK_HAS_BITS
 					 (remote_modifier_state, MapNumLockMask) == False);

@@ -41,7 +41,7 @@ static void lspci_send(const char *output);
 
 
 /* Handle one line of output from the lspci subprocess */
-static BOOL
+static RD_BOOL
 handle_child_line(const char *line, void *data)
 {
 	const char *val;
@@ -106,7 +106,7 @@ handle_child_line(const char *line, void *data)
 
 
 /* Process one line of input from virtual channel */
-static BOOL
+static RD_BOOL
 lspci_process_line(const char *line, void *data)
 {
 	char *lspci_command[5] = { "lspci", "-m", "-n", "-v", NULL };
@@ -148,7 +148,7 @@ lspci_process(STREAM s)
 }
 
 /* Initialize this module: Register the lspci channel */
-BOOL
+RD_BOOL
 lspci_init(void)
 {
 	lspci_channel =

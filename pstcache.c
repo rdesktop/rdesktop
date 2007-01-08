@@ -25,13 +25,13 @@
 #define IS_PERSISTENT(id) (id < 8 && g_pstcache_fd[id] > 0)
 
 extern int g_server_depth;
-extern BOOL g_bitmap_cache;
-extern BOOL g_bitmap_cache_persist_enable;
-extern BOOL g_bitmap_cache_precache;
+extern RD_BOOL g_bitmap_cache;
+extern RD_BOOL g_bitmap_cache_persist_enable;
+extern RD_BOOL g_bitmap_cache_precache;
 
 int g_pstcache_fd[8];
 int g_pstcache_Bpp;
-BOOL g_pstcache_enumerated = False;
+RD_BOOL g_pstcache_enumerated = False;
 uint8 zero_key[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
 
@@ -50,7 +50,7 @@ pstcache_touch_bitmap(uint8 cache_id, uint16 cache_idx, uint32 stamp)
 }
 
 /* Load a bitmap from the persistent cache */
-BOOL
+RD_BOOL
 pstcache_load_bitmap(uint8 cache_id, uint16 cache_idx)
 {
 	uint8 *celldata;
@@ -79,7 +79,7 @@ pstcache_load_bitmap(uint8 cache_id, uint16 cache_idx)
 }
 
 /* Store a bitmap in the persistent cache */
-BOOL
+RD_BOOL
 pstcache_save_bitmap(uint8 cache_id, uint16 cache_idx, uint8 * key,
 		     uint8 width, uint8 height, uint16 length, uint8 * data)
 {
@@ -160,7 +160,7 @@ pstcache_enumerate(uint8 id, HASH_KEY * keylist)
 }
 
 /* initialise the persistent bitmap cache */
-BOOL
+RD_BOOL
 pstcache_init(uint8 cache_id)
 {
 	int fd;

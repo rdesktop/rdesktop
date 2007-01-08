@@ -27,7 +27,7 @@ extern char g_hostname[16];
 static uint8 g_licence_key[16];
 static uint8 g_licence_sign_key[16];
 
-BOOL g_licence_issued = False;
+RD_BOOL g_licence_issued = False;
 
 /* Generate a session key and RC4 keys, given client and server randoms */
 static void
@@ -201,7 +201,7 @@ licence_send_authresp(uint8 * token, uint8 * crypt_hwid, uint8 * signature)
 }
 
 /* Parse an authentication request packet */
-static BOOL
+static RD_BOOL
 licence_parse_authreq(STREAM s, uint8 ** token, uint8 ** signature)
 {
 	uint16 tokenlen;

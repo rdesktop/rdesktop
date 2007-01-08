@@ -54,7 +54,7 @@ static struct stream g_out;
 int g_tcp_port_rdp = TCP_PORT_RDP;
 
 /* wait till socket is ready to write or timeout */
-static BOOL
+static RD_BOOL
 tcp_can_send(int sck, int millis)
 {
 	fd_set wfds;
@@ -199,7 +199,7 @@ tcp_recv(STREAM s, uint32 length)
 }
 
 /* Establish a connection on the TCP layer */
-BOOL
+RD_BOOL
 tcp_connect(char *server)
 {
 	socklen_t option_len;

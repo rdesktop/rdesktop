@@ -64,7 +64,7 @@
 }
 
 /* 1 byte bitmap decompress */
-static BOOL
+static RD_BOOL
 bitmap_decompress1(uint8 * output, int width, int height, uint8 * input, int size)
 {
 	uint8 *end = input + size;
@@ -262,7 +262,7 @@ bitmap_decompress1(uint8 * output, int width, int height, uint8 * input, int siz
 }
 
 /* 2 byte bitmap decompress */
-static BOOL
+static RD_BOOL
 bitmap_decompress2(uint8 * output, int width, int height, uint8 * input, int size)
 {
 	uint8 *end = input + size;
@@ -461,7 +461,7 @@ bitmap_decompress2(uint8 * output, int width, int height, uint8 * input, int siz
 }
 
 /* 3 byte bitmap decompress */
-static BOOL
+static RD_BOOL
 bitmap_decompress3(uint8 * output, int width, int height, uint8 * input, int size)
 {
 	uint8 *end = input + size;
@@ -747,10 +747,10 @@ bitmap_decompress3(uint8 * output, int width, int height, uint8 * input, int siz
 }
 
 /* main decompress function */
-BOOL
+RD_BOOL
 bitmap_decompress(uint8 * output, int width, int height, uint8 * input, int size, int Bpp)
 {
-	BOOL rv = False;
+	RD_BOOL rv = False;
 
 	switch (Bpp)
 	{

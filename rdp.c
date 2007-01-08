@@ -38,20 +38,20 @@
 extern uint16 g_mcs_userid;
 extern char g_username[64];
 extern char g_codepage[16];
-extern BOOL g_bitmap_compression;
-extern BOOL g_orders;
-extern BOOL g_encryption;
-extern BOOL g_desktop_save;
-extern BOOL g_polygon_ellipse_orders;
-extern BOOL g_use_rdp5;
+extern RD_BOOL g_bitmap_compression;
+extern RD_BOOL g_orders;
+extern RD_BOOL g_encryption;
+extern RD_BOOL g_desktop_save;
+extern RD_BOOL g_polygon_ellipse_orders;
+extern RD_BOOL g_use_rdp5;
 extern uint16 g_server_rdp_version;
 extern uint32 g_rdp5_performanceflags;
 extern int g_server_depth;
 extern int g_width;
 extern int g_height;
-extern BOOL g_bitmap_cache;
-extern BOOL g_bitmap_cache_persist_enable;
-extern BOOL g_numlock_sync;
+extern RD_BOOL g_bitmap_cache;
+extern RD_BOOL g_bitmap_cache_persist_enable;
+extern RD_BOOL g_numlock_sync;
 
 uint8 *g_next_packet;
 uint32 g_rdp_shareid;
@@ -59,7 +59,7 @@ uint32 g_rdp_shareid;
 extern RDPCOMP g_mppc_dict;
 
 /* Session Directory support */
-extern BOOL g_redirect;
+extern RD_BOOL g_redirect;
 extern char g_redirect_server[64];
 extern char g_redirect_domain[16];
 extern char g_redirect_password[64];
@@ -73,7 +73,7 @@ static uint32 g_packetno;
 #endif
 
 #ifdef HAVE_ICONV
-static BOOL g_iconv_works = True;
+static RD_BOOL g_iconv_works = True;
 #endif
 
 /* Receive an RDP packet */
@@ -1225,7 +1225,7 @@ process_disconnect_pdu(STREAM s, uint32 * ext_disc_reason)
 }
 
 /* Process data PDU */
-static BOOL
+static RD_BOOL
 process_data_pdu(STREAM s, uint32 * ext_disc_reason)
 {
 	uint8 data_pdu_type;
@@ -1310,7 +1310,7 @@ process_data_pdu(STREAM s, uint32 * ext_disc_reason)
 }
 
 /* Process redirect PDU from Session Directory */
-static BOOL
+static RD_BOOL
 process_redirect_pdu(STREAM s /*, uint32 * ext_disc_reason */ )
 {
 	uint32 len;
@@ -1360,19 +1360,19 @@ process_redirect_pdu(STREAM s /*, uint32 * ext_disc_reason */ )
 /* Process incoming packets */
 /* nevers gets out of here till app is done */
 void
-rdp_main_loop(BOOL * deactivated, uint32 * ext_disc_reason)
+rdp_main_loop(RD_BOOL * deactivated, uint32 * ext_disc_reason)
 {
 	while (rdp_loop(deactivated, ext_disc_reason))
 		;
 }
 
 /* used in uiports and rdp_main_loop, processes the rdp packets waiting */
-BOOL
-rdp_loop(BOOL * deactivated, uint32 * ext_disc_reason)
+RD_BOOL
+rdp_loop(RD_BOOL * deactivated, uint32 * ext_disc_reason)
 {
 	uint8 type;
-	BOOL disc = False;	/* True when a disconnect PDU was received */
-	BOOL cont = True;
+	RD_BOOL disc = False;	/* True when a disconnect PDU was received */
+	RD_BOOL cont = True;
 	STREAM s;
 
 	while (cont)
@@ -1409,7 +1409,7 @@ rdp_loop(BOOL * deactivated, uint32 * ext_disc_reason)
 }
 
 /* Establish a connection up to the RDP layer */
-BOOL
+RD_BOOL
 rdp_connect(char *server, uint32 flags, char *domain, char *password,
 	    char *command, char *directory)
 {
@@ -1421,7 +1421,7 @@ rdp_connect(char *server, uint32 flags, char *domain, char *password,
 }
 
 /* Establish a reconnection up to the RDP layer */
-BOOL
+RD_BOOL
 rdp_reconnect(char *server, uint32 flags, char *domain, char *password,
 	      char *command, char *directory, char *cookie)
 {

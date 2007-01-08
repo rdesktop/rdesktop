@@ -127,7 +127,7 @@ rdpsnd_dsp_swapbytes(unsigned char *buffer, unsigned int size, RD_WAVEFORMATEX *
 	}
 }
 
-BOOL
+RD_BOOL
 rdpsnd_dsp_resample_set(uint32 device_srate, uint16 device_bitspersample, uint16 device_channels)
 {
 #ifdef HAVE_LIBSAMPLERATE
@@ -158,7 +158,7 @@ rdpsnd_dsp_resample_set(uint32 device_srate, uint16 device_bitspersample, uint16
 	return True;
 }
 
-BOOL
+RD_BOOL
 rdpsnd_dsp_resample_supported(RD_WAVEFORMATEX * format)
 {
 	if (format->wFormatTag != WAVE_FORMAT_PCM)
@@ -173,7 +173,7 @@ rdpsnd_dsp_resample_supported(RD_WAVEFORMATEX * format)
 
 uint32
 rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
-		    RD_WAVEFORMATEX * format, BOOL stream_be)
+		    RD_WAVEFORMATEX * format, RD_BOOL stream_be)
 {
 #ifdef HAVE_LIBSAMPLERATE
 	SRC_DATA resample_data;
@@ -388,7 +388,7 @@ rdpsnd_dsp_process(unsigned char *data, unsigned int size, struct audio_driver *
 		   RD_WAVEFORMATEX * format)
 {
 	static struct stream out;
-	BOOL stream_be = False;
+	RD_BOOL stream_be = False;
 
 	/* softvol and byteswap do not change the amount of data they
 	   return, so they can operate on the input-stream */

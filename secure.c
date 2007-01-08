@@ -39,10 +39,10 @@ extern unsigned int g_keylayout;
 extern int g_keyboard_type;
 extern int g_keyboard_subtype;
 extern int g_keyboard_functionkeys;
-extern BOOL g_encryption;
-extern BOOL g_licence_issued;
-extern BOOL g_use_rdp5;
-extern BOOL g_console_session;
+extern RD_BOOL g_encryption;
+extern RD_BOOL g_licence_issued;
+extern RD_BOOL g_use_rdp5;
+extern RD_BOOL g_console_session;
 extern int g_server_depth;
 extern uint16 mcs_userid;
 extern VCHANNEL g_channels[];
@@ -510,7 +510,7 @@ sec_out_mcs_data(STREAM s)
 }
 
 /* Parse a public key structure */
-static BOOL
+static RD_BOOL
 sec_parse_public_key(STREAM s, uint8 ** modulus, uint8 ** exponent)
 {
 	uint32 magic, modulus_len;
@@ -539,7 +539,7 @@ sec_parse_public_key(STREAM s, uint8 ** modulus, uint8 ** exponent)
 	return s_check(s);
 }
 
-static BOOL
+static RD_BOOL
 sec_parse_x509_key(X509 * cert)
 {
 	EVP_PKEY *epk = NULL;
@@ -576,7 +576,7 @@ sec_parse_x509_key(X509 * cert)
 
 
 /* Parse a crypto information structure */
-static BOOL
+static RD_BOOL
 sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 		     uint8 ** server_random, uint8 ** modulus, uint8 ** exponent)
 {
@@ -940,7 +940,7 @@ sec_recv(uint8 * rdpver)
 }
 
 /* Establish a secure connection */
-BOOL
+RD_BOOL
 sec_connect(char *server, char *username)
 {
 	struct stream mcs_data;
@@ -961,7 +961,7 @@ sec_connect(char *server, char *username)
 }
 
 /* Establish a secure connection */
-BOOL
+RD_BOOL
 sec_reconnect(char *server)
 {
 	struct stream mcs_data;

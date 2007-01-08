@@ -18,7 +18,7 @@
    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-typedef int BOOL;
+typedef int RD_BOOL;
 
 #ifndef True
 #define True  (1)
@@ -235,7 +235,7 @@ typedef struct rdpdr_printer_info
 	char *driver, *printer;
 	uint32 bloblen;
 	uint8 *blob;
-	BOOL default_printer;
+	RD_BOOL default_printer;
 }
 PRINTER;
 
@@ -259,10 +259,10 @@ typedef struct fileinfo
 	DIR *pdir;
 	struct dirent *pdirent;
 	char pattern[PATH_MAX];
-	BOOL delete_on_close;
+	RD_BOOL delete_on_close;
 	NOTIFY notify;
 	uint32 info_class;
 }
 FILEINFO;
 
-typedef BOOL(*str_handle_lines_t) (const char *line, void *data);
+typedef RD_BOOL(*str_handle_lines_t) (const char *line, void *data);

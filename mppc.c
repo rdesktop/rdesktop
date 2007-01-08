@@ -63,7 +63,7 @@ mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen
 	int next_offset, match_off;
 	int match_len;
 	int old_offset, match_bits;
-	BOOL big = ctype & RDP_MPPC_BIG ? True : False;
+	RD_BOOL big = ctype & RDP_MPPC_BIG ? True : False;
 
 	uint8 *dict = g_mppc_dict.hist;
 

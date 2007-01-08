@@ -35,9 +35,9 @@
 #define DEFAULTDEVICE	"/dev/audio"
 
 static int dsp_fd = -1;
-static BOOL dsp_busy;
+static RD_BOOL dsp_busy;
 
-static BOOL g_reopened;
+static RD_BOOL g_reopened;
 static short g_samplewidth;
 static char *dsp_dev;
 
@@ -64,7 +64,7 @@ sun_check_fds(fd_set * rfds, fd_set * wfds)
 		sun_play();
 }
 
-BOOL
+RD_BOOL
 sun_open(void)
 {
 	if ((dsp_fd = open(dsp_dev, O_WRONLY | O_NONBLOCK)) == -1)
@@ -99,7 +99,7 @@ sun_close(void)
 	dsp_fd = -1;
 }
 
-BOOL
+RD_BOOL
 sun_format_supported(RD_WAVEFORMATEX * pwfx)
 {
 	if (pwfx->wFormatTag != WAVE_FORMAT_PCM)
@@ -112,7 +112,7 @@ sun_format_supported(RD_WAVEFORMATEX * pwfx)
 	return True;
 }
 
-BOOL
+RD_BOOL
 sun_set_format(RD_WAVEFORMATEX * pwfx)
 {
 	audio_info_t info;
@@ -199,7 +199,7 @@ sun_play(void)
 	ssize_t len;
 	unsigned int i;
 	STREAM out;
-	static BOOL sentcompletion = True;
+	static RD_BOOL sentcompletion = True;
 	static uint32 samplecnt = 0;
 	static uint32 numsamples;
 
