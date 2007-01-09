@@ -45,7 +45,7 @@
 #include <sys/un.h>		/* sockaddr_un */
 #endif
 
-#include <openssl/md5.h>
+#include "ssl.h"
 
 char g_title[64] = "";
 char g_username[64];
@@ -1052,7 +1052,7 @@ generate_random(uint8 * random)
 {
 	struct stat st;
 	struct tms tmsbuf;
-	MD5_CTX md5;
+	SSL_MD5 md5;
 	uint32 *r;
 	int fd, n;
 
@@ -1084,11 +1084,11 @@ generate_random(uint8 * random)
 	r[7] = st.st_ctime;
 
 	/* Hash both halves with MD5 to obscure possible patterns */
-	MD5_Init(&md5);
-	MD5_Update(&md5, random, 16);
-	MD5_Final(random, &md5);
-	MD5_Update(&md5, random + 16, 16);
-	MD5_Final(random + 16, &md5);
+	ssl_md5_init(&md5);
+	ssl_md5_update(&md5, random, 16);
+	ssl_md5_final(&md5, random);
+	ssl_md5_update(&md5, random + 16, 16);
+	ssl_md5_final(&md5, random + 16);
 }
 
 /* malloc; exit if out of memory */

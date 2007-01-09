@@ -19,18 +19,7 @@
 */
 
 #include "rdesktop.h"
-
-#include <openssl/rc4.h>
-#include <openssl/md5.h>
-#include <openssl/sha.h>
-#include <openssl/bn.h>
-#include <openssl/x509v3.h>
-
-#if defined(OPENSSL_VERSION_NUMBER) && (OPENSSL_VERSION_NUMBER >= 0x0090800f)
-#define D2I_X509_CONST const
-#else
-#define D2I_X509_CONST
-#endif
+#include "ssl.h"
 
 extern char g_hostname[16];
 extern int g_width;
@@ -49,9 +38,8 @@ extern VCHANNEL g_channels[];
 extern unsigned int g_num_channels;
 
 static int rc4_key_len;
-static RC4_KEY rc4_decrypt_key;
-static RC4_KEY rc4_encrypt_key;
-static RSA *server_public_key;
+static SSL_RC4 rc4_decrypt_key;
+static SSL_RC4 rc4_encrypt_key;
 static uint32 server_public_key_len;
 
 static uint8 sec_sign_key[16];
@@ -86,25 +74,25 @@ sec_hash_48(uint8 * out, uint8 * in, uint8 * salt1, uint8 * salt2, uint8 salt)
 {
 	uint8 shasig[20];
 	uint8 pad[4];
-	SHA_CTX sha;
-	MD5_CTX md5;
+	SSL_SHA1 sha1;
+	SSL_MD5 md5;
 	int i;
 
 	for (i = 0; i < 3; i++)
 	{
 		memset(pad, salt + i, i + 1);
 
-		SHA1_Init(&sha);
-		SHA1_Update(&sha, pad, i + 1);
-		SHA1_Update(&sha, in, 48);
-		SHA1_Update(&sha, salt1, 32);
-		SHA1_Update(&sha, salt2, 32);
-		SHA1_Final(shasig, &sha);
+		ssl_sha1_init(&sha1);
+		ssl_sha1_update(&sha1, pad, i + 1);
+		ssl_sha1_update(&sha1, in, 48);
+		ssl_sha1_update(&sha1, salt1, 32);
+		ssl_sha1_update(&sha1, salt2, 32);
+		ssl_sha1_final(&sha1, shasig);
 
-		MD5_Init(&md5);
-		MD5_Update(&md5, in, 48);
-		MD5_Update(&md5, shasig, 20);
-		MD5_Final(&out[i * 16], &md5);
+		ssl_md5_init(&md5);
+		ssl_md5_update(&md5, in, 48);
+		ssl_md5_update(&md5, shasig, 20);
+		ssl_md5_final(&md5, &out[i * 16]);
 	}
 }
 
@@ -114,13 +102,13 @@ sec_hash_48(uint8 * out, uint8 * in, uint8 * salt1, uint8 * salt2, uint8 salt)
 void
 sec_hash_16(uint8 * out, uint8 * in, uint8 * salt1, uint8 * salt2)
 {
-	MD5_CTX md5;
+	SSL_MD5 md5;
 
-	MD5_Init(&md5);
-	MD5_Update(&md5, in, 16);
-	MD5_Update(&md5, salt1, 32);
-	MD5_Update(&md5, salt2, 32);
-	MD5_Final(out, &md5);
+	ssl_md5_init(&md5);
+	ssl_md5_update(&md5, in, 16);
+	ssl_md5_update(&md5, salt1, 32);
+	ssl_md5_update(&md5, salt2, 32);
+	ssl_md5_final(&md5, out);
 }
 
 /* Reduce key entropy from 64 to 40 bits */
@@ -209,23 +197,23 @@ sec_sign(uint8 * signature, int siglen, uint8 * session_key, int keylen, uint8 *
 	uint8 shasig[20];
 	uint8 md5sig[16];
 	uint8 lenhdr[4];
-	SHA_CTX sha;
-	MD5_CTX md5;
+	SSL_SHA1 sha1;
+	SSL_MD5 md5;
 
 	buf_out_uint32(lenhdr, datalen);
 
-	SHA1_Init(&sha);
-	SHA1_Update(&sha, session_key, keylen);
-	SHA1_Update(&sha, pad_54, 40);
-	SHA1_Update(&sha, lenhdr, 4);
-	SHA1_Update(&sha, data, datalen);
-	SHA1_Final(shasig, &sha);
+	ssl_sha1_init(&sha1);
+	ssl_sha1_update(&sha1, session_key, keylen);
+	ssl_sha1_update(&sha1, pad_54, 40);
+	ssl_sha1_update(&sha1, lenhdr, 4);
+	ssl_sha1_update(&sha1, data, datalen);
+	ssl_sha1_final(&sha1, shasig);
 
-	MD5_Init(&md5);
-	MD5_Update(&md5, session_key, keylen);
-	MD5_Update(&md5, pad_92, 48);
-	MD5_Update(&md5, shasig, 20);
-	MD5_Final(md5sig, &md5);
+	ssl_md5_init(&md5);
+	ssl_md5_update(&md5, session_key, keylen);
+	ssl_md5_update(&md5, pad_92, 48);
+	ssl_md5_update(&md5, shasig, 20);
+	ssl_md5_final(&md5, md5sig);
 
 	memcpy(signature, md5sig, siglen);
 }
@@ -235,24 +223,24 @@ static void
 sec_update(uint8 * key, uint8 * update_key)
 {
 	uint8 shasig[20];
-	SHA_CTX sha;
-	MD5_CTX md5;
-	RC4_KEY update;
+	SSL_SHA1 sha1;
+	SSL_MD5 md5;
+	SSL_RC4 update;
 
-	SHA1_Init(&sha);
-	SHA1_Update(&sha, update_key, rc4_key_len);
-	SHA1_Update(&sha, pad_54, 40);
-	SHA1_Update(&sha, key, rc4_key_len);
-	SHA1_Final(shasig, &sha);
+	ssl_sha1_init(&sha1);
+	ssl_sha1_update(&sha1, update_key, rc4_key_len);
+	ssl_sha1_update(&sha1, pad_54, 40);
+	ssl_sha1_update(&sha1, key, rc4_key_len);
+	ssl_sha1_final(&sha1, shasig);
 
-	MD5_Init(&md5);
-	MD5_Update(&md5, update_key, rc4_key_len);
-	MD5_Update(&md5, pad_92, 48);
-	MD5_Update(&md5, shasig, 20);
-	MD5_Final(key, &md5);
+	ssl_md5_init(&md5);
+	ssl_md5_update(&md5, update_key, rc4_key_len);
+	ssl_md5_update(&md5, pad_92, 48);
+	ssl_md5_update(&md5, shasig, 20);
+	ssl_md5_final(&md5, key);
 
-	RC4_set_key(&update, rc4_key_len, key);
-	RC4(&update, rc4_key_len, key, key);
+	ssl_rc4_set_key(&update, key, rc4_key_len);
+	ssl_rc4_crypt(&update, key, key, rc4_key_len);
 
 	if (rc4_key_len == 8)
 		sec_make_40bit(key);
@@ -265,11 +253,11 @@ sec_encrypt(uint8 * data, int length)
 	if (sec_encrypt_use_count == 4096)
 	{
 		sec_update(sec_encrypt_key, sec_encrypt_update_key);
-		RC4_set_key(&rc4_encrypt_key, rc4_key_len, sec_encrypt_key);
+		ssl_rc4_set_key(&rc4_encrypt_key, sec_encrypt_key, rc4_key_len);
 		sec_encrypt_use_count = 0;
 	}
 
-	RC4(&rc4_encrypt_key, length, data, data);
+	ssl_rc4_crypt(&rc4_encrypt_key, data, data, length);
 	sec_encrypt_use_count++;
 }
 
@@ -280,26 +268,12 @@ sec_decrypt(uint8 * data, int length)
 	if (sec_decrypt_use_count == 4096)
 	{
 		sec_update(sec_decrypt_key, sec_decrypt_update_key);
-		RC4_set_key(&rc4_decrypt_key, rc4_key_len, sec_decrypt_key);
+		ssl_rc4_set_key(&rc4_decrypt_key, sec_decrypt_key, rc4_key_len);
 		sec_decrypt_use_count = 0;
 	}
 
-	RC4(&rc4_decrypt_key, length, data, data);
+	ssl_rc4_crypt(&rc4_decrypt_key, data, data, length);
 	sec_decrypt_use_count++;
-}
-
-static void
-reverse(uint8 * p, int len)
-{
-	int i, j;
-	uint8 temp;
-
-	for (i = 0, j = len - 1; i < j; i++, j--)
-	{
-		temp = p[i];
-		p[i] = p[j];
-		p[j] = temp;
-	}
 }
 
 /* Perform an RSA public key encryption operation */
@@ -307,36 +281,7 @@ static void
 sec_rsa_encrypt(uint8 * out, uint8 * in, int len, uint32 modulus_size, uint8 * modulus,
 		uint8 * exponent)
 {
-	BN_CTX *ctx;
-	BIGNUM mod, exp, x, y;
-	uint8 inr[SEC_MAX_MODULUS_SIZE];
-	int outlen;
-
-	reverse(modulus, modulus_size);
-	reverse(exponent, SEC_EXPONENT_SIZE);
-	memcpy(inr, in, len);
-	reverse(inr, len);
-
-	ctx = BN_CTX_new();
-	BN_init(&mod);
-	BN_init(&exp);
-	BN_init(&x);
-	BN_init(&y);
-
-	BN_bin2bn(modulus, modulus_size, &mod);
-	BN_bin2bn(exponent, SEC_EXPONENT_SIZE, &exp);
-	BN_bin2bn(inr, len, &x);
-	BN_mod_exp(&y, &x, &exp, &mod, ctx);
-	outlen = BN_bn2bin(&y, out);
-	reverse(out, outlen);
-	if (outlen < modulus_size)
-		memset(out + outlen, 0, modulus_size - outlen);
-
-	BN_free(&y);
-	BN_clear_free(&x);
-	BN_free(&exp);
-	BN_free(&mod);
-	BN_CTX_free(ctx);
+	ssl_rsa_encrypt(out, in, len, modulus_size, modulus, exponent);
 }
 
 /* Initialise secure transport packet */
@@ -511,7 +456,7 @@ sec_out_mcs_data(STREAM s)
 
 /* Parse a public key structure */
 static RD_BOOL
-sec_parse_public_key(STREAM s, uint8 ** modulus, uint8 ** exponent)
+sec_parse_public_key(STREAM s, uint8 * modulus, uint8 * exponent)
 {
 	uint32 magic, modulus_len;
 
@@ -524,65 +469,48 @@ sec_parse_public_key(STREAM s, uint8 ** modulus, uint8 ** exponent)
 
 	in_uint32_le(s, modulus_len);
 	modulus_len -= SEC_PADDING_SIZE;
-	if ((modulus_len < 64) || (modulus_len > SEC_MAX_MODULUS_SIZE))
+	if ((modulus_len < SEC_MODULUS_SIZE) || (modulus_len > SEC_MAX_MODULUS_SIZE))
 	{
 		error("Bad server public key size (%u bits)\n", modulus_len * 8);
 		return False;
 	}
 
 	in_uint8s(s, 8);	/* modulus_bits, unknown */
-	in_uint8p(s, *exponent, SEC_EXPONENT_SIZE);
-	in_uint8p(s, *modulus, modulus_len);
+	in_uint8a(s, exponent, SEC_EXPONENT_SIZE);
+	in_uint8a(s, modulus, modulus_len);
 	in_uint8s(s, SEC_PADDING_SIZE);
 	server_public_key_len = modulus_len;
 
 	return s_check(s);
 }
 
+/* Parse a public signature structure */
 static RD_BOOL
-sec_parse_x509_key(X509 * cert)
+sec_parse_public_sig(STREAM s, uint32 len, uint8 * modulus, uint8 * exponent)
 {
-	EVP_PKEY *epk = NULL;
-	/* By some reason, Microsoft sets the OID of the Public RSA key to
-	   the oid for "MD5 with RSA Encryption" instead of "RSA Encryption"
+	uint8 signature[SEC_MAX_MODULUS_SIZE];
+	uint32 sig_len;
 
-	   Kudos to Richard Levitte for the following (. intiutive .) 
-	   lines of code that resets the OID and let's us extract the key. */
-	if (OBJ_obj2nid(cert->cert_info->key->algor->algorithm) == NID_md5WithRSAEncryption)
+	if (len != 72)
 	{
-		DEBUG_RDP5(("Re-setting algorithm type to RSA in server certificate\n"));
-		ASN1_OBJECT_free(cert->cert_info->key->algor->algorithm);
-		cert->cert_info->key->algor->algorithm = OBJ_nid2obj(NID_rsaEncryption);
+		return True;
 	}
-	epk = X509_get_pubkey(cert);
-	if (NULL == epk)
-	{
-		error("Failed to extract public key from certificate\n");
-		return False;
-	}
-
-	server_public_key = RSAPublicKey_dup((RSA *) epk->pkey.ptr);
-	EVP_PKEY_free(epk);
-
-	server_public_key_len = RSA_size(server_public_key);
-	if ((server_public_key_len < 64) || (server_public_key_len > SEC_MAX_MODULUS_SIZE))
-	{
-		error("Bad server public key size (%u bits)\n", server_public_key_len * 8);
-		return False;
-	}
-
-	return True;
+	memset(signature, 0, sizeof(signature));
+	sig_len = len - 8;
+	in_uint8a(s, signature, sig_len);
+	return ssl_sig_ok(exponent, SEC_EXPONENT_SIZE, modulus, server_public_key_len,
+			  signature, sig_len);
 }
-
 
 /* Parse a crypto information structure */
 static RD_BOOL
 sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
-		     uint8 ** server_random, uint8 ** modulus, uint8 ** exponent)
+		     uint8 ** server_random, uint8 * modulus, uint8 * exponent)
 {
 	uint32 crypt_level, random_len, rsa_info_len;
 	uint32 cacert_len, cert_len, flags;
-	X509 *cacert, *server_cert;
+	SSL_CERT *cacert, *server_cert;
+	SSL_RKEY *server_public_key;
 	uint16 tag, length;
 	uint8 *next_tag, *end;
 
@@ -629,10 +557,8 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 					break;
 
 				case SEC_TAG_KEYSIG:
-					/* Is this a Microsoft key that we just got? */
-					/* Care factor: zero! */
-					/* Actually, it would probably be a good idea to check if the public key is signed with this key, and then store this 
-					   key as a known key of the hostname. This would prevent some MITM-attacks. */
+					if (!sec_parse_public_sig(s, length, modulus, exponent))
+						return False;
 					break;
 
 				default:
@@ -648,26 +574,21 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 
 		DEBUG_RDP5(("We're going for the RDP5-style encryption\n"));
 		in_uint32_le(s, certcount);	/* Number of certificates */
-
 		if (certcount < 2)
 		{
 			error("Server didn't send enough X509 certificates\n");
 			return False;
 		}
-
 		for (; certcount > 2; certcount--)
 		{		/* ignore all the certificates between the root and the signing CA */
 			uint32 ignorelen;
-			X509 *ignorecert;
+			SSL_CERT *ignorecert;
 
 			DEBUG_RDP5(("Ignored certs left: %d\n", certcount));
-
 			in_uint32_le(s, ignorelen);
 			DEBUG_RDP5(("Ignored Certificate length is %d\n", ignorelen));
-			ignorecert =
-				d2i_X509(NULL, (D2I_X509_CONST unsigned char **) &(s->p),
-					 ignorelen);
-
+			ignorecert = ssl_cert_read(s->p, ignorelen);
+			in_uint8s(s, ignorelen);
 			if (ignorecert == NULL)
 			{	/* XXX: error out? */
 				DEBUG_RDP5(("got a bad cert: this will probably screw up the rest of the communication\n"));
@@ -675,11 +596,10 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 
 #ifdef WITH_DEBUG_RDP5
 			DEBUG_RDP5(("cert #%d (ignored):\n", certcount));
-			X509_print_fp(stdout, ignorecert);
+			ssl_cert_print_fp(stdout, ignorecert);
 #endif
 		}
-
-		/* Do da funky X.509 stuffy 
+		/* Do da funky X.509 stuffy
 
 		   "How did I find out about this?  I looked up and saw a
 		   bright light and when I came to I had a scar on my forehead
@@ -687,52 +607,57 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 		   - Peter Gutman in a early version of 
 		   http://www.cs.auckland.ac.nz/~pgut001/pubs/x509guide.txt
 		 */
-
 		in_uint32_le(s, cacert_len);
 		DEBUG_RDP5(("CA Certificate length is %d\n", cacert_len));
-		cacert = d2i_X509(NULL, (D2I_X509_CONST unsigned char **) &(s->p), cacert_len);
-		/* Note: We don't need to move s->p here - d2i_X509 is
-		   "kind" enough to do it for us */
+		cacert = ssl_cert_read(s->p, cacert_len);
+		in_uint8s(s, cacert_len);
 		if (NULL == cacert)
 		{
 			error("Couldn't load CA Certificate from server\n");
 			return False;
 		}
-
-		/* Currently, we don't use the CA Certificate. 
-		   FIXME: 
-		   *) Verify the server certificate (server_cert) with the 
-		   CA certificate.
-		   *) Store the CA Certificate with the hostname of the 
-		   server we are connecting to as key, and compare it
-		   when we connect the next time, in order to prevent
-		   MITM-attacks.
-		 */
-
-		X509_free(cacert);
-
 		in_uint32_le(s, cert_len);
 		DEBUG_RDP5(("Certificate length is %d\n", cert_len));
-		server_cert = d2i_X509(NULL, (D2I_X509_CONST unsigned char **) &(s->p), cert_len);
+		server_cert = ssl_cert_read(s->p, cert_len);
+		in_uint8s(s, cert_len);
 		if (NULL == server_cert)
 		{
+			ssl_cert_free(cacert);
 			error("Couldn't load Certificate from server\n");
 			return False;
 		}
-
-		in_uint8s(s, 16);	/* Padding */
-
-		/* Note: Verifying the server certificate must be done here, 
-		   before sec_parse_public_key since we'll have to apply
-		   serious violence to the key after this */
-
-		if (!sec_parse_x509_key(server_cert))
+		if (!ssl_certs_ok(server_cert, cacert))
 		{
-			DEBUG_RDP5(("Didn't parse X509 correctly\n"));
-			X509_free(server_cert);
+			ssl_cert_free(server_cert);
+			ssl_cert_free(cacert);
+			error("Security error CA Certificate invalid\n");
 			return False;
 		}
-		X509_free(server_cert);
+		ssl_cert_free(cacert);
+		in_uint8s(s, 16);	/* Padding */
+		server_public_key = ssl_cert_to_rkey(server_cert, &server_public_key_len);
+		if (NULL == server_public_key)
+		{
+			DEBUG_RDP5(("Didn't parse X509 correctly\n"));
+			ssl_cert_free(server_cert);
+			return False;
+		}
+		ssl_cert_free(server_cert);
+		if ((server_public_key_len < SEC_MODULUS_SIZE) ||
+		    (server_public_key_len > SEC_MAX_MODULUS_SIZE))
+		{
+			error("Bad server public key size (%u bits)\n", server_public_key_len * 8);
+			ssl_rkey_free(server_public_key);
+			return False;
+		}
+		if (ssl_rkey_get_exp_mod(server_public_key, exponent, SEC_EXPONENT_SIZE,
+					 modulus, SEC_MAX_MODULUS_SIZE) != 0)
+		{
+			error("Problem extracting RSA exponent, modulus");
+			ssl_rkey_free(server_public_key);
+			return False;
+		}
+		ssl_rkey_free(server_public_key);
 		return True;	/* There's some garbage here we don't care about */
 	}
 	return s_check_end(s);
@@ -742,51 +667,23 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 static void
 sec_process_crypt_info(STREAM s)
 {
-	uint8 *server_random = NULL, *modulus = NULL, *exponent = NULL;
+	uint8 *server_random = NULL;
 	uint8 client_random[SEC_RANDOM_SIZE];
+	uint8 modulus[SEC_MAX_MODULUS_SIZE];
+	uint8 exponent[SEC_EXPONENT_SIZE];
 	uint32 rc4_key_size;
 
-	if (!sec_parse_crypt_info(s, &rc4_key_size, &server_random, &modulus, &exponent))
+	memset(modulus, 0, sizeof(modulus));
+	memset(exponent, 0, sizeof(exponent));
+	if (!sec_parse_crypt_info(s, &rc4_key_size, &server_random, modulus, exponent))
 	{
 		DEBUG(("Failed to parse crypt info\n"));
 		return;
 	}
-
 	DEBUG(("Generating client random\n"));
 	generate_random(client_random);
-
-	if (NULL != server_public_key)
-	{			/* Which means we should use 
-				   RDP5-style encryption */
-		uint8 inr[SEC_MAX_MODULUS_SIZE];
-		uint32 padding_len = server_public_key_len - SEC_RANDOM_SIZE;
-
-		/* This is what the MS client do: */
-		memset(inr, 0, padding_len);
-		/*  *ARIGL!* Plaintext attack, anyone?
-		   I tried doing:
-		   generate_random(inr);
-		   ..but that generates connection errors now and then (yes, 
-		   "now and then". Something like 0 to 3 attempts needed before a 
-		   successful connection. Nice. Not! 
-		 */
-		memcpy(inr + padding_len, client_random, SEC_RANDOM_SIZE);
-		reverse(inr + padding_len, SEC_RANDOM_SIZE);
-
-		RSA_public_encrypt(server_public_key_len,
-				   inr, sec_crypted_random, server_public_key, RSA_NO_PADDING);
-
-		reverse(sec_crypted_random, server_public_key_len);
-
-		RSA_free(server_public_key);
-		server_public_key = NULL;
-	}
-	else
-	{			/* RDP4-style encryption */
-		sec_rsa_encrypt(sec_crypted_random,
-				client_random, SEC_RANDOM_SIZE, server_public_key_len, modulus,
-				exponent);
-	}
+	sec_rsa_encrypt(sec_crypted_random, client_random, SEC_RANDOM_SIZE,
+			server_public_key_len, modulus, exponent);
 	sec_generate_keys(client_random, server_random, rc4_key_size);
 }
 
