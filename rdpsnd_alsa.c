@@ -42,7 +42,7 @@ static int num_fds_in;
 static snd_pcm_t *out_handle = NULL;
 static snd_pcm_t *in_handle = NULL;
 
-static BOOL reopened;
+static RD_BOOL reopened;
 
 static short samplewidth_out;
 static int audiochannels_out;
@@ -163,7 +163,7 @@ alsa_check_fds(fd_set * rfds, fd_set * wfds)
 	}
 }
 
-static BOOL
+static RD_BOOL
 alsa_set_format(snd_pcm_t * pcm, RD_WAVEFORMATEX * pwfx)
 {
 	snd_pcm_hw_params_t *hwparams = NULL;
@@ -259,7 +259,7 @@ alsa_set_format(snd_pcm_t * pcm, RD_WAVEFORMATEX * pwfx)
 	return True;
 }
 
-BOOL
+RD_BOOL
 alsa_open_out(void)
 {
 	int err;
@@ -289,7 +289,7 @@ alsa_close_out(void)
 	}
 }
 
-BOOL
+RD_BOOL
 alsa_format_supported(RD_WAVEFORMATEX * pwfx)
 {
 #if 0
@@ -322,7 +322,7 @@ alsa_format_supported(RD_WAVEFORMATEX * pwfx)
 	return True;
 }
 
-BOOL
+RD_BOOL
 alsa_set_format_out(RD_WAVEFORMATEX * pwfx)
 {
 	if (!alsa_set_format(out_handle, pwfx))
@@ -405,7 +405,7 @@ alsa_play(void)
 	}
 }
 
-BOOL
+RD_BOOL
 alsa_open_in(void)
 {
 	int err;
@@ -430,7 +430,7 @@ alsa_close_in(void)
 	}
 }
 
-BOOL
+RD_BOOL
 alsa_set_format_in(RD_WAVEFORMATEX * pwfx)
 {
 	int err;
