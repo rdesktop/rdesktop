@@ -49,6 +49,7 @@ static int dsp_mode;
 static int dsp_refs;
 
 static RD_BOOL dsp_configured;
+static RD_BOOL dsp_broken;
 
 static RD_BOOL dsp_out;
 static RD_BOOL dsp_in;
@@ -131,6 +132,7 @@ oss_open(int fallback)
 	}
 
 	dsp_configured = False;
+	dsp_broken = False;
 
 	dsp_mode = O_RDWR;
 	dsp_fd = open(dsp_dev, O_RDWR | O_NONBLOCK);
@@ -389,9 +391,16 @@ oss_play(void)
 	if (len == -1)
 	{
 		if (errno != EWOULDBLOCK)
-			perror("write audio");
+		{
+			if (!dsp_broken)
+				perror("RDPSND: write()");
+			dsp_broken = True;
+			rdpsnd_queue_next(0);
+		}
 		return;
 	}
+
+	dsp_broken = False;
 
 	out->p += len;
 
@@ -441,9 +450,16 @@ oss_record(void)
 	if (len == -1)
 	{
 		if (errno != EWOULDBLOCK)
-			perror("read audio");
+		{
+			if (!dsp_broken)
+				perror("RDPSND: read()");
+			dsp_broken = True;
+			rdpsnd_queue_next(0);
+		}
 		return;
 	}
+
+	dsp_broken = False;
 
 	rdpsnd_record(buffer, len);
 }
