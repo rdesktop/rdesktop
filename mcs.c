@@ -36,7 +36,8 @@ ber_parse_header(STREAM s, int tagval, int *length)
 	}
 	else
 	{
-	in_uint8(s, tag)}
+		in_uint8(s, tag);
+	}
 
 	if (tag != tagval)
 	{
