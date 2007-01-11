@@ -101,8 +101,8 @@ void printercache_process(STREAM s);
 /* pstcache.c */
 void pstcache_touch_bitmap(uint8 cache_id, uint16 cache_idx, uint32 stamp);
 RD_BOOL pstcache_load_bitmap(uint8 cache_id, uint16 cache_idx);
-RD_BOOL pstcache_save_bitmap(uint8 cache_id, uint16 cache_idx, uint8 * key, uint8 width, uint8 height,
-			     uint16 length, uint8 * data);
+RD_BOOL pstcache_save_bitmap(uint8 cache_id, uint16 cache_idx, uint8 * key, uint8 width,
+			     uint8 height, uint16 length, uint8 * data);
 int pstcache_enumerate(uint8 id, HASH_KEY * keylist);
 RD_BOOL pstcache_init(uint8 cache_id);
 /* rdesktop.c */
@@ -120,7 +120,8 @@ void hexdump(unsigned char *p, unsigned int len);
 char *next_arg(char *src, char needle);
 void toupper_str(char *p);
 RD_BOOL str_startswith(const char *s, const char *prefix);
-RD_BOOL str_handle_lines(const char *input, char **rest, str_handle_lines_t linehandler, void *data);
+RD_BOOL str_handle_lines(const char *input, char **rest, str_handle_lines_t linehandler,
+			 void *data);
 RD_BOOL subprocess(char *const argv[], str_handle_lines_t linehandler, void *data);
 char *l_to_a(long N, int base);
 int load_licence(unsigned char **data);
@@ -194,7 +195,8 @@ void sec_reset_state(void);
 /* serial.c */
 int serial_enum_devices(uint32 * id, char *optarg);
 RD_BOOL serial_get_event(RD_NTHANDLE handle, uint32 * result);
-RD_BOOL serial_get_timeout(RD_NTHANDLE handle, uint32 length, uint32 * timeout, uint32 * itv_timeout);
+RD_BOOL serial_get_timeout(RD_NTHANDLE handle, uint32 length, uint32 * timeout,
+			   uint32 * itv_timeout);
 /* tcp.c */
 STREAM tcp_init(uint32 maxlen);
 void tcp_send(STREAM s);

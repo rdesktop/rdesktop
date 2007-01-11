@@ -33,16 +33,16 @@ struct audio_driver
 	void (*add_fds) (int *n, fd_set * rfds, fd_set * wfds, struct timeval * tv);
 	void (*check_fds) (fd_set * rfds, fd_set * wfds);
 
-	RD_BOOL (*wave_out_open) (void);
+	  RD_BOOL(*wave_out_open) (void);
 	void (*wave_out_close) (void);
-	RD_BOOL (*wave_out_format_supported) (RD_WAVEFORMATEX * pwfx);
-	RD_BOOL (*wave_out_set_format) (RD_WAVEFORMATEX * pwfx);
+	  RD_BOOL(*wave_out_format_supported) (RD_WAVEFORMATEX * pwfx);
+	  RD_BOOL(*wave_out_set_format) (RD_WAVEFORMATEX * pwfx);
 	void (*wave_out_volume) (uint16 left, uint16 right);
 
-	RD_BOOL (*wave_in_open) (void);
+	  RD_BOOL(*wave_in_open) (void);
 	void (*wave_in_close) (void);
-	RD_BOOL (*wave_in_format_supported) (RD_WAVEFORMATEX * pwfx);
-	RD_BOOL (*wave_in_set_format) (RD_WAVEFORMATEX * pwfx);
+	  RD_BOOL(*wave_in_format_supported) (RD_WAVEFORMATEX * pwfx);
+	  RD_BOOL(*wave_in_set_format) (RD_WAVEFORMATEX * pwfx);
 	void (*wave_in_volume) (uint16 left, uint16 right);
 
 	char *name;

@@ -88,7 +88,7 @@ void
 ssl_rsa_encrypt(uint8 * out, uint8 * in, int len, uint32 modulus_size, uint8 * modulus,
 		uint8 * exponent)
 {
-	BN_CTX * ctx;
+	BN_CTX *ctx;
 	BIGNUM mod, exp, x, y;
 	uint8 inr[SEC_MAX_MODULUS_SIZE];
 	int outlen;
@@ -138,8 +138,8 @@ ssl_cert_free(SSL_CERT * cert)
 SSL_RKEY *
 ssl_cert_to_rkey(SSL_CERT * cert, uint32 * key_len)
 {
-	EVP_PKEY * epk = NULL;
-	SSL_RKEY * lkey;
+	EVP_PKEY *epk = NULL;
+	SSL_RKEY *lkey;
 	/* By some reason, Microsoft sets the OID of the Public RSA key to
 	   the oid for "MD5 with RSA Encryption" instead of "RSA Encryption"
 
@@ -176,7 +176,7 @@ ssl_certs_ok(SSL_CERT * server_cert, SSL_CERT * cacert)
 	   server we are connecting to as key, and compare it
 	   when we connect the next time, in order to prevent
 	   MITM-attacks.
-	*/
+	 */
 	return True;
 }
 
@@ -217,6 +217,6 @@ ssl_sig_ok(uint8 * exponent, uint32 exp_len, uint8 * modulus, uint32 mod_len,
 {
 	/* Currently, we don't check the signature
 	   FIXME:
-	*/
+	 */
 	return True;
 }
