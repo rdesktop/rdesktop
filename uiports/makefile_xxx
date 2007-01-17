@@ -3,7 +3,7 @@
 #
 CC = gcc
 CFLAGS = -O2 -Wall
-RESTOBJ = ../tcp.o ../iso.o ../mcs.o ../secure.o ../rdp.o ../rdp5.o ../orders.o ../cache.o ../mppc.o ../licence.o ../bitmap.o ../channels.o ../pstcache.o
+RESTOBJ = ../tcp.o ../iso.o ../mcs.o ../secure.o ../rdp.o ../rdp5.o ../orders.o ../cache.o ../mppc.o ../licence.o ../bitmap.o ../channels.o ../pstcache.o ../ssl.o
 LDFLAGS = -lcrypto
 
 all: xxxrd

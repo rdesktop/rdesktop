@@ -1,7 +1,7 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    User interface services - Generic
-   Copyright (C) Jay Sorg 2004-2006
+   Copyright (C) Jay Sorg 2004-2007
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -10,6 +10,7 @@
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
+   
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
 
@@ -41,13 +42,15 @@ int g_keyboard_type = 0x4; /* Defaults to US keyboard layout */
 int g_keyboard_subtype = 0x0; /* Defaults to US keyboard layout */
 int g_keyboard_functionkeys = 0xc; /* Defaults to US keyboard layout */
 /* Session Directory redirection */
-BOOL g_redirect = False;
+RD_BOOL g_redirect = False;
+RD_BOOL g_numlock_sync = False;
 char g_redirect_server[64];
 char g_redirect_domain[16];
 char g_redirect_password[64];
 char g_redirect_username[64];
 char g_redirect_cookie[128];
 uint32 g_redirect_flags = 0;
+char g_codepage[16] = "";
 
 /*****************************************************************************/
 void ui_bell(void)
@@ -103,7 +106,7 @@ void ui_set_colourmap(void* map)
 }
 
 /*****************************************************************************/
-HBITMAP ui_create_bitmap(int width, int height, uint8* data)
+RD_HBITMAP ui_create_bitmap(int width, int height, uint8* data)
 {
   return 0;
 }
@@ -125,14 +128,14 @@ void ui_line(uint8 opcode, int startx, int starty, int endx, int endy,
 
 /*****************************************************************************/
 void ui_triblt(uint8 opcode, int x, int y, int cx, int cy,
-               HBITMAP src, int srcx, int srcy,
+               RD_HBITMAP src, int srcx, int srcy,
                BRUSH* brush, int bgcolour, int fgcolour)
 {
 }
 
 /*****************************************************************************/
 void ui_memblt(uint8 opcode, int x, int y, int cx, int cy,
-               HBITMAP src, int srcx, int srcy)
+               RD_HBITMAP src, int srcx, int srcy)
 {
 }
 
@@ -185,14 +188,14 @@ void ui_paint_bitmap(int x, int y, int cx, int cy,
 }
 
 /*****************************************************************************/
-void ui_set_cursor(HCURSOR cursor)
+void ui_set_cursor(RD_HCURSOR cursor)
 {
 }
 
 /*****************************************************************************/
-HCURSOR ui_create_cursor(unsigned int x, unsigned int y,
-                         int width, int height,
-                         uint8* andmask, uint8* xormask)
+RD_HCURSOR ui_create_cursor(unsigned int x, unsigned int y,
+                            int width, int height,
+                            uint8* andmask, uint8* xormask)
 {
   return 0;
 }
@@ -225,14 +228,14 @@ void ui_end_update(void)
 }
 
 /*****************************************************************************/
-void ui_polygon(uint8 opcode, uint8 fillmode, POINT * point, int npoints,
+void ui_polygon(uint8 opcode, uint8 fillmode, RD_POINT * point, int npoints,
                 BRUSH * brush, int bgcolour, int fgcolour)
 {
 }
 
 /*****************************************************************************/
 /* todo, use qt function for this (QPainter::drawPolyline) */
-void ui_polyline(uint8 opcode, POINT * points, int npoints, PEN * pen)
+void ui_polyline(uint8 opcode, RD_POINT * points, int npoints, PEN * pen)
 {
   int i, x, y, dx, dy;
   if (npoints > 0)
@@ -317,7 +320,7 @@ void error(char* format, ...)
 }
 
 /*****************************************************************************/
-BOOL rd_pstcache_mkdir(void)
+RD_BOOL rd_pstcache_mkdir(void)
 {
   return 0;
 }
@@ -353,7 +356,7 @@ int rd_lseek_file(int fd, int offset)
 }
 
 /*****************************************************************************/
-BOOL rd_lock_file(int fd, int start, int len)
+RD_BOOL rd_lock_file(int fd, int start, int len)
 {
   return False;
 }
