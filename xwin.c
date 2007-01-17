@@ -1733,6 +1733,7 @@ ui_create_window(void)
 	}
 
 	XStoreName(g_display, g_wnd, g_title);
+	ewmh_set_wm_name(g_wnd, g_title);
 
 	if (g_hide_decorations)
 		mwm_hide_decorations(g_wnd);
