@@ -64,7 +64,7 @@ unsigned int queue_hi, queue_lo, queue_pending;
 struct audio_packet packet_queue[MAX_QUEUE];
 
 static char record_buffer[8192];
-static int record_buffer_size;
+static uint32 record_buffer_size;
 
 static uint8 packet_opcode;
 static struct stream packet;
@@ -153,7 +153,7 @@ rdpsnd_flush_record(void)
 void
 rdpsnd_record(const void *data, unsigned int size)
 {
-	int remain;
+	uint32 remain;
 
 	assert(rec_device_open);
 
@@ -610,7 +610,7 @@ rdpsnddbg_process(STREAM s)
 
 	pkglen = s->end - s->p;
 	/* str_handle_lines requires null terminated strings */
-	buf = xmalloc(pkglen + 1);
+	buf = (char *) xmalloc(pkglen + 1);
 	STRNCPY(buf, (char *) s->p, pkglen + 1);
 
 	str_handle_lines(buf, &rest, rdpsnddbg_line_handler, NULL);
@@ -662,7 +662,7 @@ rdpsnd_init(char *optarg)
 
 	drivers = NULL;
 
-	packet.data = xmalloc(65536);
+	packet.data = (uint8 *) xmalloc(65536);
 	packet.p = packet.end = packet.data;
 	packet.size = 0;
 

@@ -56,7 +56,7 @@ static RD_BOOL dsp_in;
 
 static int stereo;
 static int format;
-static int snd_rate;
+static uint32 snd_rate;
 static short samplewidth;
 static char *dsp_dev;
 static RD_BOOL in_esddsp;
@@ -293,8 +293,8 @@ oss_set_format(RD_WAVEFORMATEX * pwfx)
 	snd_rate = pwfx->nSamplesPerSec;
 	if (ioctl(dsp_fd, SNDCTL_DSP_SPEED, &snd_rate) == -1)
 	{
-		int rates[] = { 44100, 48000, 0 };
-		int *prates = rates;
+		uint32 rates[] = { 44100, 48000, 0 };
+		uint32 *prates = rates;
 
 		while (*prates != 0)
 		{
