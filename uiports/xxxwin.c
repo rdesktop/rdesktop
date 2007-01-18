@@ -10,7 +10,7 @@
 
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   
+
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
 
@@ -21,23 +21,23 @@
 
 #include "../rdesktop.h"
 
-extern int g_tcp_port_rdp;
-int g_use_rdp5 = 0;
+extern int g_tcp_port_rdp; /* in tcp.c */
+RD_BOOL g_use_rdp5 = False;
 char g_hostname[16];
 char g_username[64];
 int g_height = 600;
 int g_width = 800;
 int g_server_depth = 8;
-int g_encryption = 1;
-int g_desktop_save = 1;
-int g_polygon_ellipse_orders = 0;
-int g_bitmap_cache = 1;
-int g_bitmap_cache_persist_enable = False;
-int g_bitmap_cache_precache = True;
-int g_bitmap_compression = 1;
-int g_rdp5_performanceflags = 0;
-int g_console_session = 0;
-int g_keylayout = 0x409; /* Defaults to US keyboard layout */
+RD_BOOL g_encryption = True;
+RD_BOOL g_desktop_save = True;
+RD_BOOL g_polygon_ellipse_orders = False;
+RD_BOOL g_bitmap_cache = True;
+RD_BOOL g_bitmap_cache_persist_enable = False;
+RD_BOOL g_bitmap_cache_precache = True;
+RD_BOOL g_bitmap_compression = True;
+uint32 g_rdp5_performanceflags = 0;
+RD_BOOL g_console_session = False;
+uint32 g_keylayout = 0x409; /* Defaults to US keyboard layout */
 int g_keyboard_type = 0x4; /* Defaults to US keyboard layout */
 int g_keyboard_subtype = 0x0; /* Defaults to US keyboard layout */
 int g_keyboard_functionkeys = 0xc; /* Defaults to US keyboard layout */
