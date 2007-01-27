@@ -162,8 +162,8 @@ sec_generate_keys(uint8 * client_random, uint8 * server_random, int rc4_key_size
 	memcpy(sec_encrypt_update_key, sec_encrypt_key, 16);
 
 	/* Initialise RC4 state arrays */
-	RC4_set_key(&rc4_decrypt_key, rc4_key_len, sec_decrypt_key);
-	RC4_set_key(&rc4_encrypt_key, rc4_key_len, sec_encrypt_key);
+	ssl_rc4_set_key(&rc4_decrypt_key, sec_decrypt_key, rc4_key_len);
+	ssl_rc4_set_key(&rc4_encrypt_key, sec_encrypt_key, rc4_key_len);
 }
 
 static uint8 pad_54[40] = {
