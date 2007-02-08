@@ -9,7 +9,7 @@ http://support.microsoft.com/default.aspx?scid=kb;EN-US;287687.
 
 From the rdesktop mailing list:
 
-Peter Åstrand <peter@cendio.se>, 2003-02-06
+Peter Ã…strand <peter@cendio.se>, 2003-02-06
 
 > We are running rdesktop 1.2 on machine A and connects to a Windows 2000
 > Server (machine B). The W2K machine has 5 real licenses installed ("Windows

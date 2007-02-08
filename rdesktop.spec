@@ -6,7 +6,7 @@ License: GPL; see COPYING
 Group: Applications/Communications
 Source: rdesktop-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-buildroot
-Packager: Peter Åstrand <peter@cendio.se>
+Packager: Peter Ã…strand <peter@cendio.se>
 
 %description
 rdesktop is a client for Remote Desktop Protocol (RDP), used in a number of
