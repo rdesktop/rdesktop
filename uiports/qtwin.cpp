@@ -1,7 +1,7 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    User interface services - QT Window System
-   Copyright (C) Jay Sorg 2004-2006
+   Copyright (C) Jay Sorg 2004-2007
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -44,7 +44,7 @@
 
 /* rdesktop globals */
 extern int g_tcp_port_rdp;
-int g_use_rdp5 = 1;
+RD_BOOL g_use_rdp5 = True;
 char g_hostname[16];
 char g_username[64];
 int g_height = 600;
@@ -63,6 +63,7 @@ int g_keylayout = 0x409; /* Defaults to US keyboard layout */
 int g_keyboard_type = 0x4; /* Defaults to US keyboard layout */
 int g_keyboard_subtype = 0x0; /* Defaults to US keyboard layout */
 int g_keyboard_functionkeys = 0xc; /* Defaults to US keyboard layout */
+int g_numlock_sync = 0;
 
 /* hack globals */
 static int g_argc = 0;
@@ -121,7 +122,7 @@ static Qt::RasterOp g_OpCodes[16] = {
     Qt::SetROP};         // WHITENESS     1
 
 /* Session Directory redirection */
-BOOL g_redirect = False;
+RD_BOOL g_redirect = False;
 char g_redirect_server[64];
 char g_redirect_domain[16];
 char g_redirect_password[64];
@@ -616,7 +617,7 @@ void ui_main_loop(void)
   // init sound
   if (g_rdpsnd)
   {
-    rdpsnd_init();
+    rdpsnd_init(0);
   }
 #endif
   // connect
@@ -677,7 +678,7 @@ void* ui_create_glyph(int width, int height, uint8 * data)
   QBitmap * Bitmap;
   Bitmap = new QBitmap(width, height, data);
   Bitmap->setMask(*Bitmap);
-  return (HGLYPH)Bitmap;
+  return (RD_HGLYPH)Bitmap;
 }
 
 /*****************************************************************************/
@@ -736,7 +737,7 @@ void * ui_create_colourmap(COLOURMAP * colours)
 
 //*****************************************************************************
 // todo, does this leak at end of program
-void ui_destroy_colourmap(HCOLOURMAP map)
+void ui_destroy_colourmap(RD_HCOLOURMAP map)
 {
   QColorMap * LCM;
   LCM = (QColorMap*)map;
@@ -754,7 +755,7 @@ void ui_set_colourmap(void * map)
 }
 
 /*****************************************************************************/
-HBITMAP ui_create_bitmap(int width, int height, uint8 * data)
+RD_HBITMAP ui_create_bitmap(int width, int height, uint8 * data)
 {
   QImage * Image = NULL;
   QPixmap * Pixmap;
@@ -810,7 +811,7 @@ HBITMAP ui_create_bitmap(int width, int height, uint8 * data)
   {
     free(d);
   }
-  return (HBITMAP)Pixmap;
+  return (RD_HBITMAP)Pixmap;
 }
 
 //******************************************************************************
@@ -1020,14 +1021,14 @@ void ui_line(uint8 opcode, int startx, int starty, int endx, int endy,
 /*****************************************************************************/
 // not used
 void ui_triblt(uint8 opcode, int x, int y, int cx, int cy,
-               HBITMAP src, int srcx, int srcy,
+               RD_HBITMAP src, int srcx, int srcy,
                BRUSH* brush, int bgcolour, int fgcolour)
 {
 }
 
 /*****************************************************************************/
 void ui_memblt(uint8 opcode, int x, int y, int cx, int cy,
-               HBITMAP src, int srcx, int srcy)
+               RD_HBITMAP src, int srcx, int srcy)
 {
   QPixmap* Pixmap;
   Pixmap = (QPixmap*)src;
@@ -1287,7 +1288,7 @@ void FlipOver(uint8* Data)
 }
 
 /*****************************************************************************/
-void ui_set_cursor(HCURSOR cursor)
+void ui_set_cursor(RD_HCURSOR cursor)
 {
   QCursor* Cursor;
   Cursor = (QCursor*)cursor;
@@ -1296,9 +1297,9 @@ void ui_set_cursor(HCURSOR cursor)
 }
 
 /*****************************************************************************/
-HCURSOR ui_create_cursor(unsigned int x, unsigned int y,
-                         int width, int height,
-                         uint8* andmask, uint8* xormask)
+RD_HCURSOR ui_create_cursor(unsigned int x, unsigned int y,
+                            int width, int height,
+                            uint8* andmask, uint8* xormask)
 {
   uint8 AData[128];
   uint8 AMask[128];
@@ -1361,14 +1362,14 @@ void ui_resize_window(void)
 }
 
 /*****************************************************************************/
-void ui_polygon(uint8 opcode, uint8 fillmode, POINT * point, int npoints,
+void ui_polygon(uint8 opcode, uint8 fillmode, RD_POINT * point, int npoints,
                 BRUSH * brush, int bgcolour, int fgcolour)
 {
 }
 
 /*****************************************************************************/
 /* todo, use qt function for this (QPainter::drawPolyline) */
-void ui_polyline(uint8 opcode, POINT * points, int npoints, PEN * pen)
+void ui_polyline(uint8 opcode, RD_POINT * points, int npoints, PEN * pen)
 {
   int i, x, y, dx, dy;
 
@@ -1554,7 +1555,7 @@ void error(char * format, ...)
 void out_params(void)
 {
   fprintf(stderr, "rdesktop: A Remote Desktop Protocol client.\n");
-  fprintf(stderr, "Version " VERSION ". Copyright (C) 1999-2005 Matt Chapman.\n");
+  fprintf(stderr, "Version " VERSION ". Copyright (C) 1999-2007 Matt Chapman.\n");
   fprintf(stderr, "QT uiport by Jay Sorg\n");
   fprintf(stderr, "See http://www.rdesktop.org/ for more information.\n\n");
   fprintf(stderr, "Usage: qtrdesktop [options] server\n");
