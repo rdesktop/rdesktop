@@ -1,19 +1,22 @@
 #
 # qtrdesktop makefile
-# qt should be installed in /usr/local/qt
-#
+# qt should be installed in /usr/local/qt or /usr/lib/qt3
+# set QTBDIR to this location
+
+QTBDIR = /usr/lib/qt3
+
 CC = g++
-CPPFLAGS = -O2 -Wall -I/usr/local/qt/include -I..
+CPPFLAGS = -O2 -Wall -I$(QTBDIR)/include -I..
 # the next line is for sound
-CPPFLAGS += -DWITH_RDPSND
+#CPPFLAGS += -DWITH_RDPSND
 RESTOBJ = tcp.o iso.o mcs.o secure.o rdp.o rdp5.o
 RESTOBJ += orders.o cache.o mppc.o licence.o bitmap.o
-RESTOBJ += channels.o pstcache.o
+RESTOBJ += channels.o pstcache.o ssl.o
 # the next line is for sound
-RESTOBJ += rdpsnd.o rdpsnd_oss.o
-LD2FLAGS = -L/usr/local/qt/lib -L/usr/X11R6/lib
-LDFLAGS = -lcrypto -lqt -lXext -lX11 -lm
-MOCFILE = /usr/local/qt/bin/moc
+#RESTOBJ += rdpsnd.o rdpsnd_oss.o rdpsnd_dsp.o
+LD2FLAGS = -L$(QTBDIR)/lib -L/usr/X11R6/lib
+LDFLAGS = -lcrypto -lqt-mt -lXext -lX11 -lm
+MOCFILE = $(QTBDIR)/bin/moc
 
 all: qtrd
 
@@ -70,8 +73,14 @@ channels.o: ../channels.c
 pstcache.o: ../pstcache.c
 	$(CC) $(CPPFLAGS) -c ../pstcache.c
 
+ssl.o: ../ssl.c
+	$(CC) $(CPPFLAGS) -c ../ssl.c
+
 rdpsnd.o: ../rdpsnd.c
 	$(CC) $(CPPFLAGS) -c ../rdpsnd.c
 
 rdpsnd_oss.o: ../rdpsnd_oss.c
 	$(CC) $(CPPFLAGS) -c ../rdpsnd_oss.c
+
+rdpsnd_dsp.o: ../rdpsnd_dsp.c
+	$(CC) $(CPPFLAGS) -c ../rdpsnd_dsp.c
