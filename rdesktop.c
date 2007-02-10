@@ -77,7 +77,7 @@ RD_BOOL g_bitmap_cache = True;
 RD_BOOL g_bitmap_cache_persist_enable = False;
 RD_BOOL g_bitmap_cache_precache = True;
 RD_BOOL g_encryption = True;
-RD_BOOL packet_encryption = True;
+RD_BOOL g_packet_encryption = True;
 RD_BOOL g_desktop_save = True;	/* desktop save order */
 RD_BOOL g_polygon_ellipse_orders = True;	/* polygon / ellipse orders */
 RD_BOOL g_fullscreen = False;
@@ -87,7 +87,7 @@ RD_BOOL g_use_rdp5 = True;
 RD_BOOL g_rdpclip = True;
 RD_BOOL g_console_session = False;
 RD_BOOL g_numlock_sync = False;
-RD_BOOL lspci_enabled = False;
+RD_BOOL g_lspci_enabled = False;
 RD_BOOL g_owncolmap = False;
 RD_BOOL g_ownbackstore = True;	/* We can't rely on external BackingStore */
 RD_BOOL g_seamless_rdp = False;
@@ -582,7 +582,7 @@ main(int argc, char *argv[])
 				g_encryption = False;
 				break;
 			case 'E':
-				packet_encryption = False;
+				g_packet_encryption = False;
 				break;
 			case 'm':
 				g_sendmotion = False;
@@ -726,7 +726,7 @@ main(int argc, char *argv[])
 				}
 				else if (str_startswith(optarg, "lspci"))
 				{
-					lspci_enabled = True;
+					g_lspci_enabled = True;
 				}
 				else if (str_startswith(optarg, "lptport"))
 				{
@@ -920,7 +920,7 @@ main(int argc, char *argv[])
 	}
 #endif
 
-	if (lspci_enabled)
+	if (g_lspci_enabled)
 		lspci_init();
 
 	rdpdr_init();
@@ -938,7 +938,7 @@ main(int argc, char *argv[])
 
 		/* By setting encryption to False here, we have an encrypted login 
 		   packet but unencrypted transfer of other packets */
-		if (!packet_encryption)
+		if (!g_packet_encryption)
 			g_encryption = False;
 
 
