@@ -110,7 +110,7 @@ ssl_rsa_encrypt(uint8 * out, uint8 * in, int len, uint32 modulus_size, uint8 * m
 	BN_mod_exp(&y, &x, &exp, &mod, ctx);
 	outlen = BN_bn2bin(&y, out);
 	reverse(out, outlen);
-	if (outlen < modulus_size)
+	if (outlen < (int) modulus_size)
 		memset(out + outlen, 0, modulus_size - outlen);
 
 	BN_free(&y);
@@ -197,9 +197,10 @@ int
 ssl_rkey_get_exp_mod(SSL_RKEY * rkey, uint8 * exponent, uint32 max_exp_len, uint8 * modulus,
 		     uint32 max_mod_len)
 {
-	uint32 len;
+	int len;
 
-	if ((BN_num_bytes(rkey->e) > max_exp_len) || (BN_num_bytes(rkey->n) > max_mod_len))
+	if ((BN_num_bytes(rkey->e) > (int) max_exp_len) ||
+	    (BN_num_bytes(rkey->n) > (int) max_mod_len))
 	{
 		return 1;
 	}
