@@ -33,27 +33,26 @@ extern RD_BOOL g_licence_issued;
 extern RD_BOOL g_use_rdp5;
 extern RD_BOOL g_console_session;
 extern int g_server_depth;
-extern uint16 mcs_userid;
 extern VCHANNEL g_channels[];
 extern unsigned int g_num_channels;
 
-static int rc4_key_len;
-static SSL_RC4 rc4_decrypt_key;
-static SSL_RC4 rc4_encrypt_key;
-static uint32 server_public_key_len;
+static int g_rc4_key_len;
+static SSL_RC4 g_rc4_decrypt_key;
+static SSL_RC4 g_rc4_encrypt_key;
+static uint32 g_server_public_key_len;
 
-static uint8 sec_sign_key[16];
-static uint8 sec_decrypt_key[16];
-static uint8 sec_encrypt_key[16];
-static uint8 sec_decrypt_update_key[16];
-static uint8 sec_encrypt_update_key[16];
-static uint8 sec_crypted_random[SEC_MAX_MODULUS_SIZE];
+static uint8 g_sec_sign_key[16];
+static uint8 g_sec_decrypt_key[16];
+static uint8 g_sec_encrypt_key[16];
+static uint8 g_sec_decrypt_update_key[16];
+static uint8 g_sec_encrypt_update_key[16];
+static uint8 g_sec_crypted_random[SEC_MAX_MODULUS_SIZE];
 
 uint16 g_server_rdp_version = 0;
 
 /* These values must be available to reset state - Session Directory */
-static int sec_encrypt_use_count = 0;
-static int sec_decrypt_use_count = 0;
+static int g_sec_encrypt_use_count = 0;
+static int g_sec_decrypt_use_count = 0;
 
 /*
  * I believe this is based on SSLv3 with the following differences:
@@ -137,33 +136,33 @@ sec_generate_keys(uint8 * client_random, uint8 * server_random, int rc4_key_size
 	sec_hash_48(key_block, master_secret, client_random, server_random, 'X');
 
 	/* First 16 bytes of key material is MAC secret */
-	memcpy(sec_sign_key, key_block, 16);
+	memcpy(g_sec_sign_key, key_block, 16);
 
 	/* Generate export keys from next two blocks of 16 bytes */
-	sec_hash_16(sec_decrypt_key, &key_block[16], client_random, server_random);
-	sec_hash_16(sec_encrypt_key, &key_block[32], client_random, server_random);
+	sec_hash_16(g_sec_decrypt_key, &key_block[16], client_random, server_random);
+	sec_hash_16(g_sec_encrypt_key, &key_block[32], client_random, server_random);
 
 	if (rc4_key_size == 1)
 	{
 		DEBUG(("40-bit encryption enabled\n"));
-		sec_make_40bit(sec_sign_key);
-		sec_make_40bit(sec_decrypt_key);
-		sec_make_40bit(sec_encrypt_key);
-		rc4_key_len = 8;
+		sec_make_40bit(g_sec_sign_key);
+		sec_make_40bit(g_sec_decrypt_key);
+		sec_make_40bit(g_sec_encrypt_key);
+		g_rc4_key_len = 8;
 	}
 	else
 	{
 		DEBUG(("rc_4_key_size == %d, 128-bit encryption enabled\n", rc4_key_size));
-		rc4_key_len = 16;
+		g_rc4_key_len = 16;
 	}
 
 	/* Save initial RC4 keys as update keys */
-	memcpy(sec_decrypt_update_key, sec_decrypt_key, 16);
-	memcpy(sec_encrypt_update_key, sec_encrypt_key, 16);
+	memcpy(g_sec_decrypt_update_key, g_sec_decrypt_key, 16);
+	memcpy(g_sec_encrypt_update_key, g_sec_encrypt_key, 16);
 
 	/* Initialise RC4 state arrays */
-	ssl_rc4_set_key(&rc4_decrypt_key, sec_decrypt_key, rc4_key_len);
-	ssl_rc4_set_key(&rc4_encrypt_key, sec_encrypt_key, rc4_key_len);
+	ssl_rc4_set_key(&g_rc4_decrypt_key, g_sec_decrypt_key, g_rc4_key_len);
+	ssl_rc4_set_key(&g_rc4_encrypt_key, g_sec_encrypt_key, g_rc4_key_len);
 }
 
 static uint8 pad_54[40] = {
@@ -228,21 +227,21 @@ sec_update(uint8 * key, uint8 * update_key)
 	SSL_RC4 update;
 
 	ssl_sha1_init(&sha1);
-	ssl_sha1_update(&sha1, update_key, rc4_key_len);
+	ssl_sha1_update(&sha1, update_key, g_rc4_key_len);
 	ssl_sha1_update(&sha1, pad_54, 40);
-	ssl_sha1_update(&sha1, key, rc4_key_len);
+	ssl_sha1_update(&sha1, key, g_rc4_key_len);
 	ssl_sha1_final(&sha1, shasig);
 
 	ssl_md5_init(&md5);
-	ssl_md5_update(&md5, update_key, rc4_key_len);
+	ssl_md5_update(&md5, update_key, g_rc4_key_len);
 	ssl_md5_update(&md5, pad_92, 48);
 	ssl_md5_update(&md5, shasig, 20);
 	ssl_md5_final(&md5, key);
 
-	ssl_rc4_set_key(&update, key, rc4_key_len);
-	ssl_rc4_crypt(&update, key, key, rc4_key_len);
+	ssl_rc4_set_key(&update, key, g_rc4_key_len);
+	ssl_rc4_crypt(&update, key, key, g_rc4_key_len);
 
-	if (rc4_key_len == 8)
+	if (g_rc4_key_len == 8)
 		sec_make_40bit(key);
 }
 
@@ -250,30 +249,30 @@ sec_update(uint8 * key, uint8 * update_key)
 static void
 sec_encrypt(uint8 * data, int length)
 {
-	if (sec_encrypt_use_count == 4096)
+	if (g_sec_encrypt_use_count == 4096)
 	{
-		sec_update(sec_encrypt_key, sec_encrypt_update_key);
-		ssl_rc4_set_key(&rc4_encrypt_key, sec_encrypt_key, rc4_key_len);
-		sec_encrypt_use_count = 0;
+		sec_update(g_sec_encrypt_key, g_sec_encrypt_update_key);
+		ssl_rc4_set_key(&g_rc4_encrypt_key, g_sec_encrypt_key, g_rc4_key_len);
+		g_sec_encrypt_use_count = 0;
 	}
 
-	ssl_rc4_crypt(&rc4_encrypt_key, data, data, length);
-	sec_encrypt_use_count++;
+	ssl_rc4_crypt(&g_rc4_encrypt_key, data, data, length);
+	g_sec_encrypt_use_count++;
 }
 
 /* Decrypt data using RC4 */
 void
 sec_decrypt(uint8 * data, int length)
 {
-	if (sec_decrypt_use_count == 4096)
+	if (g_sec_decrypt_use_count == 4096)
 	{
-		sec_update(sec_decrypt_key, sec_decrypt_update_key);
-		ssl_rc4_set_key(&rc4_decrypt_key, sec_decrypt_key, rc4_key_len);
-		sec_decrypt_use_count = 0;
+		sec_update(g_sec_decrypt_key, g_sec_decrypt_update_key);
+		ssl_rc4_set_key(&g_rc4_decrypt_key, g_sec_decrypt_key, g_rc4_key_len);
+		g_sec_decrypt_use_count = 0;
 	}
 
-	ssl_rc4_crypt(&rc4_decrypt_key, data, data, length);
-	sec_decrypt_use_count++;
+	ssl_rc4_crypt(&g_rc4_decrypt_key, data, data, length);
+	g_sec_decrypt_use_count++;
 }
 
 /* Perform an RSA public key encryption operation */
@@ -325,7 +324,7 @@ sec_send_to_channel(STREAM s, uint32 flags, uint16 channel)
 		hexdump(s->p + 8, datalen);
 #endif
 
-		sec_sign(s->p, 8, sec_sign_key, rc4_key_len, s->p + 8, datalen);
+		sec_sign(s->p, 8, g_sec_sign_key, g_rc4_key_len, s->p + 8, datalen);
 		sec_encrypt(s->p + 8, datalen);
 	}
 
@@ -349,14 +348,14 @@ sec_send(STREAM s, uint32 flags)
 static void
 sec_establish_key(void)
 {
-	uint32 length = server_public_key_len + SEC_PADDING_SIZE;
+	uint32 length = g_server_public_key_len + SEC_PADDING_SIZE;
 	uint32 flags = SEC_CLIENT_RANDOM;
 	STREAM s;
 
 	s = sec_init(flags, length + 4);
 
 	out_uint32_le(s, length);
-	out_uint8p(s, sec_crypted_random, server_public_key_len);
+	out_uint8p(s, g_sec_crypted_random, g_server_public_key_len);
 	out_uint8s(s, SEC_PADDING_SIZE);
 
 	s_mark_end(s);
@@ -479,7 +478,7 @@ sec_parse_public_key(STREAM s, uint8 * modulus, uint8 * exponent)
 	in_uint8a(s, exponent, SEC_EXPONENT_SIZE);
 	in_uint8a(s, modulus, modulus_len);
 	in_uint8s(s, SEC_PADDING_SIZE);
-	server_public_key_len = modulus_len;
+	g_server_public_key_len = modulus_len;
 
 	return s_check(s);
 }
@@ -498,7 +497,7 @@ sec_parse_public_sig(STREAM s, uint32 len, uint8 * modulus, uint8 * exponent)
 	memset(signature, 0, sizeof(signature));
 	sig_len = len - 8;
 	in_uint8a(s, signature, sig_len);
-	return ssl_sig_ok(exponent, SEC_EXPONENT_SIZE, modulus, server_public_key_len,
+	return ssl_sig_ok(exponent, SEC_EXPONENT_SIZE, modulus, g_server_public_key_len,
 			  signature, sig_len);
 }
 
@@ -635,7 +634,7 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 		}
 		ssl_cert_free(cacert);
 		in_uint8s(s, 16);	/* Padding */
-		server_public_key = ssl_cert_to_rkey(server_cert, &server_public_key_len);
+		server_public_key = ssl_cert_to_rkey(server_cert, &g_server_public_key_len);
 		if (NULL == server_public_key)
 		{
 			DEBUG_RDP5(("Didn't parse X509 correctly\n"));
@@ -643,10 +642,10 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 			return False;
 		}
 		ssl_cert_free(server_cert);
-		if ((server_public_key_len < SEC_MODULUS_SIZE) ||
-		    (server_public_key_len > SEC_MAX_MODULUS_SIZE))
+		if ((g_server_public_key_len < SEC_MODULUS_SIZE) ||
+		    (g_server_public_key_len > SEC_MAX_MODULUS_SIZE))
 		{
-			error("Bad server public key size (%u bits)\n", server_public_key_len * 8);
+			error("Bad server public key size (%u bits)\n", g_server_public_key_len * 8);
 			ssl_rkey_free(server_public_key);
 			return False;
 		}
@@ -682,8 +681,8 @@ sec_process_crypt_info(STREAM s)
 	}
 	DEBUG(("Generating client random\n"));
 	generate_random(client_random);
-	sec_rsa_encrypt(sec_crypted_random, client_random, SEC_RANDOM_SIZE,
-			server_public_key_len, modulus, exponent);
+	sec_rsa_encrypt(g_sec_crypted_random, client_random, SEC_RANDOM_SIZE,
+			g_server_public_key_len, modulus, exponent);
 	sec_generate_keys(client_random, server_random, rc4_key_size);
 }
 
@@ -890,7 +889,7 @@ void
 sec_reset_state(void)
 {
 	g_server_rdp_version = 0;
-	sec_encrypt_use_count = 0;
-	sec_decrypt_use_count = 0;
+	g_sec_encrypt_use_count = 0;
+	g_sec_decrypt_use_count = 0;
 	mcs_reset_state();
 }
