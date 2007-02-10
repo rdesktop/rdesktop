@@ -119,7 +119,7 @@ rdpsnd_dsp_swapbytes(unsigned char *buffer, unsigned int size, RD_WAVEFORMATEX *
 	if (format->wBitsPerSample == 8)
 		return;
 
-	for (i = 0; i < size; i += 2)
+	for (i = 0; i < (int) size; i += 2)
 	{
 		swap = *(buffer + i);
 		*(buffer + i) = *(buffer + i + 1);
@@ -201,7 +201,7 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 	if (resample_to_channels != format->nChannels)
 	{
 		int newsize = (size / format->nChannels) * resample_to_channels;
-		tmpdata = xmalloc(newsize);
+		tmpdata = (unsigned char *) xmalloc(newsize);
 
 		for (i = 0; i < newsize / samplewidth; i++)
 		{
@@ -232,8 +232,8 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 		if (format->wBitsPerSample == 8)
 		{
 			tmp = tmpdata;
-			tmpdata = xmalloc(size * 2);
-			for (i = 0; i < size; i++)
+			tmpdata = (unsigned char *) xmalloc(size * 2);
+			for (i = 0; i < (int) size; i++)
 			{
 				tmpdata[i * 2] = in[i];
 				tmpdata[(i * 2) + 1] = 0x00;
@@ -259,8 +259,8 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 
 	outnum = ((float) innum * ((float) resample_to_srate / (float) format->nSamplesPerSec)) + 1;
 
-	infloat = xmalloc(sizeof(float) * innum);
-	outfloat = xmalloc(sizeof(float) * outnum);
+	infloat = (float *) xmalloc(sizeof(float) * innum);
+	outfloat = (float *) xmalloc(sizeof(float) * outnum);
 
 	src_short_to_float_array((short *) in, infloat, innum);
 
@@ -278,7 +278,7 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 	xfree(infloat);
 
 	outsize = resample_data.output_frames_gen * resample_to_channels * samplewidth;
-	*out = xmalloc(outsize);
+	*out = (unsigned char *) xmalloc(outsize);
 	src_float_to_short_array(outfloat, (short *) *out,
 				 resample_data.output_frames_gen * resample_to_channels);
 	xfree(outfloat);
@@ -294,7 +294,7 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 	outnum = (innum * ratio1k) / 1000;
 
 	outsize = outnum * samplewidth;
-	*out = xmalloc(outsize);
+	*out = (unsigned char *) xmalloc(outsize);
 	bzero(*out, outsize);
 
 	for (i = 0; i < outsize / (resample_to_channels * samplewidth); i++)
@@ -305,7 +305,7 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 #endif
 		int j;
 
-		if (source * resample_to_channels + samplewidth > size)
+		if (source * resample_to_channels + samplewidth > (int) size)
 			break;
 
 #if 0				/* Linear resampling, TODO: soundquality fixes (LP filter) */
@@ -410,7 +410,7 @@ rdpsnd_dsp_process(unsigned char *data, unsigned int size, struct audio_driver *
 
 	if (out.data == NULL)
 	{
-		out.data = xmalloc(size);
+		out.data = (unsigned char *) xmalloc(size);
 		memcpy(out.data, data, size);
 		out.size = size;
 	}
