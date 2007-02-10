@@ -645,7 +645,8 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 		if ((g_server_public_key_len < SEC_MODULUS_SIZE) ||
 		    (g_server_public_key_len > SEC_MAX_MODULUS_SIZE))
 		{
-			error("Bad server public key size (%u bits)\n", g_server_public_key_len * 8);
+			error("Bad server public key size (%u bits)\n",
+			      g_server_public_key_len * 8);
 			ssl_rkey_free(server_public_key);
 			return False;
 		}
