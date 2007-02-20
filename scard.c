@@ -42,10 +42,7 @@
 #define SCARD_MAX_MEM 102400
 #define SCARD_AUTOALLOCATE -1
 #define	OUT_STREAM_SIZE	4096
-#define STREAM_COUNT 8
 
-static struct stream out[STREAM_COUNT];
-static int cur_stream_id = 0;
 static pthread_mutex_t **scard_mutex = NULL;
 
 static uint32 curDevice = 0, curId = 0, curBytesOut = 0;
@@ -2662,49 +2659,4 @@ void
 scard_unlock(int lock)
 {
 	pthread_mutex_unlock(scard_mutex[lock]);
-}
-
-STREAM
-scard_tcp_init(void)
-{
-	STREAM result = NULL;
-
-	result = &out[cur_stream_id];
-	cur_stream_id = (cur_stream_id + 1) % STREAM_COUNT;
-
-	return result;
-}
-
-void
-scard_tcp_connect(void)
-{
-	int i;
-
-	for (i = 0; i < STREAM_COUNT; i++)
-	{
-		out[i].size = 4096;
-		out[i].data = (uint8 *) xmalloc(out[i].size);
-	}
-}
-
-void
-scard_tcp_reset_state(void)
-{
-	int i;
-	struct stream *p;
-
-	for (i = 0, p = out; i < STREAM_COUNT; i++, p++)
-	{
-		if (p->data != NULL)
-			xfree(p->data);
-		p->p = NULL;
-		p->end = NULL;
-		p->data = NULL;
-		p->size = 0;
-		p->iso_hdr = NULL;
-		p->mcs_hdr = NULL;
-		p->sec_hdr = NULL;
-		p->rdp_hdr = NULL;
-		p->channel_hdr = NULL;
-	}
 }

@@ -46,11 +46,15 @@
 #define INADDR_NONE ((unsigned long) -1)
 #endif
 
+#ifdef WITH_SCARD
+#define STREAM_COUNT 8
+#else
+#define STREAM_COUNT 1
+#endif
+
 static int g_sock;
 static struct stream g_in;
-#ifndef WITH_SCARD
-static struct stream g_out;
-#endif
+static struct stream g_out[STREAM_COUNT];
 int g_tcp_port_rdp = TCP_PORT_RDP;
 
 /* wait till socket is ready to write or timeout */
@@ -77,14 +81,14 @@ tcp_can_send(int sck, int millis)
 STREAM
 tcp_init(uint32 maxlen)
 {
+	static int cur_stream_id = 0;
 	STREAM result = NULL;
 
 #ifdef WITH_SCARD
 	scard_lock(SCARD_LOCK_TCP);
-	result = scard_tcp_init();
-#else
-	result = &g_out;
 #endif
+	result = &g_out[cur_stream_id];
+	cur_stream_id = (cur_stream_id + 1) % STREAM_COUNT;
 
 	if (maxlen > result->size)
 	{
@@ -204,6 +208,7 @@ tcp_connect(char *server)
 {
 	socklen_t option_len;
 	uint32 option_value;
+	int i;
 
 #ifdef IPv6
 
@@ -296,12 +301,11 @@ tcp_connect(char *server)
 	g_in.size = 4096;
 	g_in.data = (uint8 *) xmalloc(g_in.size);
 
-#ifdef WITH_SCARD
-	scard_tcp_connect();
-#else
-	g_out.size = 4096;
-	g_out.data = (uint8 *) xmalloc(g_out.size);
-#endif
+	for (i = 0; i < STREAM_COUNT; i++)
+	{
+		g_out[i].size = 4096;
+		g_out[i].data = (uint8 *) xmalloc(g_out[i].size);
+	}
 
 	return True;
 }
@@ -334,6 +338,8 @@ tcp_get_address()
 void
 tcp_reset_state(void)
 {
+	int i;
+
 	g_sock = -1;		/* reset socket */
 
 	/* Clear the incoming stream */
@@ -350,19 +356,18 @@ tcp_reset_state(void)
 	g_in.channel_hdr = NULL;
 
 	/* Clear the outgoing stream(s) */
-#ifdef WITH_SCARD
-	scard_tcp_reset_state();
-#else
-	if (g_out.data != NULL)
-		xfree(g_out.data);
-	g_out.p = NULL;
-	g_out.end = NULL;
-	g_out.data = NULL;
-	g_out.size = 0;
-	g_out.iso_hdr = NULL;
-	g_out.mcs_hdr = NULL;
-	g_out.sec_hdr = NULL;
-	g_out.rdp_hdr = NULL;
-	g_out.channel_hdr = NULL;
-#endif
+	for (i = 0; i < STREAM_COUNT; i++)
+	{
+		if (g_out[i].data != NULL)
+			xfree(g_out[i].data);
+		g_out[i].p = NULL;
+		g_out[i].end = NULL;
+		g_out[i].data = NULL;
+		g_out[i].size = 0;
+		g_out[i].iso_hdr = NULL;
+		g_out[i].mcs_hdr = NULL;
+		g_out[i].sec_hdr = NULL;
+		g_out[i].rdp_hdr = NULL;
+		g_out[i].channel_hdr = NULL;
+	}
 }
