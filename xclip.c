@@ -289,6 +289,9 @@ xclip_send_data_with_convert(uint8 * source, size_t source_size, Atom target)
 	DEBUG_CLIPBOARD(("xclip_send_data_with_convert: target=%s, size=%u\n",
 			 XGetAtomName(g_display, target), (unsigned) source_size));
 
+	if ((!source) || source_size == 0)
+		return False;
+
 #ifdef USE_UNICODE_CLIPBOARD
 	if (target == format_string_atom ||
 	    target == format_unicode_atom || target == format_utf8_string_atom)
@@ -754,7 +757,7 @@ void
 xclip_handle_SelectionRequest(XSelectionRequestEvent * event)
 {
 	unsigned long nitems, bytes_left;
-	unsigned char *prop_return;
+	unsigned char *prop_return = NULL;
 	int format, res;
 	Atom type;
 
@@ -796,7 +799,7 @@ xclip_handle_SelectionRequest(XSelectionRequestEvent * event)
 						 event->property, 0, 1, True,
 						 XA_INTEGER, &type, &format, &nitems, &bytes_left,
 						 &prop_return);
-			if (res != Success)
+			if (res != Success || (!prop_return))
 			{
 				DEBUG_CLIPBOARD(("Requested native format but didn't specifiy which.\n"));
 				xclip_refuse_selection(event);
