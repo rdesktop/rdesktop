@@ -289,9 +289,6 @@ xclip_send_data_with_convert(uint8 * source, size_t source_size, Atom target)
 	DEBUG_CLIPBOARD(("xclip_send_data_with_convert: target=%s, size=%u\n",
 			 XGetAtomName(g_display, target), (unsigned) source_size));
 
-	if ((!source) || source_size == 0)
-		return False;
-
 #ifdef USE_UNICODE_CLIPBOARD
 	if (target == format_string_atom ||
 	    target == format_unicode_atom || target == format_utf8_string_atom)
@@ -716,7 +713,7 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 			rdesktop_is_selection_owner = True;
 			cliprdr_send_native_format_announce(data, nitems);
 		}
-		else if (!xclip_send_data_with_convert(data, nitems, event->target))
+		else if ((!nitems) || (!xclip_send_data_with_convert(data, nitems, event->target)))
 		{
 			goto fail;
 		}
