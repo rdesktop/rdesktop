@@ -697,11 +697,11 @@ xkeymap_send_keys(uint32 keysym, unsigned int keycode, unsigned int state, uint3
 			save_remote_modifiers(tr.scancode);
 			ensure_remote_modifiers(ev_time, tr);
 			rdp_send_scancode(ev_time, RDP_KEYPRESS, tr.scancode);
-			restore_remote_modifiers(ev_time, tr.scancode);
 		}
 		else
 		{
 			rdp_send_scancode(ev_time, RDP_KEYRELEASE, tr.scancode);
+			restore_remote_modifiers(ev_time, tr.scancode);
 		}
 		return;
 	}
