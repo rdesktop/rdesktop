@@ -153,12 +153,12 @@ typedef struct
 static RD_NTSTATUS NotifyInfo(RD_NTHANDLE handle, uint32 info_class, NOTIFY * p);
 
 static time_t
-get_create_time(struct stat *st)
+get_create_time(struct stat *filestat)
 {
 	time_t ret, ret1;
 
-	ret = MIN(st->st_ctime, st->st_mtime);
-	ret1 = MIN(ret, st->st_atime);
+	ret = MIN(filestat->st_ctime, filestat->st_mtime);
+	ret1 = MIN(ret, filestat->st_atime);
 
 	if (ret1 != (time_t) 0)
 		return ret1;
@@ -262,7 +262,7 @@ static int
 open_weak_exclusive(const char *pathname, int flags, mode_t mode)
 {
 	int ret;
-	struct stat statbuf;
+	struct stat filestat;
 
 	ret = open(pathname, flags, mode);
 	if (ret != -1 || !(flags & O_EXCL))
@@ -291,7 +291,7 @@ open_weak_exclusive(const char *pathname, int flags, mode_t mode)
 	}
 
 	/* Retry with GUARDED semantics */
-	if (stat(pathname, &statbuf) != -1)
+	if (stat(pathname, &filestat) != -1)
 	{
 		/* File exists */
 		errno = EEXIST;
@@ -930,19 +930,19 @@ static RD_NTSTATUS
 NotifyInfo(RD_NTHANDLE handle, uint32 info_class, NOTIFY * p)
 {
 	struct fileinfo *pfinfo;
-	struct stat buf;
+	struct stat filestat;
 	struct dirent *dp;
 	char *fullname;
 	DIR *dpr;
 
 	pfinfo = &(g_fileinfo[handle]);
-	if (fstat(handle, &buf) < 0)
+	if (fstat(handle, &filestat) < 0)
 	{
 		perror("NotifyInfo");
 		return RD_STATUS_ACCESS_DENIED;
 	}
-	p->modify_time = buf.st_mtime;
-	p->status_time = buf.st_ctime;
+	p->modify_time = filestat.st_mtime;
+	p->status_time = filestat.st_ctime;
 	p->num_entries = 0;
 	p->total_time = 0;
 
@@ -963,9 +963,9 @@ NotifyInfo(RD_NTHANDLE handle, uint32 info_class, NOTIFY * p)
 		fullname = (char *) xmalloc(strlen(pfinfo->path) + strlen(dp->d_name) + 2);
 		sprintf(fullname, "%s/%s", pfinfo->path, dp->d_name);
 
-		if (!stat(fullname, &buf))
+		if (!stat(fullname, &filestat))
 		{
-			p->total_time += (buf.st_mtime + buf.st_ctime);
+			p->total_time += (filestat.st_mtime + filestat.st_ctime);
 		}
 
 		xfree(fullname);
@@ -1115,7 +1115,7 @@ disk_query_directory(RD_NTHANDLE handle, uint32 info_class, char *pattern, STREA
 	char *dirname, fullpath[PATH_MAX];
 	DIR *pdir;
 	struct dirent *pdirent;
-	struct stat fstat;
+	struct stat filestat;
 	struct fileinfo *pfinfo;
 
 	pfinfo = &(g_fileinfo[handle]);
@@ -1145,7 +1145,7 @@ disk_query_directory(RD_NTHANDLE handle, uint32 info_class, char *pattern, STREA
 			/* Get information for directory entry */
 			sprintf(fullpath, "%s/%s", dirname, pdirent->d_name);
 
-			if (stat(fullpath, &fstat))
+			if (stat(fullpath, &filestat))
 			{
 				switch (errno)
 				{
@@ -1153,7 +1153,7 @@ disk_query_directory(RD_NTHANDLE handle, uint32 info_class, char *pattern, STREA
 					case ELOOP:
 					case EACCES:
 						/* These are non-fatal errors. */
-						memset(&fstat, 0, sizeof(fstat));
+						memset(&filestat, 0, sizeof(filestat));
 						break;
 					default:
 						/* Fatal error. By returning STATUS_NO_SUCH_FILE, 
@@ -1164,37 +1164,38 @@ disk_query_directory(RD_NTHANDLE handle, uint32 info_class, char *pattern, STREA
 				}
 			}
 
-			if (S_ISDIR(fstat.st_mode))
+			if (S_ISDIR(filestat.st_mode))
 				file_attributes |= FILE_ATTRIBUTE_DIRECTORY;
 			if (pdirent->d_name[0] == '.')
 				file_attributes |= FILE_ATTRIBUTE_HIDDEN;
 			if (!file_attributes)
 				file_attributes |= FILE_ATTRIBUTE_NORMAL;
-			if (!(fstat.st_mode & S_IWUSR))
+			if (!(filestat.st_mode & S_IWUSR))
 				file_attributes |= FILE_ATTRIBUTE_READONLY;
 
 			/* Return requested information */
 			out_uint8s(out, 8);	/* unknown zero */
 
-			seconds_since_1970_to_filetime(get_create_time(&fstat), &ft_high, &ft_low);
+			seconds_since_1970_to_filetime(get_create_time(&filestat), &ft_high,
+						       &ft_low);
 			out_uint32_le(out, ft_low);	/* create time */
 			out_uint32_le(out, ft_high);
 
-			seconds_since_1970_to_filetime(fstat.st_atime, &ft_high, &ft_low);
+			seconds_since_1970_to_filetime(filestat.st_atime, &ft_high, &ft_low);
 			out_uint32_le(out, ft_low);	/* last_access_time */
 			out_uint32_le(out, ft_high);
 
-			seconds_since_1970_to_filetime(fstat.st_mtime, &ft_high, &ft_low);
+			seconds_since_1970_to_filetime(filestat.st_mtime, &ft_high, &ft_low);
 			out_uint32_le(out, ft_low);	/* last_write_time */
 			out_uint32_le(out, ft_high);
 
-			seconds_since_1970_to_filetime(fstat.st_ctime, &ft_high, &ft_low);
+			seconds_since_1970_to_filetime(filestat.st_ctime, &ft_high, &ft_low);
 			out_uint32_le(out, ft_low);	/* change_write_time */
 			out_uint32_le(out, ft_high);
 
-			out_uint32_le(out, fstat.st_size);	/* filesize low */
+			out_uint32_le(out, filestat.st_size);	/* filesize low */
 			out_uint32_le(out, 0);	/* filesize high */
-			out_uint32_le(out, fstat.st_size);	/* filesize low */
+			out_uint32_le(out, filestat.st_size);	/* filesize low */
 			out_uint32_le(out, 0);	/* filesize high */
 			out_uint32_le(out, file_attributes);
 			out_uint8(out, 2 * strlen(pdirent->d_name) + 2);	/* unicode length */
