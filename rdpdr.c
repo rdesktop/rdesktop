@@ -645,8 +645,6 @@ rdpdr_process_irp(STREAM s)
 
 					in_uint32_le(s, info_level);	/* notify mask */
 
-					g_notify_stamp = True;
-
 					status = disk_create_notify(file, info_level);
 					result = 0;
 

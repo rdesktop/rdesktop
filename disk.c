@@ -493,7 +493,9 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 	g_fileinfo[handle].accessmask = accessmask;
 	strncpy(g_fileinfo[handle].path, path, PATH_MAX - 1);
 	g_fileinfo[handle].delete_on_close = False;
-	g_notify_stamp = True;
+
+	if (accessmask & GENERIC_ALL || accessmask & GENERIC_WRITE)
+		g_notify_stamp = True;
 
 	*phandle = handle;
 	return RD_STATUS_SUCCESS;
@@ -506,7 +508,8 @@ disk_close(RD_NTHANDLE handle)
 
 	pfinfo = &(g_fileinfo[handle]);
 
-	g_notify_stamp = True;
+	if (pfinfo->accessmask & GENERIC_ALL || pfinfo->accessmask & GENERIC_WRITE)
+		g_notify_stamp = True;
 
 	rdpdr_abort_io(handle, 0, RD_STATUS_CANCELLED);
 
