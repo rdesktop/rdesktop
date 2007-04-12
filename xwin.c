@@ -3218,7 +3218,7 @@ ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy)
 		return;
 
 	image = XCreateImage(g_display, g_visual, g_depth, ZPixmap, 0,
-			     (char *) data, cx, cy, BitmapPad(g_display), cx * g_bpp / 8);
+			     (char *) data, cx, cy, g_bpp, 0);
 
 	if (g_ownbackstore)
 	{
