@@ -130,8 +130,8 @@ static uint8 *g_clip_buffer = 0;
 /* Denotes the size of g_clip_buffer. */
 static uint32 g_clip_buflen = 0;
 
-/* Translate LF to CR-LF. To do this, we must allocate more memory.
-   The returned string is null-terminated, as required by CF_TEXT.
+/* Translates CR-LF to LF.
+   Changes the string in-place.
    Does not stop on embedded nulls.
    The length is updated. */
 static void
@@ -170,13 +170,15 @@ utf16_lf2crlf(uint8 * data, uint32 * size)
 	/* Check for a reversed BOM */
 	swap_endianess = (*inptr == 0xfffe);
 
+	uint16 uvalue_previous = 0;	/* Kept so we'll avoid translating CR-LF to CR-CR-LF */
 	while ((uint8 *) inptr < data + *size)
 	{
 		uint16 uvalue = *inptr;
 		if (swap_endianess)
 			uvalue = ((uvalue << 8) & 0xff00) + (uvalue >> 8);
-		if (uvalue == 0x0a)
+		if ((uvalue == 0x0a) && (uvalue_previous != 0x0d))
 			*outptr++ = swap_endianess ? 0x0d00 : 0x0d;
+		uvalue_previous = uvalue;
 		*outptr++ = *inptr++;
 	}
 	*outptr++ = 0;		/* null termination */
@@ -198,10 +200,12 @@ lf2crlf(uint8 * data, uint32 * length)
 	p = data;
 	o = result;
 
+	uint8 previous = '\0';	/* Kept to avoid translating CR-LF to CR-CR-LF */
 	while (p < data + *length)
 	{
-		if (*p == '\x0a')
+		if ((*p == '\x0a') && (previous != '\x0d'))
 			*o++ = '\x0d';
+		previous = *p;
 		*o++ = *p++;
 	}
 	*length = o - result;
@@ -1006,6 +1010,8 @@ ui_clip_handle_data(uint8 * data, uint32 length)
 			free_data = True;
 			data = (uint8 *) utf8_data;
 			length = utf8_length - utf8_length_remaining;
+			/* translate linebreaks (works just as well on UTF-8) */
+			crlf2lf(data, &length);
 		}
 	}
 	else if (selection_request.target == format_unicode_atom)
