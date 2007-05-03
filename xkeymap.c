@@ -679,6 +679,36 @@ xkeymap_translate_key(uint32 keysym, unsigned int keycode, unsigned int state)
 	return tr;
 }
 
+static RD_BOOL
+is_modifier(uint8 scancode)
+{
+	switch (scancode)
+	{
+		case SCANCODE_CHAR_LSHIFT:
+		case SCANCODE_CHAR_RSHIFT:
+		case SCANCODE_CHAR_LCTRL:
+		case SCANCODE_CHAR_RCTRL:
+		case SCANCODE_CHAR_LALT:
+		case SCANCODE_CHAR_RALT:
+		case SCANCODE_CHAR_LWIN:
+		case SCANCODE_CHAR_RWIN:
+		case SCANCODE_CHAR_NUMLOCK:
+			return True;
+		default:
+			break;
+	}
+	return False;
+}
+
+static void
+save_remote_modifiers_if_modifier(uint8 scancode)
+{
+	if (!is_modifier(scancode))
+		return;
+
+	saved_remote_modifier_state = remote_modifier_state;
+}
+
 void
 xkeymap_send_keys(uint32 keysym, unsigned int keycode, unsigned int state, uint32 ev_time,
 		  RD_BOOL pressed, uint8 nesting)
@@ -702,6 +732,7 @@ xkeymap_send_keys(uint32 keysym, unsigned int keycode, unsigned int state, uint3
 		{
 			rdp_send_scancode(ev_time, RDP_KEYRELEASE, tr.scancode);
 			restore_remote_modifiers(ev_time, tr.scancode);
+			save_remote_modifiers_if_modifier(tr.scancode);
 		}
 		return;
 	}
@@ -760,27 +791,6 @@ get_ksname(uint32 keysym)
 		ksname = "(no name)";
 
 	return ksname;
-}
-
-static RD_BOOL
-is_modifier(uint8 scancode)
-{
-	switch (scancode)
-	{
-		case SCANCODE_CHAR_LSHIFT:
-		case SCANCODE_CHAR_RSHIFT:
-		case SCANCODE_CHAR_LCTRL:
-		case SCANCODE_CHAR_RCTRL:
-		case SCANCODE_CHAR_LALT:
-		case SCANCODE_CHAR_RALT:
-		case SCANCODE_CHAR_LWIN:
-		case SCANCODE_CHAR_RWIN:
-		case SCANCODE_CHAR_NUMLOCK:
-			return True;
-		default:
-			break;
-	}
-	return False;
 }
 
 void
