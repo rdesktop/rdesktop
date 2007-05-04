@@ -240,4 +240,6 @@ works:
 10. Make sure keymaps can be loaded from ~/.rdesktop/keymaps,
     KEYMAP_PATH, $CWD/keymaps, and from an absolute path. 
 
-
+11. Press Shift, then press a key modified by shift, the release
+    shift, then release the other key.  Do this in a speedy fasion.
+    Make sure the shift state is not stuck down.
