@@ -102,6 +102,9 @@ static int g_bpp;
 static XIM g_IM;
 static XIC g_IC;
 static XModifierKeymap *g_mod_map;
+/* Maps logical (xmodmap -pp) pointing device buttons (0-based) back
+   to physical (1-based) indices. */
+static unsigned char g_pointer_log_to_phys_map[16];
 static Cursor g_current_cursor;
 static RD_HCURSOR g_null_cursor = NULL;
 static Atom g_protocol_atom, g_kill_atom;
@@ -1260,6 +1263,22 @@ translate_image(int width, int height, uint8 * data)
 	return out;
 }
 
+static void
+xwin_refresh_pointer_map(void)
+{
+	unsigned char phys_to_log_map[sizeof(g_pointer_log_to_phys_map)];
+	int i, pointer_buttons;
+
+	pointer_buttons = XGetPointerMapping(g_display, phys_to_log_map, sizeof(phys_to_log_map));
+	for (i = 0; i < pointer_buttons; ++i)
+	{
+		/* This might produce multiple logical buttons mapping
+		   to a single physical one, but hey, that's
+		   life... */
+		g_pointer_log_to_phys_map[phys_to_log_map[i] - 1] = i + 1;
+	}
+}
+
 RD_BOOL
 get_key_state(unsigned int state, uint32 keysym)
 {
@@ -1614,6 +1633,7 @@ ui_init(void)
 	g_width = (g_width + 3) & ~3;
 
 	g_mod_map = XGetModifierMapping(g_display);
+	xwin_refresh_pointer_map();
 
 	xkeymap_init();
 
@@ -1877,6 +1897,12 @@ handle_button_event(XEvent xevent, RD_BOOL down)
 {
 	uint16 button, flags = 0;
 	g_last_gesturetime = xevent.xbutton.time;
+	/* Reverse the pointer button mapping, e.g. in the case of
+	   "left-handed mouse mode"; the RDP session expects to
+	   receive physical buttons (true in mstsc as well) and
+	   logical button behavior depends on the remote desktop's own
+	   mouse settings */
+	xevent.xbutton.button = g_pointer_log_to_phys_map[xevent.xbutton.button - 1];
 	button = xkeymap_translate_button(xevent.xbutton.button);
 	if (button == 0)
 		return;
@@ -2164,6 +2190,12 @@ xwin_process_events(void)
 					XFreeModifiermap(g_mod_map);
 					g_mod_map = XGetModifierMapping(g_display);
 				}
+
+				if (xevent.xmapping.request == MappingPointer)
+				{
+					xwin_refresh_pointer_map();
+				}
+
 				break;
 
 				/* clipboard stuff */
