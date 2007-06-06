@@ -1,7 +1,7 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    User interface services - SVGA lib
-   Copyright (C) Jay Sorg 2004-2005
+   Copyright (C) Jay Sorg 2004-2007
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -112,7 +112,7 @@ static tcursor mcursor;
 static int g_draw_mouse = 1;
 
 /* Session Directory redirection */
-BOOL g_redirect = False;
+RD_BOOL g_redirect = False;
 char g_redirect_server[64];
 char g_redirect_domain[16];
 char g_redirect_password[64];
@@ -278,7 +278,7 @@ uint8* get_ptr(int x, int y, uint8* data, int width, int bpp)
 
 //*****************************************************************************
 // check if a certain pixel is set in a bitmap
-BOOL is_pixel_on(uint8* data, int x, int y, int width, int bpp)
+RD_BOOL is_pixel_on(uint8* data, int x, int y, int width, int bpp)
 {
   int start;
   int shift;
@@ -999,7 +999,7 @@ void process_keyboard(void)
 }
 
 /*****************************************************************************/
-BOOL ui_main_loop(void)
+RD_BOOL ui_main_loop(void)
 {
   int sel;
   fd_set rfds;
@@ -1743,7 +1743,7 @@ void error(char* format, ...)
   va_end(ap);
 }
 
-BOOL rd_pstcache_mkdir(void)
+RD_BOOL rd_pstcache_mkdir(void)
 {
   return 0;
 }
@@ -1779,7 +1779,7 @@ int rd_lseek_file(int fd, int offset)
 }
 
 /*****************************************************************************/
-BOOL rd_lock_file(int fd, int start, int len)
+RD_BOOL rd_lock_file(int fd, int start, int len)
 {
   return False;
 }
