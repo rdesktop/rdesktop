@@ -40,7 +40,7 @@ char g_hostname[16] = "";
 char g_username[64] = "";
 int g_height = 600;
 int g_width = 800;
-int g_server_bpp = 8;
+int g_server_depth = 8;
 int g_encryption = 1;
 int g_desktop_save = 1;
 int g_polygon_ellipse_orders = 0;
@@ -54,6 +54,7 @@ int g_keylayout = 0x409; /* Defaults to US keyboard layout */
 int g_keyboard_type = 0x4; /* Defaults to US keyboard layout */
 int g_keyboard_subtype = 0x0; /* Defaults to US keyboard layout */
 int g_keyboard_functionkeys = 0xc; /* Defaults to US keyboard layout */
+RD_BOOL g_numlock_sync = False;
 
 /* hack globals */
 int g_argc = 0;
@@ -408,7 +409,7 @@ void accel_draw_box(int x, int y, int cx, int cy, uint8* data, int line_size)
   if (sdata != 0)
   {
     s = data;
-    d = get_ptr(x, y, sdata, g_width, g_server_bpp);
+    d = get_ptr(x, y, sdata, g_width, g_server_depth);
     for (i = 0; i < cy; i++)
     {
       copy_mem(d, s, cx * g_server_Bpp);
@@ -447,7 +448,7 @@ void accel_fill_rect(int x, int y, int cx, int cy, int color)
     else if (g_server_Bpp == 2)
       for (i = 0; i < cx; i++)
         ((uint16*)temp)[i] = color;
-    d = get_ptr(x, y, sdata, g_width, g_server_bpp);
+    d = get_ptr(x, y, sdata, g_width, g_server_depth);
     for (i = 0; i < cy; i++)
     {
       copy_mem(d, temp, cx * g_server_Bpp);
@@ -487,8 +488,8 @@ void accel_screen_copy(int x, int y, int cx, int cy, int srcx, int srcy)
   {
     if (srcy < y)
     { // bottom to top
-      s = get_ptr(srcx, (srcy + cy) - 1, sdata, g_width, g_server_bpp);
-      d = get_ptr(x, (y + cy) - 1, sdata, g_width, g_server_bpp);
+      s = get_ptr(srcx, (srcy + cy) - 1, sdata, g_width, g_server_depth);
+      d = get_ptr(x, (y + cy) - 1, sdata, g_width, g_server_depth);
       for (i = 0; i < cy; i++)  // copy down
       {
         copy_mem(d, s, cx * g_server_Bpp);
@@ -498,8 +499,8 @@ void accel_screen_copy(int x, int y, int cx, int cy, int srcx, int srcy)
     }
     else if (srcy > y || srcx > x) // copy up or left
     { // top to bottom
-      s = get_ptr(srcx, srcy, sdata, g_width, g_server_bpp);
-      d = get_ptr(x, y, sdata, g_width, g_server_bpp);
+      s = get_ptr(srcx, srcy, sdata, g_width, g_server_depth);
+      d = get_ptr(x, y, sdata, g_width, g_server_depth);
       for (i = 0; i < cy; i++)
       {
         copy_mem(d, s, cx * g_server_Bpp);
@@ -509,8 +510,8 @@ void accel_screen_copy(int x, int y, int cx, int cy, int srcx, int srcy)
     }
     else // copy straight right
     {
-      s = get_ptr(srcx, srcy, sdata, g_width, g_server_bpp);
-      d = get_ptr(x, y, sdata, g_width, g_server_bpp);
+      s = get_ptr(srcx, srcy, sdata, g_width, g_server_depth);
+      d = get_ptr(x, y, sdata, g_width, g_server_depth);
       for (i = 0; i < cy; i++)
       {
         copy_memb(d, s, cx * g_server_Bpp);
@@ -528,9 +529,9 @@ void accel_screen_copy(int x, int y, int cx, int cy, int srcx, int srcy)
     // slow
     temp = (uint8*)xmalloc(cx * cy * g_server_Bpp);
     for (i = 0; i < cy; i++)
-      vga_getscansegment(get_ptr(0, i, temp, cx, g_server_bpp), srcx, srcy + i, cx * g_server_Bpp);
+      vga_getscansegment(get_ptr(0, i, temp, cx, g_server_depth), srcx, srcy + i, cx * g_server_Bpp);
     for (i = 0; i < cy; i++)
-      vga_drawscansegment(get_ptr(0, i, temp, cx, g_server_bpp), x, y + i, cx * g_server_Bpp);
+      vga_drawscansegment(get_ptr(0, i, temp, cx, g_server_depth), x, y + i, cx * g_server_Bpp);
     xfree(temp);
   }
 }
@@ -590,7 +591,7 @@ void get_rect(int x, int y, int cx, int cy, uint8* p)
   {
     for (i = 0; i < cy; i++)
     {
-      copy_mem(p, get_ptr(x, y + i, sdata, g_width, g_server_bpp), cx * g_server_Bpp);
+      copy_mem(p, get_ptr(x, y + i, sdata, g_width, g_server_depth), cx * g_server_Bpp);
       p = p + cx * g_server_Bpp;
     }
   }
@@ -637,7 +638,7 @@ void draw_cursor_under(int ox, int oy)
   {
     for (i = 0; i < 32; i++)
     {
-      ptr = get_ptr(k, i, mouse_under, 32, g_server_bpp);
+      ptr = get_ptr(k, i, mouse_under, 32, g_server_depth);
       len = (j - k) * g_server_Bpp;
       if (ox + k >= 0 && oy + i >= 0 && ox + k < g_width && oy + i < g_height)
         vga_drawscansegment(ptr, ox + k, oy + i, len);
@@ -665,7 +666,7 @@ void draw_cursor(void)
     for (j = 0; j < 32; j++)
     {
       pixel = get_pixel(mousex + j, mousey + i);
-      set_pixel2(j, i, pixel, mouse_under, 32, g_server_bpp);
+      set_pixel2(j, i, pixel, mouse_under, 32, g_server_depth);
       if (mcursor.andmask[i * 32 + j] == 0)
         k = 0;
       else
@@ -676,7 +677,7 @@ void draw_cursor(void)
       else
         k = ~0;
       pixel = rop(0x6, k, pixel);
-      set_pixel2(j, i, pixel, mouse_a, 32, g_server_bpp);
+      set_pixel2(j, i, pixel, mouse_a, 32, g_server_depth);
     }
   }
   if (mousex < 0)
@@ -691,7 +692,7 @@ void draw_cursor(void)
     for (i = mousey; i < mousey + 32; i++)
       if (i < g_height && i >= 0)
       {
-        ptr = get_ptr(k, i - mousey, mouse_a, 32, g_server_bpp);
+        ptr = get_ptr(k, i - mousey, mouse_a, 32, g_server_depth);
         len = (j - k) * g_server_Bpp;
         vga_drawscansegment(ptr, mousex + k, i, len);
       }
@@ -756,7 +757,7 @@ void draw_cache_rects(void)
   rect = head_rect;
   while (rect != 0)
   {
-    p = get_ptr(rect->x, rect->y, sdata, g_width, g_server_bpp);
+    p = get_ptr(rect->x, rect->y, sdata, g_width, g_server_depth);
     for (i = 0; i < rect->cy; i++)
     {
       vga_drawscansegment(p, rect->x, rect->y + i, rect->cx * g_server_Bpp);
@@ -1126,7 +1127,7 @@ void* ui_create_colourmap(COLOURMAP * colours)
 }
 
 /*****************************************************************************/
-void ui_destroy_colourmap(HCOLOURMAP map)
+void ui_destroy_colourmap(RD_HCOLOURMAP map)
 {
   if (colmap == map)
     colmap = 0;
@@ -1143,7 +1144,7 @@ void ui_set_colourmap(void* map)
 }
 
 /*****************************************************************************/
-HBITMAP ui_create_bitmap(int width, int height, uint8* data)
+RD_HBITMAP ui_create_bitmap(int width, int height, uint8* data)
 {
   bitmap* b;
 
@@ -1157,7 +1158,7 @@ HBITMAP ui_create_bitmap(int width, int height, uint8* data)
 }
 
 //*****************************************************************************
-void draw_glyph (int x, int y, HGLYPH glyph, int fgcolour)
+void draw_glyph (int x, int y, RD_HGLYPH glyph, int fgcolour)
 {
   bitmap* the_glyph;
   int i, j;
@@ -1377,7 +1378,7 @@ void ui_line(uint8 opcode, int startx, int starty, int endx,
 
 /*****************************************************************************/
 void ui_triblt(uint8 opcode, int x, int y, int cx, int cy,
-               HBITMAP src, int srcx, int srcy,
+               RD_HBITMAP src, int srcx, int srcy,
                BRUSH* brush, int bgcolour, int fgcolour)
 {
   // non used
@@ -1385,7 +1386,7 @@ void ui_triblt(uint8 opcode, int x, int y, int cx, int cy,
 
 /*****************************************************************************/
 void ui_memblt(uint8 opcode, int x, int y, int cx, int cy,
-               HBITMAP src, int srcx, int srcy)
+               RD_HBITMAP src, int srcx, int srcy)
 {
   bitmap* b;
   int i;
@@ -1398,7 +1399,7 @@ void ui_memblt(uint8 opcode, int x, int y, int cx, int cy,
       draw_cursor_under(mousex, mousey);
     b = (bitmap*)src;
     if (opcode == 0xc)
-      accel_draw_box(x, y, cx, cy, get_ptr(srcx, srcy, b->data, b->width, g_server_bpp),
+      accel_draw_box(x, y, cx, cy, get_ptr(srcx, srcy, b->data, b->width, g_server_depth),
                      b->width * g_server_Bpp);
     else
     {
@@ -1406,7 +1407,7 @@ void ui_memblt(uint8 opcode, int x, int y, int cx, int cy,
       {
         for (j = 0; j < cx; j++)
         {
-          pixel = get_pixel2(srcx + j, srcy + i, b->data, b->width, g_server_bpp);
+          pixel = get_pixel2(srcx + j, srcy + i, b->data, b->width, g_server_depth);
           set_pixel(x + j, y + i, pixel, opcode);
         }
       }
@@ -1476,10 +1477,10 @@ void ui_screenblt(uint8 opcode, int x, int y, int cx, int cy,
       temp = (uint8*)xmalloc(cx * cy * g_server_Bpp);
       for (i = 0; i < cy; i++)
         for (j = 0; j < cx; j++)
-          set_pixel2(j, i, get_pixel(srcx + j, srcy + i), temp, cx, g_server_bpp);
+          set_pixel2(j, i, get_pixel(srcx + j, srcy + i), temp, cx, g_server_depth);
       for (i = 0; i < cy; i++)
         for (j = 0; j < cx; j++)
-          set_pixel(x + j, y + i, get_pixel2(j, i, temp, cx, g_server_bpp), opcode);
+          set_pixel(x + j, y + i, get_pixel2(j, i, temp, cx, g_server_depth), opcode);
       xfree(temp);
     }
     cache_rect(x, y, cx, cy, False);
@@ -1646,13 +1647,13 @@ void ui_end_update(void)
 }
 
 /*****************************************************************************/
-void ui_polygon(uint8 opcode, uint8 fillmode, POINT * point, int npoints,
+void ui_polygon(uint8 opcode, uint8 fillmode, RD_POINT * point, int npoints,
                 BRUSH * brush, int bgcolour, int fgcolour)
 {
 }
 
 /*****************************************************************************/
-void ui_polyline(uint8 opcode, POINT * points, int npoints, PEN * pen)
+void ui_polyline(uint8 opcode, RD_POINT * points, int npoints, PEN * pen)
 {
 }
 
@@ -1916,13 +1917,13 @@ int parse_parameters(int in_argc, char** in_argv)
     }
     else if (strcmp(in_argv[i], "-a") == 0)
     {
-      g_server_bpp = strtol(in_argv[i + 1], NULL, 10);
-      if (g_server_bpp != 8 && g_server_bpp != 16)
+      g_server_depth = strtol(in_argv[i + 1], NULL, 10);
+      if (g_server_depth != 8 && g_server_depth != 16)
       {
         error("invalid server bpp\n");
         return 0;
       }
-      g_server_Bpp = (g_server_bpp + 7) / 8;
+      g_server_Bpp = (g_server_depth + 7) / 8;
     }
     else if (strcmp(in_argv[i], "-l") == 0)
       g_save_mem = 1;
