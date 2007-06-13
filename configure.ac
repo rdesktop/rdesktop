@@ -830,6 +830,14 @@ AC_ARG_WITH(debug-channel,
 	fi
     ])
 
+AC_ARG_WITH(debug-seamless,
+    [  --with-debug-seamless  enable debugging of SeamlessRDP code],
+    [
+        if test $withval != "no";
+        then 
+            AC_DEFINE(WITH_DEBUG_SEAMLESS,1)
+	fi
+    ])
 
 AC_ARG_WITH(debug-smartcard,
     [  --with-debug-smartcard  enable debugging of smart-card code],

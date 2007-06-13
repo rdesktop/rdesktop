@@ -22,8 +22,6 @@
 #include <stdarg.h>
 #include <assert.h>
 
-/* #define WITH_DEBUG_SEAMLESS */
-
 #ifdef WITH_DEBUG_SEAMLESS
 #define DEBUG_SEAMLESS(args) printf args;
 #else
