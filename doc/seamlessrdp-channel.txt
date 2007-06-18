@@ -5,8 +5,6 @@ TODO
 
 * Commands for changing z order and focus.
 
-* Command for transferring icon.
-
 * Think about protocol version management
 
 * Try to assure that messages aren't repeated or are sent for hidden windows.
@@ -236,6 +234,49 @@ Syntax:
 This message is sent some time after a HIDE, indicating that the windowed view
 has been restored. If the client has dropped all information about windows then
 it can send a SYNC to re-enumerate them.
+
+SETICON
+-------
+
+Sets an icon for a window.
+
+Syntax:
+	SETICON,<SERIAL>,<ID>,<CHUNK>,<FORMAT>,<WIDTH>,<HEIGHT>,<DATA>
+
+This message is sent when a window is initially created and at any time when
+the application modifies its icon.
+
+A window can have multiple icons, but only one of a given format and size. A
+SETICON received for an already existing format and size is expected to over-
+write that icon.
+
+Since icons can potentially be very large, it can easily overflow the line
+limitation in the protocol. To handle this, multiple SETICON will be issued
+with an ever increasing chunk number.
+
+The initial chunk is 0 (zero) and all chunks must be sent in order. Multiple
+SETICON sets for the same window may not interleave. SETICON sets for
+different windows may interleave though.
+
+Formats:
+  RGBA : Four bytes of data per pixel, representing red, green, blue and
+         alpha, in that order.
+
+Data is the raw icon data written in hex (e.g. 3fab32...). Chunks must be
+divided on a whole byte boundary. Case is not specified.
+
+DELICON
+-------
+
+Removes an icon for a window.
+
+Syntax:
+	DELICON,<SERIAL>,<ID>,<FORMAT>,<WIDTH>,<HEIGHT>
+
+Removes the icon of a window matching the given format and size, previously
+set with SETICON.
+
+This command may not be interleaved with a SETICON set.
 
 Client to Server Operations
 ===========================

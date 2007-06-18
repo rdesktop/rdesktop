@@ -2,6 +2,7 @@
    rdesktop: A Remote Desktop Protocol client.
    User interface services - X Window System
    Copyright (C) Matthew Chapman 1999-2007
+   Copyright 2007 Pierre Ossman <ossman@cendio.se> for Cendio AB
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -73,6 +74,10 @@ typedef struct _seamless_window
 	unsigned int outpos_serial;
 	int outpos_xoffset, outpos_yoffset;
 	int outpos_width, outpos_height;
+
+	unsigned int icon_size;
+	unsigned int icon_offset;
+	char icon_buffer[32 * 32 * 4];
 
 	struct _seamless_window *next;
 } seamless_window;
@@ -3452,15 +3457,13 @@ ui_seamless_create_window(unsigned long id, unsigned long group, unsigned long p
 	XSetWMProtocols(g_display, wnd, &g_kill_atom, 1);
 
 	sw = xmalloc(sizeof(seamless_window));
+
+	memset(sw, 0, sizeof(seamless_window));
+
 	sw->wnd = wnd;
 	sw->id = id;
-	sw->behind = 0;
 	sw->group = sw_find_group(group, False);
 	sw->group->refcnt++;
-	sw->xoffset = 0;
-	sw->yoffset = 0;
-	sw->width = 0;
-	sw->height = 0;
 	sw->state = SEAMLESSRDP_NOTYETMAPPED;
 	sw->desktop = 0;
 	sw->position_timer = xmalloc(sizeof(struct timeval));
@@ -3524,6 +3527,93 @@ ui_seamless_destroy_group(unsigned long id, unsigned long flags)
 			sw_remove_window(sw);
 		}
 	}
+}
+
+
+void
+ui_seamless_seticon(unsigned long id, const char *format, int width, int height, int chunk,
+		    const char *data, int chunk_len)
+{
+	seamless_window *sw;
+
+	if (!g_seamless_active)
+		return;
+
+	sw = sw_get_window_by_id(id);
+	if (!sw)
+	{
+		warning("ui_seamless_seticon: No information for window 0x%lx\n", id);
+		return;
+	}
+
+	if (chunk == 0)
+	{
+		if (sw->icon_size)
+			warning("ui_seamless_seticon: New icon started before previous completed\n");
+
+		if (strcmp(format, "RGBA") != 0)
+		{
+			warning("ui_seamless_seticon: Uknown icon format \"%s\"\n", format);
+			return;
+		}
+
+		sw->icon_size = width * height * 4;
+		if (sw->icon_size > 32 * 32 * 4)
+		{
+			warning("ui_seamless_seticon: Icon too large (%d bytes)\n", sw->icon_size);
+			sw->icon_size = 0;
+			return;
+		}
+
+		sw->icon_offset = 0;
+	}
+	else
+	{
+		if (!sw->icon_size)
+			return;
+	}
+
+	if (chunk_len > (sw->icon_size - sw->icon_offset))
+	{
+		warning("ui_seamless_seticon: Too large chunk received (%d bytes > %d bytes)\n",
+			chunk_len, sw->icon_size - sw->icon_offset);
+		sw->icon_size = 0;
+		return;
+	}
+
+	memcpy(sw->icon_buffer + sw->icon_offset, data, chunk_len);
+	sw->icon_offset += chunk_len;
+
+	if (sw->icon_offset == sw->icon_size)
+	{
+		ewmh_set_icon(sw->wnd, width, height, sw->icon_buffer);
+		sw->icon_size = 0;
+	}
+}
+
+
+void
+ui_seamless_delicon(unsigned long id, const char *format, int width, int height)
+{
+	seamless_window *sw;
+
+	if (!g_seamless_active)
+		return;
+
+	sw = sw_get_window_by_id(id);
+	if (!sw)
+	{
+		warning("ui_seamless_seticon: No information for window 0x%lx\n", id);
+		return;
+	}
+
+	if (strcmp(format, "RGBA") != 0)
+	{
+		warning("ui_seamless_seticon: Uknown icon format \"%s\"\n", format);
+		return;
+	}
+
+	ewmh_del_icon(sw->wnd, width, height);
 }
 
 

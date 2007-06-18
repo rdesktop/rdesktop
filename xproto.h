@@ -9,3 +9,5 @@ int ewmh_get_window_desktop(Window wnd);
 void ewmh_set_wm_name(Window wnd, const char *title);
 int ewmh_set_window_popup(Window wnd);
 int ewmh_set_window_modal(Window wnd);
+void ewmh_set_icon(Window wnd, int width, int height, const char *rgba_data);
+void ewmh_del_icon(Window wnd, int width, int height);

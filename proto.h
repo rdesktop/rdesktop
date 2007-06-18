@@ -288,6 +288,9 @@ void ui_seamless_create_window(unsigned long id, unsigned long group, unsigned l
 			       unsigned long flags);
 void ui_seamless_destroy_window(unsigned long id, unsigned long flags);
 void ui_seamless_destroy_group(unsigned long id, unsigned long flags);
+void ui_seamless_seticon(unsigned long id, const char *format, int width, int height, int chunk,
+			 const char *data, int chunk_len);
+void ui_seamless_delicon(unsigned long id, const char *format, int width, int height);
 void ui_seamless_move_window(unsigned long id, int x, int y, int width, int height,
 			     unsigned long flags);
 void ui_seamless_restack_window(unsigned long id, unsigned long behind, unsigned long flags);
@@ -307,13 +310,8 @@ void seamless_select_timeout(struct timeval *tv);
 unsigned int seamless_send_zchange(unsigned long id, unsigned long below, unsigned long flags);
 unsigned int seamless_send_focus(unsigned long id, unsigned long flags);
 /* scard.c */
-void scardSetInfo(uint32 device, uint32 id, uint32 bytes_out);
-int scard_enum_devices(uint32 * id, char *optarg);
 void scard_lock(int lock);
 void scard_unlock(int lock);
-STREAM scard_tcp_init(void);
-void scard_tcp_connect(void);
-void scard_tcp_reset_state(void);
 
 /* *INDENT-OFF* */
 #ifdef __cplusplus

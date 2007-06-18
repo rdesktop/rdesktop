@@ -4,7 +4,8 @@
    Support functions for Extended Window Manager Hints,
    http://www.freedesktop.org/wiki/Standards_2fwm_2dspec
 
-   Copyright (C) Peter Astrand <astrand@cendio.se> 2005
+   Copyright 2005 Peter Astrand <astrand@cendio.se> for Cendio AB
+   Copyright 2007 Pierre Ossman <ossman@cendio.se> for Cendio AB
    
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -34,7 +35,8 @@ extern Display *g_display;
 
 static Atom g_net_wm_state_maximized_vert_atom, g_net_wm_state_maximized_horz_atom,
 	g_net_wm_state_hidden_atom, g_net_wm_name_atom, g_utf8_string_atom,
-	g_net_wm_state_skip_taskbar_atom, g_net_wm_state_skip_pager_atom, g_net_wm_state_modal_atom;
+	g_net_wm_state_skip_taskbar_atom, g_net_wm_state_skip_pager_atom,
+	g_net_wm_state_modal_atom, g_net_wm_icon_atom;
 
 Atom g_net_wm_state_atom, g_net_wm_desktop_atom;
 
@@ -187,6 +189,7 @@ ewmh_init()
 	g_net_wm_state_atom = XInternAtom(g_display, "_NET_WM_STATE", False);
 	g_net_wm_desktop_atom = XInternAtom(g_display, "_NET_WM_DESKTOP", False);
 	g_net_wm_name_atom = XInternAtom(g_display, "_NET_WM_NAME", False);
+	g_net_wm_icon_atom = XInternAtom(g_display, "_NET_WM_ICON", False);
 	g_utf8_string_atom = XInternAtom(g_display, "UTF8_STRING", False);
 }
 
@@ -421,6 +424,113 @@ ewmh_set_window_modal(Window wnd)
 	if (ewmh_modify_state(wnd, 1, g_net_wm_state_modal_atom, 0) < 0)
 		return -1;
 	return 0;
+}
+
+void
+ewmh_set_icon(Window wnd, int width, int height, const char *rgba_data)
+{
+	unsigned long nitems, i;
+	unsigned char *props;
+	uint32 *cur_set, *new_set;
+	uint32 *icon;
+
+	cur_set = NULL;
+	new_set = NULL;
+
+	if (get_property_value(wnd, "_NET_WM_ICON", 10000, &nitems, &props, 1) >= 0)
+	{
+		cur_set = (uint32 *) props;
+
+		for (i = 0; i < nitems;)
+		{
+			if (cur_set[i] == width && cur_set[i + 1] == height)
+				break;
+
+			i += 2 + cur_set[i] * cur_set[i + 1];
+		}
+
+		if (i != nitems)
+			icon = cur_set + i;
+		else
+		{
+			new_set = xmalloc((nitems + width * height + 2) * 4);
+			memcpy(new_set, cur_set, nitems * 4);
+			icon = new_set + nitems;
+			nitems += width * height + 2;
+		}
+	}
+	else
+	{
+		new_set = xmalloc((width * height + 2) * 4);
+		icon = new_set;
+		nitems = width * height + 2;
+	}
+
+	icon[0] = width;
+	icon[1] = height;
+
+	/* Convert RGBA -> ARGB */
+	for (i = 0; i < width * height; i++)
+	{
+		icon[i + 2] =
+			rgba_data[i * 4 + 3] << 24 |
+			((rgba_data[i * 4 + 0] << 16) & 0x00FF0000) |
+			((rgba_data[i * 4 + 1] << 8) & 0x0000FF00) |
+			((rgba_data[i * 4 + 2] << 0) & 0x000000FF);
+	}
+
+	XChangeProperty(g_display, wnd, g_net_wm_icon_atom, XA_CARDINAL, 32,
+			PropModeReplace, (unsigned char *) (new_set ? new_set : cur_set), nitems);
+
+	if (cur_set)
+		XFree(cur_set);
+	if (new_set)
+		xfree(new_set);
+}
+
+void
+ewmh_del_icon(Window wnd, int width, int height)
+{
+	unsigned long nitems, i, icon_size;
+	unsigned char *props;
+	uint32 *cur_set, *new_set;
+
+	cur_set = NULL;
+	new_set = NULL;
+
+	if (get_property_value(wnd, "_NET_WM_ICON", 10000, &nitems, &props, 1) < 0)
+		return;
+
+	cur_set = (uint32 *) props;
+
+	for (i = 0; i < nitems;)
+	{
+		if (cur_set[i] == width && cur_set[i + 1] == height)
+			break;
+
+		i += 2 + cur_set[i] * cur_set[i + 1];
+	}
+
+	if (i == nitems)
+		goto out;
+
+	icon_size = width * height + 2;
+	new_set = xmalloc((nitems - icon_size) * 4);
+
+	if (i != 0)
+		memcpy(new_set, cur_set, i * 4);
+	if (i != nitems - icon_size)
+		memcpy(new_set + i * 4, cur_set + i * 4 + icon_size, nitems - icon_size);
+
+	nitems -= icon_size;
+
+	XChangeProperty(g_display, wnd, g_net_wm_icon_atom, XA_CARDINAL, 32,
+			PropModeReplace, (unsigned char *) new_set, nitems);
+
+	xfree(new_set);
+
+      out:
+	XFree(cur_set);
 }
 
 #endif /* MAKE_PROTO */

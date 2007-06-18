@@ -1,7 +1,8 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    Seamless Windows support
-   Copyright (C) Peter Astrand <astrand@cendio.se> 2005-2007
+   Copyright 2005-2007 Peter Astrand <astrand@cendio.se> for Cendio AB
+   Copyright 2007 Pierre Ossman <ossman@cendio.se> for Cendio AB
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -31,6 +32,7 @@
 extern RD_BOOL g_seamless_rdp;
 static VCHANNEL *seamless_channel;
 static unsigned int seamless_serial;
+static char icon_buf[1024];
 
 static char *
 seamless_get_token(char **s)
@@ -135,7 +137,65 @@ seamless_process_line(const char *line, void *data)
 	}
 	else if (!strcmp("SETICON", tok1))
 	{
-		unimpl("SeamlessRDP SETICON1\n");
+		int chunk, width, height, len;
+		char byte[3];
+
+		if (!tok8)
+			return False;
+
+		id = strtoul(tok3, &endptr, 0);
+		if (*endptr)
+			return False;
+
+		chunk = strtoul(tok4, &endptr, 0);
+		if (*endptr)
+			return False;
+
+		width = strtoul(tok6, &endptr, 0);
+		if (*endptr)
+			return False;
+
+		height = strtoul(tok7, &endptr, 0);
+		if (*endptr)
+			return False;
+
+		byte[2] = '\0';
+		len = 0;
+		while (*tok8 != '\0')
+		{
+			byte[0] = *tok8;
+			tok8++;
+			if (*tok8 == '\0')
+				return False;
+			byte[1] = *tok8;
+			tok8++;
+
+			icon_buf[len] = strtol(byte, NULL, 16);
+			len++;
+		}
+
+		ui_seamless_seticon(id, tok5, width, height, chunk, icon_buf, len);
+	}
+	else if (!strcmp("DELICON", tok1))
+	{
+		int width, height;
+
+		if (!tok6)
+			return False;
+
+		id = strtoul(tok3, &endptr, 0);
+		if (*endptr)
+			return False;
+
+		width = strtoul(tok5, &endptr, 0);
+		if (*endptr)
+			return False;
+
+		height = strtoul(tok6, &endptr, 0);
+		if (*endptr)
+			return False;
+
+		ui_seamless_delicon(id, tok4, width, height);
 	}
 	else if (!strcmp("POSITION", tok1))
 	{
