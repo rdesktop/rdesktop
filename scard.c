@@ -1268,6 +1268,7 @@ TS_SCardLocateCardsByATR(STREAM in, STREAM out, RD_BOOL wide)
 	myRsArray = SC_xmalloc(&lcHandle, readerCount * sizeof(MYPCSC_SCARD_READERSTATE_A));
 	if (!myRsArray)
 		return SC_returnNoMemoryError(&lcHandle, in, out);
+	copyReaderState_ServerToMyPCSC(rsArray, myRsArray, readerCount);
 	rv = SCardGetStatusChange((MYPCSC_SCARDCONTEXT) hContext, 0x00000001, myRsArray,
 				  readerCount);
 	copyReaderState_MyPCSCToServer(myRsArray, rsArray, readerCount);
@@ -1572,7 +1573,12 @@ TS_SCardTransmit(STREAM in, STREAM out)
 
 	if (pioRecvPci)
 	{
-		copyIORequest_MyPCSCToServer(myPioRecvPci, pioRecvPci);
+		/*
+		 * pscs-lite mishandles this structure in some cases.
+		 * make sure we only copy it if it is valid.
+		 */
+		if (myPioRecvPci->cbPciLength >= sizeof(MYPCSC_SCARD_IO_REQUEST))
+			copyIORequest_MyPCSCToServer(myPioRecvPci, pioRecvPci);
 	}
 
 	if (rv != SCARD_S_SUCCESS)
