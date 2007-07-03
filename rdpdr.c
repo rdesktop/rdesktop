@@ -684,17 +684,11 @@ rdpdr_process_irp(STREAM s)
 			out.data = out.p = buffer;
 			out.size = sizeof(buffer);
 
-			DEBUG_SCARD(("[SMART-CARD TRACE]\n"));
-			DEBUG_SCARD(("device 0x%.8x\n", device));
-			DEBUG_SCARD(("file   0x%.8x\n", file));
-			DEBUG_SCARD(("id     0x%.8x\n", id));
 #ifdef WITH_SCARD
 			scardSetInfo(device, id, bytes_out + 0x14);
 #endif
 			status = fns->device_control(file, request, s, &out);
 			result = buffer_len = out.p - out.data;
-
-			DEBUG_SCARD(("[SMART-CARD TRACE] OUT 0x%.8x\n", status));
 
 			/* Serial SERIAL_WAIT_ON_MASK */
 			if (status == RD_STATUS_PENDING)
