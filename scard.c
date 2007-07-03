@@ -1286,10 +1286,8 @@ TS_SCardLocateCardsByATR(STREAM in, STREAM out, RD_BOOL wide)
 				RD_BOOL equal = 1;
 				for (k = 0; k < cur->cbAtr; k++)
 				{
-					/*  This line check if them equal */
-					if (cur->rgbAtr[k] != rsCur->rgbAtr[k])
-						/*  Next Line was make to search with mask (some strange behavours with applications which use eToken SmartCards) */
-						/*  if((cur->rgbAtr[k]&cur->rgbMask[k])!=(rsCur->rgbAtr[k]&cur->rgbMask[k])){ */
+					if ((cur->rgbAtr[k] & cur->rgbMask[k]) !=
+					    (rsCur->rgbAtr[k] & cur->rgbMask[k]))
 					{
 						equal = 0;
 						break;
