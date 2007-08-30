@@ -746,6 +746,140 @@ bitmap_decompress3(uint8 * output, int width, int height, uint8 * input, int siz
 	return True;
 }
 
+/* decompress a colour plane */
+static int
+process_plane(uint8 * in, int width, int height, uint8 * out, int size)
+{
+	int indexw;
+	int indexh;
+	int code;
+	int collen;
+	int replen;
+	int color;
+	int x;
+	int revcode;
+	uint8 * last_line;
+	uint8 * this_line;
+	uint8 * org_in;
+	uint8 * org_out;
+
+	org_in = in;
+	org_out = out;
+	last_line = 0;
+	indexh = 0;
+	while (indexh < height)
+	{
+		out = (org_out + width * height * 4) - ((indexh + 1) * width * 4);
+		color = 0;
+		this_line = out;
+		indexw = 0;
+		if (last_line == 0)
+		{
+			while (indexw < width)
+			{
+				code = CVAL(in);
+				replen = code & 0xf;
+				collen = (code >> 4) & 0xf;
+				revcode = (replen << 4) | collen;
+				if ((revcode <= 47) && (revcode >= 16))
+				{
+					replen = revcode;
+					collen = 0;
+				}
+				while (collen > 0)
+				{
+					color = CVAL(in);
+					*out = color;
+					out += 4;
+					indexw++;
+					collen--;
+				}
+				while (replen > 0)
+				{
+					*out = color;
+					out += 4;
+					indexw++;
+					replen--;
+				}
+			}
+		}
+		else
+		{
+			while (indexw < width)
+			{
+				code = CVAL(in);
+				replen = code & 0xf;
+				collen = (code >> 4) & 0xf;
+				revcode = (replen << 4) | collen;
+				if ((revcode <= 47) && (revcode >= 16))
+				{
+					replen = revcode;
+					collen = 0;
+				}
+				while (collen > 0)
+				{
+					x = CVAL(in);
+					if (x & 1)
+					{
+						x = x >> 1;
+						x = x + 1;
+						color = -x;
+					}
+					else
+					{
+						x = x >> 1;
+						color = x;
+					}
+					x = last_line[indexw * 4] + color;
+					*out = x;
+					out += 4;
+					indexw++;
+					collen--;
+				}
+				while (replen > 0)
+				{
+					x = last_line[indexw * 4] + color;
+					*out = x;
+					out += 4;
+					indexw++;
+					replen--;
+				}
+			}
+		}
+		indexh++;
+		last_line = this_line;
+	}
+	return (int) (in - org_in);
+}
+
+/* 4 byte bitmap decompress */
+static RD_BOOL
+bitmap_decompress4(uint8 * output, int width, int height, uint8 * input, int size)
+{
+	int code;
+	int bytes_pro;
+	int total_pro;
+
+	code = CVAL(input);
+	if (code != 0x10)
+	{
+		return False;
+	}
+	total_pro = 1;
+	bytes_pro = process_plane(input, width, height, output + 3, size - total_pro);
+	total_pro += bytes_pro;
+	input += bytes_pro;
+	bytes_pro = process_plane(input, width, height, output + 2, size - total_pro);
+	total_pro += bytes_pro;
+	input += bytes_pro;
+	bytes_pro = process_plane(input, width, height, output + 1, size - total_pro);
+	total_pro += bytes_pro;
+	input += bytes_pro;
+	bytes_pro = process_plane(input, width, height, output + 0, size - total_pro);
+	total_pro += bytes_pro;
+	return size == total_pro;
+}
+
 /* main decompress function */
 RD_BOOL
 bitmap_decompress(uint8 * output, int width, int height, uint8 * input, int size, int Bpp)
@@ -762,6 +896,12 @@ bitmap_decompress(uint8 * output, int width, int height, uint8 * input, int size
 			break;
 		case 3:
 			rv = bitmap_decompress3(output, width, height, input, size);
+			break;
+		case 4:
+			rv = bitmap_decompress4(output, width, height, input, size);
+			break;
+		default:
+			unimpl("Bpp %d\n", Bpp);
 			break;
 	}
 	return rv;

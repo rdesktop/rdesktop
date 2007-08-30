@@ -633,7 +633,8 @@ main(int argc, char *argv[])
 				g_server_depth = strtol(optarg, NULL, 10);
 				if (g_server_depth != 8 &&
 				    g_server_depth != 16 &&
-				    g_server_depth != 15 && g_server_depth != 24)
+				    g_server_depth != 15 && g_server_depth != 24
+				    && g_server_depth != 32)
 				{
 					error("Invalid server colour depth.\n");
 					return 1;

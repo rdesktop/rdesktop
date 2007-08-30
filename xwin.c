@@ -583,6 +583,7 @@ translate_colour(uint32 colour)
 			SPLITCOLOUR16(colour, pc);
 			break;
 		case 24:
+		case 32:
 			SPLITCOLOUR24(colour, pc);
 			break;
 		default:
@@ -1191,6 +1192,13 @@ translate_image(int width, int height, uint8 * data)
 	   is only set for compatible depths, but the RDP depth might've
 	   changed during connection negotiations.
 	 */
+
+	/* todo */
+	if (g_server_depth == 32 && g_depth == 24)
+	{
+		return data;
+	}
+
 	if (g_no_translate_image)
 	{
 		if ((g_depth == 15 && g_server_depth == 15) ||
