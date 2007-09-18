@@ -34,7 +34,12 @@
  * - jared.jennings@eglin.af.mil, 2 Aug 2006
  */
 
+#ifdef HAVE_STDINT_H
 #include <stdint.h>
+#endif
+#ifdef HAVE_INTTYPES_H
+#include <inttypes.h>
+#endif
 
 /* A DWORD when dealing with the smartcard stuff. Could be 32 bits or 64. */
 typedef DWORD MYPCSC_DWORD;
