@@ -700,14 +700,6 @@ is_modifier(uint8 scancode)
 	return False;
 }
 
-static void
-save_remote_modifiers_if_modifier(uint8 scancode)
-{
-	if (!is_modifier(scancode))
-		return;
-
-	saved_remote_modifier_state = remote_modifier_state;
-}
 
 void
 xkeymap_send_keys(uint32 keysym, unsigned int keycode, unsigned int state, uint32 ev_time,
@@ -722,18 +714,10 @@ xkeymap_send_keys(uint32 keysym, unsigned int keycode, unsigned int state, uint3
 		if (tr.scancode == 0)
 			return;
 
-		if (pressed)
-		{
-			save_remote_modifiers(tr.scancode);
-			ensure_remote_modifiers(ev_time, tr);
-			rdp_send_scancode(ev_time, RDP_KEYPRESS, tr.scancode);
-		}
-		else
-		{
-			rdp_send_scancode(ev_time, RDP_KEYRELEASE, tr.scancode);
-			restore_remote_modifiers(ev_time, tr.scancode);
-			save_remote_modifiers_if_modifier(tr.scancode);
-		}
+		save_remote_modifiers(tr.scancode);
+		ensure_remote_modifiers(ev_time, tr);
+		rdp_send_scancode(ev_time, pressed ? RDP_KEYPRESS : RDP_KEYRELEASE, tr.scancode);
+		restore_remote_modifiers(ev_time, tr.scancode);
 		return;
 	}
 

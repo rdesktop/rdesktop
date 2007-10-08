@@ -243,3 +243,17 @@ works:
 11. Press Shift, then press a key modified by shift, the release
     shift, then release the other key.  Do this in a speedy fasion.
     Make sure the shift state is not stuck down.
+
+12. Test all numpad keys, when not using the -N option. 
+
+13. Map a single, un-shifted key (such as F1) to XK_A:
+    xmodmap -e "keycode 67 = A A"
+
+    Perform in Notepad:
+    * Write some text
+    * Press F1
+    * Press b
+    * Release b
+    * Release F1
+
+    Verify that shift is not stuck down, by clicking on the text. 
