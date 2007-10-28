@@ -95,8 +95,6 @@ AC_ARG_ENABLE(smartcard,
 	     	case "$OSTYPE" in
 			darwin*)
 				AC_CHECK_HEADER(PCSC/pcsclite.h, [WITH_SCARD=1], [WITH_SCARD=0])
-				AC_DEFINE(PCSC_OSX)
-				AC_DEFINE(WITH_PCSC120)
 				PCSCLITE_CFLAGS=""
 				PCSCLITE_LIBS="-framework PCSC"
 				;;
@@ -113,6 +111,21 @@ AC_ARG_ENABLE(smartcard,
 			LIBS="$LIBS $PCSCLITE_LIBS"
 			AC_DEFINE(WITH_SCARD)
 		fi
+
+		AC_MSG_CHECKING([for old version of PCSC])
+		AC_TRY_LINK([
+			#include <stdlib.h>
+			#ifdef __APPLE__
+			#include <PCSC/wintypes.h>
+			#include <PCSC/winscard.h>
+			#else
+			#include <winscard.h>
+			#endif
+			],
+			[SCardControl(NULL, NULL, 0, NULL, NULL);],
+			[AC_MSG_RESULT(yes) AC_DEFINE(WITH_PCSC120, 1, [old version of PCSC])],
+			[AC_MSG_RESULT(no)]
+		)
              ])
 
 AC_SUBST(SCARDOBJ)

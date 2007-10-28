@@ -25,7 +25,7 @@
 #include <sys/types.h>
 #include <time.h>
 #ifndef MAKE_PROTO
-#ifdef PCSC_OSX
+#ifdef __APPLE__
 #include <PCSC/wintypes.h>
 #include <PCSC/pcsclite.h>
 #include <PCSC/winscard.h>
