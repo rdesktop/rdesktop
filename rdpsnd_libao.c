@@ -42,7 +42,8 @@ void
 libao_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv)
 {
 	/* We need to be called rather often... */
-	FD_SET(0, wfds);
+	if (o_device != NULL && !rdpsnd_queue_empty())
+		FD_SET(0, wfds);
 }
 
 void
