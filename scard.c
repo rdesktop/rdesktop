@@ -43,6 +43,16 @@
 #define SCARD_AUTOALLOCATE -1
 #define	OUT_STREAM_SIZE	4096
 
+#ifdef B_ENDIAN
+#define swap32(x)	((((x) & 0xff) << 24) | (((x) & 0xff00) << 8) |	\
+			(((x) & 0xff0000) >> 8) | (((x) & 0xff000000) >> 24))
+
+#define	swap16(x)	((((x) & 0xff) << 8) | (((x) & 0xff00) >> 8))
+#else
+#define	swap32(x)	(x)
+#define	swap16(x)	(x)
+#endif
+
 static pthread_mutex_t **scard_mutex = NULL;
 
 static uint32 curDevice = 0, curId = 0, curBytesOut = 0;
@@ -51,7 +61,7 @@ static int nameMapCount = 0;
 
 static pthread_t queueHandler;
 static pthread_mutex_t queueAccess;
-static pthread_mutex_t queueEmpty;
+static pthread_cond_t queueEmpty;
 static pthread_mutex_t hcardAccess;
 
 static PMEM_HANDLE threadListHandle = NULL;
@@ -138,9 +148,9 @@ scard_enum_devices(uint32 * id, char *optarg)
 		return 0;
 	}
 
-	if (0 != pthread_mutex_init(&queueEmpty, NULL))
+	if (0 != pthread_cond_init(&queueEmpty, NULL))
 	{
-		error("scard_enum_devices: Can't initialize queue control mutex\n");
+		error("scard_enum_devices: Can't initialize queue control cv\n");
 		return 0;
 	}
 
@@ -610,7 +620,7 @@ TS_SCardEstablishContext(STREAM in, STREAM out)
 	}
 	else
 	{
-		DEBUG_SCARD(("SCARD: -> Success (context: 0x%08x)\n", (unsigned) hContext));
+		DEBUG_SCARD(("SCARD: -> Success (context: 0x%08lx)\n", hContext));
 	}
 
 	out_uint32_le(out, 0x00000004);
@@ -1053,6 +1063,11 @@ TS_SCardGetStatusChange(STREAM in, STREAM out, RD_BOOL wide)
 		{
 			SERVER_DWORD dataLength;
 
+			/* Do endian swaps... */
+			cur->dwCurrentState = swap32(cur->dwCurrentState);
+			cur->dwEventState = swap32(cur->dwEventState);
+			cur->cbAtr = swap32(cur->cbAtr);
+
 			/* reset Current state hign bytes; */
 			*curState = cur->dwCurrentState;
 			cur->dwCurrentState &= 0x0000FFFF;
@@ -1160,6 +1175,11 @@ TS_SCardGetStatusChange(STREAM in, STREAM out, RD_BOOL wide)
 			     (unsigned) cur->pvUserData, (unsigned) cur->dwCurrentState,
 			     (unsigned) cur->dwEventState));
 
+		/* Do endian swaps... */
+		cur->dwCurrentState = swap32(cur->dwCurrentState);
+		cur->dwEventState = swap32(cur->dwEventState);
+		cur->cbAtr = swap32(cur->cbAtr);
+
 		out_uint8p(out, (void *) ((unsigned char **) cur + 2),
 			   sizeof(SERVER_SCARD_READERSTATE_A) - 2 * sizeof(unsigned char *));
 	}
@@ -1225,6 +1245,8 @@ TS_SCardLocateCardsByATR(STREAM in, STREAM out, RD_BOOL wide)
 
 	for (i = 0, cur = pAtrMasks; i < atrMaskCount; i++, cur++)
 	{
+		cur->cbAtr = swap32(cur->cbAtr);
+
 		DEBUG_SCARD(("SCARD:    ATR: "));
 		for (j = 0; j < pAtrMasks->cbAtr; j++)
 		{
@@ -1251,16 +1273,21 @@ TS_SCardLocateCardsByATR(STREAM in, STREAM out, RD_BOOL wide)
 	ResArray = SC_xmalloc(&lcHandle, readerCount * sizeof(SERVER_SCARD_READERSTATE_A));
 	if (!ResArray)
 		return SC_returnNoMemoryError(&lcHandle, in, out);
-	memcpy(ResArray, rsArray, readerCount * sizeof(SERVER_SCARD_READERSTATE_A));
 
 	for (i = 0, rsCur = rsArray; i < readerCount; i++, rsCur++)
 	{
+		/* Do endian swaps... */
+		rsCur->dwCurrentState = swap32(rsCur->dwCurrentState);
+		rsCur->dwEventState = swap32(rsCur->dwEventState);
+		rsCur->cbAtr = swap32(rsCur->cbAtr);
+
 		inReaderName(&lcHandle, in, (char **) &rsCur->szReader, wide);
 		DEBUG_SCARD(("SCARD:    \"%s\"\n", rsCur->szReader ? rsCur->szReader : "NULL"));
 		DEBUG_SCARD(("SCARD:        user: 0x%08x, state: 0x%08x, event: 0x%08x\n",
 			     (unsigned) rsCur->pvUserData, (unsigned) rsCur->dwCurrentState,
 			     (unsigned) rsCur->dwEventState));
 	}
+	memcpy(ResArray, rsArray, readerCount * sizeof(SERVER_SCARD_READERSTATE_A));
 
 	/* FIXME segfault here. */
 	myRsArray = SC_xmalloc(&lcHandle, readerCount * sizeof(MYPCSC_SCARD_READERSTATE_A));
@@ -1309,8 +1336,13 @@ TS_SCardLocateCardsByATR(STREAM in, STREAM out, RD_BOOL wide)
 	out_uint32_le(out, 0x00084dd8);
 	out_uint32_le(out, readerCount);
 
-	for (i = 0, rsCur = rsArray; i < readerCount; i++, rsCur++)
+	for (i = 0, rsCur = ResArray; i < readerCount; i++, rsCur++)
 	{
+		/* Do endian swaps... */
+		rsCur->dwCurrentState = swap32(rsCur->dwCurrentState);
+		rsCur->dwEventState = swap32(rsCur->dwEventState);
+		rsCur->cbAtr = swap32(rsCur->cbAtr);
+
 		out_uint8p(out, (void *) ((unsigned char **) rsCur + 2),
 			   sizeof(SCARD_READERSTATE_A) - 2 * sizeof(unsigned char *));
 	}
@@ -1388,9 +1420,9 @@ copyIORequest_MyPCSCToServer(MYPCSC_LPSCARD_IO_REQUEST src, SERVER_LPSCARD_IO_RE
 	size_t bytesToCopy = src->cbPciLength - sizeof(MYPCSC_SCARD_IO_REQUEST);
 	srcBytes = ((unsigned char *) src + sizeof(MYPCSC_SCARD_IO_REQUEST));
 	dstBytes = ((unsigned char *) dst + sizeof(SERVER_SCARD_IO_REQUEST));
-	dst->dwProtocol = src->dwProtocol;
-	dst->cbPciLength = src->cbPciLength
-		- sizeof(MYPCSC_SCARD_IO_REQUEST) + sizeof(SERVER_SCARD_IO_REQUEST);
+	dst->dwProtocol = swap32((uint32_t)src->dwProtocol);
+	dst->cbPciLength = swap32((uint32_t)src->cbPciLength
+		- sizeof(MYPCSC_SCARD_IO_REQUEST) + sizeof(SERVER_SCARD_IO_REQUEST));
 	memcpy(dstBytes, srcBytes, bytesToCopy);
 }
 
@@ -1401,8 +1433,8 @@ copyIORequest_ServerToMyPCSC(SERVER_LPSCARD_IO_REQUEST src, MYPCSC_LPSCARD_IO_RE
 	size_t bytesToCopy = src->cbPciLength - sizeof(SERVER_SCARD_IO_REQUEST);
 	srcBytes = ((unsigned char *) src + sizeof(SERVER_SCARD_IO_REQUEST));
 	dstBytes = ((unsigned char *) dst + sizeof(MYPCSC_SCARD_IO_REQUEST));
-	dst->dwProtocol = src->dwProtocol;
-	dst->cbPciLength = src->cbPciLength
+	dst->dwProtocol = swap32(src->dwProtocol);
+	dst->cbPciLength = src->cbPciLength	/* already correct endian */
 		- sizeof(SERVER_SCARD_IO_REQUEST) + sizeof(MYPCSC_SCARD_IO_REQUEST);
 	memcpy(dstBytes, srcBytes, bytesToCopy);
 }
@@ -1563,7 +1595,7 @@ TS_SCardTransmit(STREAM in, STREAM out)
 	{
 		DEBUG_SCARD(("SCARD: -> Success (%d bytes)\n", (int) cbRecvLength));
 #if 0
-		if ((pioRecvPci != NULL) && (pioRecvPci->cbPciLength > 0))
+		if ((pioRecvPci != NULL) && (mypioRecvPci->cbPciLength > 0))
 		{
 			out_uint32_le(out, (DWORD) pioRecvPci);	/* if not NULL, this 4 bytes indicates that pioRecvPci is present */
 		}
@@ -1574,10 +1606,10 @@ TS_SCardTransmit(STREAM in, STREAM out)
 		outBufferStart(out, cbRecvLength);	/* start of recvBuf output */
 
 #if 0
-		if ((pioRecvPci) && (pioRecvPci->cbPciLength > 0))
+		if ((pioRecvPci) && (mypioRecvPci->cbPciLength > 0))
 		{
-			out_uint32_le(out, pioRecvPci->dwProtocol);
-			int len = pioRecvPci->cbPciLength - sizeof(pioRecvPci);
+			out_uint32_le(out, mypioRecvPci->dwProtocol);
+			int len = mypioRecvPci->cbPciLength - sizeof(mypioRecvPci);
 			outBufferStartWithLimit(out, len, 12);
 			outBufferFinishWithLimit(out,
 						 (char *) ((DWORD) pioRecvPci + sizeof(pioRecvPci)),
@@ -1619,6 +1651,15 @@ TS_SCardStatus(STREAM in, STREAM out, RD_BOOL wide)
 		dwReaderLen = SCARD_MAX_MEM;
 	if (dwAtrLen <= 0 || dwAtrLen == SCARD_AUTOALLOCATE || dwAtrLen > SCARD_MAX_MEM)
 		dwAtrLen = SCARD_MAX_MEM;
+
+#if 1
+	/*
+	 * Active client sometimes sends a readerlen *just* big enough
+	 * SCardStatus doesn't seem to like this. This is a workaround,
+	 * aka hack!
+	 */
+	dwReaderLen = 200;
+#endif
 
 	readerName = SC_xmalloc(&lcHandle, dwReaderLen + 2);
 	if (!readerName)
@@ -2382,7 +2423,7 @@ SC_addToQueue(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 		if (!queueFirst)
 			queueFirst = data;
 
-		pthread_mutex_unlock(&queueEmpty);
+		pthread_cond_broadcast(&queueEmpty);
 		pthread_mutex_unlock(&queueAccess);
 	}
 	return data;
@@ -2402,19 +2443,22 @@ static PSCThreadData
 SC_getNextInQueue()
 {
 	PSCThreadData Result = NULL;
+
 	pthread_mutex_lock(&queueAccess);
-	if (queueFirst != NULL)
+
+	while (queueFirst == NULL)
+		pthread_cond_wait(&queueEmpty, &queueAccess);
+
+	Result = queueFirst;
+	queueFirst = queueFirst->next;
+	if (!queueFirst)
 	{
-		Result = queueFirst;
-		queueFirst = queueFirst->next;
-		if (!queueFirst)
-		{
-			queueLast = NULL;
-			pthread_mutex_trylock(&queueEmpty);
-		}
-		Result->next = NULL;
+		queueLast = NULL;
 	}
+	Result->next = NULL;
+
 	pthread_mutex_unlock(&queueAccess);
+
 	return Result;
 }
 
@@ -2432,16 +2476,18 @@ SC_deviceControl(PSCThreadData data)
 static void *
 thread_function(PThreadListElement listElement)
 {
-	if ((listElement != NULL) && (listElement->data != NULL))
+	pthread_mutex_lock(&listElement->busy);
+	while (1)
 	{
-		while (1)
-		{
-			pthread_mutex_lock(&listElement->nodata);
-			SC_deviceControl(listElement->data);
-			listElement->data = NULL;
-			pthread_mutex_unlock(&listElement->busy);
-		}
+		while (listElement->data == NULL)
+			pthread_cond_wait(&listElement->nodata,
+			    &listElement->busy);
+
+		SC_deviceControl(listElement->data);
+		listElement->data = NULL;
 	}
+	pthread_mutex_unlock(&listElement->busy);
+
 	pthread_exit(NULL);
 	return NULL;
 }
@@ -2450,20 +2496,22 @@ static void
 SC_handleRequest(PSCThreadData data)
 {
 	int Result = 0;
-	PThreadListElement cur = threadList, last = threadList;
+	PThreadListElement cur;
 
-	while (cur)
-	{
-		if (0 == pthread_mutex_trylock(&cur->busy))
-		{
+	for (cur = threadList; cur != NULL; cur = cur->next) {
+		if (cur->data == NULL) {
+			pthread_mutex_lock(&cur->busy);
+			/* double check with lock held.... */
+			if (cur->data != NULL) {
+				pthread_mutex_unlock(&cur->busy);
+				continue;
+			}
+			
+			/* Wake up thread */
 			cur->data = data;
-			pthread_mutex_unlock(&cur->nodata);
+			pthread_cond_broadcast(&cur->nodata);
+			pthread_mutex_unlock(&cur->busy);
 			return;
-		}
-		else
-		{
-			last = cur;
-			cur = cur->next;
 		}
 	}
 
@@ -2473,12 +2521,9 @@ SC_handleRequest(PSCThreadData data)
 
 	threadCount++;
 
-	cur->next = NULL;
 	pthread_mutex_init(&cur->busy, NULL);
-	pthread_mutex_init(&cur->nodata, NULL);
-	pthread_mutex_trylock(&cur->busy);
+	pthread_cond_init(&cur->nodata, NULL);
 	cur->data = data;
-	pthread_mutex_unlock(&cur->nodata);
 
 	Result = pthread_create(&cur->thread, NULL, (void *(*)(void *)) thread_function, cur);
 	if (0 != Result)
@@ -2488,10 +2533,8 @@ SC_handleRequest(PSCThreadData data)
 		SC_destroyThreadData(data);
 		data = NULL;
 	}
-	else if (last)
-		last->next = cur;
-	else
-		threadList = cur;
+	cur->next = threadList;
+	threadList = cur;
 }
 
 static void *
@@ -2501,26 +2544,20 @@ queue_handler_function(void *data)
 	while (1)
 	{
 		cur_data = SC_getNextInQueue();
-		if (cur_data != NULL)
+		switch (cur_data->request)
 		{
-			switch (cur_data->request)
-			{
-				case SC_ESTABLISH_CONTEXT:
-				case SC_RELEASE_CONTEXT:
-					{
-						SC_deviceControl(cur_data);
-						break;
-					}
-				default:
-					{
-						SC_handleRequest(cur_data);
-						break;
-					}
-			}
-			cur_data = NULL;
+			case SC_ESTABLISH_CONTEXT:
+			case SC_RELEASE_CONTEXT:
+				{
+					SC_deviceControl(cur_data);
+					break;
+				}
+			default:
+				{
+					SC_handleRequest(cur_data);
+					break;
+				}
 		}
-		else
-			pthread_mutex_lock(&queueEmpty);
 	}
 	return NULL;
 }

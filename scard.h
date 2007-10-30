@@ -168,7 +168,7 @@ typedef struct _TThreadListElement
 {
 	pthread_t thread;
 	pthread_mutex_t busy;
-	pthread_mutex_t nodata;
+	pthread_cond_t nodata;
 	PSCThreadData data;
 	struct _TThreadListElement *next;
 } TThreadListElement, *PThreadListElement;
