@@ -438,7 +438,7 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 		out_uint32_le(s, 0xffffffc4);
 		out_uint32_le(s, 0xfffffffe);
 		out_uint32_le(s, g_rdp5_performanceflags);
-		out_uint32(s, 0);
+		out_uint16(s, 0);
 
 
 	}
