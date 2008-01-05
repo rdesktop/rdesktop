@@ -802,7 +802,7 @@ disk_set_information(RD_NTHANDLE handle, uint32 info_class, STREAM in, STREAM ou
 
 			if (length && (length / 2) < 256)
 			{
-				rdp_in_unistr(in, newname, length);
+				rdp_in_unistr(in, newname, sizeof(newname), length);
 				convert_to_unix_filename(newname);
 			}
 			else

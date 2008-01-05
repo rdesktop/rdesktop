@@ -243,10 +243,10 @@ rdp_out_unistr(STREAM s, char *string, int len)
  * Returns str_len of string
  */
 int
-rdp_in_unistr(STREAM s, char *string, int uni_len)
+rdp_in_unistr(STREAM s, char *string, int str_size, int in_len)
 {
 #ifdef HAVE_ICONV
-	size_t ibl = uni_len, obl = uni_len;
+	size_t ibl = in_len, obl = str_size-1;
 	char *pin = (char *) s->p, *pout = string;
 	static iconv_t iconv_h = (iconv_t) - 1;
 
@@ -260,37 +260,56 @@ rdp_in_unistr(STREAM s, char *string, int uni_len)
 					WINDOWS_CODEPAGE, g_codepage, iconv_h);
 
 				g_iconv_works = False;
-				return rdp_in_unistr(s, string, uni_len);
+				return rdp_in_unistr(s, string, str_size, in_len);
 			}
 		}
 
 		if (iconv(iconv_h, (ICONV_CONST char **) &pin, &ibl, &pout, &obl) == (size_t) - 1)
 		{
-			iconv_close(iconv_h);
-			iconv_h = (iconv_t) - 1;
-			warning("rdp_in_unistr: iconv fail, errno %d\n", errno);
+			if (errno == E2BIG)
+			{
+				warning("server sent an unexpectedly long string, truncating\n");
+			}
+			else
+			{
+				iconv_close(iconv_h);
+				iconv_h = (iconv_t) - 1;
+				warning("rdp_in_unistr: iconv fail, errno %d\n", errno);
 
-			g_iconv_works = False;
-			return rdp_in_unistr(s, string, uni_len);
+				g_iconv_works = False;
+				return rdp_in_unistr(s, string, str_size, in_len);
+			}
 		}
 
 		/* we must update the location of the current STREAM for future reads of s->p */
-		s->p += uni_len;
+		s->p += in_len;
 
+		*pout = 0;
 		return pout - string;
 	}
 	else
 #endif
 	{
 		int i = 0;
+		int len = in_len/2;
+		int rem = 0;
 
-		while (i < uni_len / 2)
+		if (len > str_size-1)
+		{
+			warning("server sent an unexpectedly long string, truncating\n");
+			len = str_size-1;
+			rem = in_len - 2*len;
+		}
+
+		while (i < len)
 		{
 			in_uint8a(s, &string[i++], 1);
 			in_uint8s(s, 1);
 		}
 
-		return i - 1;
+		in_uint8s(s, rem);
+		string[len] = 0;
+		return len;
 	}
 }
 
@@ -1325,32 +1344,44 @@ process_redirect_pdu(STREAM s /*, uint32 * ext_disc_reason */ )
 	in_uint32_le(s, len);
 
 	/* read ip string */
-	rdp_in_unistr(s, g_redirect_server, len);
+	rdp_in_unistr(s, g_redirect_server, sizeof(g_redirect_server), len);
 
 	/* read length of cookie string */
 	in_uint32_le(s, len);
 
 	/* read cookie string (plain ASCII) */
-	in_uint8a(s, g_redirect_cookie, len);
+	if (len > sizeof(g_redirect_cookie)-1)
+	{
+		uint32 rem = len - (sizeof(g_redirect_cookie)-1);
+		len = sizeof(g_redirect_cookie)-1;
+
+		warning("Unexpectedly large redirection cookie\n");
+		in_uint8a(s, g_redirect_cookie, len);
+		in_uint8s(s, rem);
+	}
+	else
+	{
+		in_uint8a(s, g_redirect_cookie, len);
+	}
 	g_redirect_cookie[len] = 0;
 
 	/* read length of username string */
 	in_uint32_le(s, len);
 
 	/* read username string */
-	rdp_in_unistr(s, g_redirect_username, len);
+	rdp_in_unistr(s, g_redirect_username, sizeof(g_redirect_username), len);
 
 	/* read length of domain string */
 	in_uint32_le(s, len);
 
 	/* read domain string */
-	rdp_in_unistr(s, g_redirect_domain, len);
+	rdp_in_unistr(s, g_redirect_domain, sizeof(g_redirect_domain), len);
 
 	/* read length of password string */
 	in_uint32_le(s, len);
 
 	/* read password string */
-	rdp_in_unistr(s, g_redirect_password, len);
+	rdp_in_unistr(s, g_redirect_password, sizeof(g_redirect_password), len);
 
 	g_redirect = True;
 

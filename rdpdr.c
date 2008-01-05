@@ -429,7 +429,7 @@ rdpdr_process_irp(STREAM s)
 
 			if (length && (length / 2) < 256)
 			{
-				rdp_in_unistr(s, filename, length);
+				rdp_in_unistr(s, filename, sizeof(filename), length);
 				convert_to_unix_filename(filename);
 			}
 			else
@@ -622,7 +622,7 @@ rdpdr_process_irp(STREAM s)
 					in_uint8s(s, 0x17);
 					if (length && length < 2 * 255)
 					{
-						rdp_in_unistr(s, filename, length);
+						rdp_in_unistr(s, filename, sizeof(filename), length);
 						convert_to_unix_filename(filename);
 					}
 					else

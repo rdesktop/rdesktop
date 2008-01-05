@@ -111,7 +111,7 @@ void generate_random(uint8 * random);
 void *xmalloc(int size);
 void exit_if_null(void *ptr);
 char *xstrdup(const char *s);
-void *xrealloc(void *oldmem, int size);
+void *xrealloc(void *oldmem, size_t size);
 void xfree(void *mem);
 void error(char *format, ...);
 void warning(char *format, ...);
@@ -137,7 +137,7 @@ RD_BOOL rd_lock_file(int fd, int start, int len);
 void rdp5_process(STREAM s);
 /* rdp.c */
 void rdp_out_unistr(STREAM s, char *string, int len);
-int rdp_in_unistr(STREAM s, char *string, int uni_len);
+int rdp_in_unistr(STREAM s, char *string, int str_len, int in_len);
 void rdp_send_input(uint32 time, uint16 message_type, uint16 device_flags, uint16 param1,
 		    uint16 param2);
 void rdp_send_client_window_status(int status);

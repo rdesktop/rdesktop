@@ -1131,16 +1131,16 @@ xstrdup(const char *s)
 
 /* realloc; exit if out of memory */
 void *
-xrealloc(void *oldmem, int size)
+xrealloc(void *oldmem, size_t size)
 {
 	void *mem;
 
-	if (size < 1)
+	if (size == 0)
 		size = 1;
 	mem = realloc(oldmem, size);
 	if (mem == NULL)
 	{
-		error("xrealloc %d\n", size);
+		error("xrealloc %ld\n", size);
 		exit(1);
 	}
 	return mem;
