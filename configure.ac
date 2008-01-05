@@ -12,7 +12,19 @@ AC_LANG_C
 AC_HEADER_STDC
 AC_C_BIGENDIAN([AC_DEFINE(B_ENDIAN)], [AC_DEFINE(L_ENDIAN)])
 AC_PATH_XTRA
-
+if test "$no_x" = "yes"; then
+    echo
+    echo "ERROR: Could not find X Window System headers/libraries."
+    if test -f /etc/debian_version; then
+       echo "Probably you need to install the libx11-dev package."
+    elif test -f /etc/redhat-release; then
+       echo "Probably you need to install the libX11-devel package."
+    fi
+    echo "To specify paths manually, use the options --x-includes and --x-libraries."
+    echo
+    exit 1
+fi
+    
 AC_PATH_PROG(PKG_CONFIG, pkg-config)
 
 AC_SEARCH_LIBS(socket, socket)
@@ -67,8 +79,13 @@ AC_ARG_WITH(openssl,
 if test -z "$ssldir"; then
     AC_MSG_RESULT([Not found])
     echo
-    echo "Couldn't find your OpenSSL library installation dir"
-    echo "Use --with-openssl option to fix this problem"
+    echo "ERROR: Could not find OpenSSL headers/libraries."
+    if test -f /etc/debian_version; then
+       echo "Probably you need to install the libssl-dev package."
+    elif test -f /etc/redhat-release; then
+       echo "Probably you need to install the openssl-devel package."
+    fi
+    echo "To specify a path manually, use the --with-openssl option."
     echo
     exit 1
 fi
