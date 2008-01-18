@@ -376,7 +376,8 @@ rdpsnd_process_rec_negotiate(STREAM in)
 			in_uint8a(in, format->cb, readcnt);
 			in_uint8s(in, discardcnt);
 
-			if (current_driver && current_driver->wave_in_format_supported(format))
+			if (current_driver && current_driver->wave_in_format_supported
+			    && current_driver->wave_in_format_supported(format))
 			{
 				rec_format_count++;
 				if (rec_format_count == MAX_FORMATS)
