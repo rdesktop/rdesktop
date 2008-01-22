@@ -4,6 +4,7 @@
    Copyright (C) Matthew Chapman 2003-2007
    Copyright (C) GuoJunBo guojunbo@ict.ac.cn 2003
    Copyright (C) Michael Gernoth mike@zerfleddert.de 2003-2007
+   Copyright 2007 Pierre Ossman <ossman@cendio.se> for Cendio AB
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -33,15 +34,28 @@
 #endif
 
 #define DEFAULTDEVICE	"/dev/audio"
+#define MAX_LEN		512
 
 static int dsp_fd = -1;
-static RD_BOOL dsp_busy;
+static int dsp_mode;
+static int dsp_refs;
 
-static RD_BOOL g_reopened;
-static short g_samplewidth;
+static RD_BOOL dsp_configured;
+static RD_BOOL dsp_broken;
+
+static RD_BOOL dsp_out;
+static RD_BOOL dsp_in;
+
+static int stereo;
+static int format;
+static uint32 snd_rate;
+static short samplewidth;
 static char *dsp_dev;
 
+static uint_t written_samples;
+
 void sun_play(void);
+void sun_record(void);
 
 void
 sun_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv)
@@ -49,10 +63,10 @@ sun_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv)
 	if (dsp_fd == -1)
 		return;
 
-	if (rdpsnd_queue_empty())
-		return;
-
-	FD_SET(dsp_fd, wfds);
+	if (dsp_out && !rdpsnd_queue_empty())
+		FD_SET(dsp_fd, wfds);
+	if (dsp_in)
+		FD_SET(dsp_fd, rfds);
 	if (dsp_fd > *n)
 		*n = dsp_fd;
 }
@@ -62,21 +76,61 @@ sun_check_fds(fd_set * rfds, fd_set * wfds)
 {
 	if (FD_ISSET(dsp_fd, wfds))
 		sun_play();
+	if (FD_ISSET(dsp_fd, rfds))
+		sun_record();
 }
 
 RD_BOOL
-sun_open(void)
+sun_open(int mode)
 {
-	if ((dsp_fd = open(dsp_dev, O_WRONLY | O_NONBLOCK)) == -1)
+	audio_info_t info;
+
+	if (dsp_fd != -1)
 	{
-		perror(dsp_dev);
+		dsp_refs++;
+
+		if (dsp_mode == O_RDWR)
+			return True;
+
+		if (dsp_mode == mode)
+			return True;
+
+		dsp_refs--;
 		return False;
 	}
 
-	/* Non-blocking so that user interface is responsive */
-	fcntl(dsp_fd, F_SETFL, fcntl(dsp_fd, F_GETFL) | O_NONBLOCK);
+	dsp_configured = False;
+	dsp_broken = False;
 
-	g_reopened = True;
+	written_samples = 0;
+
+	dsp_mode = O_RDWR;
+	dsp_fd = open(dsp_dev, O_RDWR | O_NONBLOCK);
+	if (dsp_fd != -1)
+	{
+		AUDIO_INITINFO(&info);
+
+		if ((ioctl(dsp_fd, AUDIO_GETINFO, &info) == -1)
+		    || !(info.hw_features & AUDIO_HWFEATURE_DUPLEX))
+		{
+			close(dsp_fd);
+			dsp_fd = -1;
+		}
+	}
+
+	if (dsp_fd == -1)
+	{
+		dsp_mode = mode;
+
+		dsp_fd = open(dsp_dev, dsp_mode | O_NONBLOCK);
+		if (dsp_fd == -1)
+		{
+			perror(dsp_dev);
+			return False;
+		}
+	}
+
+	dsp_refs++;
 
 	return True;
 }
@@ -84,10 +138,29 @@ sun_open(void)
 void
 sun_close(void)
 {
-	/* Ack all remaining packets */
-	while (!rdpsnd_queue_empty())
-		rdpsnd_queue_next(0);
+	dsp_refs--;
 
+	if (dsp_refs != 0)
+		return;
+
+	close(dsp_fd);
+	dsp_fd = -1;
+}
+
+RD_BOOL
+sun_open_out(void)
+{
+	if (!sun_open(O_WRONLY))
+		return False;
+
+	dsp_out = True;
+
+	return True;
+}
+
+void
+sun_close_out(void)
+{
 #if defined I_FLUSH && defined FLUSHW
 	/* Flush the audiobuffer */
 	ioctl(dsp_fd, I_FLUSH, FLUSHW);
@@ -95,8 +168,33 @@ sun_close(void)
 #if defined AUDIO_FLUSH
 	ioctl(dsp_fd, AUDIO_FLUSH, NULL);
 #endif
-	close(dsp_fd);
-	dsp_fd = -1;
+
+	sun_close();
+
+	/* Ack all remaining packets */
+	while (!rdpsnd_queue_empty())
+		rdpsnd_queue_next(0);
+
+	dsp_out = False;
+}
+
+RD_BOOL
+sun_open_in(void)
+{
+	if (!sun_open(O_RDONLY))
+		return False;
+
+	dsp_in = True;
+
+	return True;
+}
+
+void
+sun_close_in(void)
+{
+	sun_close();
+
+	dsp_in = False;
 }
 
 RD_BOOL
@@ -120,6 +218,21 @@ sun_set_format(RD_WAVEFORMATEX * pwfx)
 	ioctl(dsp_fd, AUDIO_DRAIN, 0);
 	AUDIO_INITINFO(&info);
 
+	if (dsp_configured)
+	{
+		if ((pwfx->wBitsPerSample == 8) && (format != AUDIO_ENCODING_LINEAR8))
+			return False;
+		if ((pwfx->wBitsPerSample == 16) && (format != AUDIO_ENCODING_LINEAR))
+			return False;
+
+		if ((pwfx->nChannels == 2) != !!stereo)
+			return False;
+
+		if (pwfx->nSamplesPerSec != snd_rate)
+			return False;
+
+		return True;
+	}
 
 	if (pwfx->wBitsPerSample == 8)
 	{
@@ -130,7 +243,7 @@ sun_set_format(RD_WAVEFORMATEX * pwfx)
 		info.play.encoding = AUDIO_ENCODING_LINEAR;
 	}
 
-	g_samplewidth = pwfx->wBitsPerSample / 8;
+	samplewidth = pwfx->wBitsPerSample / 8;
 
 	if (pwfx->nChannels == 1)
 	{
@@ -139,15 +252,23 @@ sun_set_format(RD_WAVEFORMATEX * pwfx)
 	else if (pwfx->nChannels == 2)
 	{
 		info.play.channels = 2;
-		g_samplewidth *= 2;
+		samplewidth *= 2;
 	}
+
+	snd_rate = pwfx->nSamplesPerSec;
 
 	info.play.sample_rate = pwfx->nSamplesPerSec;
 	info.play.precision = pwfx->wBitsPerSample;
 	info.play.samples = 0;
 	info.play.eof = 0;
 	info.play.error = 0;
-	g_reopened = True;
+
+	info.record.sample_rate = info.play.sample_rate;
+	info.record.channels = info.play.channels;
+	info.record.precision = info.play.precision;
+	info.record.encoding = info.play.encoding;
+	info.record.samples = 0;
+	info.record.error = 0;
 
 	if (ioctl(dsp_fd, AUDIO_SETINFO, &info) == -1)
 	{
@@ -155,6 +276,8 @@ sun_set_format(RD_WAVEFORMATEX * pwfx)
 		sun_close();
 		return False;
 	}
+
+	dsp_configured = True;
 
 	return True;
 }
@@ -195,73 +318,68 @@ void
 sun_play(void)
 {
 	struct audio_packet *packet;
-	audio_info_t info;
 	ssize_t len;
-	unsigned int i;
 	STREAM out;
-	static RD_BOOL sentcompletion = True;
-	static uint32 samplecnt = 0;
-	static uint32 numsamples;
 
-	while (1)
+	/* We shouldn't be called if the queue is empty, but still */
+	if (rdpsnd_queue_empty())
+		return;
+
+	packet = rdpsnd_queue_current_packet();
+	out = &packet->s;
+
+	len = out->end - out->p;
+
+	len = write(dsp_fd, out->p, (len > MAX_LEN) ? MAX_LEN : len);
+	if (len == -1)
 	{
-		if (g_reopened)
+		if (errno != EWOULDBLOCK)
 		{
-			/* Device was just (re)openend */
-			samplecnt = 0;
-			sentcompletion = True;
-			g_reopened = False;
+			if (!dsp_broken)
+				perror("RDPSND: write()");
+			dsp_broken = True;
+			rdpsnd_queue_next(0);
 		}
-
-		if (rdpsnd_queue_empty())
-			return;
-
-		packet = rdpsnd_queue_current_packet();
-		out = &packet->s;
-
-		if (sentcompletion)
-		{
-			sentcompletion = False;
-			numsamples = (out->end - out->p) / g_samplewidth;
-		}
-
-		len = 0;
-
-		if (out->end != out->p)
-		{
-			len = write(dsp_fd, out->p, out->end - out->p);
-			if (len == -1)
-			{
-				if (errno != EWOULDBLOCK)
-					perror("write audio");
-				return;
-			}
-		}
-
-		out->p += len;
-		if (out->p == out->end)
-		{
-			if (ioctl(dsp_fd, AUDIO_GETINFO, &info) == -1)
-			{
-				perror("AUDIO_GETINFO");
-				return;
-			}
-
-			/* Ack the packet, if we have played at least 70% */
-			if (info.play.samples >= samplecnt + ((numsamples * 7) / 10))
-			{
-				samplecnt += numsamples;
-				/* We need to add 50 to tell windows that time has passed while
-				 * playing this packet */
-				rdpsnd_queue_next(50);
-				sentcompletion = True;
-			}
-			else
-			{
-				return;
-			}
-		}
+		return;
 	}
+
+	written_samples += len / (samplewidth * (stereo ? 2 : 1));
+
+	dsp_broken = False;
+
+	out->p += len;
+
+	if (out->p == out->end)
+	{
+		audio_info_t info;
+		uint_t delay_samples;
+		unsigned long delay_us;
+
+		if (ioctl(dsp_fd, AUDIO_GETINFO, &info) != -1)
+			delay_samples = written_samples - info.play.samples;
+		else
+			delay_samples = out->size / (samplewidth * (stereo ? 2 : 1));
+
+		delay_us = delay_samples * (1000000 / snd_rate);
+		rdpsnd_queue_next(delay_us);
+	}
+}
+
+void
+sun_record(void)
+{
+	char buffer[32768];
+	int len;
+
+	len = read(dsp_fd, buffer, sizeof(buffer));
+	if (len == -1)
+	{
+		if (errno != EWOULDBLOCK)
+			perror("read audio");
+		return;
+	}
+
+	rdpsnd_record(buffer, len);
 }
 
 struct audio_driver *
@@ -278,11 +396,17 @@ sun_register(char *options)
 	sun_driver.add_fds = sun_add_fds;
 	sun_driver.check_fds = sun_check_fds;
 
-	sun_driver.wave_out_open = sun_open;
-	sun_driver.wave_out_close = sun_close;
+	sun_driver.wave_out_open = sun_open_out;
+	sun_driver.wave_out_close = sun_close_out;
 	sun_driver.wave_out_format_supported = sun_format_supported;
 	sun_driver.wave_out_set_format = sun_set_format;
 	sun_driver.wave_out_volume = sun_volume;
+
+	sun_driver.wave_in_open = sun_open_in;
+	sun_driver.wave_in_close = sun_close_in;
+	sun_driver.wave_in_format_supported = sun_format_supported;
+	sun_driver.wave_in_set_format = sun_set_format;
+	sun_driver.wave_in_volume = NULL;	/* FIXME */
 
 	sun_driver.need_byteswap_on_be = 1;
 	sun_driver.need_resampling = 0;
