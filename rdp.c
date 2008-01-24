@@ -246,7 +246,7 @@ int
 rdp_in_unistr(STREAM s, char *string, int str_size, int in_len)
 {
 #ifdef HAVE_ICONV
-	size_t ibl = in_len, obl = str_size-1;
+	size_t ibl = in_len, obl = str_size - 1;
 	char *pin = (char *) s->p, *pout = string;
 	static iconv_t iconv_h = (iconv_t) - 1;
 
@@ -291,14 +291,14 @@ rdp_in_unistr(STREAM s, char *string, int str_size, int in_len)
 #endif
 	{
 		int i = 0;
-		int len = in_len/2;
+		int len = in_len / 2;
 		int rem = 0;
 
-		if (len > str_size-1)
+		if (len > str_size - 1)
 		{
 			warning("server sent an unexpectedly long string, truncating\n");
-			len = str_size-1;
-			rem = in_len - 2*len;
+			len = str_size - 1;
+			rem = in_len - 2 * len;
 		}
 
 		while (i < len)
@@ -1350,10 +1350,10 @@ process_redirect_pdu(STREAM s /*, uint32 * ext_disc_reason */ )
 	in_uint32_le(s, len);
 
 	/* read cookie string (plain ASCII) */
-	if (len > sizeof(g_redirect_cookie)-1)
+	if (len > sizeof(g_redirect_cookie) - 1)
 	{
-		uint32 rem = len - (sizeof(g_redirect_cookie)-1);
-		len = sizeof(g_redirect_cookie)-1;
+		uint32 rem = len - (sizeof(g_redirect_cookie) - 1);
+		len = sizeof(g_redirect_cookie) - 1;
 
 		warning("Unexpectedly large redirection cookie\n");
 		in_uint8a(s, g_redirect_cookie, len);

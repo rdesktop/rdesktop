@@ -1420,9 +1420,10 @@ copyIORequest_MyPCSCToServer(MYPCSC_LPSCARD_IO_REQUEST src, SERVER_LPSCARD_IO_RE
 	size_t bytesToCopy = src->cbPciLength - sizeof(MYPCSC_SCARD_IO_REQUEST);
 	srcBytes = ((unsigned char *) src + sizeof(MYPCSC_SCARD_IO_REQUEST));
 	dstBytes = ((unsigned char *) dst + sizeof(SERVER_SCARD_IO_REQUEST));
-	dst->dwProtocol = swap32((uint32_t)src->dwProtocol);
-	dst->cbPciLength = swap32((uint32_t)src->cbPciLength
-		- sizeof(MYPCSC_SCARD_IO_REQUEST) + sizeof(SERVER_SCARD_IO_REQUEST));
+	dst->dwProtocol = swap32((uint32_t) src->dwProtocol);
+	dst->cbPciLength = swap32((uint32_t) src->cbPciLength
+				  - sizeof(MYPCSC_SCARD_IO_REQUEST) +
+				  sizeof(SERVER_SCARD_IO_REQUEST));
 	memcpy(dstBytes, srcBytes, bytesToCopy);
 }
 
@@ -2480,8 +2481,7 @@ thread_function(PThreadListElement listElement)
 	while (1)
 	{
 		while (listElement->data == NULL)
-			pthread_cond_wait(&listElement->nodata,
-			    &listElement->busy);
+			pthread_cond_wait(&listElement->nodata, &listElement->busy);
 
 		SC_deviceControl(listElement->data);
 		listElement->data = NULL;
@@ -2498,15 +2498,18 @@ SC_handleRequest(PSCThreadData data)
 	int Result = 0;
 	PThreadListElement cur;
 
-	for (cur = threadList; cur != NULL; cur = cur->next) {
-		if (cur->data == NULL) {
+	for (cur = threadList; cur != NULL; cur = cur->next)
+	{
+		if (cur->data == NULL)
+		{
 			pthread_mutex_lock(&cur->busy);
 			/* double check with lock held.... */
-			if (cur->data != NULL) {
+			if (cur->data != NULL)
+			{
 				pthread_mutex_unlock(&cur->busy);
 				continue;
 			}
-			
+
 			/* Wake up thread */
 			cur->data = data;
 			pthread_cond_broadcast(&cur->nodata);
