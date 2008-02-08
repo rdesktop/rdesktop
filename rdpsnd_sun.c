@@ -307,23 +307,21 @@ sun_set_format(RD_WAVEFORMATEX * pwfx)
 	sun_pause();
 
 	if (pwfx->wBitsPerSample == 8)
-	{
-		info.play.encoding = AUDIO_ENCODING_LINEAR8;
-	}
+		format = AUDIO_ENCODING_LINEAR8;
 	else if (pwfx->wBitsPerSample == 16)
-	{
-		info.play.encoding = AUDIO_ENCODING_LINEAR;
-	}
+		format = AUDIO_ENCODING_LINEAR;
 
 	samplewidth = pwfx->wBitsPerSample / 8;
 
 	if (pwfx->nChannels == 1)
 	{
 		info.play.channels = 1;
+		stereo = 0;
 	}
 	else if (pwfx->nChannels == 2)
 	{
 		info.play.channels = 2;
+		stereo = 1;
 		samplewidth *= 2;
 	}
 
@@ -331,6 +329,7 @@ sun_set_format(RD_WAVEFORMATEX * pwfx)
 
 	info.play.sample_rate = pwfx->nSamplesPerSec;
 	info.play.precision = pwfx->wBitsPerSample;
+	info.play.encoding = format;
 	info.play.samples = 0;
 	info.play.eof = 0;
 	info.play.error = 0;
