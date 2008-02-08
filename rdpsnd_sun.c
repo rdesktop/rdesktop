@@ -57,6 +57,41 @@ static uint_t written_samples;
 void sun_play(void);
 void sun_record(void);
 
+static int
+sun_pause(void)
+{
+	audio_info_t info;
+
+	AUDIO_INITINFO(&info);
+
+	info.record.pause = 1;
+
+	if (ioctl(dsp_fd, AUDIO_SETINFO, &info) == -1)
+		return -1;
+
+#if defined I_FLUSH && defined FLUSHR
+	if (ioctl(dsp_fd, I_FLUSH, FLUSHR) == -1)
+		return -1;
+#endif
+
+	return 0;
+}
+
+static int
+sun_resume(void)
+{
+	audio_info_t info;
+
+	AUDIO_INITINFO(&info);
+
+	info.record.pause = 0;
+
+	if (ioctl(dsp_fd, AUDIO_SETINFO, &info) == -1)
+		return -1;
+
+	return 0;
+}
+
 void
 sun_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv)
 {
@@ -130,6 +165,19 @@ sun_open(int mode)
 		}
 	}
 
+	/*
+	 * Pause recording until we actually start using it.
+	 */
+	if (dsp_mode != O_WRONLY)
+	{
+		if (sun_pause() == -1)
+		{
+			close(dsp_fd);
+			dsp_fd = -1;
+			return False;
+		}
+	}
+
 	dsp_refs++;
 
 	return True;
@@ -181,8 +229,25 @@ sun_close_out(void)
 RD_BOOL
 sun_open_in(void)
 {
+#if ! (defined I_FLUSH && defined FLUSHR)
+	/*
+	 * It is not possible to reliably use the recording without
+	 * flush operations.
+	 */
+	return False;
+#endif
+
 	if (!sun_open(O_RDONLY))
 		return False;
+
+	/*
+	 * Unpause the stream now that we have someone using it.
+	 */
+	if (sun_resume() == -1)
+	{
+		sun_close();
+		return False;
+	}
 
 	dsp_in = True;
 
@@ -192,6 +257,11 @@ sun_open_in(void)
 void
 sun_close_in(void)
 {
+	/*
+	 * Repause the stream when the user goes away.
+	 */
+	sun_pause();
+
 	sun_close();
 
 	dsp_in = False;
@@ -233,6 +303,8 @@ sun_set_format(RD_WAVEFORMATEX * pwfx)
 
 		return True;
 	}
+
+	sun_pause();
 
 	if (pwfx->wBitsPerSample == 8)
 	{
@@ -278,6 +350,9 @@ sun_set_format(RD_WAVEFORMATEX * pwfx)
 	}
 
 	dsp_configured = True;
+
+	if (dsp_in)
+		sun_resume();
 
 	return True;
 }
