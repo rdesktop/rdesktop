@@ -119,6 +119,9 @@ rdpsnd_dsp_swapbytes(unsigned char *buffer, unsigned int size, RD_WAVEFORMATEX *
 	if (format->wBitsPerSample == 8)
 		return;
 
+	if (size & 0x1)
+		warning("badly aligned sound data");
+
 	for (i = 0; i < (int) size; i += 2)
 	{
 		swap = *(buffer + i);
