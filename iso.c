@@ -98,6 +98,11 @@ iso_recv_msg(uint8 * code, uint8 * rdpver)
 			next_be(s, length);
 		}
 	}
+	if (length < 4)
+	{
+		error("Bad packet header\n");
+		return NULL;
+	}
 	s = tcp_recv(s, length - 4);
 	if (s == NULL)
 		return NULL;
