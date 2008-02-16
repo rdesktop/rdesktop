@@ -853,7 +853,7 @@ disk_set_information(RD_NTHANDLE handle, uint32 info_class, STREAM in, STREAM ou
 			in_uint32_le(in, length);	/* file size */
 
 			/* prevents start of writing if not enough space left on device */
-			if (STATFS_FN(g_rdpdr_device[pfinfo->device_id].local_path, &stat_fs) == 0)
+			if (STATFS_FN(pfinfo->path, &stat_fs) == 0)
 				if (stat_fs.f_bfree * stat_fs.f_bsize < length)
 					return RD_STATUS_DISK_FULL;
 
