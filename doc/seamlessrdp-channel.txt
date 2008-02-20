@@ -323,3 +323,51 @@ Syntax:
 
 Changes which window that will recieve the keyboard events. Note that this
 might cause the window to change z order.
+
+
+Test Cases
+==========
+
+* Start Wordpad. Verify taskbar icon. 
+
+* Resize Wordpad main window. 
+
+* Open "Open Dialog". Resize, bigger than main window. Verify no
+  additional task bar icons.
+
+* Open File Format box dropdown. Verify that it correctly appears
+  outside main window. Verify no additional task bar icons. 
+
+* Abort Open. Select About Wordpad. Verify no additional task bar icons. 
+
+* Open Wordpad Help. Verify task bar icon. 
+
+* Switch between Help and Wordpad window using a X11 taskbar. 
+
+* In Wordpad, right click at the bottom of the document, and verify
+  that the menu correctly appears outside the main window. Verify no
+  additional task bar icons.
+
+* Click on the New icon. Select Text Document. Verify that the taskbar
+  icon is updated.
+
+* Write something. Try the Find dialog (Ctrl-F). Move it outside the
+  main window. Verify no task bar icons. 
+
+* Make Wordpad very small and try to use the menus. 
+
+
+* Start Internet Explorer. 
+
+* Minimize IE using the IE button. Restore. 
+
+* Minimize IE using the taskbar. Restore. 
+
+* Maximize IE using the IE button. Restore. 
+
+* Maximize IE using the taskbar. Restore. 
+
+* Open an additional IE window and verify you can switch between them. 
+
+
+* Try the menus in Microsoft Office XP, which uses shaded menus. 
