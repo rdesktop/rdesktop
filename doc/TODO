@@ -76,8 +76,6 @@
 
   * Systray support. 
 
-  * Support for transferring the application taskbar icon.
-
   * Better support for non-EWMH window managers. 
 
   * Support for non-rectangular windows. 
@@ -95,3 +93,7 @@
 
   * When enumerating windows, make sure to send info about windows
     that are transient for other windows after the referred window.
+
+  * We support topmost windows at creating time, but we do not detect
+    when this property is added or removed. This can be verified with
+    task manager, which has an "Always on top" option. 
