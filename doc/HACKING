@@ -25,7 +25,10 @@ rdesktop.c
 
 Compiler support
 ----------------
-The source code should be compatible with ANSI C89. 
+
+The source code should be compatible with ANSI C89. One exception is
+the SeamlessRDP ServerEXE and ClientDLL, which should be compatible
+with ANSI C99.
 
 
 RDP resources
