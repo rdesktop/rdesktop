@@ -371,3 +371,17 @@ Test Cases
 
 
 * Try the menus in Microsoft Office XP, which uses shaded menus. 
+
+
+* Test transient windows: Run a program (ie Excel) seamlessly and open
+  a modal dialog (ie Open). Move the dialog so it partially overlaps
+  its parent window. Cover both windows with a third (ie a maximized
+  xterm). Click on Excel's taskbar entry to bring it to the front.
+
+
+* Test topmost windows: Run Task Manager seamlessly
+  (...\seamlessrdpshell.exe taskmgr). From Task Manager's File menu,
+  select 'New Task (Run)' and run Notepad. Move Notepad so it
+  partially overlaps Task Manager. Cover both windows with a native
+  window (ie a maximized xterm). Click on Notepad's taskbar entry to
+  bring it to the front.
