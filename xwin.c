@@ -3452,6 +3452,12 @@ ui_seamless_create_window(unsigned long id, unsigned long group, unsigned long p
 		ewmh_set_window_modal(wnd);
 	}
 
+	if (flags & SEAMLESSRDP_CREATE_TOPMOST)
+	{
+		/* Make window always-on-top */
+		ewmh_set_window_above(wnd);
+	}
+
 	/* FIXME: Support for Input Context:s */
 
 	get_input_mask(&input_mask);
@@ -3706,6 +3712,12 @@ ui_seamless_restack_window(unsigned long id, unsigned long behind, unsigned long
 	}
 
 	sw_restack_window(sw, behind);
+
+	if (flags & SEAMLESSRDP_CREATE_TOPMOST)
+	{
+		/* Make window always-on-top */
+		ewmh_set_window_above(sw->wnd);
+	}
 }
 
 

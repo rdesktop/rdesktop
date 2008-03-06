@@ -11,3 +11,4 @@ int ewmh_set_window_popup(Window wnd);
 int ewmh_set_window_modal(Window wnd);
 void ewmh_set_icon(Window wnd, int width, int height, const char *rgba_data);
 void ewmh_del_icon(Window wnd, int width, int height);
+int ewmh_set_window_above(Window wnd);
