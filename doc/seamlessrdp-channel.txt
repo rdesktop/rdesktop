@@ -385,3 +385,10 @@ Test Cases
   partially overlaps Task Manager. Cover both windows with a native
   window (ie a maximized xterm). Click on Notepad's taskbar entry to
   bring it to the front.
+
+
+* Test X11 window close: Start Notepad and open the Help
+  Browser. Close the Help Browser window on the X11 side using your
+  window manager. Verify that rdesktop still runs and that the Notepad
+  application window still exists. (currently fails, see patch
+  1715358)
