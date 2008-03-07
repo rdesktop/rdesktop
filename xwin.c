@@ -2028,8 +2028,16 @@ xwin_process_events(void)
 				/* the window manager told us to quit */
 				if ((xevent.xclient.message_type == g_protocol_atom)
 				    && ((Atom) xevent.xclient.data.l[0] == g_kill_atom))
-					/* Quit */
-					return 0;
+				{
+					/* When killing a seamless window, close the window on the
+					   serverside instead of terminating rdesktop */
+					sw = sw_get_window_by_wnd(xevent.xclient.window);
+					if (!sw)
+						/* Otherwise, quit */
+						return 0;
+					/* send seamless destroy process message */
+					seamless_send_destroy(sw->id);
+				}
 				break;
 
 			case KeyPress:
@@ -3465,9 +3473,7 @@ ui_seamless_create_window(unsigned long id, unsigned long group, unsigned long p
 
 	XSelectInput(g_display, wnd, input_mask);
 
-	/* handle the WM_DELETE_WINDOW protocol. FIXME: When killing a
-	   seamless window, we could try to close the window on the
-	   serverside, instead of terminating rdesktop */
+	/* handle the WM_DELETE_WINDOW protocol. */
 	XSetWMProtocols(g_display, wnd, &g_kill_atom, 1);
 
 	sw = xmalloc(sizeof(seamless_window));

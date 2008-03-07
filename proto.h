@@ -309,6 +309,7 @@ unsigned int seamless_send_position(unsigned long id, int x, int y, int width, i
 void seamless_select_timeout(struct timeval *tv);
 unsigned int seamless_send_zchange(unsigned long id, unsigned long below, unsigned long flags);
 unsigned int seamless_send_focus(unsigned long id, unsigned long flags);
+unsigned int seamless_send_destroy(unsigned long id);
 /* scard.c */
 void scard_lock(int lock);
 void scard_unlock(int lock);

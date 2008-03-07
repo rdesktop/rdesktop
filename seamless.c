@@ -509,3 +509,10 @@ seamless_send_focus(unsigned long id, unsigned long flags)
 
 	return seamless_send("FOCUS", "0x%08lx,0x%lx", id, flags);
 }
+
+/* Send client-to-server message to destroy process on the server. */
+unsigned int
+seamless_send_destroy(unsigned long id)
+{
+	return seamless_send("DESTROY", "0x%08lx", id);
+}

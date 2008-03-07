@@ -324,6 +324,11 @@ Syntax:
 Changes which window that will recieve the keyboard events. Note that this
 might cause the window to change z order.
 
+DESTROY
+-------
+
+Identical to the command sent from server to client.
+
 
 Test Cases
 ==========
@@ -390,5 +395,4 @@ Test Cases
 * Test X11 window close: Start Notepad and open the Help
   Browser. Close the Help Browser window on the X11 side using your
   window manager. Verify that rdesktop still runs and that the Notepad
-  application window still exists. (currently fails, see patch
-  1715358)
+  application window still exists.
