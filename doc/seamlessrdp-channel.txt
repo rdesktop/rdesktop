@@ -338,12 +338,13 @@ Test Cases
 * Resize Wordpad main window. 
 
 * Open "Open Dialog". Resize, bigger than main window. Verify no
-  additional task bar icons.
+  additional task bar icons. Verify that the Open dialog is focused.
 
 * Open File Format box dropdown. Verify that it correctly appears
   outside main window. Verify no additional task bar icons. 
 
-* Abort Open. Select About Wordpad. Verify no additional task bar icons. 
+* Abort Open. Select About Wordpad. Verify no additional task bar
+  icons. Verify that the About dialog is focused. 
 
 * Open Wordpad Help. Verify task bar icon. 
 
