@@ -400,3 +400,9 @@ Test Cases
   Browser. Close the Help Browser window on the X11 side using your
   window manager. Verify that rdesktop still runs and that the Notepad
   application window still exists.
+
+
+* Test window restacking: Run Mozilla Seamonkey and open two separate
+  windows. From the first one, select the other one from the windows
+  menu. Verify that the other window is brought to the front. Test
+  this using both the mouse and the keyboard.
