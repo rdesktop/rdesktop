@@ -129,7 +129,10 @@ Syntax:
 	ZCHANGE,<SERIAL>,<ID>,<BEHIND>,<FLAGS>
 
 The window with the id ID is behind the window with the id BEHIND. If
-BEHIND is 0, then this window should be brought to the front. 
+BEHIND is 0, then this window should be brought to the front. The ID
+window is the window to be moved, while the BEHIND window is only used
+as a reference.
+
 
 STATE
 -----
