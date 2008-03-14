@@ -3702,13 +3702,12 @@ ui_seamless_restack_window(unsigned long id, unsigned long behind, unsigned long
 		sw_behind = sw_get_window_by_id(behind);
 		if (!sw_behind)
 		{
-			warning("ui_seamless_restack_window: No information for window 0x%lx\n",
-				behind);
+			warning("ui_seamless_restack_window: No information for behind window 0x%lx\n", behind);
 			return;
 		}
 
-		wnds[1] = sw_behind->wnd;
-		wnds[0] = sw->wnd;
+		wnds[1] = sw->wnd;
+		wnds[0] = sw_behind->wnd;
 
 		XRestackWindows(g_display, wnds, 2);
 	}
