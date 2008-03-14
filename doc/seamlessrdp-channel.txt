@@ -336,6 +336,11 @@ Identical to the command sent from server to client.
 Test Cases
 ==========
 
+A list of test cases is found below. These should be verified before
+commit, ideally with different window managers (KWin, Metacity,
+Blackbox, IceWM etc).
+
+
 * Start Wordpad. Verify taskbar icon. 
 
 * Resize Wordpad main window. 
