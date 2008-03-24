@@ -338,8 +338,7 @@ Test Cases
 
 A list of test cases is found below. These should be verified before
 commit, ideally with different window managers (KWin, Metacity,
-Blackbox, IceWM etc).
-
+Blackbox, IceWM etc). You can also test without a window manager. 
 
 * Start Wordpad. Verify taskbar icon. 
 
@@ -353,6 +352,11 @@ Blackbox, IceWM etc).
 
 * Abort Open. Select About Wordpad. Verify no additional task bar
   icons. Verify that the About dialog is focused. 
+
+* Minimize and restore Wordpad using the WM. Verify that both the
+  Wordpad and About window is minimized and restored, and that the
+  About window ends up in front of Wordpad. This test is known to fail
+  with some WMs. Close the About dialog. 
 
 * Open Wordpad Help. Verify task bar icon. 
 
@@ -411,3 +415,11 @@ Blackbox, IceWM etc).
   windows. From the first one, select the other one from the windows
   menu. Verify that the other window is brought to the front. Test
   this using both the mouse and the keyboard.
+
+
+* Test restacking of a middle window. For this test, you'll need to
+  the tool "notepadbehindwordpad.exe". Run Task Manager
+  seamlessly. Start Notepad and Wordpad from it. Manually stack the
+  windows as (from top to bottom) Task Manager - Notepad - xterm -
+  Wordpad. Make sure the windows partially overlaps. From Task
+  Manager, execute notepadbehindwordpad.exe. 
