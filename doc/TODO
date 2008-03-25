@@ -97,3 +97,6 @@
   * We support topmost windows at creating time, but we do not detect
     when this property is added or removed. This can be verified with
     task manager, which has an "Always on top" option. 
+
+  * Window icons are not set when reconnecting. get_icon/update_icon
+    needs to be called from enum_cb. 
