@@ -417,9 +417,21 @@ Blackbox, IceWM etc). You can also test without a window manager.
   this using both the mouse and the keyboard.
 
 
-* Test restacking of a middle window. For this test, you'll need to
+* Test restacking of a bottom window. For this test, you'll need to
   the tool "notepadbehindwordpad.exe". Run Task Manager
   seamlessly. Start Notepad and Wordpad from it. Manually stack the
   windows as (from top to bottom) Task Manager - Notepad - xterm -
   Wordpad. Make sure the windows partially overlaps. From Task
-  Manager, execute notepadbehindwordpad.exe. 
+  Manager, execute notepadbehindwordpad.exe. This
+  test is expected to fail when rdesktop emits the warning about
+  broken WM at startup.
+
+
+* Test restacking of a middle window. For this test, you'll need to
+  the tool "notepadbehindwordpad.exe". Run Task Manager
+  seamlessly. Start Paint, Notepad, and Wordpad from it. Manually
+  stack the windows as (from top to bottom) Task Manager - Notepad -
+  xterm - Wordpad - Paint. Make sure the windows partially
+  overlaps. From Task Manager, execute notepadbehindwordpad.exe. This
+  test is expected to fail when rdesktop emits the warning about
+  broken WM at startup.

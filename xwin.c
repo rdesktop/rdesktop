@@ -86,6 +86,7 @@ static unsigned long g_seamless_focused = 0;
 static RD_BOOL g_seamless_started = False;	/* Server end is up and running */
 static RD_BOOL g_seamless_active = False;	/* We are currently in seamless mode */
 static RD_BOOL g_seamless_hidden = False;	/* Desktop is hidden on server */
+static RD_BOOL g_seamless_broken_restack = False;	/* WM does not properly restack */
 extern RD_BOOL g_seamless_rdp;
 
 extern uint32 g_embed_wnd;
@@ -527,6 +528,243 @@ mwm_hide_decorations(Window wnd)
 	XChangeProperty(g_display, wnd, hintsatom, hintsatom, 32, PropModeReplace,
 			(unsigned char *) &motif_hints, PROP_MOTIF_WM_HINTS_ELEMENTS);
 
+}
+
+typedef struct _sw_configurenotify_context
+{
+	Window window;
+	unsigned long serial;
+} sw_configurenotify_context;
+
+/* Predicate procedure for sw_wait_configurenotify */
+static Bool
+sw_configurenotify_p(Display * display, XEvent * xevent, XPointer arg)
+{
+	sw_configurenotify_context *context = (sw_configurenotify_context *) arg;
+	if (xevent->xany.type == ConfigureNotify
+	    && xevent->xconfigure.window == context->window
+	    && xevent->xany.serial >= context->serial)
+		return True;
+
+	return False;
+}
+
+/* Wait for a ConfigureNotify, with a equal or larger serial, on the
+   specified window. The event will be removed from the queue. We
+   could use XMaskEvent(StructureNotifyMask), but we would then risk
+   throwing away crucial events like DestroyNotify. 
+
+   After a ConfigureWindow, according to ICCCM section 4.1.5, we
+   should recieve a ConfigureNotify, either a real or synthetic
+   one. This indicates that the configure has been "completed".
+   However, some WMs such as several versions of Metacity fails to
+   send synthetic events. See bug
+   http://bugzilla.gnome.org/show_bug.cgi?id=322840. We need to use a
+   timeout to avoid a hang. Tk uses the same approach. */
+static void
+sw_wait_configurenotify(Window wnd, unsigned long serial)
+{
+	XEvent xevent;
+	sw_configurenotify_context context;
+	time_t start;
+	RD_BOOL got = False;
+
+	context.window = wnd;
+	context.serial = serial;
+	start = time(NULL);
+
+	do
+	{
+		if (XCheckIfEvent(g_display, &xevent, sw_configurenotify_p, (XPointer) & context))
+		{
+			got = True;
+			break;
+		}
+		usleep(100000);
+	}
+	while (time(NULL) - start < 2);
+
+	if (!got)
+	{
+		warning("Broken Window Manager: Timeout while waiting for ConfigureNotify\n");
+	}
+}
+
+/* Get the toplevel window, in case of reparenting */
+static Window
+sw_get_toplevel(Window wnd)
+{
+	Window root, parent;
+	Window *child_list;
+	unsigned int num_children;
+
+	while (1)
+	{
+		XQueryTree(g_display, wnd, &root, &parent, &child_list, &num_children);
+		if (root == parent)
+		{
+			break;
+		}
+		else if (!parent)
+		{
+			warning("Internal error: sw_get_toplevel called with root window\n");
+		}
+
+		wnd = parent;
+	}
+
+	return wnd;
+}
+
+
+/* Check if wnd is already behind a window wrt stacking order */
+static RD_BOOL
+sw_window_is_behind(Window wnd, Window behind)
+{
+	Window dummy1, dummy2;
+	Window *child_list;
+	unsigned int num_children;
+	unsigned int i;
+	RD_BOOL found_behind = False;
+	RD_BOOL found_wnd = False;
+
+	wnd = sw_get_toplevel(wnd);
+	behind = sw_get_toplevel(behind);
+
+	XQueryTree(g_display, RootWindowOfScreen(g_screen), &dummy1, &dummy2, &child_list,
+		   &num_children);
+
+	for (i = num_children - 1; i >= 0; i--)
+	{
+		if (child_list[i] == behind)
+		{
+			found_behind = True;
+		}
+		else if (child_list[i] == wnd)
+		{
+			found_wnd = True;
+			break;
+		}
+	}
+
+	if (child_list)
+		XFree(child_list);
+
+	if (!found_wnd)
+	{
+		warning("sw_window_is_behind: Unable to find window 0x%lx\n", wnd);
+
+		if (!found_behind)
+		{
+			warning("sw_window_is_behind: Unable to find behind window 0x%lx\n",
+				behind);
+		}
+	}
+
+	return found_behind;
+}
+
+
+/* Test if the window manager correctly handles window restacking. In
+   particular, we are testing if it's possible to place a window
+   between two other windows. Many WMs such as Metacity can only stack
+   windows on the top or bottom. The window creation should mostly
+   match ui_seamless_create_window. */
+static void
+seamless_restack_test()
+{
+	/* The goal is to have the middle window between top and
+	   bottom.  The middle window is initially at the top,
+	   though. */
+	Window wnds[3];		/* top, middle and bottom */
+	int i;
+	XEvent xevent;
+	XWindowChanges values;
+	unsigned long restack_serial;
+
+	for (i = 0; i < 3; i++)
+	{
+		char name[64];
+		wnds[i] =
+			XCreateSimpleWindow(g_display, RootWindowOfScreen(g_screen), 0, 0, 20, 20,
+					    0, 0, 0);
+		snprintf(name, sizeof(name), "SeamlessRDP restack test - window %d", i);
+		XStoreName(g_display, wnds[i], name);
+		ewmh_set_wm_name(wnds[i], name);
+
+		/* Hide decorations. Often this means that no
+		   reparenting will be done, which makes the restack
+		   easier. Besides, we want to mimic our other
+		   seamless windows as much as possible. We must still
+		   handle the case with reparenting, though. */
+		mwm_hide_decorations(wnds[i]);
+
+		/* Prevent windows from appearing in task bar */
+		XSetTransientForHint(g_display, wnds[i], RootWindowOfScreen(g_screen));
+		ewmh_set_window_popup(wnds[i]);
+
+		/* We need to catch MapNotify/ConfigureNotify */
+		XSelectInput(g_display, wnds[i], StructureNotifyMask);
+	}
+
+	/* Map Windows. Currently, we assume that XMapRaised places
+	   the window on the top of the stack. Should be fairly safe;
+	   the window is configured before it's mapped. */
+	XMapRaised(g_display, wnds[2]);	/* bottom */
+	do
+	{
+		XWindowEvent(g_display, wnds[2], StructureNotifyMask, &xevent);
+	}
+	while (xevent.type != MapNotify);
+	XMapRaised(g_display, wnds[0]);	/* top */
+	do
+	{
+		XWindowEvent(g_display, wnds[0], StructureNotifyMask, &xevent);
+	}
+	while (xevent.type != MapNotify);
+	XMapRaised(g_display, wnds[1]);	/* middle */
+	do
+	{
+		XWindowEvent(g_display, wnds[1], StructureNotifyMask, &xevent);
+	}
+	while (xevent.type != MapNotify);
+
+	/* The stacking order should now be 1 - 0 - 2 */
+	if (!sw_window_is_behind(wnds[0], wnds[1]) || !sw_window_is_behind(wnds[2], wnds[1]))
+	{
+		/* Ok, technically a WM is allowed to stack windows arbitrarily, but... */
+		warning("Broken Window Manager: Unable to test window restacking\n");
+		g_seamless_broken_restack = True;
+		for (i = 0; i < 3; i++)
+			XDestroyWindow(g_display, wnds[i]);
+		return;
+	}
+
+	/* Restack, using XReconfigureWMWindow, which should correctly
+	   handle reparented windows as well as nonreparenting WMs. */
+	values.stack_mode = Below;
+	values.sibling = wnds[0];
+	restack_serial = XNextRequest(g_display);
+	XReconfigureWMWindow(g_display, wnds[1], DefaultScreen(g_display), CWStackMode | CWSibling,
+			     &values);
+	sw_wait_configurenotify(wnds[1], restack_serial);
+
+	/* Now verify that middle is behind top but not behind
+	   bottom */
+	if (!sw_window_is_behind(wnds[1], wnds[0]))
+	{
+		warning("Broken Window Manager: doesn't handle restack (restack request was ignored)\n");
+		g_seamless_broken_restack = True;
+	}
+	else if (sw_window_is_behind(wnds[1], wnds[2]))
+	{
+		warning("Broken Window Manager: doesn't handle restack (window was moved to bottom)\n");
+		g_seamless_broken_restack = True;
+	}
+
+	/* Destroy windows */
+	for (i = 0; i < 3; i++)
+		XDestroyWindow(g_display, wnds[i]);
 }
 
 #define SPLITCOLOUR15(colour, rv) \
@@ -1536,17 +1774,37 @@ select_visual(int screen_num)
 }
 
 static XErrorHandler g_old_error_handler;
+static RD_BOOL g_error_expected = False;
+
+/* Check if the X11 window corresponding to a seamless window with
+   specified id exists. */
+RD_BOOL
+sw_window_exists(unsigned long id)
+{
+	seamless_window *sw;
+	char *name;
+	Status sts = 0;
+
+	sw = sw_get_window_by_id(id);
+	if (!sw)
+		return False;
+
+	g_error_expected = True;
+	sts = XFetchName(g_display, sw->wnd, &name);
+	g_error_expected = False;
+	if (sts)
+	{
+		XFree(name);
+	}
+
+	return sts;
+}
 
 static int
 error_handler(Display * dpy, XErrorEvent * eev)
 {
-	if ((eev->error_code == BadMatch) && (eev->request_code == X_ConfigureWindow))
-	{
-		fprintf(stderr, "Got \"BadMatch\" when trying to restack windows.\n");
-		fprintf(stderr,
-			"This is most likely caused by a broken window manager (commonly KWin).\n");
+	if (g_error_expected)
 		return 0;
-	}
 
 	return g_old_error_handler(dpy, eev);
 }
@@ -1656,7 +1914,10 @@ ui_init(void)
 	xclip_init();
 	ewmh_init();
 	if (g_seamless_rdp)
+	{
+		seamless_restack_test();
 		seamless_init();
+	}
 
 	DEBUG_RDP5(("server bpp %d client bpp %d depth %d\n", g_server_depth, g_bpp, g_depth));
 
@@ -2138,9 +2399,24 @@ xwin_process_events(void)
 				if (!sw)
 					break;
 
+				/* Menu windows are real X11 windows,
+				   with focus. When such a window is
+				   destroyed, focus is reverted to the
+				   main application window, which
+				   would cause us to send FOCUS. This
+				   breaks window switching in, say,
+				   Seamonkey. We shouldn't need to
+				   send FOCUS: Windows should also
+				   revert focus to some other window
+				   when the menu window is
+				   destroyed. So, we only send FOCUS
+				   if the previous focus window still
+				   exists. */
 				if (sw->id != g_seamless_focused)
 				{
-					seamless_send_focus(sw->id, 0);
+
+					if (sw_window_exists(g_seamless_focused))
+						seamless_send_focus(sw->id, 0);
 					g_seamless_focused = sw->id;
 				}
 				break;
@@ -3683,6 +3959,8 @@ void
 ui_seamless_restack_window(unsigned long id, unsigned long behind, unsigned long flags)
 {
 	seamless_window *sw;
+	XWindowChanges values;
+	unsigned long restack_serial;
 
 	if (!g_seamless_active)
 		return;
@@ -3697,7 +3975,6 @@ ui_seamless_restack_window(unsigned long id, unsigned long behind, unsigned long
 	if (behind)
 	{
 		seamless_window *sw_behind;
-		Window wnds[2];
 
 		sw_behind = sw_get_window_by_id(behind);
 		if (!sw_behind)
@@ -3706,14 +3983,23 @@ ui_seamless_restack_window(unsigned long id, unsigned long behind, unsigned long
 			return;
 		}
 
-		wnds[1] = sw->wnd;
-		wnds[0] = sw_behind->wnd;
-
-		XRestackWindows(g_display, wnds, 2);
+		if (!g_seamless_broken_restack)
+		{
+			values.stack_mode = Below;
+			values.sibling = sw_behind->wnd;
+			restack_serial = XNextRequest(g_display);
+			XReconfigureWMWindow(g_display, sw->wnd, DefaultScreen(g_display),
+					     CWStackMode | CWSibling, &values);
+			sw_wait_configurenotify(sw->wnd, restack_serial);
+		}
 	}
 	else
 	{
-		XRaiseWindow(g_display, sw->wnd);
+		values.stack_mode = Above;
+		restack_serial = XNextRequest(g_display);
+		XReconfigureWMWindow(g_display, sw->wnd, DefaultScreen(g_display), CWStackMode,
+				     &values);
+		sw_wait_configurenotify(sw->wnd, restack_serial);
 	}
 
 	sw_restack_window(sw, behind);
