@@ -340,98 +340,98 @@ A list of test cases is found below. These should be verified before
 commit, ideally with different window managers (KWin, Metacity,
 Blackbox, IceWM etc). You can also test without a window manager. 
 
-* Start Wordpad. Verify taskbar icon. 
-
-* Resize Wordpad main window. 
-
-* Open "Open Dialog". Resize, bigger than main window. Verify no
-  additional task bar icons. Verify that the Open dialog is focused.
-
-* Open File Format box dropdown. Verify that it correctly appears
-  outside main window. Verify no additional task bar icons. 
-
-* Abort Open. Select About Wordpad. Verify no additional task bar
-  icons. Verify that the About dialog is focused. 
-
-* Minimize and restore Wordpad using the WM. Verify that both the
-  Wordpad and About window is minimized and restored, and that the
-  About window ends up in front of Wordpad. This test is known to fail
-  with some WMs. Close the About dialog. 
-
-* Open Wordpad Help. Verify task bar icon. 
-
-* Switch between Help and Wordpad window using a X11 taskbar. 
-
-* In Wordpad, right click at the bottom of the document, and verify
-  that the menu correctly appears outside the main window. Verify no
-  additional task bar icons.
-
-* Click on the New icon. Select Text Document. Verify that the taskbar
-  icon is updated.
-
-* Write something. Try the Find dialog (Ctrl-F). Move it outside the
-  main window. Verify no task bar icons. 
-
-* Make Wordpad very small and try to use the menus. 
-
-
-* Start Internet Explorer. 
-
-* Minimize IE using the IE button. Restore. 
-
-* Minimize IE using the taskbar. Restore. 
-
-* Maximize IE using the IE button. Restore. 
-
-* Maximize IE using the taskbar. Restore. 
-
-* Open an additional IE window and verify you can switch between them. 
-
-
-* Try the menus in Microsoft Office XP, which uses shaded menus. 
-
-
-* Test transient windows: Run a program (ie Excel) seamlessly and open
-  a modal dialog (ie Open). Move the dialog so it partially overlaps
-  its parent window. Cover both windows with a third (ie a maximized
-  xterm). Click on Excel's taskbar entry to bring it to the front.
-
-
-* Test topmost windows: Run Task Manager seamlessly
-  (...\seamlessrdpshell.exe taskmgr). From Task Manager's File menu,
-  select 'New Task (Run)' and run Notepad. Move Notepad so it
-  partially overlaps Task Manager. Cover both windows with a native
-  window (ie a maximized xterm). Click on Notepad's taskbar entry to
-  bring it to the front.
-
-
-* Test X11 window close: Start Notepad and open the Help
-  Browser. Close the Help Browser window on the X11 side using your
-  window manager. Verify that rdesktop still runs and that the Notepad
-  application window still exists.
-
-
-* Test window restacking: Run Mozilla Seamonkey and open two separate
-  windows. From the first one, select the other one from the windows
-  menu. Verify that the other window is brought to the front. Test
-  this using both the mouse and the keyboard.
-
-
-* Test restacking of a bottom window. For this test, you'll need to
-  the tool "notepadbehindwordpad.exe". Run Task Manager
-  seamlessly. Start Notepad and Wordpad from it. Manually stack the
-  windows as (from top to bottom) Task Manager - Notepad - xterm -
-  Wordpad. Make sure the windows partially overlaps. From Task
-  Manager, execute notepadbehindwordpad.exe. This
-  test is expected to fail when rdesktop emits the warning about
-  broken WM at startup.
-
-
-* Test restacking of a middle window. For this test, you'll need to
-  the tool "notepadbehindwordpad.exe". Run Task Manager
-  seamlessly. Start Paint, Notepad, and Wordpad from it. Manually
-  stack the windows as (from top to bottom) Task Manager - Notepad -
-  xterm - Wordpad - Paint. Make sure the windows partially
-  overlaps. From Task Manager, execute notepadbehindwordpad.exe. This
-  test is expected to fail when rdesktop emits the warning about
-  broken WM at startup.
+1  Start Wordpad. Verify taskbar icon. 
+ 
+2  Resize Wordpad main window. 
+ 
+3  Open "Open Dialog". Resize, bigger than main window. Verify no
+   additional task bar icons. Verify that the Open dialog is focused.
+ 
+4  Open File Format box dropdown. Verify that it correctly appears
+   outside main window. Verify no additional task bar icons. 
+ 
+5  Abort Open. Select About Wordpad. Verify no additional task bar
+   icons. Verify that the About dialog is focused. 
+ 
+6  Minimize and restore Wordpad using the WM. Verify that both the
+   Wordpad and About window is minimized and restored, and that the
+   About window ends up in front of Wordpad. This test is known to fail
+   with some WMs. Close the About dialog. 
+ 
+7  Open Wordpad Help. Verify task bar icon. 
+ 
+8  Switch between Help and Wordpad window using a X11 taskbar. 
+ 
+9  In Wordpad, right click at the bottom of the document, and verify
+   that the menu correctly appears outside the main window. Verify no
+   additional task bar icons.
+ 
+10 Click on the New icon. Select Text Document. Verify that the taskbar
+   icon is updated.
+ 
+11 Write something. Try the Find dialog (Ctrl-F). Move it outside the
+   main window. Verify no task bar icons. 
+ 
+12 Make Wordpad very small and try to use the menus. 
+ 
+ 
+13 Start Internet Explorer. 
+ 
+14 Minimize IE using the IE button. Restore. 
+ 
+15 Minimize IE using the taskbar. Restore. 
+ 
+16 Maximize IE using the IE button. Restore. 
+ 
+17 Maximize IE using the taskbar. Restore. 
+ 
+18 Open an additional IE window and verify you can switch between them. 
+ 
+ 
+19 Try the menus in Microsoft Office XP, which uses shaded menus. 
+ 
+ 
+20 Test transient windows: Run a program (ie Excel) seamlessly and open
+   a modal dialog (ie Open). Move the dialog so it partially overlaps
+   its parent window. Cover both windows with a third (ie a maximized
+   xterm). Click on Excel's taskbar entry to bring it to the front.
+ 
+ 
+21 Test topmost windows: Run Task Manager seamlessly
+   (...\seamlessrdpshell.exe taskmgr). From Task Manager's File menu,
+   select 'New Task (Run)' and run Notepad. Move Notepad so it
+   partially overlaps Task Manager. Cover both windows with a native
+   window (ie a maximized xterm). Click on Notepad's taskbar entry to
+   bring it to the front.
+ 
+ 
+22 Test X11 window close: Start Notepad and open the Help
+   Browser. Close the Help Browser window on the X11 side using your
+   window manager. Verify that rdesktop still runs and that the Notepad
+   application window still exists.
+ 
+ 
+23 Test window restacking: Run Mozilla Seamonkey and open two separate
+   windows. From the first one, select the other one from the windows
+   menu. Verify that the other window is brought to the front. Test
+   this using both the mouse and the keyboard.
+ 
+ 
+24 Test restacking of a bottom window. For this test, you'll need to
+   the tool "notepadbehindwordpad.exe". Run Task Manager
+   seamlessly. Start Notepad and Wordpad from it. Manually stack the
+   windows as (from top to bottom) Task Manager - Notepad - xterm -
+   Wordpad. Make sure the windows partially overlaps. From Task
+   Manager, execute notepadbehindwordpad.exe. This
+   test is expected to fail when rdesktop emits the warning about
+   broken WM at startup.
+ 
+ 
+25 Test restacking of a middle window. For this test, you'll need to
+   the tool "notepadbehindwordpad.exe". Run Task Manager
+   seamlessly. Start Paint, Notepad, and Wordpad from it. Manually
+   stack the windows as (from top to bottom) Task Manager - Notepad -
+   xterm - Wordpad - Paint. Make sure the windows partially
+   overlaps. From Task Manager, execute notepadbehindwordpad.exe. This
+   test is expected to fail when rdesktop emits the warning about
+   broken WM at startup.
