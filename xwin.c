@@ -1919,7 +1919,6 @@ ui_init(void)
 	ewmh_init();
 	if (g_seamless_rdp)
 	{
-		seamless_restack_test();
 		seamless_init();
 	}
 
@@ -2095,6 +2094,11 @@ ui_create_window(void)
 	/* create invisible 1x1 cursor to be used as null cursor */
 	if (g_null_cursor == NULL)
 		g_null_cursor = ui_create_cursor(0, 0, 1, 1, null_pointer_mask, null_pointer_data);
+
+	if (g_seamless_rdp)
+	{
+		seamless_restack_test();
+	}
 
 	return True;
 }
