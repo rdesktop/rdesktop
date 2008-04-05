@@ -140,12 +140,15 @@ ssl_cert_to_rkey(SSL_CERT * cert, uint32 * key_len)
 {
 	EVP_PKEY *epk = NULL;
 	SSL_RKEY *lkey;
+	int nid;
+
 	/* By some reason, Microsoft sets the OID of the Public RSA key to
 	   the oid for "MD5 with RSA Encryption" instead of "RSA Encryption"
 
 	   Kudos to Richard Levitte for the following (. intiutive .) 
 	   lines of code that resets the OID and let's us extract the key. */
-	if (OBJ_obj2nid(cert->cert_info->key->algor->algorithm) == NID_md5WithRSAEncryption)
+	nid = OBJ_obj2nid(cert->cert_info->key->algor->algorithm);
+	if ((nid == NID_md5WithRSAEncryption) || (nid == NID_shaWithRSAEncryption))
 	{
 		DEBUG_RDP5(("Re-setting algorithm type to RSA in server certificate\n"));
 		ASN1_OBJECT_free(cert->cert_info->key->algor->algorithm);
