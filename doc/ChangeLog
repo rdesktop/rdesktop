@@ -1,7 +1,12 @@
-rdesktop (1.?.?)
-  * ALSA-driver added
-  * sound-drivers can now be selected at runtime
-  * Smartcard support by Alexi Volkov <alexi@myrealbox.com>
+rdesktop (1.6.0)
+  * Fix for crash with recent versions of X.Org
+  * Fix for potential vulnerability against compromised/malicious servers (reported by iDefense)
+  * ALSA driver added
+  * Sound drivers can now be selected at runtime
+  * Smartcard support (Alexi Volkov <alexi@myrealbox.com>)
+  * Send physical mouse buttons rather than logical ones
+
+  -- Matthew Chapman <matthewc@cse.unsw.edu.au>  Sat, 5 Apr 2008 17:09:15 +1100 (AEDT)
 
 rdesktop (1.5.0)
   * SeamlessRDP - seamless windows support
