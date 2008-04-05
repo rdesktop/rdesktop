@@ -105,7 +105,6 @@ dead_acute 0x27 shift altgr
 
 i 0x28
 Iabovedot 0x28 shift
-apostrophe 0x28 altgr
 dead_caron 0x28 shift altgr
 
 less 0x56
