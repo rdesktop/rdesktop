@@ -1,7 +1,7 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    User interface services - X Window System
-   Copyright (C) Matthew Chapman 1999-2007
+   Copyright (C) Matthew Chapman 1999-2008
    Copyright 2007 Pierre Ossman <ossman@cendio.se> for Cendio AB
 
    This program is free software; you can redistribute it and/or modify
@@ -110,7 +110,7 @@ static XIC g_IC;
 static XModifierKeymap *g_mod_map;
 /* Maps logical (xmodmap -pp) pointing device buttons (0-based) back
    to physical (1-based) indices. */
-static unsigned char g_pointer_log_to_phys_map[16];
+static unsigned char g_pointer_log_to_phys_map[32];
 static Cursor g_current_cursor;
 static RD_HCURSOR g_null_cursor = NULL;
 static Atom g_protocol_atom, g_kill_atom;
@@ -1525,11 +1525,17 @@ xwin_refresh_pointer_map(void)
 	int i, pointer_buttons;
 
 	pointer_buttons = XGetPointerMapping(g_display, phys_to_log_map, sizeof(phys_to_log_map));
-	for (i = 0; i < pointer_buttons; ++i)
+	if (pointer_buttons > sizeof(phys_to_log_map))
+		pointer_buttons = sizeof(phys_to_log_map);
+
+	/* if multiple physical buttons map to the same logical button, then
+	 * use the lower numbered physical one */
+	for (i = pointer_buttons-1; i >= 0; i--)
 	{
-		/* This might produce multiple logical buttons mapping
-		   to a single physical one, but hey, that's
-		   life... */
+		/* a user could specify arbitrary values for the logical button
+		 * number, ignore any that are abnormally large */
+		if (phys_to_log_map[i] > sizeof(g_pointer_log_to_phys_map))
+			continue;
 		g_pointer_log_to_phys_map[phys_to_log_map[i] - 1] = i + 1;
 	}
 }
