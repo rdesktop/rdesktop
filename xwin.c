@@ -1530,7 +1530,7 @@ xwin_refresh_pointer_map(void)
 
 	/* if multiple physical buttons map to the same logical button, then
 	 * use the lower numbered physical one */
-	for (i = pointer_buttons-1; i >= 0; i--)
+	for (i = pointer_buttons - 1; i >= 0; i--)
 	{
 		/* a user could specify arbitrary values for the logical button
 		 * number, ignore any that are abnormally large */
