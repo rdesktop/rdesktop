@@ -28,6 +28,7 @@
 #include <errno.h>
 #include <sys/ioctl.h>
 #include <sys/audioio.h>
+#include <string.h>
 
 #if (defined(sun) && (defined(__svr4__) || defined(__SVR4)))
 #include <stropts.h>
@@ -42,6 +43,7 @@ static int dsp_refs;
 
 static RD_BOOL dsp_configured;
 static RD_BOOL dsp_broken;
+static RD_BOOL broken_2_channel_record = False;
 
 static RD_BOOL dsp_out;
 static RD_BOOL dsp_in;
@@ -240,6 +242,13 @@ sun_open_in(void)
 	if (!sun_open(O_RDONLY))
 		return False;
 
+	/* 2 channel recording is known to be broken on Solaris x86
+	   Sun Ray systems */
+#ifdef L_ENDIAN
+	if (strstr(dsp_dev, "/utaudio/"))
+		broken_2_channel_record = True;
+#endif
+
 	/*
 	 * Unpause the stream now that we have someone using it.
 	 */
@@ -313,16 +322,27 @@ sun_set_format(RD_WAVEFORMATEX * pwfx)
 
 	samplewidth = pwfx->wBitsPerSample / 8;
 
+	info.play.channels = pwfx->nChannels;
+	info.record.channels = info.play.channels;
+
 	if (pwfx->nChannels == 1)
 	{
-		info.play.channels = 1;
 		stereo = 0;
 	}
 	else if (pwfx->nChannels == 2)
 	{
-		info.play.channels = 2;
 		stereo = 1;
 		samplewidth *= 2;
+
+		if (broken_2_channel_record)
+		{
+			info.record.channels = 1;
+			if (rdpsnd_dsp_resample_set(pwfx->nSamplesPerSec, pwfx->wBitsPerSample, 2)
+			    == False)
+			{
+				return False;
+			}
+		}
 	}
 
 	snd_rate = pwfx->nSamplesPerSec;
@@ -335,7 +355,6 @@ sun_set_format(RD_WAVEFORMATEX * pwfx)
 	info.play.error = 0;
 
 	info.record.sample_rate = info.play.sample_rate;
-	info.record.channels = info.play.channels;
 	info.record.precision = info.play.precision;
 	info.record.encoding = info.play.encoding;
 	info.record.samples = 0;
@@ -445,12 +464,34 @@ sun_record(void)
 	char buffer[32768];
 	int len;
 
-	len = read(dsp_fd, buffer, sizeof(buffer));
+	len = read(dsp_fd, buffer, sizeof(buffer) / 2);
 	if (len == -1)
 	{
 		if (errno != EWOULDBLOCK)
 			perror("read audio");
 		return;
+	}
+
+	if (broken_2_channel_record)
+	{
+		unsigned int i;
+		int rec_samplewidth = samplewidth / 2;
+		/* Loop over each byte read backwards and put in place */
+		i = len - 1;
+		do
+		{
+			int samples_before = i / rec_samplewidth * 2;
+			int sample_byte = i % rec_samplewidth;
+			int ch1_offset = samples_before * rec_samplewidth + sample_byte;
+			// Channel 1
+			buffer[ch1_offset] = buffer[i];
+			// Channel 2
+			buffer[ch1_offset + rec_samplewidth] = buffer[i];
+
+			i--;
+		}
+		while (i);
+		len *= 2;
 	}
 
 	rdpsnd_record(buffer, len);
