@@ -337,11 +337,6 @@ sun_set_format(RD_WAVEFORMATEX * pwfx)
 		if (broken_2_channel_record)
 		{
 			info.record.channels = 1;
-			if (rdpsnd_dsp_resample_set(pwfx->nSamplesPerSec, pwfx->wBitsPerSample, 2)
-			    == False)
-			{
-				return False;
-			}
 		}
 	}
 
