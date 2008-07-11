@@ -151,7 +151,7 @@ rdp_parse_pen(STREAM s, PEN * pen, uint32 present)
 static void
 setup_brush(BRUSH * out_brush, BRUSH * in_brush)
 {
-	BRUSHDATA * brush_data;
+	BRUSHDATA *brush_data;
 	uint16 cache_idx;
 	uint8 brush_bpp;
 
@@ -159,7 +159,7 @@ setup_brush(BRUSH * out_brush, BRUSH * in_brush)
 	if (out_brush->style & 0x80)
 	{
 		brush_bpp = out_brush->style & 0x0f;
-		if (brush_bpp == 1) /* 1 bpp */
+		if (brush_bpp == 1)	/* 1 bpp */
 		{
 			cache_idx = out_brush->pattern[0];
 			brush_data = cache_get_brush_data(cache_idx);
@@ -1165,11 +1165,11 @@ process_brushcache(STREAM s, uint16 flags)
 	in_uint8(s, depth);
 	in_uint8(s, width);
 	in_uint8(s, height);
-	in_uint8s(s, 1); /* type, 0x80 = cached */
+	in_uint8s(s, 1);	/* type, 0x80 = cached */
 	in_uint8(s, size);
 
 	DEBUG(("BRUSHCACHE(idx=%d,dp=%d,wd=%d,ht=%d,sz=%d)\n", cache_idx, depth,
-		width, height, size));
+	       width, height, size));
 
 	if ((depth == 1) && (width == 8) && (height == 8) && (size == 8))
 	{
