@@ -1,8 +1,8 @@
 /*
    rdesktop: A Remote Desktop Protocol client.
    Disk Redirection definitions
-   Copyright (C) Jeroen Meijer 2003-2007
-   Copyright (C) Peter Astrand 2004-2007
+   Copyright (C) Jeroen Meijer 2003-2008
+   Copyright (C) Peter Astrand 2004-2008
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by

@@ -2,8 +2,8 @@
    rdesktop: A Remote Desktop Protocol client.
    User interface services - X keyboard mapping
 
-   Copyright (C) Matthew Chapman 1999-2007
-   Copyright (C) Peter Astrand <astrand@cendio.se> 2003-2007
+   Copyright (C) Matthew Chapman 1999-2008
+   Copyright (C) Peter Astrand <astrand@cendio.se> 2003-2008
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by

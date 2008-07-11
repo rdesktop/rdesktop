@@ -1,8 +1,8 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    Seamless Windows support
-   Copyright 2005-2007 Peter Astrand <astrand@cendio.se> for Cendio AB
-   Copyright 2007 Pierre Ossman <ossman@cendio.se> for Cendio AB
+   Copyright 2005-2008 Peter Astrand <astrand@cendio.se> for Cendio AB
+   Copyright 2007-2008 Pierre Ossman <ossman@cendio.se> for Cendio AB
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by

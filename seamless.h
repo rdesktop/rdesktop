@@ -1,7 +1,7 @@
 /*
    rdesktop: A Remote Desktop Protocol client.
    Seamless Windows support
-   Copyright (C) Peter Astrand <astrand@cendio.se> 2005-2007
+   Copyright (C) Peter Astrand <astrand@cendio.se> 2005-2008
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
