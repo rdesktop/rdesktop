@@ -79,6 +79,13 @@ typedef struct _PEN
 }
 PEN;
 
+/* this is whats in the brush cache */
+typedef struct _BRUSHDATA
+{
+	uint8 pattern[8];
+}
+BRUSHDATA;
+
 typedef struct _BRUSH
 {
 	uint8 xorigin;

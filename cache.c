@@ -430,3 +430,32 @@ cache_put_cursor(uint16 cache_idx, RD_HCURSOR cursor)
 		error("put cursor %d\n", cache_idx);
 	}
 }
+
+/* BRUSH CACHE */
+static BRUSHDATA g_brushcache[64];
+
+/* Retrieve brush from cache */
+BRUSHDATA *
+cache_get_brush_data(uint16 cache_idx)
+{
+	if (cache_idx < NUM_ELEMENTS(g_brushcache))
+	{
+		return &g_brushcache[cache_idx];
+	}
+	error("get brush %d\n", cache_idx);
+	return NULL;
+}
+
+/* Store brush in cache */
+void
+cache_put_brush_data(uint16 cache_idx, BRUSHDATA * brush_data)
+{
+	if (cache_idx < NUM_ELEMENTS(g_brushcache))
+	{
+		memcpy(&g_brushcache[cache_idx], brush_data, sizeof(BRUSHDATA));
+	}
+	else
+	{
+		error("put brush %d\n", cache_idx);
+	}
+}
