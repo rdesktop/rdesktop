@@ -71,7 +71,8 @@ pstcache_load_bitmap(uint8 cache_id, uint16 cache_idx)
 	rd_read_file(fd, celldata, cellhdr.length);
 
 	bitmap = ui_create_bitmap(cellhdr.width, cellhdr.height, celldata);
-	DEBUG(("Load bitmap from disk: id=%d, idx=%d, bmp=0x%x)\n", cache_id, cache_idx, bitmap));
+	DEBUG(("Load bitmap from disk: id=%d, idx=%d, bmp=0x%x)\n", cache_id, cache_idx,
+	       (unsigned int) bitmap));
 	cache_put_bitmap(cache_id, cache_idx, bitmap);
 
 	xfree(celldata);

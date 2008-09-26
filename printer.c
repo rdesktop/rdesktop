@@ -110,7 +110,7 @@ printer_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 dispos
 	pprinter_data = (PRINTER *) g_rdpdr_device[device_id].pdevice_data;
 
 	/* default printer name use default printer queue as well in unix */
-	if (pprinter_data->printer == "mydeskjet")
+	if (strncmp(pprinter_data->printer, "mydeskjet", strlen(pprinter_data->printer)) == 0)
 	{
 		pprinter_data->printer_fp = popen("lpr", "w");
 	}
