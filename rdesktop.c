@@ -48,7 +48,7 @@
 #include "ssl.h"
 
 char g_title[64] = "";
-char g_username[64];
+char *g_username;
 char g_hostname[16];
 char g_keymapname[PATH_MAX] = "";
 unsigned int g_keylayout = 0x409;	/* Defaults to US keyboard layout */
@@ -99,7 +99,7 @@ RD_BOOL g_redirect = False;
 char g_redirect_server[64];
 char g_redirect_domain[16];
 char g_redirect_password[64];
-char g_redirect_username[64];
+char *g_redirect_username;
 char g_redirect_cookie[128];
 uint32 g_redirect_flags = 0;
 
@@ -473,7 +473,8 @@ main(int argc, char *argv[])
 				break;
 
 			case 'u':
-				STRNCPY(g_username, optarg, sizeof(g_username));
+				g_username = (char *) xmalloc(strlen(optarg) + 1);
+				STRNCPY(g_username, optarg, strlen(optarg) + 1);
 				username_option = 1;
 				break;
 
@@ -846,8 +847,10 @@ main(int argc, char *argv[])
 			error("could not determine username, use -u\n");
 			return 1;
 		}
-
-		STRNCPY(g_username, pw->pw_name, sizeof(g_username));
+		/* +1 for trailing \0 */
+		int pwlen = strlen(pw->pw_name) + 1;
+		g_username = (char *) xmalloc(pwlen);
+		STRNCPY(g_username, pw->pw_name, pwlen);
 	}
 
 #ifdef HAVE_ICONV
@@ -962,6 +965,8 @@ main(int argc, char *argv[])
 			rdesktop_reset_state();
 
 			STRNCPY(domain, g_redirect_domain, sizeof(domain));
+			xfree(g_username);
+			g_username = (char *) xmalloc(strlen(g_redirect_username) + 1);
 			STRNCPY(g_username, g_redirect_username, sizeof(g_username));
 			STRNCPY(password, g_redirect_password, sizeof(password));
 			STRNCPY(server, g_redirect_server, sizeof(server));
@@ -1006,7 +1011,10 @@ main(int argc, char *argv[])
 	}
 
 #endif
+	if (g_redirect_username)
+		xfree(g_redirect_username);
 
+	xfree(g_username);
 }
 
 #ifdef EGD_SOCKET

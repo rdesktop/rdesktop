@@ -36,7 +36,7 @@
 #endif
 
 extern uint16 g_mcs_userid;
-extern char g_username[64];
+extern char *g_username;
 extern char g_codepage[16];
 extern RD_BOOL g_bitmap_compression;
 extern RD_BOOL g_orders;
@@ -63,7 +63,7 @@ extern RD_BOOL g_redirect;
 extern char g_redirect_server[64];
 extern char g_redirect_domain[16];
 extern char g_redirect_password[64];
-extern char g_redirect_username[64];
+extern char *g_redirect_username;
 extern char g_redirect_cookie[128];
 extern uint32 g_redirect_flags;
 /* END Session Directory support */
@@ -1379,7 +1379,8 @@ process_redirect_pdu(STREAM s /*, uint32 * ext_disc_reason */ )
 	in_uint32_le(s, len);
 
 	/* read username string */
-	rdp_in_unistr(s, g_redirect_username, sizeof(g_redirect_username), len);
+	g_redirect_username = (char *) xmalloc(len + 1);
+	rdp_in_unistr(s, g_redirect_username, strlen(g_redirect_username), len);
 
 	/* read length of domain string */
 	in_uint32_le(s, len);
