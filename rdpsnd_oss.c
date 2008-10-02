@@ -64,10 +64,10 @@ static RD_BOOL in_esddsp;
 /* This is a just a forward declaration */
 static struct audio_driver oss_driver;
 
-void oss_play(void);
-void oss_record(void);
+static void oss_play(void);
+static void oss_record(void);
 
-void
+static void
 oss_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv)
 {
 	if (dsp_fd == -1)
@@ -81,7 +81,7 @@ oss_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv)
 		*n = dsp_fd;
 }
 
-void
+static void
 oss_check_fds(fd_set * rfds, fd_set * wfds)
 {
 	if (FD_ISSET(dsp_fd, wfds))
@@ -112,7 +112,7 @@ detect_esddsp(void)
 	return True;
 }
 
-RD_BOOL
+static RD_BOOL
 oss_open(int fallback)
 {
 	int caps;
@@ -166,7 +166,7 @@ oss_open(int fallback)
 	return True;
 }
 
-void
+static void
 oss_close(void)
 {
 	dsp_refs--;
@@ -178,7 +178,7 @@ oss_close(void)
 	dsp_fd = -1;
 }
 
-RD_BOOL
+static RD_BOOL
 oss_open_out(void)
 {
 	if (!oss_open(O_WRONLY))
@@ -189,7 +189,7 @@ oss_open_out(void)
 	return True;
 }
 
-void
+static void
 oss_close_out(void)
 {
 	oss_close();
@@ -201,7 +201,7 @@ oss_close_out(void)
 	dsp_out = False;
 }
 
-RD_BOOL
+static RD_BOOL
 oss_open_in(void)
 {
 	if (!oss_open(O_RDONLY))
@@ -212,7 +212,7 @@ oss_open_in(void)
 	return True;
 }
 
-void
+static void
 oss_close_in(void)
 {
 	oss_close();
@@ -220,7 +220,7 @@ oss_close_in(void)
 	dsp_in = False;
 }
 
-RD_BOOL
+static RD_BOOL
 oss_format_supported(RD_WAVEFORMATEX * pwfx)
 {
 	if (pwfx->wFormatTag != WAVE_FORMAT_PCM)
@@ -233,7 +233,7 @@ oss_format_supported(RD_WAVEFORMATEX * pwfx)
 	return True;
 }
 
-RD_BOOL
+static RD_BOOL
 oss_set_format(RD_WAVEFORMATEX * pwfx)
 {
 	int fragments;
@@ -354,7 +354,7 @@ oss_set_format(RD_WAVEFORMATEX * pwfx)
 	return True;
 }
 
-void
+static void
 oss_volume(uint16 left, uint16 right)
 {
 	uint32 volume;
@@ -371,7 +371,7 @@ oss_volume(uint16 left, uint16 right)
 	}
 }
 
-void
+static void
 oss_play(void)
 {
 	struct audio_packet *packet;
@@ -440,7 +440,7 @@ oss_play(void)
 	}
 }
 
-void
+static void
 oss_record(void)
 {
 	char buffer[32768];
