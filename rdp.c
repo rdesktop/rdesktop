@@ -857,7 +857,7 @@ rdp_send_confirm_active(void)
 		RDP_CAPLEN_GENERAL + RDP_CAPLEN_BITMAP + RDP_CAPLEN_ORDER +
 		RDP_CAPLEN_BMPCACHE + RDP_CAPLEN_COLCACHE +
 		RDP_CAPLEN_ACTIVATE + RDP_CAPLEN_CONTROL +
-		RDP_CAPLEN_POINTER + RDP_CAPLEN_SHARE + RDP_CAPLEN_BRUSHCACHE +
+		RDP_CAPLEN_POINTER + RDP_CAPLEN_SHARE +
 		0x58 + 0x08 + 0x08 + 0x34 /* unknown caps */  +
 		4 /* w2k fix, why? */ ;
 
@@ -885,7 +885,10 @@ rdp_send_confirm_active(void)
 	rdp_out_control_caps(s);
 	rdp_out_pointer_caps(s);
 	rdp_out_share_caps(s);
+#if 0
+	/* Temporarily disabled due to bug 2167833. When re-enabling, add RDP_CAPLEN_BRUSHCACHE to caplen.  */
 	rdp_out_brushcache_caps(s);
+#endif
 
 	rdp_out_unknown_caps(s, 0x0d, 0x58, caps_0x0d);	/* international? */
 	rdp_out_unknown_caps(s, 0x0c, 0x08, caps_0x0c);
