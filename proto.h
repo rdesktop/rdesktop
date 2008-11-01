@@ -44,8 +44,8 @@ void cache_put_desktop(uint32 offset, int cx, int cy, int scanline, int bytes_pe
 		       uint8 * data);
 RD_HCURSOR cache_get_cursor(uint16 cache_idx);
 void cache_put_cursor(uint16 cache_idx, RD_HCURSOR cursor);
-BRUSHDATA *cache_get_brush_data(uint16 cache_idx);
-void cache_put_brush_data(uint16 cache_idx, BRUSHDATA * brush_data);
+BRUSHDATA *cache_get_brush_data(uint8 colour_code, uint8 idx);
+void cache_put_brush_data(uint8 colour_code, uint8 idx, BRUSHDATA * brush_data);
 /* channels.c */
 VCHANNEL *channel_register(char *name, uint32 flags, void (*callback) (STREAM));
 STREAM channel_init(VCHANNEL * channel, uint32 length);

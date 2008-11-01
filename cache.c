@@ -432,30 +432,41 @@ cache_put_cursor(uint16 cache_idx, RD_HCURSOR cursor)
 }
 
 /* BRUSH CACHE */
-static BRUSHDATA g_brushcache[64];
+/* index 0 is 2 colour brush, index 1 is muti colour brush */
+static BRUSHDATA g_brushcache[2][64];
 
 /* Retrieve brush from cache */
 BRUSHDATA *
-cache_get_brush_data(uint16 cache_idx)
+cache_get_brush_data(uint8 colour_code, uint8 idx)
 {
-	if (cache_idx < NUM_ELEMENTS(g_brushcache))
+	colour_code = colour_code == 1 ? 0 : 1;
+	if (idx < NUM_ELEMENTS(g_brushcache[0]))
 	{
-		return &g_brushcache[cache_idx];
+		return &g_brushcache[colour_code][idx];
 	}
-	error("get brush %d\n", cache_idx);
+	error("get brush %d %d\n", colour_code, idx);
 	return NULL;
 }
 
 /* Store brush in cache */
+/* this function takes over the data pointer in struct, eg, caller gives it up */
 void
-cache_put_brush_data(uint16 cache_idx, BRUSHDATA * brush_data)
+cache_put_brush_data(uint8 colour_code, uint8 idx, BRUSHDATA * brush_data)
 {
-	if (cache_idx < NUM_ELEMENTS(g_brushcache))
+	BRUSHDATA * bd;
+
+	colour_code = colour_code == 1 ? 0 : 1;
+	if (idx < NUM_ELEMENTS(g_brushcache[0]))
 	{
-		memcpy(&g_brushcache[cache_idx], brush_data, sizeof(BRUSHDATA));
+		bd = &g_brushcache[colour_code][idx];
+		if (bd->data != 0)
+		{
+			xfree(bd->data);
+		}
+		memcpy(bd, brush_data, sizeof(BRUSHDATA));
 	}
 	else
 	{
-		error("put brush %d\n", cache_idx);
+		error("put brush %d %d\n", colour_code, idx);
 	}
 }

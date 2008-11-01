@@ -3070,18 +3070,45 @@ ui_patblt(uint8 opcode,
 			break;
 
 		case 3:	/* Pattern */
-			for (i = 0; i != 8; i++)
-				ipattern[7 - i] = brush->pattern[i];
-			fill = (Pixmap) ui_create_glyph(8, 8, ipattern);
-			SET_FOREGROUND(bgcolour);
-			SET_BACKGROUND(fgcolour);
-			XSetFillStyle(g_display, g_gc, FillOpaqueStippled);
-			XSetStipple(g_display, g_gc, fill);
-			XSetTSOrigin(g_display, g_gc, brush->xorigin, brush->yorigin);
-			FILL_RECTANGLE_BACKSTORE(x, y, cx, cy);
-			XSetFillStyle(g_display, g_gc, FillSolid);
-			XSetTSOrigin(g_display, g_gc, 0, 0);
-			ui_destroy_glyph((RD_HGLYPH) fill);
+			if (brush->bd == 0) /* rdp4 brush */
+			{
+				for (i = 0; i != 8; i++)
+					ipattern[7 - i] = brush->pattern[i];
+				fill = (Pixmap) ui_create_glyph(8, 8, ipattern);
+				SET_FOREGROUND(bgcolour);
+				SET_BACKGROUND(fgcolour);
+				XSetFillStyle(g_display, g_gc, FillOpaqueStippled);
+				XSetStipple(g_display, g_gc, fill);
+				XSetTSOrigin(g_display, g_gc, brush->xorigin, brush->yorigin);
+				FILL_RECTANGLE_BACKSTORE(x, y, cx, cy);
+				XSetFillStyle(g_display, g_gc, FillSolid);
+				XSetTSOrigin(g_display, g_gc, 0, 0);
+				ui_destroy_glyph((RD_HGLYPH) fill);
+			}
+			else if (brush->bd->colour_code > 1) /* > 1 bpp */
+			{
+				fill = (Pixmap) ui_create_bitmap(8, 8, brush->bd->data);
+				XSetFillStyle(g_display, g_gc, FillTiled);
+				XSetTile(g_display, g_gc, fill);
+				XSetTSOrigin(g_display, g_gc, brush->xorigin, brush->yorigin);
+				FILL_RECTANGLE_BACKSTORE(x, y, cx, cy);
+				XSetFillStyle(g_display, g_gc, FillSolid);
+				XSetTSOrigin(g_display, g_gc, 0, 0);
+				ui_destroy_bitmap((RD_HBITMAP) fill);
+			}
+			else
+			{
+				fill = (Pixmap) ui_create_glyph(8, 8, brush->bd->data);
+				SET_FOREGROUND(bgcolour);
+				SET_BACKGROUND(fgcolour);
+				XSetFillStyle(g_display, g_gc, FillOpaqueStippled);
+				XSetStipple(g_display, g_gc, fill);
+				XSetTSOrigin(g_display, g_gc, brush->xorigin, brush->yorigin);
+				FILL_RECTANGLE_BACKSTORE(x, y, cx, cy);
+				XSetFillStyle(g_display, g_gc, FillSolid);
+				XSetTSOrigin(g_display, g_gc, 0, 0);
+				ui_destroy_glyph((RD_HGLYPH) fill);
+			}
 			break;
 
 		default:
@@ -3244,18 +3271,45 @@ ui_polygon(uint8 opcode,
 			break;
 
 		case 3:	/* Pattern */
-			for (i = 0; i != 8; i++)
-				ipattern[7 - i] = brush->pattern[i];
-			fill = (Pixmap) ui_create_glyph(8, 8, ipattern);
-			SET_FOREGROUND(bgcolour);
-			SET_BACKGROUND(fgcolour);
-			XSetFillStyle(g_display, g_gc, FillOpaqueStippled);
-			XSetStipple(g_display, g_gc, fill);
-			XSetTSOrigin(g_display, g_gc, brush->xorigin, brush->yorigin);
-			FILL_POLYGON((XPoint *) point, npoints);
-			XSetFillStyle(g_display, g_gc, FillSolid);
-			XSetTSOrigin(g_display, g_gc, 0, 0);
-			ui_destroy_glyph((RD_HGLYPH) fill);
+			if (brush->bd == 0) /* rdp4 brush */
+			{
+				for (i = 0; i != 8; i++)
+					ipattern[7 - i] = brush->pattern[i];
+				fill = (Pixmap) ui_create_glyph(8, 8, ipattern);
+				SET_FOREGROUND(bgcolour);
+				SET_BACKGROUND(fgcolour);
+				XSetFillStyle(g_display, g_gc, FillOpaqueStippled);
+				XSetStipple(g_display, g_gc, fill);
+				XSetTSOrigin(g_display, g_gc, brush->xorigin, brush->yorigin);
+				FILL_POLYGON((XPoint *) point, npoints);
+				XSetFillStyle(g_display, g_gc, FillSolid);
+				XSetTSOrigin(g_display, g_gc, 0, 0);
+				ui_destroy_glyph((RD_HGLYPH) fill);
+			}
+			else if (brush->bd->colour_code > 1) /* > 1 bpp */
+			{
+				fill = (Pixmap) ui_create_bitmap(8, 8, brush->bd->data);
+				XSetFillStyle(g_display, g_gc, FillTiled);
+				XSetTile(g_display, g_gc, fill);
+				XSetTSOrigin(g_display, g_gc, brush->xorigin, brush->yorigin);
+				FILL_POLYGON((XPoint *) point, npoints);
+				XSetFillStyle(g_display, g_gc, FillSolid);
+				XSetTSOrigin(g_display, g_gc, 0, 0);
+				ui_destroy_bitmap((RD_HBITMAP) fill);
+			}
+			else
+			{
+				fill = (Pixmap) ui_create_glyph(8, 8, brush->bd->data);
+				SET_FOREGROUND(bgcolour);
+				SET_BACKGROUND(fgcolour);
+				XSetFillStyle(g_display, g_gc, FillOpaqueStippled);
+				XSetStipple(g_display, g_gc, fill);
+				XSetTSOrigin(g_display, g_gc, brush->xorigin, brush->yorigin);
+				FILL_POLYGON((XPoint *) point, npoints);
+				XSetFillStyle(g_display, g_gc, FillSolid);
+				XSetTSOrigin(g_display, g_gc, 0, 0);
+				ui_destroy_glyph((RD_HGLYPH) fill);
+			}
 			break;
 
 		default:
@@ -3322,18 +3376,45 @@ ui_ellipse(uint8 opcode,
 			break;
 
 		case 3:	/* Pattern */
-			for (i = 0; i != 8; i++)
-				ipattern[7 - i] = brush->pattern[i];
-			fill = (Pixmap) ui_create_glyph(8, 8, ipattern);
-			SET_FOREGROUND(bgcolour);
-			SET_BACKGROUND(fgcolour);
-			XSetFillStyle(g_display, g_gc, FillOpaqueStippled);
-			XSetStipple(g_display, g_gc, fill);
-			XSetTSOrigin(g_display, g_gc, brush->xorigin, brush->yorigin);
-			DRAW_ELLIPSE(x, y, cx, cy, fillmode);
-			XSetFillStyle(g_display, g_gc, FillSolid);
-			XSetTSOrigin(g_display, g_gc, 0, 0);
-			ui_destroy_glyph((RD_HGLYPH) fill);
+			if (brush->bd == 0) /* rdp4 brush */
+			{
+				for (i = 0; i != 8; i++)
+					ipattern[7 - i] = brush->pattern[i];
+				fill = (Pixmap) ui_create_glyph(8, 8, ipattern);
+				SET_FOREGROUND(bgcolour);
+				SET_BACKGROUND(fgcolour);
+				XSetFillStyle(g_display, g_gc, FillOpaqueStippled);
+				XSetStipple(g_display, g_gc, fill);
+				XSetTSOrigin(g_display, g_gc, brush->xorigin, brush->yorigin);
+				DRAW_ELLIPSE(x, y, cx, cy, fillmode);
+				XSetFillStyle(g_display, g_gc, FillSolid);
+				XSetTSOrigin(g_display, g_gc, 0, 0);
+				ui_destroy_glyph((RD_HGLYPH) fill);
+			}
+			else if (brush->bd->colour_code > 1) /* > 1 bpp */
+			{
+				fill = (Pixmap) ui_create_bitmap(8, 8, brush->bd->data);
+				XSetFillStyle(g_display, g_gc, FillTiled);
+				XSetTile(g_display, g_gc, fill);
+				XSetTSOrigin(g_display, g_gc, brush->xorigin, brush->yorigin);
+				DRAW_ELLIPSE(x, y, cx, cy, fillmode);
+				XSetFillStyle(g_display, g_gc, FillSolid);
+				XSetTSOrigin(g_display, g_gc, 0, 0);
+				ui_destroy_bitmap((RD_HBITMAP) fill);
+			}
+			else
+			{
+				fill = (Pixmap) ui_create_glyph(8, 8, brush->bd->data);
+				SET_FOREGROUND(bgcolour);
+				SET_BACKGROUND(fgcolour);
+				XSetFillStyle(g_display, g_gc, FillOpaqueStippled);
+				XSetStipple(g_display, g_gc, fill);
+				XSetTSOrigin(g_display, g_gc, brush->xorigin, brush->yorigin);
+				DRAW_ELLIPSE(x, y, cx, cy, fillmode);
+				XSetFillStyle(g_display, g_gc, FillSolid);
+				XSetTSOrigin(g_display, g_gc, 0, 0);
+				ui_destroy_glyph((RD_HGLYPH) fill);
+			}
 			break;
 
 		default:

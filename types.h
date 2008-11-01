@@ -82,7 +82,9 @@ PEN;
 /* this is whats in the brush cache */
 typedef struct _BRUSHDATA
 {
-	uint8 pattern[8];
+	uint32 colour_code;
+	uint32 data_size;
+	uint8 * data;
 }
 BRUSHDATA;
 
@@ -92,7 +94,7 @@ typedef struct _BRUSH
 	uint8 yorigin;
 	uint8 style;
 	uint8 pattern[8];
-
+	BRUSHDATA * bd;
 }
 BRUSH;
 

@@ -152,30 +152,24 @@ static void
 setup_brush(BRUSH * out_brush, BRUSH * in_brush)
 {
 	BRUSHDATA *brush_data;
-	uint16 cache_idx;
-	uint8 brush_bpp;
+	uint8 cache_idx;
+	uint8 colour_code;
 
 	memcpy(out_brush, in_brush, sizeof(BRUSH));
 	if (out_brush->style & 0x80)
 	{
-		brush_bpp = out_brush->style & 0x0f;
-		if (brush_bpp == 1)	/* 1 bpp */
+		colour_code = out_brush->style & 0x0f;
+		cache_idx = out_brush->pattern[0];
+		brush_data = cache_get_brush_data(colour_code, cache_idx);
+		if ((brush_data == NULL) || (brush_data->data == NULL))
 		{
-			cache_idx = out_brush->pattern[0];
-			brush_data = cache_get_brush_data(cache_idx);
-			if (brush_data == NULL)
-			{
-				error("error getting brush data, style %x\n", out_brush->style);
-			}
-			else
-			{
-				memcpy(out_brush->pattern, brush_data->pattern,
-				       sizeof(out_brush->pattern));
-			}
+			error("error getting brush data, style %x\n", out_brush->style);
+			out_brush->bd = NULL;
+			memset(out_brush->pattern, 0, 8);
 		}
 		else
 		{
-			error("bad brush bpp %d\n", brush_bpp);
+			out_brush->bd = brush_data;
 		}
 		out_brush->style = 3;
 	}
@@ -1154,31 +1148,105 @@ process_fontcache(STREAM s)
 	}
 }
 
+static void
+process_compressed_8x8_brush_data(uint8 * in, uint8 * out, int Bpp)
+{
+	int x, y, pal_index, in_index, shift, do2, i;
+	uint8 * pal;
+
+	in_index = 0;
+	pal = in + 16;
+	/* read it bottom up */
+	for (y = 7; y >= 0; y--)
+	{
+		/* 2 bytes per row */
+		x = 0;
+		for (do2 = 0; do2 < 2; do2++)
+		{
+			/* 4 pixels per byte */
+			shift = 6;
+			while (shift >= 0)
+			{
+				pal_index = (in[in_index] >> shift) & 3;
+				/* size of palette entries depends on Bpp */
+				for (i = 0; i < Bpp; i++)
+				{
+					out[(y * 8 + x) * Bpp + i] = pal[pal_index * Bpp + i];
+				}
+				x++;
+				shift -= 2;
+			}
+			in_index++;
+		}
+	}
+}
+
 /* Process a brush cache order */
 static void
 process_brushcache(STREAM s, uint16 flags)
 {
 	BRUSHDATA brush_data;
-	uint8 cache_idx, depth, width, height, size;
+	uint8 cache_idx, colour_code, width, height, size, type;
+	uint8 * comp_brush;
+	int index;
+	int Bpp;
 
 	in_uint8(s, cache_idx);
-	in_uint8(s, depth);
+	in_uint8(s, colour_code);
 	in_uint8(s, width);
 	in_uint8(s, height);
-	in_uint8s(s, 1);	/* type, 0x80 = cached */
+	in_uint8(s, type);	/* type, 0x8x = cached */
 	in_uint8(s, size);
 
 	DEBUG(("BRUSHCACHE(idx=%d,dp=%d,wd=%d,ht=%d,sz=%d)\n", cache_idx, depth,
 	       width, height, size));
 
-	if ((depth == 1) && (width == 8) && (height == 8) && (size == 8))
+	if ((width == 8) && (height == 8))
 	{
-		in_uint8a(s, brush_data.pattern, sizeof(brush_data.pattern));
-		cache_put_brush_data(cache_idx, &brush_data);
+		if (colour_code == 1)
+		{
+			brush_data.colour_code = 1;
+			brush_data.data_size = 8;
+			brush_data.data = xmalloc(8);
+			if (size == 8)
+			{
+				/* read it bottom up */
+				for (index = 7; index >= 0; index--)
+				{
+					in_uint8(s, brush_data.data[index]);
+				}
+			}
+			else
+			{
+				warning("incompatible brush, colour_code %d size %d\n", colour_code, size);
+			}			
+			cache_put_brush_data(1, cache_idx, &brush_data);
+		}
+		else if ((colour_code >= 3) && (colour_code <= 6))
+		{
+			Bpp = colour_code - 2;
+			brush_data.colour_code = colour_code;
+			brush_data.data_size = 8 * 8 * Bpp;
+			brush_data.data = xmalloc(8 * 8 * Bpp);
+			if (size == 16 + 4 * Bpp)
+			{
+				in_uint8p(s, comp_brush, 16 + 4 * Bpp);
+				process_compressed_8x8_brush_data(comp_brush, brush_data.data, Bpp);
+			}
+			else
+			{
+				in_uint8a(s, brush_data.data, 8 * 8 * Bpp);
+			}
+			cache_put_brush_data(colour_code, cache_idx, &brush_data);
+		}
+		else
+		{
+			warning("incompatible brush, colour_code %d size %d\n", colour_code, size);
+		}
 	}
 	else
 	{
-		warning("ignoring incompatible brush type. display may be incorrect\n");
+		warning("incompatible brush, width height %d %d\n", width, height);
 	}
 }
 
