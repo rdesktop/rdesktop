@@ -1,0 +1,16 @@
+
+# by Jay Sorg, public domain
+# borland makefile
+
+OBJS = brushtest.obj
+
+CFLAGS = -O2
+LDFLAGS = -W
+
+all: brushtest.exe
+
+brushtest.exe: $(OBJS)
+	$(CC) -ebrushtest.exe $(LDFLAGS) $(OBJS)
+
+clean:
+	del /q $(OBJS) brushtest.exe *.tds
