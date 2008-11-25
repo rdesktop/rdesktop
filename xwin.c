@@ -3070,7 +3070,7 @@ ui_patblt(uint8 opcode,
 			break;
 
 		case 3:	/* Pattern */
-			if (brush->bd == 0) /* rdp4 brush */
+			if (brush->bd == 0)	/* rdp4 brush */
 			{
 				for (i = 0; i != 8; i++)
 					ipattern[7 - i] = brush->pattern[i];
@@ -3085,7 +3085,7 @@ ui_patblt(uint8 opcode,
 				XSetTSOrigin(g_display, g_gc, 0, 0);
 				ui_destroy_glyph((RD_HGLYPH) fill);
 			}
-			else if (brush->bd->colour_code > 1) /* > 1 bpp */
+			else if (brush->bd->colour_code > 1)	/* > 1 bpp */
 			{
 				fill = (Pixmap) ui_create_bitmap(8, 8, brush->bd->data);
 				XSetFillStyle(g_display, g_gc, FillTiled);
@@ -3271,7 +3271,7 @@ ui_polygon(uint8 opcode,
 			break;
 
 		case 3:	/* Pattern */
-			if (brush->bd == 0) /* rdp4 brush */
+			if (brush->bd == 0)	/* rdp4 brush */
 			{
 				for (i = 0; i != 8; i++)
 					ipattern[7 - i] = brush->pattern[i];
@@ -3286,7 +3286,7 @@ ui_polygon(uint8 opcode,
 				XSetTSOrigin(g_display, g_gc, 0, 0);
 				ui_destroy_glyph((RD_HGLYPH) fill);
 			}
-			else if (brush->bd->colour_code > 1) /* > 1 bpp */
+			else if (brush->bd->colour_code > 1)	/* > 1 bpp */
 			{
 				fill = (Pixmap) ui_create_bitmap(8, 8, brush->bd->data);
 				XSetFillStyle(g_display, g_gc, FillTiled);
@@ -3376,7 +3376,7 @@ ui_ellipse(uint8 opcode,
 			break;
 
 		case 3:	/* Pattern */
-			if (brush->bd == 0) /* rdp4 brush */
+			if (brush->bd == 0)	/* rdp4 brush */
 			{
 				for (i = 0; i != 8; i++)
 					ipattern[7 - i] = brush->pattern[i];
@@ -3391,7 +3391,7 @@ ui_ellipse(uint8 opcode,
 				XSetTSOrigin(g_display, g_gc, 0, 0);
 				ui_destroy_glyph((RD_HGLYPH) fill);
 			}
-			else if (brush->bd->colour_code > 1) /* > 1 bpp */
+			else if (brush->bd->colour_code > 1)	/* > 1 bpp */
 			{
 				fill = (Pixmap) ui_create_bitmap(8, 8, brush->bd->data);
 				XSetFillStyle(g_display, g_gc, FillTiled);

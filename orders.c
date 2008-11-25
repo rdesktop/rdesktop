@@ -1152,7 +1152,7 @@ static void
 process_compressed_8x8_brush_data(uint8 * in, uint8 * out, int Bpp)
 {
 	int x, y, pal_index, in_index, shift, do2, i;
-	uint8 * pal;
+	uint8 *pal;
 
 	in_index = 0;
 	pal = in + 16;
@@ -1187,7 +1187,7 @@ process_brushcache(STREAM s, uint16 flags)
 {
 	BRUSHDATA brush_data;
 	uint8 cache_idx, colour_code, width, height, size, type;
-	uint8 * comp_brush;
+	uint8 *comp_brush;
 	int index;
 	int Bpp;
 
@@ -1218,8 +1218,9 @@ process_brushcache(STREAM s, uint16 flags)
 			}
 			else
 			{
-				warning("incompatible brush, colour_code %d size %d\n", colour_code, size);
-			}			
+				warning("incompatible brush, colour_code %d size %d\n", colour_code,
+					size);
+			}
 			cache_put_brush_data(1, cache_idx, &brush_data);
 		}
 		else if ((colour_code >= 3) && (colour_code <= 6))

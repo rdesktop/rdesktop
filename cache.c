@@ -453,7 +453,7 @@ cache_get_brush_data(uint8 colour_code, uint8 idx)
 void
 cache_put_brush_data(uint8 colour_code, uint8 idx, BRUSHDATA * brush_data)
 {
-	BRUSHDATA * bd;
+	BRUSHDATA *bd;
 
 	colour_code = colour_code == 1 ? 0 : 1;
 	if (idx < NUM_ELEMENTS(g_brushcache[0]))

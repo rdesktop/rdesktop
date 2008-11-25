@@ -84,7 +84,7 @@ typedef struct _BRUSHDATA
 {
 	uint32 colour_code;
 	uint32 data_size;
-	uint8 * data;
+	uint8 *data;
 }
 BRUSHDATA;
 
@@ -94,7 +94,7 @@ typedef struct _BRUSH
 	uint8 yorigin;
 	uint8 style;
 	uint8 pattern[8];
-	BRUSHDATA * bd;
+	BRUSHDATA *bd;
 }
 BRUSH;
 

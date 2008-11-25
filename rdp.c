@@ -858,8 +858,7 @@ rdp_send_confirm_active(void)
 		RDP_CAPLEN_BMPCACHE + RDP_CAPLEN_COLCACHE +
 		RDP_CAPLEN_ACTIVATE + RDP_CAPLEN_CONTROL +
 		RDP_CAPLEN_POINTER + RDP_CAPLEN_SHARE +
-		RDP_CAPLEN_BRUSHCACHE +
-		0x58 + 0x08 + 0x08 + 0x34 /* unknown caps */  +
+		RDP_CAPLEN_BRUSHCACHE + 0x58 + 0x08 + 0x08 + 0x34 /* unknown caps */  +
 		4 /* w2k fix, why? */ ;
 
 	s = sec_init(sec_flags, 6 + 14 + caplen + sizeof(RDP_SOURCE));
