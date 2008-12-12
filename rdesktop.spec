@@ -31,10 +31,6 @@ make install DESTDIR=$RPM_BUILD_ROOT
 %{_mandir}/man1/rdesktop.1*
 %{_datadir}/rdesktop/keymaps
 
-%post
-
-%postun
-
 %clean
 rm -rf $RPM_BUILD_ROOT
 
