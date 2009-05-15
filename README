@@ -1,6 +1,6 @@
-===========================================
-rdesktop: A Remote Desktop Protocol client.
-===========================================
+==========================================
+rdesktop: A Remote Desktop Protocol client
+==========================================
 
 rdesktop is a client for Microsoft Windows NT Terminal Server, Windows 2000
 Terminal Services, Windows 2003 Terminal Services/Remote Desktop, Windows XP
@@ -10,7 +10,7 @@ rdesktop currently implements the RDP version 4 and 5 protocols.
 Installation
 ------------
 rdesktop uses a GNU-style build procedure.  Typically all that is necessary
-to install rdesktop is the following:
+to install rdesktop is the following::
 
 	% ./configure
 	% make
@@ -27,7 +27,7 @@ necessary for release versions of rdesktop.
 
 Invocation
 ----------
-Simply run:
+Simply run::
 
 	% rdesktop server
 
