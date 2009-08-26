@@ -1198,8 +1198,7 @@ process_brushcache(STREAM s, uint16 flags)
 	in_uint8(s, type);	/* type, 0x8x = cached */
 	in_uint8(s, size);
 
-	DEBUG(("BRUSHCACHE(idx=%d,dp=%d,wd=%d,ht=%d,sz=%d)\n", cache_idx, depth,
-	       width, height, size));
+	DEBUG(("BRUSHCACHE(idx=%d,wd=%d,ht=%d,sz=%d)\n", cache_idx, width, height, size));
 
 	if ((width == 8) && (height == 8))
 	{
