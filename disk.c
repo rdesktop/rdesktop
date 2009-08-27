@@ -833,8 +833,8 @@ disk_set_information(RD_NTHANDLE handle, uint32 info_class, STREAM in, STREAM ou
 			in_uint32_le(in, delete_on_close);
 
 			if (delete_on_close ||
-			    (pfinfo->
-			     accessmask & (FILE_DELETE_ON_CLOSE | FILE_COMPLETE_IF_OPLOCKED)))
+			    (pfinfo->accessmask &
+			     (FILE_DELETE_ON_CLOSE | FILE_COMPLETE_IF_OPLOCKED)))
 			{
 				pfinfo->delete_on_close = True;
 			}

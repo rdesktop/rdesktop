@@ -50,6 +50,7 @@ static RD_HBITMAP g_volatile_bc[3];
 
 static int g_bmpcache_lru[3] = { NOT_SET, NOT_SET, NOT_SET };
 static int g_bmpcache_mru[3] = { NOT_SET, NOT_SET, NOT_SET };
+
 static int g_bmpcache_count[3];
 
 /* Setup the bitmap cache lru/mru linked list */

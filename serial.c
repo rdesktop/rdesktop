@@ -271,9 +271,8 @@ get_termios(SERIAL_DEVICE * pser_inf, RD_NTHANDLE serial_fd)
 
 	pser_inf->stop_bits = (ptermios->c_cflag & CSTOPB) ? STOP_BITS_2 : STOP_BITS_1;
 	pser_inf->parity =
-		(ptermios->
-		 c_cflag & PARENB) ? ((ptermios->
-				       c_cflag & PARODD) ? ODD_PARITY : EVEN_PARITY) : NO_PARITY;
+		(ptermios->c_cflag & PARENB) ? ((ptermios->c_cflag & PARODD) ? ODD_PARITY :
+						EVEN_PARITY) : NO_PARITY;
 	switch (ptermios->c_cflag & CSIZE)
 	{
 		case CS5:
