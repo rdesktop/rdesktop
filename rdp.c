@@ -1413,7 +1413,6 @@ RD_BOOL
 rdp_loop(RD_BOOL * deactivated, uint32 * ext_disc_reason)
 {
 	uint8 type;
-	RD_BOOL disc = False;	/* True when a disconnect PDU was received */
 	RD_BOOL cont = True;
 	STREAM s;
 
@@ -1436,15 +1435,13 @@ rdp_loop(RD_BOOL * deactivated, uint32 * ext_disc_reason)
 				return process_redirect_pdu(s);
 				break;
 			case RDP_PDU_DATA:
-				disc = process_data_pdu(s, ext_disc_reason);
+				process_data_pdu(s, ext_disc_reason);
 				break;
 			case 0:
 				break;
 			default:
 				unimpl("PDU %d\n", type);
 		}
-		if (disc)
-			return False;
 		cont = g_next_packet < s->end;
 	}
 	return True;
