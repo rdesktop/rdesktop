@@ -91,6 +91,7 @@ RD_BOOL g_lspci_enabled = False;
 RD_BOOL g_owncolmap = False;
 RD_BOOL g_ownbackstore = True;	/* We can't rely on external BackingStore */
 RD_BOOL g_seamless_rdp = False;
+RD_BOOL g_user_quit = False;
 uint32 g_embed_wnd;
 uint32 g_rdp5_performanceflags =
 	RDP5_NO_WALLPAPER | RDP5_NO_FULLWINDOWDRAG | RDP5_NO_MENUANIMATIONS;
@@ -213,91 +214,116 @@ usage(char *program)
 	fprintf(stderr, "   -5: use RDP version 5 (default)\n");
 }
 
-static void
-print_disconnect_reason(uint16 reason)
+static int
+handle_disconnect_reason(RD_BOOL deactivated, uint16 reason)
 {
 	char *text;
+	int retval;
 
 	switch (reason)
 	{
 		case exDiscReasonNoInfo:
 			text = "No information available";
+			if (deactivated)
+				retval = EX_OK;
+			else
+				retval = EXRD_UNKNOWN;
 			break;
 
 		case exDiscReasonAPIInitiatedDisconnect:
+		case exDiscReasonWindows7Disconnect:
 			text = "Server initiated disconnect";
+			retval = EXRD_API_DISCONNECT;
 			break;
 
 		case exDiscReasonAPIInitiatedLogoff:
 			text = "Server initiated logoff";
+			retval = EXRD_API_LOGOFF;
 			break;
 
 		case exDiscReasonServerIdleTimeout:
 			text = "Server idle timeout reached";
+			retval = EXRD_IDLE_TIMEOUT;
 			break;
 
 		case exDiscReasonServerLogonTimeout:
 			text = "Server logon timeout reached";
+			retval = EXRD_LOGON_TIMEOUT;
 			break;
 
 		case exDiscReasonReplacedByOtherConnection:
 			text = "The session was replaced";
+			retval = EXRD_REPLACED;
 			break;
 
 		case exDiscReasonOutOfMemory:
 			text = "The server is out of memory";
+			retval = EXRD_OUT_OF_MEM;
 			break;
 
 		case exDiscReasonServerDeniedConnection:
 			text = "The server denied the connection";
+			retval = EXRD_DENIED;
 			break;
 
 		case exDiscReasonServerDeniedConnectionFips:
 			text = "The server denied the connection for security reason";
+			retval = EXRD_DENIED_FIPS;
 			break;
 
 		case exDiscReasonLicenseInternal:
 			text = "Internal licensing error";
+			retval = EXRD_LIC_INTERNAL;
 			break;
 
 		case exDiscReasonLicenseNoLicenseServer:
 			text = "No license server available";
+			retval = EXRD_LIC_NOSERVER;
 			break;
 
 		case exDiscReasonLicenseNoLicense:
 			text = "No valid license available";
+			retval = EXRD_LIC_NOLICENSE;
 			break;
 
 		case exDiscReasonLicenseErrClientMsg:
 			text = "Invalid licensing message";
+			retval = EXRD_LIC_MSG;
 			break;
 
 		case exDiscReasonLicenseHwidDoesntMatchLicense:
 			text = "Hardware id doesn't match software license";
+			retval = EXRD_LIC_HWID;
 			break;
 
 		case exDiscReasonLicenseErrClientLicense:
 			text = "Client license error";
+			retval = EXRD_LIC_CLIENT;
 			break;
 
 		case exDiscReasonLicenseCantFinishProtocol:
 			text = "Network error during licensing protocol";
+			retval = EXRD_LIC_NET;
 			break;
 
 		case exDiscReasonLicenseClientEndedProtocol:
 			text = "Licensing protocol was not completed";
+			retval = EXRD_LIC_PROTO;
 			break;
 
 		case exDiscReasonLicenseErrClientEncryption:
 			text = "Incorrect client license enryption";
+			retval = EXRD_LIC_ENC;
 			break;
 
 		case exDiscReasonLicenseCantUpgradeLicense:
 			text = "Can't upgrade license";
+			retval = EXRD_LIC_UPGRADE;
 			break;
 
 		case exDiscReasonLicenseNoRemoteConnections:
 			text = "The server is not licensed to accept remote connections";
+			retval = EXRD_LIC_NOREMOTE;
 			break;
 
 		default:
@@ -309,8 +335,12 @@ print_disconnect_reason(uint16 reason)
 			{
 				text = "Unknown reason";
 			}
+			retval = EXRD_UNKNOWN;
 	}
-	fprintf(stderr, "disconnect: %s.\n", text);
+	if (reason != exDiscReasonNoInfo)
+		fprintf(stderr, "disconnect: %s.\n", text);
+
+	return retval;
 }
 
 static void
@@ -535,7 +565,7 @@ main(int argc, char *argv[])
 				if (g_width <= 0)
 				{
 					error("invalid geometry\n");
-					return 1;
+					return EX_USAGE;
 				}
 
 				if (*p == 'x')
@@ -544,7 +574,7 @@ main(int argc, char *argv[])
 				if (g_height <= 0)
 				{
 					error("invalid geometry\n");
-					return 1;
+					return EX_USAGE;
 				}
 
 				if (*p == '%')
@@ -613,7 +643,7 @@ main(int argc, char *argv[])
 				if (*p)
 				{
 					error("invalid button size\n");
-					return 1;
+					return EX_USAGE;
 				}
 
 				break;
@@ -638,7 +668,7 @@ main(int argc, char *argv[])
 				    && g_server_depth != 32)
 				{
 					error("Invalid server colour depth.\n");
-					return 1;
+					return EX_USAGE;
 				}
 				break;
 
@@ -789,14 +819,14 @@ main(int argc, char *argv[])
 			case '?':
 			default:
 				usage(argv[0]);
-				return 1;
+				return EX_USAGE;
 		}
 	}
 
 	if (argc - optind != 1)
 	{
 		usage(argv[0]);
-		return 1;
+		return EX_USAGE;
 	}
 
 	STRNCPY(server, argv[optind], sizeof(server));
@@ -807,33 +837,33 @@ main(int argc, char *argv[])
 		if (g_win_button_size)
 		{
 			error("You cannot use -S and -A at the same time\n");
-			return 1;
+			return EX_USAGE;
 		}
 		g_rdp5_performanceflags &= ~RDP5_NO_FULLWINDOWDRAG;
 		if (geometry_option)
 		{
 			error("You cannot use -g and -A at the same time\n");
-			return 1;
+			return EX_USAGE;
 		}
 		if (g_fullscreen)
 		{
 			error("You cannot use -f and -A at the same time\n");
-			return 1;
+			return EX_USAGE;
 		}
 		if (g_hide_decorations)
 		{
 			error("You cannot use -D and -A at the same time\n");
-			return 1;
+			return EX_USAGE;
 		}
 		if (g_embed_wnd)
 		{
 			error("You cannot use -X and -A at the same time\n");
-			return 1;
+			return EX_USAGE;
 		}
 		if (!g_use_rdp5)
 		{
 			error("You cannot use -4 and -A at the same time\n");
-			return 1;
+			return EX_USAGE;
 		}
 		g_width = -100;
 		g_grab_keyboard = False;
@@ -845,7 +875,7 @@ main(int argc, char *argv[])
 		if ((pw == NULL) || (pw->pw_name == NULL))
 		{
 			error("could not determine username, use -u\n");
-			return 1;
+			return EX_OSERR;
 		}
 		/* +1 for trailing \0 */
 		int pwlen = strlen(pw->pw_name) + 1;
@@ -872,7 +902,7 @@ main(int argc, char *argv[])
 		if (gethostname(fullhostname, sizeof(fullhostname)) == -1)
 		{
 			error("could not determine local hostname, use -n\n");
-			return 1;
+			return EX_OSERR;
 		}
 
 		p = strchr(fullhostname, '.');
@@ -908,11 +938,11 @@ main(int argc, char *argv[])
 
 #ifdef RDP2VNC
 	rdp2vnc_connect(server, flags, domain, password, shell, directory);
-	return 0;
+	return EX_OK;
 #else
 
 	if (!ui_init())
-		return 1;
+		return EX_OSERR;
 
 #ifdef WITH_RDPSND
 	if (g_rdpsnd)
@@ -934,11 +964,11 @@ main(int argc, char *argv[])
 		if (run_count == 0)
 		{
 			if (!rdp_connect(server, flags, domain, password, shell, directory))
-				return 1;
+				return EX_PROTOCOL;
 		}
 		else if (!rdp_reconnect
 			 (server, flags, domain, password, shell, directory, g_redirect_cookie))
-			return 1;
+			return EX_PROTOCOL;
 
 		/* By setting encryption to False here, we have an encrypted login 
 		   packet but unencrypted transfer of other packets */
@@ -987,28 +1017,10 @@ main(int argc, char *argv[])
 	cache_save_state();
 	ui_deinit();
 
-	if (ext_disc_reason >= 2)
-		print_disconnect_reason(ext_disc_reason);
+	if (g_user_quit)
+		return EXRD_WINDOW_CLOSED;
 
-	if (deactivated)
-	{
-		/* clean disconnect */
-		return 0;
-	}
-	else
-	{
-		if (ext_disc_reason == exDiscReasonAPIInitiatedDisconnect
-		    || ext_disc_reason == exDiscReasonAPIInitiatedLogoff)
-		{
-			/* not so clean disconnect, but nothing to worry about */
-			return 0;
-		}
-		else
-		{
-			/* return error */
-			return 2;
-		}
-	}
+	return handle_disconnect_reason(deactivated, ext_disc_reason);
 
 #endif
 	if (g_redirect_username)
@@ -1108,7 +1120,7 @@ xmalloc(int size)
 	if (mem == NULL)
 	{
 		error("xmalloc %d\n", size);
-		exit(1);
+		exit(EX_UNAVAILABLE);
 	}
 	return mem;
 }
@@ -1120,7 +1132,7 @@ exit_if_null(void *ptr)
 	if (ptr == NULL)
 	{
 		error("unexpected null pointer. Out of memory?\n");
-		exit(1);
+		exit(EX_UNAVAILABLE);
 	}
 }
 
@@ -1132,7 +1144,7 @@ xstrdup(const char *s)
 	if (mem == NULL)
 	{
 		perror("strdup");
-		exit(1);
+		exit(EX_UNAVAILABLE);
 	}
 	return mem;
 }
@@ -1149,7 +1161,7 @@ xrealloc(void *oldmem, size_t size)
 	if (mem == NULL)
 	{
 		error("xrealloc %ld\n", size);
-		exit(1);
+		exit(EX_UNAVAILABLE);
 	}
 	return mem;
 }

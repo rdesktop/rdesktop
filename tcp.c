@@ -56,6 +56,7 @@ static int g_sock;
 static struct stream g_in;
 static struct stream g_out[STREAM_COUNT];
 int g_tcp_port_rdp = TCP_PORT_RDP;
+extern RD_BOOL g_user_quit;
 
 /* wait till socket is ready to write or timeout */
 static RD_BOOL
@@ -173,8 +174,11 @@ tcp_recv(STREAM s, uint32 length)
 	while (length > 0)
 	{
 		if (!ui_select(g_sock))
+		{
 			/* User quit */
+			g_user_quit = True;
 			return NULL;
+		}
 
 		rcvd = recv(g_sock, s->end, length, 0);
 		if (rcvd < 0)

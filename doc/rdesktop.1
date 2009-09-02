@@ -220,6 +220,64 @@ Use RDP version 4.
 .BR "-5"
 Use RDP version 5 (default).
 .PP
+.SH "EXIT VALUES"
+.PP 
+.IP "\fB0\fP"
+RDP session terminated normally
+.IP "\fB1\fP"
+Server initiated disconnect
+.IP "\fB2\fP"
+Server initiated logoff
+.IP "\fB3\fP"
+Server idle timeout reached
+.IP "\fB4\fP"
+Server logon timeout reached
+.IP "\fB5\fP"
+The session was replaced
+.IP "\fB6\fP"
+The server is out of memory
+.IP "\fB7\fP"
+The server denied the connection
+.IP "\fB8\fP"
+The server denied the connection for security reason
+.IP "\fB16\fP"
+Internal licensing error
+.IP "\fB17\fP"
+No license server available
+.IP "\fB18\fP"
+No valid license available
+.IP "\fB19\fP"
+Invalid licensing message
+.IP "\fB20\fP"
+Hardware id doesn't match software license
+.IP "\fB21\fP"
+Client license error
+.IP "\fB22\fP"
+Network error during licensing protocol
+.IP "\fB23\fP"
+Licensing protocol was not completed
+.IP "\fB24\fP"
+Incorrect client license enryption
+.IP "\fB25\fP"
+Can't upgrade license
+.IP "\fB26\fP"
+The server is not licensed to accept remote connections
+.IP "\fB62\fP"
+The local client window was closed
+.IP "\fB63\fP"
+Some other, unknown error occured
+.IP "\fB64\fP"
+Command line usage error
+.IP "\fB69\fP"
+A service or resource (such as memory) is unavailable
+.IP "\fB70\fP"
+An internal software error has been detected
+.IP "\fB71\fP"
+Operating system error
+.IP "\fB76\fP"
+Protocol error or unable to connect to remote host.
+
+.PP 
 .SH LINKS
 Main website of rdesktop
 .br

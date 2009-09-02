@@ -480,7 +480,7 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 	{
 		error("Maximum number of open files (%s) reached. Increase MAX_OPEN_FILES!\n",
 		      handle);
-		exit(1);
+		exit(EX_SOFTWARE);
 	}
 
 	if (dirp)

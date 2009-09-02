@@ -95,7 +95,7 @@ cache_rebuild_bmpcache_linked_list(uint8 id, sint16 * idx, int count)
 	{
 		error("Oops. %d in bitmap cache linked list, %d in ui cache...\n", c,
 		      g_bmpcache_count[id]);
-		exit(1);
+		exit(EX_SOFTWARE);
 	}
 }
 
