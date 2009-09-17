@@ -219,7 +219,10 @@ works:
 
 2. Ctrl+Shift+arrows should mark text, with CapsLock both on and off. 
 
-3. Test a sequence, like egrave. 
+3. Test a sequence, like egrave. If you don't have this symbol in your
+   keyboard layout, try something like:
+
+   xmodmap -e "keycode 49 = egrave"
 
 4. Test a char generated with AltGr, such as @ on a swedish keyboard. 
 
