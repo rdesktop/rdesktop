@@ -260,3 +260,16 @@ works:
     * Release F1
 
     Verify that shift is not stuck down, by clicking on the text. 
+
+14. Use a keyboard layout where Meta_L can be generated with Shift_R +
+    Alt_L. Then:
+
+    * Start Notepad
+    * Press Shift_R
+    * Press Alt_L
+    * Release Shift_R
+    * Release Alt_L
+    * Press "e"
+
+    Verify that you get an "e" in Notepad, rather than start Windows
+    Explorer. 

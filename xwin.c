@@ -2341,6 +2341,7 @@ xwin_process_events(void)
 				DEBUG_KBD(("KeyPress for keysym (0x%lx, %s)\n", keysym,
 					   get_ksname(keysym)));
 
+				set_keypress_keysym(xevent.xkey.keycode, keysym);
 				ev_time = time(NULL);
 				if (handle_special_keys(keysym, xevent.xkey.state, ev_time, True))
 					break;
@@ -2357,6 +2358,7 @@ xwin_process_events(void)
 				DEBUG_KBD(("\nKeyRelease for keysym (0x%lx, %s)\n", keysym,
 					   get_ksname(keysym)));
 
+				keysym = reset_keypress_keysym(xevent.xkey.keycode, keysym);
 				ev_time = time(NULL);
 				if (handle_special_keys(keysym, xevent.xkey.state, ev_time, False))
 					break;

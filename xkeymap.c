@@ -31,6 +31,7 @@
 #include <limits.h>
 #include <time.h>
 #include <string.h>
+#include <assert.h>
 #include "rdesktop.h"
 #include "scancodes.h"
 
@@ -52,6 +53,7 @@ extern RD_BOOL g_numlock_sync;
 
 static RD_BOOL keymap_loaded;
 static key_translation *keymap[KEYMAP_SIZE];
+static KeySym keypress_keysyms[256];
 static int min_keycode;
 static uint16 remote_modifier_state = 0;
 static uint16 saved_remote_modifier_state = 0;
@@ -502,6 +504,36 @@ reset_winkey(uint32 ev_time)
 		rdp_send_scancode(ev_time, RDP_KEYRELEASE, SCANCODE_CHAR_LWIN);
 	}
 }
+
+
+void
+set_keypress_keysym(unsigned int keycode, KeySym keysym)
+{
+	if (keycode < 8 || keycode > 255)
+		return;
+	keypress_keysyms[keycode] = keysym;
+}
+
+
+KeySym
+reset_keypress_keysym(unsigned int keycode, KeySym keysym)
+{
+	KeySym ks;
+	if (keycode < 8 || keycode > 255)
+		return keysym;
+	ks = keypress_keysyms[keycode];
+	if (ks != 0)
+	{
+		keypress_keysyms[keycode] = 0;
+	}
+	else
+	{
+		ks = keysym;
+	}
+
+	return ks;
+}
+
 
 /* Handle special key combinations */
 RD_BOOL
