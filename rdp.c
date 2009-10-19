@@ -859,7 +859,7 @@ rdp_send_confirm_active(void)
 		RDP_CAPLEN_ACTIVATE + RDP_CAPLEN_CONTROL +
 		RDP_CAPLEN_POINTER + RDP_CAPLEN_SHARE +
 		RDP_CAPLEN_BRUSHCACHE + 0x58 + 0x08 + 0x08 + 0x34 /* unknown caps */  +
-		4 /* w2k fix, why? */ ;
+		4 /* w2k fix, sessionid */ ;
 
 	s = sec_init(sec_flags, 6 + 14 + caplen + sizeof(RDP_SOURCE));
 
@@ -873,7 +873,7 @@ rdp_send_confirm_active(void)
 	out_uint16_le(s, caplen);
 
 	out_uint8p(s, RDP_SOURCE, sizeof(RDP_SOURCE));
-	out_uint16_le(s, 0xd);	/* num_caps */
+	out_uint16_le(s, 0xe);	/* num_caps */
 	out_uint8s(s, 2);	/* pad */
 
 	rdp_out_general_caps(s);
@@ -887,10 +887,10 @@ rdp_send_confirm_active(void)
 	rdp_out_share_caps(s);
 	rdp_out_brushcache_caps(s);
 
-	rdp_out_unknown_caps(s, 0x0d, 0x58, caps_0x0d);	/* international? */
-	rdp_out_unknown_caps(s, 0x0c, 0x08, caps_0x0c);
-	rdp_out_unknown_caps(s, 0x0e, 0x08, caps_0x0e);
-	rdp_out_unknown_caps(s, 0x10, 0x34, caps_0x10);	/* glyph cache? */
+	rdp_out_unknown_caps(s, 0x0d, 0x58, caps_0x0d);	/* CAPSTYPE_INPUT */
+	rdp_out_unknown_caps(s, 0x0c, 0x08, caps_0x0c);	/* CAPSTYPE_SOUND */
+	rdp_out_unknown_caps(s, 0x0e, 0x08, caps_0x0e);	/* CAPSTYPE_FONT */
+	rdp_out_unknown_caps(s, 0x10, 0x34, caps_0x10);	/* CAPSTYPE_GLYPHCACHE */
 
 	s_mark_end(s);
 	sec_send(s, sec_flags);
