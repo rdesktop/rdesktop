@@ -3735,6 +3735,7 @@ ui_begin_update(void)
 void
 ui_end_update(void)
 {
+	XFlush(g_display);
 }
 
 
