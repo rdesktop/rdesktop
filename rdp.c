@@ -778,6 +778,18 @@ rdp_out_pointer_caps(STREAM s)
 	out_uint16_le(s, 20);	/* Cache size */
 }
 
+/* Output new pointer capability set */
+static void
+rdp_out_newpointer_caps(STREAM s)
+{
+	out_uint16_le(s, RDP_CAPSET_POINTER);
+	out_uint16_le(s, RDP_CAPLEN_NEWPOINTER);
+
+	out_uint16_le(s, 1);	/* Colour pointer */
+	out_uint16_le(s, 20);	/* Cache size */
+	out_uint16_le(s, 20);	/* Cache size for new pointers */
+}
+
 /* Output share capability set */
 static void
 rdp_out_share_caps(STREAM s)
@@ -855,11 +867,22 @@ rdp_send_confirm_active(void)
 	uint32 sec_flags = g_encryption ? (RDP5_FLAG | SEC_ENCRYPT) : RDP5_FLAG;
 	uint16 caplen =
 		RDP_CAPLEN_GENERAL + RDP_CAPLEN_BITMAP + RDP_CAPLEN_ORDER +
-		RDP_CAPLEN_BMPCACHE + RDP_CAPLEN_COLCACHE +
+		RDP_CAPLEN_COLCACHE +
 		RDP_CAPLEN_ACTIVATE + RDP_CAPLEN_CONTROL +
-		RDP_CAPLEN_POINTER + RDP_CAPLEN_SHARE +
+		RDP_CAPLEN_SHARE +
 		RDP_CAPLEN_BRUSHCACHE + 0x58 + 0x08 + 0x08 + 0x34 /* unknown caps */  +
 		4 /* w2k fix, sessionid */ ;
+
+	if (g_use_rdp5)
+	{
+		caplen += RDP_CAPLEN_BMPCACHE2;
+		caplen += RDP_CAPLEN_NEWPOINTER;
+	}
+	else
+	{
+		caplen += RDP_CAPLEN_BMPCACHE;
+		caplen += RDP_CAPLEN_POINTER;
+	}
 
 	s = sec_init(sec_flags, 6 + 14 + caplen + sizeof(RDP_SOURCE));
 
@@ -879,11 +902,19 @@ rdp_send_confirm_active(void)
 	rdp_out_general_caps(s);
 	rdp_out_bitmap_caps(s);
 	rdp_out_order_caps(s);
-	g_use_rdp5 ? rdp_out_bmpcache2_caps(s) : rdp_out_bmpcache_caps(s);
+	if (g_use_rdp5)
+	{
+		rdp_out_bmpcache2_caps(s);
+		rdp_out_newpointer_caps(s);
+	}
+	else
+	{
+		rdp_out_bmpcache_caps(s);
+		rdp_out_pointer_caps(s);
+	}
 	rdp_out_colcache_caps(s);
 	rdp_out_activate_caps(s);
 	rdp_out_control_caps(s);
-	rdp_out_pointer_caps(s);
 	rdp_out_share_caps(s);
 	rdp_out_brushcache_caps(s);
 
@@ -1022,11 +1053,13 @@ process_demand_active(STREAM s)
 }
 
 /* Process a colour pointer PDU */
-void
-process_colour_pointer_pdu(STREAM s)
+static void
+process_colour_pointer_common(STREAM s, int bpp)
 {
-	uint16 x, y, width, height, cache_idx, masklen, datalen;
-	uint8 *mask, *data;
+	uint16 width, height, cache_idx, masklen, datalen;
+	sint16 x, y;
+	uint8 * mask;
+	uint8 * data;
 	RD_HCURSOR cursor;
 
 	in_uint16_le(s, cache_idx);
@@ -1038,9 +1071,36 @@ process_colour_pointer_pdu(STREAM s)
 	in_uint16_le(s, datalen);
 	in_uint8p(s, data, datalen);
 	in_uint8p(s, mask, masklen);
-	cursor = ui_create_cursor(x, y, width, height, mask, data);
+	if ((width != 32) || (height != 32))
+	{
+		warning("process_colour_pointer_common: "
+			"width %d height %d\n", width, height);
+	}
+	/* sometimes x or y is out of bounds */
+	x = MAX(x, 0);
+	x = MIN(x, width - 1);
+	y = MAX(y, 0);
+	y = MIN(y, height - 1);
+	cursor = ui_create_cursor(x, y, width, height, mask, data, bpp);
 	ui_set_cursor(cursor);
 	cache_put_cursor(cache_idx, cursor);
+}
+
+/* Process a colour pointer PDU */
+void
+process_colour_pointer_pdu(STREAM s)
+{
+	process_colour_pointer_common(s, 24);
+}
+
+/* Process a New Pointer PDU - these pointers have variable bit depth */
+void 
+process_new_pointer_pdu(STREAM s)
+{
+	int xor_bpp;
+
+	in_uint16_le(s, xor_bpp);
+	process_colour_pointer_common(s, xor_bpp);
 }
 
 /* Process a cached pointer PDU */
@@ -1100,6 +1160,10 @@ process_pointer_pdu(STREAM s)
 
 		case RDP_POINTER_SYSTEM:
 			process_system_pointer_pdu(s);
+			break;
+
+		case RDP_POINTER_NEW:
+			process_new_pointer_pdu(s);
 			break;
 
 		default:

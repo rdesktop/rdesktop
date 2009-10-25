@@ -111,6 +111,9 @@ rdp5_process(STREAM s)
 			case 10:	/* cached pointer */
 				process_cached_pointer_pdu(ts);
 				break;
+			case 11:
+				process_new_pointer_pdu(ts);
+				break;
 			default:
 				unimpl("RDP5 opcode %d\n", type);
 		}

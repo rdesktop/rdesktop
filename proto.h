@@ -144,6 +144,7 @@ void rdp_send_input(uint32 time, uint16 message_type, uint16 device_flags, uint1
 		    uint16 param2);
 void rdp_send_client_window_status(int status);
 void process_colour_pointer_pdu(STREAM s);
+void process_new_pointer_pdu(STREAM s);
 void process_cached_pointer_pdu(STREAM s);
 void process_system_pointer_pdu(STREAM s);
 void process_bitmap_updates(STREAM s);
@@ -249,7 +250,7 @@ void ui_destroy_bitmap(RD_HBITMAP bmp);
 RD_HGLYPH ui_create_glyph(int width, int height, uint8 * data);
 void ui_destroy_glyph(RD_HGLYPH glyph);
 RD_HCURSOR ui_create_cursor(unsigned int x, unsigned int y, int width, int height, uint8 * andmask,
-			    uint8 * xormask);
+			    uint8 * xormask, int bpp);
 void ui_set_cursor(RD_HCURSOR cursor);
 void ui_destroy_cursor(RD_HCURSOR cursor);
 void ui_set_null_cursor(void);

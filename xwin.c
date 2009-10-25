@@ -2099,7 +2099,7 @@ ui_create_window(void)
 
 	/* create invisible 1x1 cursor to be used as null cursor */
 	if (g_null_cursor == NULL)
-		g_null_cursor = ui_create_cursor(0, 0, 1, 1, null_pointer_mask, null_pointer_data);
+		g_null_cursor = ui_create_cursor(0, 0, 1, 1, null_pointer_mask, null_pointer_data, 24);
 
 	if (g_seamless_rdp)
 	{
@@ -2772,9 +2772,62 @@ ui_destroy_glyph(RD_HGLYPH glyph)
 	XFreePixmap(g_display, (Pixmap) glyph);
 }
 
+/* convert next pixel to 32 bpp */
+static int
+get_next_xor_pixel(uint8 * xormask, int bpp, int * k)
+{
+	int rv = 0;
+	PixelColour pc;
+	uint8 * s8;
+	uint16 * s16;
+
+	switch (bpp)
+	{
+		case 1:
+			s8 = xormask + (*k) / 8;
+			rv = (*s8) & (0x80 >> ((*k) % 8));
+			rv = rv ? 0xffffff : 0;
+			(*k) += 1;
+			break;
+		case 8:
+			s8 = xormask + *k;
+			/* should use colour map */
+			rv = s8[0];
+			rv = rv ? 0xffffff : 0;
+			(*k) += 1;
+			break;
+		case 15:
+			s16 = (uint16 *) xormask;
+			SPLITCOLOUR15(s16[*k], pc);
+			rv = (pc.red << 16) | (pc.green << 8) | pc.blue;
+			(*k) += 1;
+			break;
+		case 16:
+			s16 = (uint16 *) xormask;
+			SPLITCOLOUR16(s16[*k], pc);
+			rv = (pc.red << 16) | (pc.green << 8) | pc.blue;
+			(*k) += 1;
+			break;
+		case 24:
+			s8 = xormask + *k;
+			rv = (s8[0] << 16) | (s8[1] << 8) | s8[2];
+			(*k) += 3;
+			break;
+		case 32:
+			s8 = xormask + *k;
+			rv = (s8[1] << 16) | (s8[2] << 8) | s8[3];
+			(*k) += 4;
+			break;
+		default:
+			error("unknown bpp in get_next_xor_pixel %d\n", bpp);
+			break;
+	}
+	return rv;
+}
+
 RD_HCURSOR
 ui_create_cursor(unsigned int x, unsigned int y, int width, int height,
-		 uint8 * andmask, uint8 * xormask)
+		 uint8 * andmask, uint8 * xormask, int bpp)
 {
 	RD_HGLYPH maskglyph, cursorglyph;
 	XColor bg, fg;
@@ -2782,9 +2835,10 @@ ui_create_cursor(unsigned int x, unsigned int y, int width, int height,
 	uint8 *cursor, *pcursor;
 	uint8 *mask, *pmask;
 	uint8 nextbit;
-	int scanline, offset;
-	int i, j;
+	int scanline, offset, delta;
+	int i, j, k;
 
+	k = 0;
 	scanline = (width + 7) / 8;
 	offset = scanline * height;
 
@@ -2793,11 +2847,19 @@ ui_create_cursor(unsigned int x, unsigned int y, int width, int height,
 
 	mask = (uint8 *) xmalloc(offset);
 	memset(mask, 0, offset);
-
+	if (bpp == 1)
+	{
+		offset = 0;
+		delta = scanline;
+	}
+	else
+	{
+		offset = scanline * height - scanline;
+		delta = -scanline;
+	}
 	/* approximate AND and XOR masks with a monochrome X pointer */
 	for (i = 0; i < height; i++)
 	{
-		offset -= scanline;
 		pcursor = &cursor[offset];
 		pmask = &mask[offset];
 
@@ -2805,7 +2867,7 @@ ui_create_cursor(unsigned int x, unsigned int y, int width, int height,
 		{
 			for (nextbit = 0x80; nextbit != 0; nextbit >>= 1)
 			{
-				if (xormask[0] || xormask[1] || xormask[2])
+				if (get_next_xor_pixel(xormask, bpp, &k))
 				{
 					*pcursor |= (~(*andmask) & nextbit);
 					*pmask |= nextbit;
@@ -2815,14 +2877,13 @@ ui_create_cursor(unsigned int x, unsigned int y, int width, int height,
 					*pcursor |= ((*andmask) & nextbit);
 					*pmask |= (~(*andmask) & nextbit);
 				}
-
-				xormask += 3;
 			}
 
 			andmask++;
 			pcursor++;
 			pmask++;
 		}
+		offset += delta;
 	}
 
 	fg.red = fg.blue = fg.green = 0xffff;
