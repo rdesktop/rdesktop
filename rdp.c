@@ -1058,8 +1058,8 @@ process_colour_pointer_common(STREAM s, int bpp)
 {
 	uint16 width, height, cache_idx, masklen, datalen;
 	sint16 x, y;
-	uint8 * mask;
-	uint8 * data;
+	uint8 *mask;
+	uint8 *data;
 	RD_HCURSOR cursor;
 
 	in_uint16_le(s, cache_idx);
@@ -1073,8 +1073,7 @@ process_colour_pointer_common(STREAM s, int bpp)
 	in_uint8p(s, mask, masklen);
 	if ((width != 32) || (height != 32))
 	{
-		warning("process_colour_pointer_common: "
-			"width %d height %d\n", width, height);
+		warning("process_colour_pointer_common: " "width %d height %d\n", width, height);
 	}
 	/* sometimes x or y is out of bounds */
 	x = MAX(x, 0);
@@ -1094,7 +1093,7 @@ process_colour_pointer_pdu(STREAM s)
 }
 
 /* Process a New Pointer PDU - these pointers have variable bit depth */
-void 
+void
 process_new_pointer_pdu(STREAM s)
 {
 	int xor_bpp;
