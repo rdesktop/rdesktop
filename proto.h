@@ -75,8 +75,7 @@ void ewmh_init(void);
 STREAM iso_init(int length);
 void iso_send(STREAM s);
 STREAM iso_recv(uint8 * rdpver);
-RD_BOOL iso_connect(char *server, char *username);
-RD_BOOL iso_reconnect(char *server);
+RD_BOOL iso_connect(char *server, char *username, RD_BOOL reconnect);
 void iso_disconnect(void);
 void iso_reset_state(void);
 /* licence.c */

@@ -377,16 +377,8 @@ mcs_connect_common(char *server, STREAM mcs_data, char *username, RD_BOOL reconn
 {
 	unsigned int i;
 
-	if (reconnect)
-	{
-		if (!iso_reconnect(server))
-			return False;
-	}
-	else
-	{
-		if (!iso_connect(server, username))
-			return False;
-	}
+	if (!iso_connect(server, username, reconnect))
+		return False;
 
 	mcs_send_connect_initial(mcs_data);
 	if (!mcs_recv_connect_response(mcs_data))
