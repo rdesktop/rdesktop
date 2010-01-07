@@ -85,8 +85,7 @@ STREAM mcs_init(int length);
 void mcs_send_to_channel(STREAM s, uint16 channel);
 void mcs_send(STREAM s);
 STREAM mcs_recv(uint16 * channel, uint8 * rdpver);
-RD_BOOL mcs_connect(char *server, STREAM mcs_data, char *username);
-RD_BOOL mcs_reconnect(char *server, STREAM mcs_data);
+RD_BOOL mcs_connect(char *server, STREAM mcs_data, char *username, RD_BOOL reconnect);
 void mcs_disconnect(void);
 void mcs_reset_state(void);
 /* orders.c */
@@ -152,9 +151,7 @@ void process_disconnect_pdu(STREAM s, uint32 * ext_disc_reason);
 void rdp_main_loop(RD_BOOL * deactivated, uint32 * ext_disc_reason);
 RD_BOOL rdp_loop(RD_BOOL * deactivated, uint32 * ext_disc_reason);
 RD_BOOL rdp_connect(char *server, uint32 flags, char *domain, char *password, char *command,
-		    char *directory);
-RD_BOOL rdp_reconnect(char *server, uint32 flags, char *domain, char *password, char *command,
-		      char *directory, char *cookie);
+		    char *directory, RD_BOOL reconnect);
 void rdp_reset_state(void);
 void rdp_disconnect(void);
 /* rdpdr.c */
@@ -190,8 +187,7 @@ void sec_send_to_channel(STREAM s, uint32 flags, uint16 channel);
 void sec_send(STREAM s, uint32 flags);
 void sec_process_mcs_data(STREAM s);
 STREAM sec_recv(uint8 * rdpver);
-RD_BOOL sec_connect(char *server, char *username);
-RD_BOOL sec_reconnect(char *server);
+RD_BOOL sec_connect(char *server, char *username, RD_BOOL reconnect);
 void sec_disconnect(void);
 void sec_reset_state(void);
 /* serial.c */

@@ -838,7 +838,7 @@ sec_recv(uint8 * rdpver)
 
 /* Establish a secure connection */
 RD_BOOL
-sec_connect(char *server, char *username)
+sec_connect(char *server, char *username, RD_BOOL reconnect)
 {
 	struct stream mcs_data;
 
@@ -847,28 +847,7 @@ sec_connect(char *server, char *username)
 	mcs_data.p = mcs_data.data = (uint8 *) xmalloc(mcs_data.size);
 	sec_out_mcs_data(&mcs_data);
 
-	if (!mcs_connect(server, &mcs_data, username))
-		return False;
-
-	/*      sec_process_mcs_data(&mcs_data); */
-	if (g_encryption)
-		sec_establish_key();
-	xfree(mcs_data.data);
-	return True;
-}
-
-/* Establish a secure connection */
-RD_BOOL
-sec_reconnect(char *server)
-{
-	struct stream mcs_data;
-
-	/* We exchange some RDP data during the MCS-Connect */
-	mcs_data.size = 512;
-	mcs_data.p = mcs_data.data = (uint8 *) xmalloc(mcs_data.size);
-	sec_out_mcs_data(&mcs_data);
-
-	if (!mcs_reconnect(server, &mcs_data))
+	if (!mcs_connect(server, &mcs_data, username, reconnect))
 		return False;
 
 	/*      sec_process_mcs_data(&mcs_data); */

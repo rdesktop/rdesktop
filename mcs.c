@@ -373,7 +373,7 @@ mcs_recv(uint16 * channel, uint8 * rdpver)
 }
 
 RD_BOOL
-mcs_connect_common(char *server, STREAM mcs_data, char *username, RD_BOOL reconnect)
+mcs_connect(char *server, STREAM mcs_data, char *username, RD_BOOL reconnect)
 {
 	unsigned int i;
 
@@ -410,21 +410,6 @@ mcs_connect_common(char *server, STREAM mcs_data, char *username, RD_BOOL reconn
       error:
 	iso_disconnect();
 	return False;
-}
-
-/* Establish a connection up to the MCS layer */
-RD_BOOL
-mcs_connect(char *server, STREAM mcs_data, char *username)
-{
-	return mcs_connect_common(server, mcs_data, username, False);
-}
-
-
-/* Establish a connection up to the MCS layer */
-RD_BOOL
-mcs_reconnect(char *server, STREAM mcs_data)
-{
-	return mcs_connect_common(server, mcs_data, NULL, False);
 }
 
 /* Disconnect from the MCS layer */

@@ -1513,21 +1513,9 @@ rdp_loop(RD_BOOL * deactivated, uint32 * ext_disc_reason)
 /* Establish a connection up to the RDP layer */
 RD_BOOL
 rdp_connect(char *server, uint32 flags, char *domain, char *password,
-	    char *command, char *directory)
+	    char *command, char *directory, RD_BOOL reconnect)
 {
-	if (!sec_connect(server, g_username))
-		return False;
-
-	rdp_send_logon_info(flags, domain, g_username, password, command, directory);
-	return True;
-}
-
-/* Establish a reconnection up to the RDP layer */
-RD_BOOL
-rdp_reconnect(char *server, uint32 flags, char *domain, char *password,
-	      char *command, char *directory, char *cookie)
-{
-	if (!sec_reconnect(server))
+	if (!sec_connect(server, g_username, reconnect))
 		return False;
 
 	rdp_send_logon_info(flags, domain, g_username, password, command, directory);

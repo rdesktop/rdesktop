@@ -963,11 +963,10 @@ main(int argc, char *argv[])
 	{
 		if (run_count == 0)
 		{
-			if (!rdp_connect(server, flags, domain, password, shell, directory))
+			if (!rdp_connect(server, flags, domain, password, shell, directory, False))
 				return EX_PROTOCOL;
 		}
-		else if (!rdp_reconnect
-			 (server, flags, domain, password, shell, directory, g_redirect_cookie))
+		else if (!rdp_connect(server, flags, domain, password, shell, directory, True))
 			return EX_PROTOCOL;
 
 		/* By setting encryption to False here, we have an encrypted login 
