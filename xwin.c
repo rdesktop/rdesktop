@@ -2099,7 +2099,8 @@ ui_create_window(void)
 
 	/* create invisible 1x1 cursor to be used as null cursor */
 	if (g_null_cursor == NULL)
-		g_null_cursor = ui_create_cursor(0, 0, 1, 1, null_pointer_mask, null_pointer_data, 24);
+		g_null_cursor =
+			ui_create_cursor(0, 0, 1, 1, null_pointer_mask, null_pointer_data, 24);
 
 	if (g_seamless_rdp)
 	{
@@ -2774,12 +2775,12 @@ ui_destroy_glyph(RD_HGLYPH glyph)
 
 /* convert next pixel to 32 bpp */
 static int
-get_next_xor_pixel(uint8 * xormask, int bpp, int * k)
+get_next_xor_pixel(uint8 * xormask, int bpp, int *k)
 {
 	int rv = 0;
 	PixelColour pc;
-	uint8 * s8;
-	uint16 * s16;
+	uint8 *s8;
+	uint16 *s16;
 
 	switch (bpp)
 	{
