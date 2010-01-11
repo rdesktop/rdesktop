@@ -429,32 +429,32 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 		{
 			out_uint16_le(s, 0);
 		}
-		out_uint16_le(s, 2);
-		out_uint16_le(s, len_ip + 2);	/* Length of client ip */
-		rdp_out_unistr(s, ipaddr, len_ip);
-		out_uint16_le(s, len_dll + 2);
-		rdp_out_unistr(s, "C:\\WINNT\\System32\\mstscax.dll", len_dll);
+		/* TS_EXTENDED_INFO_PACKET */
+		out_uint16_le(s, 2);	/* clientAddressFamily = AF_INET */
+		out_uint16_le(s, len_ip + 2);	/* cbClientAddress, Length of client ip */
+		rdp_out_unistr(s, ipaddr, len_ip);	/* clientAddress */
+		out_uint16_le(s, len_dll + 2);	/* cbClientDir */
+		rdp_out_unistr(s, "C:\\WINNT\\System32\\mstscax.dll", len_dll);	/* clientDir */
 
+		/* TS_TIME_ZONE_INFORMATION */
 		tzone = (mktime(gmtime(&t)) - mktime(localtime(&t))) / 60;
 		out_uint32_le(s, tzone);
-
 		rdp_out_unistr(s, "GTB, normaltid", 2 * strlen("GTB, normaltid"));
 		out_uint8s(s, 62 - 2 * strlen("GTB, normaltid"));
-
 		out_uint32_le(s, 0x0a0000);
 		out_uint32_le(s, 0x050000);
 		out_uint32_le(s, 3);
 		out_uint32_le(s, 0);
 		out_uint32_le(s, 0);
-
 		rdp_out_unistr(s, "GTB, sommartid", 2 * strlen("GTB, sommartid"));
 		out_uint8s(s, 62 - 2 * strlen("GTB, sommartid"));
-
 		out_uint32_le(s, 0x30000);
 		out_uint32_le(s, 0x050000);
 		out_uint32_le(s, 2);
 		out_uint32(s, 0);
 		out_uint32_le(s, 0xffffffc4);
+
+		/* Rest of TS_EXTENDED_INFO_PACKET */
 		out_uint32_le(s, 0xfffffffe);
 		out_uint32_le(s, g_rdp5_performanceflags);
 		out_uint16(s, 0);
