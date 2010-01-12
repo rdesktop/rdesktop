@@ -176,7 +176,7 @@ cache_evict_bitmap(uint8 id)
 
 	idx = g_bmpcache_lru[id];
 	n_idx = g_bmpcache[id][idx].next;
-	DEBUG_RDP5(("evict bitmap: id=%d idx=%d n_idx=%d bmp=0x%x\n", id, idx, n_idx,
+	DEBUG_RDP5(("evict bitmap: id=%d idx=%d n_idx=%d bmp=%p\n", id, idx, n_idx,
 		    g_bmpcache[id][idx].bitmap));
 
 	ui_destroy_bitmap(g_bmpcache[id][idx].bitmap);
