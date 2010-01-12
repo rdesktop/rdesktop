@@ -70,6 +70,7 @@ extern uint32 g_redirect_flags;
 
 extern uint32 g_reconnect_logonid;
 extern char g_reconnect_random[16];
+extern RD_BOOL g_has_reconnect_random;
 extern uint8 g_client_random[SEC_RANDOM_SIZE];
 
 #if WITH_DEBUG
@@ -464,14 +465,22 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 		out_uint32_le(s, g_rdp5_performanceflags);
 
 		/* Client Auto-Reconnect */
-		out_uint16_le(s, 28);	/* cbAutoReconnectLen */
-		/* ARC_CS_PRIVATE_PACKET */
-		out_uint32_le(s, 28);	/* cbLen */
-		out_uint32_le(s, 1);	/* Version */
-		out_uint32_le(s, g_reconnect_logonid);	/* LogonId */
-		ssl_hmac_md5(g_reconnect_random, sizeof(g_reconnect_random),
-			     g_client_random, SEC_RANDOM_SIZE, security_verifier);
-		out_uint8a(s, security_verifier, sizeof(security_verifier));
+		if (g_has_reconnect_random)
+		{
+			out_uint16_le(s, 28);	/* cbAutoReconnectLen */
+			/* ARC_CS_PRIVATE_PACKET */
+			out_uint32_le(s, 28);	/* cbLen */
+			out_uint32_le(s, 1);	/* Version */
+			out_uint32_le(s, g_reconnect_logonid);	/* LogonId */
+			ssl_hmac_md5(g_reconnect_random, sizeof(g_reconnect_random),
+				     g_client_random, SEC_RANDOM_SIZE, security_verifier);
+			out_uint8a(s, security_verifier, sizeof(security_verifier));
+		}
+		else
+		{
+			out_uint16_le(s, 0);	/* cbAutoReconnectLen */
+		}
+
 	}
 	s_mark_end(s);
 	sec_send(s, sec_flags);
@@ -1357,6 +1366,7 @@ process_pdu_logon(STREAM s)
 
 			in_uint32_le(s, g_reconnect_logonid);
 			in_uint8a(s, g_reconnect_random, 16);
+			g_has_reconnect_random = True;
 			DEBUG(("Saving auto-reconnect cookie, id=%u\n", g_reconnect_logonid));
 		}
 	}

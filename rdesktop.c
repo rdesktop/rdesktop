@@ -105,6 +105,7 @@ uint32 g_redirect_flags = 0;
 
 uint32 g_reconnect_logonid = 0;
 char g_reconnect_random[16];
+RD_BOOL g_has_reconnect_random = False;
 uint8 g_client_random[SEC_RANDOM_SIZE];
 
 #ifdef WITH_RDPSND
