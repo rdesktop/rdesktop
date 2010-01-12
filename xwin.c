@@ -1964,7 +1964,6 @@ static void
 get_window_attribs(XSetWindowAttributes * attribs)
 {
 	attribs->background_pixel = BlackPixelOfScreen(g_screen);
-	attribs->background_pixel = WhitePixelOfScreen(g_screen);
 	attribs->border_pixel = WhitePixelOfScreen(g_screen);
 	attribs->backing_store = g_ownbackstore ? NotUseful : Always;
 	attribs->override_redirect = g_fullscreen;
