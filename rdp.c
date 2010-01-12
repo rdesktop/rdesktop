@@ -23,6 +23,7 @@
 #include <unistd.h>
 #endif
 #include "rdesktop.h"
+#include "ssl.h"
 
 #ifdef HAVE_ICONV
 #ifdef HAVE_ICONV_H
