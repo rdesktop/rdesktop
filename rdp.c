@@ -67,6 +67,10 @@ extern char g_redirect_cookie[128];
 extern uint32 g_redirect_flags;
 /* END Session Directory support */
 
+extern uint32 g_reconnect_logonid;
+extern char g_reconnect_random[16];
+extern uint8 g_client_random[SEC_RANDOM_SIZE];
+
 #if WITH_DEBUG
 static uint32 g_packetno;
 #endif
@@ -331,6 +335,7 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 	STREAM s;
 	time_t t = time(NULL);
 	time_t tzone;
+	uint8 security_verifier[16];
 
 	if (!g_use_rdp5 || 1 == g_server_rdp_version)
 	{
@@ -456,9 +461,16 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 		/* Rest of TS_EXTENDED_INFO_PACKET */
 		out_uint32_le(s, 0xfffffffe);	/* clientSessionId, consider changing to 0 */
 		out_uint32_le(s, g_rdp5_performanceflags);
-		out_uint16(s, 0);
 
-
+		/* Client Auto-Reconnect */
+		out_uint16_le(s, 28);	/* cbAutoReconnectLen */
+		/* ARC_CS_PRIVATE_PACKET */
+		out_uint32_le(s, 28);	/* cbLen */
+		out_uint32_le(s, 1);	/* Version */
+		out_uint32_le(s, g_reconnect_logonid);	/* LogonId */
+		ssl_hmac_md5(g_reconnect_random, sizeof(g_reconnect_random),
+			     g_client_random, SEC_RANDOM_SIZE, security_verifier);
+		out_uint8a(s, security_verifier, sizeof(security_verifier));
 	}
 	s_mark_end(s);
 	sec_send(s, sec_flags);
@@ -1306,6 +1318,50 @@ process_update_pdu(STREAM s)
 	ui_end_update();
 }
 
+
+/* Process a Save Session Info PDU */
+void
+process_pdu_logon(STREAM s)
+{
+	uint32 infotype;
+	in_uint32_le(s, infotype);
+	if (infotype == INFOTYPE_LOGON_EXTENDED_INF)
+	{
+		uint32 fieldspresent;
+
+		in_uint8s(s, 2);	/* Length */
+		in_uint32_le(s, fieldspresent);
+		if (fieldspresent & LOGON_EX_AUTORECONNECTCOOKIE)
+		{
+			uint32 len;
+			uint32 version;
+
+			/* TS_LOGON_INFO_FIELD */
+			in_uint8s(s, 4);	/* cbFieldData */
+
+			/* ARC_SC_PRIVATE_PACKET */
+			in_uint32_le(s, len);
+			if (len != 28)
+			{
+				warning("Invalid length in Auto-Reconnect packet\n");
+				return;
+			}
+
+			in_uint32_le(s, version);
+			if (version != 1)
+			{
+				warning("Unsupported version of Auto-Reconnect packet\n");
+				return;
+			}
+
+			in_uint32_le(s, g_reconnect_logonid);
+			in_uint8a(s, g_reconnect_random, 16);
+			DEBUG(("Saving auto-reconnect cookie, id=%u\n", g_reconnect_logonid));
+		}
+	}
+}
+
+
 /* Process a disconnect PDU */
 void
 process_disconnect_pdu(STREAM s, uint32 * ext_disc_reason)
@@ -1382,6 +1438,7 @@ process_data_pdu(STREAM s, uint32 * ext_disc_reason)
 		case RDP_DATA_PDU_LOGON:
 			DEBUG(("Received Logon PDU\n"));
 			/* User logged on */
+			process_pdu_logon(s);
 			break;
 
 		case RDP_DATA_PDU_DISCONNECT:

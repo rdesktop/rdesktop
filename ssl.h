@@ -26,6 +26,7 @@
 #include <openssl/sha.h>
 #include <openssl/bn.h>
 #include <openssl/x509v3.h>
+#include <openssl/hmac.h>
 
 #if defined(OPENSSL_VERSION_NUMBER) && (OPENSSL_VERSION_NUMBER >= 0x0090800f)
 #define D2I_X509_CONST const
@@ -59,5 +60,8 @@ int ssl_rkey_get_exp_mod(SSL_RKEY * rkey, uint8 * exponent, uint32 max_exp_len, 
 			 uint32 max_mod_len);
 RD_BOOL ssl_sig_ok(uint8 * exponent, uint32 exp_len, uint8 * modulus, uint32 mod_len,
 		   uint8 * signature, uint32 sig_len);
+
+void ssl_hmac_md5(const void *key, int key_len,
+		  const unsigned char *msg, int msg_len, unsigned char *md);
 
 #endif

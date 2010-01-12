@@ -103,6 +103,10 @@ char *g_redirect_username;
 char g_redirect_cookie[128];
 uint32 g_redirect_flags = 0;
 
+uint32 g_reconnect_logonid = 0;
+char g_reconnect_random[16];
+uint8 g_client_random[SEC_RANDOM_SIZE];
+
 #ifdef WITH_RDPSND
 RD_BOOL g_rdpsnd = False;
 #endif

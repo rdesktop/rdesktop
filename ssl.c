@@ -223,3 +223,13 @@ ssl_sig_ok(uint8 * exponent, uint32 exp_len, uint8 * modulus, uint32 mod_len,
 	 */
 	return True;
 }
+
+
+void
+ssl_hmac_md5(const void *key, int key_len, const unsigned char *msg, int msg_len, unsigned char *md)
+{
+	HMAC_CTX ctx;
+	HMAC_CTX_init(&ctx);
+	HMAC(EVP_md5(), key, key_len, msg, msg_len, md, NULL);
+	HMAC_CTX_cleanup(&ctx);
+}

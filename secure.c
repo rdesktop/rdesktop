@@ -34,6 +34,7 @@ extern RD_BOOL g_console_session;
 extern int g_server_depth;
 extern VCHANNEL g_channels[];
 extern unsigned int g_num_channels;
+extern uint8 g_client_random[SEC_RANDOM_SIZE];
 
 static int g_rc4_key_len;
 static SSL_RC4 g_rc4_decrypt_key;
@@ -667,7 +668,6 @@ static void
 sec_process_crypt_info(STREAM s)
 {
 	uint8 *server_random = NULL;
-	uint8 client_random[SEC_RANDOM_SIZE];
 	uint8 modulus[SEC_MAX_MODULUS_SIZE];
 	uint8 exponent[SEC_EXPONENT_SIZE];
 	uint32 rc4_key_size;
@@ -680,10 +680,10 @@ sec_process_crypt_info(STREAM s)
 		return;
 	}
 	DEBUG(("Generating client random\n"));
-	generate_random(client_random);
-	sec_rsa_encrypt(g_sec_crypted_random, client_random, SEC_RANDOM_SIZE,
+	generate_random(g_client_random);
+	sec_rsa_encrypt(g_sec_crypted_random, g_client_random, SEC_RANDOM_SIZE,
 			g_server_public_key_len, modulus, exponent);
-	sec_generate_keys(client_random, server_random, rc4_key_size);
+	sec_generate_keys(g_client_random, server_random, rc4_key_size);
 }
 
 
