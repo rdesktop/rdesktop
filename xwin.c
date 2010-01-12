@@ -1874,44 +1874,6 @@ ui_init(void)
 		g_ownbackstore = True;
 	}
 
-	/*
-	 * Determine desktop size
-	 */
-	if (g_fullscreen)
-	{
-		g_width = WidthOfScreen(g_screen);
-		g_height = HeightOfScreen(g_screen);
-		g_using_full_workarea = True;
-	}
-	else if (g_width < 0)
-	{
-		/* Percent of screen */
-		if (-g_width >= 100)
-			g_using_full_workarea = True;
-		g_height = HeightOfScreen(g_screen) * (-g_width) / 100;
-		g_width = WidthOfScreen(g_screen) * (-g_width) / 100;
-	}
-	else if (g_width == 0)
-	{
-		/* Fetch geometry from _NET_WORKAREA */
-		uint32 x, y, cx, cy;
-		if (get_current_workarea(&x, &y, &cx, &cy) == 0)
-		{
-			g_width = cx;
-			g_height = cy;
-			g_using_full_workarea = True;
-		}
-		else
-		{
-			warning("Failed to get workarea: probably your window manager does not support extended hints\n");
-			g_width = WidthOfScreen(g_screen);
-			g_height = HeightOfScreen(g_screen);
-		}
-	}
-
-	/* make sure width is a multiple of 4 */
-	g_width = (g_width + 3) & ~3;
-
 	g_mod_map = XGetModifierMapping(g_display);
 	xwin_refresh_pointer_map();
 
@@ -1998,6 +1960,44 @@ ui_create_window(void)
 	int wndwidth, wndheight;
 	long input_mask, ic_input_mask;
 	XEvent xevent;
+
+	/*
+	 * Determine desktop size
+	 */
+	if (g_fullscreen)
+	{
+		g_width = WidthOfScreen(g_screen);
+		g_height = HeightOfScreen(g_screen);
+		g_using_full_workarea = True;
+	}
+	else if (g_width < 0)
+	{
+		/* Percent of screen */
+		if (-g_width >= 100)
+			g_using_full_workarea = True;
+		g_height = HeightOfScreen(g_screen) * (-g_width) / 100;
+		g_width = WidthOfScreen(g_screen) * (-g_width) / 100;
+	}
+	else if (g_width == 0)
+	{
+		/* Fetch geometry from _NET_WORKAREA */
+		uint32 x, y, cx, cy;
+		if (get_current_workarea(&x, &y, &cx, &cy) == 0)
+		{
+			g_width = cx;
+			g_height = cy;
+			g_using_full_workarea = True;
+		}
+		else
+		{
+			warning("Failed to get workarea: probably your window manager does not support extended hints\n");
+			g_width = WidthOfScreen(g_screen);
+			g_height = HeightOfScreen(g_screen);
+		}
+	}
+
+	/* make sure width is a multiple of 4 */
+	g_width = (g_width + 3) & ~3;
 
 	wndwidth = g_fullscreen ? WidthOfScreen(g_screen) : g_width;
 	wndheight = g_fullscreen ? HeightOfScreen(g_screen) : g_height;
