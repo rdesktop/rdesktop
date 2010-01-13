@@ -965,9 +965,7 @@ main(int argc, char *argv[])
 
 	while (run_count < 2 && continue_connect)	/* add support for Session Directory; only reconnect once */
 	{
-		if (run_count == 0)
-			if (!ui_create_window())
-				return EX_OSERR;
+		ui_init_connection();
 
 		if (run_count == 0)
 		{
@@ -985,6 +983,10 @@ main(int argc, char *argv[])
 
 		DEBUG(("Connection successful.\n"));
 		memset(password, 0, sizeof(password));
+
+		if (run_count == 0)
+			if (!ui_create_window())
+				return EX_OSERR;
 
 		if (continue_connect)
 			rdp_main_loop(&deactivated, &ext_disc_reason);

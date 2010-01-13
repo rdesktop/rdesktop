@@ -231,6 +231,7 @@ void rdp_send_scancode(uint32 time, uint16 flags, uint8 scancode);
 /* xwin.c */
 RD_BOOL get_key_state(unsigned int state, uint32 keysym);
 RD_BOOL ui_init(void);
+void ui_init_connection(void);
 void ui_deinit(void);
 RD_BOOL ui_create_window(void);
 void ui_resize_window(void);
