@@ -455,8 +455,6 @@ main(int argc, char *argv[])
 	char *locale = NULL;
 	int username_option = 0;
 	RD_BOOL geometry_option = False;
-	int run_count = 0;	/* Session Directory support */
-	RD_BOOL continue_connect = True;	/* Session Directory support */
 #ifdef WITH_RDPSND
 	char *rdpsnd_optarg = NULL;
 #endif
@@ -963,16 +961,23 @@ main(int argc, char *argv[])
 
 	rdpdr_init();
 
-	while (run_count < 2 && continue_connect)	/* add support for Session Directory; only reconnect once */
+	while (1)
 	{
-		ui_init_connection();
+		rdesktop_reset_state();
 
-		if (run_count == 0)
+		if (g_redirect)
 		{
-			if (!rdp_connect(server, flags, domain, password, shell, directory, False))
-				return EX_PROTOCOL;
+			STRNCPY(domain, g_redirect_domain, sizeof(domain));
+			xfree(g_username);
+			g_username = (char *) xmalloc(strlen(g_redirect_username) + 1);
+			STRNCPY(g_username, g_redirect_username, sizeof(g_username));
+			STRNCPY(password, g_redirect_password, sizeof(password));
+			STRNCPY(server, g_redirect_server, sizeof(server));
+			flags |= RDP_LOGON_AUTO;
 		}
-		else if (!rdp_connect(server, flags, domain, password, shell, directory, True))
+
+		ui_init_connection();
+		if (!rdp_connect(server, flags, domain, password, shell, directory, g_redirect))
 			return EX_PROTOCOL;
 
 		/* By setting encryption to False here, we have an encrypted login 
@@ -984,39 +989,20 @@ main(int argc, char *argv[])
 		DEBUG(("Connection successful.\n"));
 		memset(password, 0, sizeof(password));
 
-		if (run_count == 0)
+		if (!g_redirect)
 			if (!ui_create_window())
 				return EX_OSERR;
 
-		if (continue_connect)
-			rdp_main_loop(&deactivated, &ext_disc_reason);
+		g_redirect = False;
+		rdp_main_loop(&deactivated, &ext_disc_reason);
 
 		DEBUG(("Disconnecting...\n"));
 		rdp_disconnect();
 
-		if ((g_redirect == True) && (run_count == 0))	/* Support for Session Directory */
-		{
-			/* reset state of major globals */
-			rdesktop_reset_state();
-
-			STRNCPY(domain, g_redirect_domain, sizeof(domain));
-			xfree(g_username);
-			g_username = (char *) xmalloc(strlen(g_redirect_username) + 1);
-			STRNCPY(g_username, g_redirect_username, sizeof(g_username));
-			STRNCPY(password, g_redirect_password, sizeof(password));
-			STRNCPY(server, g_redirect_server, sizeof(server));
-			flags |= RDP_LOGON_AUTO;
-
-			g_redirect = False;
-		}
-		else
-		{
-			continue_connect = False;
-			ui_destroy_window();
-			break;
-		}
-
-		run_count++;
+		if (g_redirect)
+			continue;
+		ui_destroy_window();
+		break;
 	}
 
 	cache_save_state();
