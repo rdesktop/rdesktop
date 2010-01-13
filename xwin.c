@@ -2158,6 +2158,7 @@ ui_destroy_window(void)
 		XDestroyIC(g_IC);
 
 	XDestroyWindow(g_display, g_wnd);
+	g_wnd = NULL;
 }
 
 void
@@ -2293,6 +2294,10 @@ xwin_process_events(void)
 	while ((XPending(g_display) > 0) && events++ < 20)
 	{
 		XNextEvent(g_display, &xevent);
+
+		if (g_wnd == NULL)
+			/* Ignore events between ui_destroy_window and ui_create_window */
+			continue;
 
 		if ((g_IC != NULL) && (XFilterEvent(&xevent, None) == True))
 		{
