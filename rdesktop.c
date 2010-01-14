@@ -867,7 +867,7 @@ main(int argc, char *argv[])
 			error("You cannot use -4 and -A at the same time\n");
 			return EX_USAGE;
 		}
-		g_width = -100;
+		g_sizeopt = -100;
 		g_grab_keyboard = False;
 	}
 
