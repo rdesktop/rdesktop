@@ -54,12 +54,11 @@ unsigned int g_keylayout = 0x409;	/* Defaults to US keyboard layout */
 int g_keyboard_type = 0x4;	/* Defaults to US keyboard layout */
 int g_keyboard_subtype = 0x0;	/* Defaults to US keyboard layout */
 int g_keyboard_functionkeys = 0xc;	/* Defaults to US keyboard layout */
-
-int g_width = 800;		/* width is special: If 0, the
-				   geometry will be fetched from
-				   _NET_WORKAREA. If negative,
-				   absolute value specifies the
-				   percent of the whole screen. */
+int g_sizeopt = 0;		/* If non-zero, a special size has been
+				   requested. If 1, the geometry will be fetched
+				   from _NET_WORKAREA. If negative, absolute value
+				   specifies the percent of the whole screen. */
+int g_width = 800;
 int g_height = 600;
 int g_xpos = 0;
 int g_ypos = 0;
@@ -559,7 +558,7 @@ main(int argc, char *argv[])
 				g_fullscreen = False;
 				if (!strcmp(optarg, "workarea"))
 				{
-					g_width = g_height = 0;
+					g_sizeopt = 1;
 					break;
 				}
 
@@ -581,7 +580,8 @@ main(int argc, char *argv[])
 
 				if (*p == '%')
 				{
-					g_width = -g_width;
+					g_sizeopt = -g_width;
+					g_width = 800;
 					p++;
 				}
 

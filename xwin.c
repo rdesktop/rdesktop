@@ -29,6 +29,7 @@
 #include "rdesktop.h"
 #include "xproto.h"
 
+extern int g_sizeopt;
 extern int g_width;
 extern int g_height;
 extern int g_xpos;
@@ -1911,15 +1912,15 @@ ui_init_connection(void)
 		g_height = HeightOfScreen(g_screen);
 		g_using_full_workarea = True;
 	}
-	else if (g_width < 0)
+	else if (g_sizeopt < 0)
 	{
 		/* Percent of screen */
-		if (-g_width >= 100)
+		if (-g_sizeopt >= 100)
 			g_using_full_workarea = True;
-		g_height = HeightOfScreen(g_screen) * (-g_width) / 100;
-		g_width = WidthOfScreen(g_screen) * (-g_width) / 100;
+		g_height = HeightOfScreen(g_screen) * (-g_sizeopt) / 100;
+		g_width = WidthOfScreen(g_screen) * (-g_sizeopt) / 100;
 	}
-	else if (g_width == 0)
+	else if (g_sizeopt == 1)
 	{
 		/* Fetch geometry from _NET_WORKAREA */
 		uint32 x, y, cx, cy;
