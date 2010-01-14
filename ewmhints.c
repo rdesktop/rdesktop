@@ -134,7 +134,7 @@ get_current_workarea(uint32 * x, uint32 * y, uint32 * width, uint32 * height)
 	int current_desktop;
 	unsigned long nitems_return;
 	unsigned char *prop_return;
-	uint32 *return_words;
+	long *return_words;
 	const uint32 net_workarea_x_offset = 0;
 	const uint32 net_workarea_y_offset = 1;
 	const uint32 net_workarea_width_offset = 2;
@@ -157,7 +157,7 @@ get_current_workarea(uint32 * x, uint32 * y, uint32 * width, uint32 * height)
 	if (current_desktop < 0)
 		return -1;
 
-	return_words = (uint32 *) prop_return;
+	return_words = (long *) prop_return;
 
 	*x = return_words[current_desktop * 4 + net_workarea_x_offset];
 	*y = return_words[current_desktop * 4 + net_workarea_y_offset];
