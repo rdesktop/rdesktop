@@ -1962,9 +1962,6 @@ ui_deinit(void)
 
 	XFreeModifiermap(g_mod_map);
 
-	if (g_ownbackstore)
-		XFreePixmap(g_display, g_backstore);
-
 	XFreeGC(g_display, g_gc);
 	XCloseDisplay(g_display);
 	g_display = NULL;
@@ -2160,6 +2157,12 @@ ui_destroy_window(void)
 
 	XDestroyWindow(g_display, g_wnd);
 	g_wnd = 0;
+
+	if (g_backstore)
+	{
+		XFreePixmap(g_display, g_backstore);
+		g_backstore = 0;
+	}
 }
 
 void
