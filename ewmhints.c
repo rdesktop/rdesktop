@@ -431,15 +431,15 @@ ewmh_set_icon(Window wnd, int width, int height, const char *rgba_data)
 {
 	unsigned long nitems, i;
 	unsigned char *props;
-	uint32 *cur_set, *new_set;
-	uint32 *icon;
+	unsigned long *cur_set, *new_set;
+	unsigned long *icon;
 
 	cur_set = NULL;
 	new_set = NULL;
 
 	if (get_property_value(wnd, "_NET_WM_ICON", 10000, &nitems, &props, 1) >= 0)
 	{
-		cur_set = (uint32 *) props;
+		cur_set = (unsigned long *) props;
 
 		for (i = 0; i < nitems;)
 		{
@@ -453,15 +453,15 @@ ewmh_set_icon(Window wnd, int width, int height, const char *rgba_data)
 			icon = cur_set + i;
 		else
 		{
-			new_set = xmalloc((nitems + width * height + 2) * 4);
-			memcpy(new_set, cur_set, nitems * 4);
+			new_set = xmalloc((nitems + width * height + 2) * sizeof(unsigned long));
+			memcpy(new_set, cur_set, nitems * sizeof(unsigned long));
 			icon = new_set + nitems;
 			nitems += width * height + 2;
 		}
 	}
 	else
 	{
-		new_set = xmalloc((width * height + 2) * 4);
+		new_set = xmalloc((width * height + 2) * sizeof(unsigned long));
 		icon = new_set;
 		nitems = width * height + 2;
 	}
@@ -493,7 +493,7 @@ ewmh_del_icon(Window wnd, int width, int height)
 {
 	unsigned long nitems, i, icon_size;
 	unsigned char *props;
-	uint32 *cur_set, *new_set;
+	unsigned long *cur_set, *new_set;
 
 	cur_set = NULL;
 	new_set = NULL;
@@ -501,7 +501,7 @@ ewmh_del_icon(Window wnd, int width, int height)
 	if (get_property_value(wnd, "_NET_WM_ICON", 10000, &nitems, &props, 1) < 0)
 		return;
 
-	cur_set = (uint32 *) props;
+	cur_set = (unsigned long *) props;
 
 	for (i = 0; i < nitems;)
 	{
@@ -515,12 +515,13 @@ ewmh_del_icon(Window wnd, int width, int height)
 		goto out;
 
 	icon_size = width * height + 2;
-	new_set = xmalloc((nitems - icon_size) * 4);
+	new_set = xmalloc((nitems - icon_size) * sizeof(unsigned long));
 
 	if (i != 0)
-		memcpy(new_set, cur_set, i * 4);
+		memcpy(new_set, cur_set, i * sizeof(unsigned long));
 	if (i != nitems - icon_size)
-		memcpy(new_set + i * 4, cur_set + i * 4 + icon_size, nitems - icon_size);
+		memcpy(new_set + i * sizeof(unsigned long),
+		       cur_set + i * sizeof(unsigned long) + icon_size, nitems - icon_size);
 
 	nitems -= icon_size;
 
