@@ -520,8 +520,8 @@ ewmh_del_icon(Window wnd, int width, int height)
 	if (i != 0)
 		memcpy(new_set, cur_set, i * sizeof(unsigned long));
 	if (i != nitems - icon_size)
-		memcpy(new_set + i * sizeof(unsigned long),
-		       cur_set + i * sizeof(unsigned long) + icon_size, nitems - icon_size);
+		memcpy(new_set + i, cur_set + i + icon_size,
+		       (nitems - (i + icon_size)) * sizeof(unsigned long));
 
 	nitems -= icon_size;
 
