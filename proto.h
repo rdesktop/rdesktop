@@ -279,6 +279,7 @@ void ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy);
 void ui_begin_update(void);
 void ui_end_update(void);
 void ui_seamless_begin(RD_BOOL hidden);
+void ui_seamless_end();
 void ui_seamless_hide_desktop(void);
 void ui_seamless_unhide_desktop(void);
 void ui_seamless_toggle(void);

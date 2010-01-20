@@ -52,6 +52,7 @@ extern int g_height;
 extern RD_BOOL g_bitmap_cache;
 extern RD_BOOL g_bitmap_cache_persist_enable;
 extern RD_BOOL g_numlock_sync;
+extern RD_BOOL g_pending_resize;
 
 uint8 *g_next_packet;
 uint32 g_rdp_shareid;
@@ -1530,12 +1531,16 @@ process_redirect_pdu(STREAM s /*, uint32 * ext_disc_reason */ )
 }
 
 /* Process incoming packets */
-/* nevers gets out of here till app is done */
 void
 rdp_main_loop(RD_BOOL * deactivated, uint32 * ext_disc_reason)
 {
 	while (rdp_loop(deactivated, ext_disc_reason))
-		;
+	{
+		if (g_pending_resize)
+		{
+			return;
+		}
+	}
 }
 
 /* used in uiports and rdp_main_loop, processes the rdp packets waiting */

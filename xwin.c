@@ -28,6 +28,9 @@
 #include <strings.h>
 #include "rdesktop.h"
 #include "xproto.h"
+#ifdef HAVE_XRANDR
+#include <X11/extensions/Xrandr.h>
+#endif
 
 extern int g_sizeopt;
 extern int g_width;
@@ -39,6 +42,7 @@ extern RD_BOOL g_sendmotion;
 extern RD_BOOL g_fullscreen;
 extern RD_BOOL g_grab_keyboard;
 extern RD_BOOL g_hide_decorations;
+extern RD_BOOL g_pending_resize;
 extern char g_title[];
 /* Color depth of the RDP session.
    As of RDP 5.1, it may be 8, 15, 16 or 24. */
@@ -1946,12 +1950,6 @@ ui_init_connection(void)
 void
 ui_deinit(void)
 {
-	while (g_seamless_windows)
-	{
-		XDestroyWindow(g_display, g_seamless_windows->wnd);
-		sw_remove_window(g_seamless_windows);
-	}
-
 	xclip_deinit();
 
 	if (g_IM != NULL)
@@ -2085,6 +2083,9 @@ ui_create_window(void)
 	}
 
 	XSelectInput(g_display, g_wnd, input_mask);
+#ifdef HAVE_XRANDR
+	XSelectInput(g_display, RootWindowOfScreen(g_screen), StructureNotifyMask);
+#endif
 	XMapWindow(g_display, g_wnd);
 
 	/* wait for VisibilityNotify */
@@ -2301,6 +2302,11 @@ xwin_process_events(void)
 
 		if (!g_wnd)
 			/* Ignore events between ui_destroy_window and ui_create_window */
+			continue;
+
+		/* Also ignore root window events except ConfigureNotify */
+		if (xevent.type != ConfigureNotify
+		    && xevent.xany.window == DefaultRootWindow(g_display))
 			continue;
 
 		if ((g_IC != NULL) && (XFilterEvent(&xevent, None) == True))
@@ -2575,6 +2581,20 @@ xwin_process_events(void)
 					rdp_send_client_window_status(0);
 				break;
 			case ConfigureNotify:
+#ifdef HAVE_XRANDR
+				if ((g_sizeopt || g_fullscreen)
+				    && xevent.xconfigure.window == DefaultRootWindow(g_display))
+				{
+					if (xevent.xconfigure.width != WidthOfScreen(g_screen)
+					    || xevent.xconfigure.height != HeightOfScreen(g_screen))
+					{
+						XRRUpdateConfiguration(&xevent);
+						XSync(g_display, False);
+						g_pending_resize = True;
+					}
+
+				}
+#endif
 				if (!g_seamless_active)
 					break;
 
@@ -3771,6 +3791,22 @@ ui_seamless_begin(RD_BOOL hidden)
 
 	if (!hidden)
 		ui_seamless_toggle();
+}
+
+
+void
+ui_seamless_end()
+{
+	/* Destroy all seamless windows */
+	while (g_seamless_windows)
+	{
+		XDestroyWindow(g_display, g_seamless_windows->wnd);
+		sw_remove_window(g_seamless_windows);
+	}
+
+	g_seamless_started = False;
+	g_seamless_active = False;
+	g_seamless_hidden = False;
 }
 
 

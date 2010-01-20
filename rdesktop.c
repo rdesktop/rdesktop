@@ -106,6 +106,7 @@ uint32 g_reconnect_logonid = 0;
 char g_reconnect_random[16];
 RD_BOOL g_has_reconnect_random = False;
 uint8 g_client_random[SEC_RANDOM_SIZE];
+RD_BOOL g_pending_resize = False;
 
 #ifdef WITH_RDPSND
 RD_BOOL g_rdpsnd = False;
@@ -1001,7 +1002,15 @@ main(int argc, char *argv[])
 
 		if (g_redirect)
 			continue;
+
+		ui_seamless_end();
 		ui_destroy_window();
+		if (g_pending_resize)
+		{
+			/* If we have a pending resize, reconnect using the new size, rather than exit */
+			g_pending_resize = False;
+			continue;
+		}
 		break;
 	}
 

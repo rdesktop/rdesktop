@@ -105,6 +105,15 @@ LIBS="$LIBS $ssldir/lib/libcrypto.a"
 LIBS="$LIBS -L$ssldir/lib -lcrypto" 
 rpath="$rpath:$ssldir/lib"
              ])
+# xrandr
+if test -n "$PKG_CONFIG"; then
+    PKG_CHECK_MODULES(XRANDR, xrandr, [HAVE_XRANDR=1], [HAVE_XRANDR=0])
+fi
+if test x"$HAVE_XRANDR" = "x1"; then
+    CFLAGS="$CFLAGS $XRANDR_CFLAGS"
+    LIBS="$LIBS $XRANDR_LIBS"
+    AC_DEFINE(HAVE_XRANDR)
+fi
 
 AC_ARG_ENABLE(smartcard, 
              [  --enable-smartcard	  Enables smart-card support.
