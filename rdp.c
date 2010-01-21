@@ -1481,49 +1481,94 @@ process_redirect_pdu(STREAM s /*, uint32 * ext_disc_reason */ )
 	/* read connection flags */
 	in_uint32_le(s, g_redirect_flags);
 
-	/* read length of ip string */
-	in_uint32_le(s, len);
-
-	/* read ip string */
-	rdp_in_unistr(s, g_redirect_server, sizeof(g_redirect_server), len);
-
-	/* read length of cookie string */
-	in_uint32_le(s, len);
-
-	/* read cookie string (plain ASCII) */
-	if (len > sizeof(g_redirect_cookie) - 1)
+	if (g_redirect_flags & PDU_REDIRECT_HAS_IP)
 	{
-		uint32 rem = len - (sizeof(g_redirect_cookie) - 1);
-		len = sizeof(g_redirect_cookie) - 1;
+		/* read length of ip string */
+		in_uint32_le(s, len);
 
-		warning("Unexpectedly large redirection cookie\n");
-		in_uint8a(s, g_redirect_cookie, len);
-		in_uint8s(s, rem);
+		/* read ip string */
+		rdp_in_unistr(s, g_redirect_server, sizeof(g_redirect_server), len);
 	}
-	else
+
+	if (g_redirect_flags & PDU_REDIRECT_HAS_COOKIE)
 	{
-		in_uint8a(s, g_redirect_cookie, len);
+		/* read length of cookie string */
+		in_uint32_le(s, len);
+
+		/* read cookie string (plain ASCII) */
+		if (len > sizeof(g_redirect_cookie) - 1)
+		{
+			uint32 rem = len - (sizeof(g_redirect_cookie) - 1);
+			len = sizeof(g_redirect_cookie) - 1;
+
+			warning("Unexpectedly large redirection cookie\n");
+			in_uint8a(s, g_redirect_cookie, len);
+			in_uint8s(s, rem);
+		}
+		else
+		{
+			in_uint8a(s, g_redirect_cookie, len);
+		}
+		g_redirect_cookie[len] = 0;
 	}
-	g_redirect_cookie[len] = 0;
 
-	/* read length of username string */
-	in_uint32_le(s, len);
+	if (g_redirect_flags & PDU_REDIRECT_HAS_USERNAME)
+	{
+		/* read length of username string */
+		in_uint32_le(s, len);
 
-	/* read username string */
-	g_redirect_username = (char *) xmalloc(len + 1);
-	rdp_in_unistr(s, g_redirect_username, strlen(g_redirect_username), len);
+		/* read username string */
+		g_redirect_username = (char *) xmalloc(len + 1);
+		rdp_in_unistr(s, g_redirect_username, strlen(g_redirect_username), len);
+	}
 
-	/* read length of domain string */
-	in_uint32_le(s, len);
+	if (g_redirect_flags & PDU_REDIRECT_HAS_DOMAIN)
+	{
+		/* read length of domain string */
+		in_uint32_le(s, len);
 
-	/* read domain string */
-	rdp_in_unistr(s, g_redirect_domain, sizeof(g_redirect_domain), len);
+		/* read domain string */
+		rdp_in_unistr(s, g_redirect_domain, sizeof(g_redirect_domain), len);
+	}
 
-	/* read length of password string */
-	in_uint32_le(s, len);
+	if (g_redirect_flags & PDU_REDIRECT_HAS_PASSWORD)
+	{
+		/* read length of password string */
+		in_uint32_le(s, len);
 
-	/* read password string */
-	rdp_in_unistr(s, g_redirect_password, sizeof(g_redirect_password), len);
+		/* read password string */
+		rdp_in_unistr(s, g_redirect_password, sizeof(g_redirect_password), len);
+	}
+
+	if (g_redirect_flags & PDU_REDIRECT_DONT_STORE_USERNAME)
+	{
+		warning("PDU_REDIRECT_DONT_STORE_USERNAME set\n");
+	}
+
+	if (g_redirect_flags & PDU_REDIRECT_USE_SMARTCARD)
+	{
+		warning("PDU_REDIRECT_USE_SMARTCARD set\n");
+	}
+
+	if (g_redirect_flags & PDU_REDIRECT_INFORMATIONAL)
+	{
+		warning("PDU_REDIRECT_INFORMATIONAL set\n");
+	}
+
+	if (g_redirect_flags & PDU_REDIRECT_HAS_TARGET_FQDN)
+	{
+		warning("PDU_REDIRECT_HAS_TARGET_FQDN set\n");
+	}
+
+	if (g_redirect_flags & PDU_REDIRECT_HAS_TARGET_NETBIOS)
+	{
+		warning("PDU_REDIRECT_HAS_TARGET_NETBIOS set\n");
+	}
+
+	if (g_redirect_flags & PDU_REDIRECT_HAS_TARGET_IP_ARRAY)
+	{
+		warning("PDU_REDIRECT_HAS_TARGET_IP_ARRAY set\n");
+	}
 
 	g_redirect = True;
 
