@@ -172,4 +172,3 @@ typedef struct _TThreadListElement
 	struct _TThreadListElement *next;
 } TThreadListElement, *PThreadListElement;
 
-int scard_enum_devices(uint32 * id, char *optarg);

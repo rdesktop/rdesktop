@@ -312,6 +312,8 @@ unsigned int seamless_send_destroy(unsigned long id);
 /* scard.c */
 void scard_lock(int lock);
 void scard_unlock(int lock);
+int scard_enum_devices(uint32 * id, char *optarg);
+void scardSetInfo(uint32 device, uint32 id, uint32 bytes_out);
 
 /* *INDENT-OFF* */
 #ifdef __cplusplus
