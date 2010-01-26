@@ -171,4 +171,3 @@ typedef struct _TThreadListElement
 	PSCThreadData data;
 	struct _TThreadListElement *next;
 } TThreadListElement, *PThreadListElement;
-
