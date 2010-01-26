@@ -351,6 +351,7 @@ static void
 rdesktop_reset_state(void)
 {
 	rdp_reset_state();
+	scard_reset_state();
 }
 
 static RD_BOOL

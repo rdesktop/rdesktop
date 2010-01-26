@@ -2626,3 +2626,12 @@ scard_unlock(int lock)
 {
 	pthread_mutex_unlock(scard_mutex[lock]);
 }
+
+void scard_reset_state()
+{
+    curDevice = 0;
+    curId = 0;
+    curBytesOut = 0;
+
+    queueFirst = queueLast = NULL;
+}
