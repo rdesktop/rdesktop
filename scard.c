@@ -39,7 +39,9 @@
 /* variable segment */
 
 #define SCARD_MAX_MEM 102400
+#ifndef SCARD_AUTOALLOCATE
 #define SCARD_AUTOALLOCATE -1
+#endif
 #define	OUT_STREAM_SIZE	4096
 
 #ifdef B_ENDIAN
@@ -933,6 +935,8 @@ TS_SCardDisconnect(STREAM in, STREAM out)
 	return rv;
 }
 
+/* Currently unused */
+#if 0
 static int
 needStatusRecheck(MYPCSC_DWORD rv, MYPCSC_LPSCARD_READERSTATE_A rsArray, SERVER_DWORD dwCount)
 {
@@ -959,6 +963,7 @@ mappedStatus(MYPCSC_DWORD code)
 	code &= 0x0000FFFF;
 	return (code % 2);
 }
+#endif
 
 static MYPCSC_DWORD
 incStatus(MYPCSC_DWORD code, RD_BOOL mapped)
@@ -1851,6 +1856,8 @@ TS_SCardState(STREAM in, STREAM out)
 
 #ifndef WITH_PCSC120
 
+/* Currently unused */
+#if 0
 static MYPCSC_DWORD
 TS_SCardListReaderGroups(STREAM in, STREAM out)
 {
@@ -1910,6 +1917,7 @@ TS_SCardListReaderGroups(STREAM in, STREAM out)
 	SC_xfreeallmemory(&lcHandle);
 	return rv;
 }
+#endif
 
 static MYPCSC_DWORD
 TS_SCardGetAttrib(STREAM in, STREAM out)
@@ -2006,6 +2014,8 @@ TS_SCardGetAttrib(STREAM in, STREAM out)
 	return rv;
 }
 
+/* Currently unused */
+#if 0
 static MYPCSC_DWORD
 TS_SCardSetAttrib(STREAM in, STREAM out)
 {
@@ -2059,6 +2069,7 @@ TS_SCardSetAttrib(STREAM in, STREAM out)
 	SC_xfreeallmemory(&lcHandle);
 	return rv;
 }
+#endif
 
 #endif
 
@@ -2373,6 +2384,8 @@ duplicateStream(PMEM_HANDLE * handle, STREAM s, uint32 buffer_size, RD_BOOL isIn
 	return d;
 }
 
+/* Currently unused */
+#if 0
 static void
 freeStream(PMEM_HANDLE * handle, STREAM s)
 {
@@ -2383,6 +2396,7 @@ freeStream(PMEM_HANDLE * handle, STREAM s)
 		SC_xfree(handle, s);
 	}
 }
+#endif
 
 static PSCThreadData
 SC_addToQueue(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
