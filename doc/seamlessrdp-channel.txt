@@ -435,3 +435,10 @@ Blackbox, IceWM etc). You can also test without a window manager.
    overlaps. From Task Manager, execute notepadbehindwordpad.exe. This
    test is expected to fail when rdesktop emits the warning about
    broken WM at startup.
+
+
+26 If running on a 64 bit Windows version, try a 32 bit application:
+   Run Task Manager seamlessly (...\seamlessrdpshell.exe
+   taskmgr). From Task Manager's File menu, select 'New Task (Run)'
+   and run %windir%\syswow64\notepad.exe. Try various window
+   operations.
