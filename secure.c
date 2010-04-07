@@ -825,7 +825,8 @@ sec_recv(uint8 * rdpver)
 		if (channel != MCS_GLOBAL_CHANNEL)
 		{
 			channel_process(s, channel);
-			*rdpver = 0xff;
+			if (rdpver != NULL)
+				*rdpver = 0xff;
 			return s;
 		}
 

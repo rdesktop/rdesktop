@@ -820,7 +820,7 @@ save_remote_modifiers(uint8 scancode)
 void
 restore_remote_modifiers(uint32 ev_time, uint8 scancode)
 {
-	key_translation dummy;
+	key_translation dummy = { };
 
 	if (is_modifier(scancode))
 		return;
