@@ -1,7 +1,7 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    Sound Channel Process Functions
-   Copyright 2006-2008 Pierre Ossman <ossman@cendio.se> for Cendio AB
+   Copyright 2006-2010 Pierre Ossman <ossman@cendio.se> for Cendio AB
    Copyright (C) Matthew Chapman 2003-2008
    Copyright (C) GuoJunBo guojunbo@ict.ac.cn 2003
 
@@ -48,6 +48,9 @@ static VCHANNEL *rdpsnd_channel;
 static VCHANNEL *rdpsnddbg_channel;
 static struct audio_driver *drivers = NULL;
 struct audio_driver *current_driver = NULL;
+
+static RD_BOOL rdpsnd_negotiated;
+static RD_BOOL rdpsnd_rec_negotiated;
 
 static RD_BOOL device_open;
 static RD_BOOL rec_device_open;
@@ -244,6 +247,13 @@ rdpsnd_process_negotiate(STREAM in)
 	DEBUG_SOUND(("RDPSND: RDPSND_NEGOTIATE(formats: %d, pad: 0x%02x, version: %x)\n",
 		     (int) in_format_count, (unsigned) pad, (unsigned) version));
 
+	if (rdpsnd_negotiated)
+	{
+		error("RDPSND: Extra RDPSND_NEGOTIATE in the middle of a session\n");
+		/* Do a complete reset of the sound state */
+		rdpsnd_reset_state();
+	}
+
 	if (!current_driver)
 		device_available = rdpsnd_auto_select();
 
@@ -317,6 +327,8 @@ rdpsnd_process_negotiate(STREAM in)
 	DEBUG_SOUND(("RDPSND: -> RDPSND_NEGOTIATE(formats: %d)\n", (int) format_count));
 
 	rdpsnd_send(out);
+
+	rdpsnd_negotiated = True;
 }
 
 static void
@@ -355,6 +367,13 @@ rdpsnd_process_rec_negotiate(STREAM in)
 
 	DEBUG_SOUND(("RDPSND: RDPSND_REC_NEGOTIATE(formats: %d, version: %x)\n",
 		     (int) in_format_count, (unsigned) version));
+
+	if (rdpsnd_rec_negotiated)
+	{
+		error("RDPSND: Extra RDPSND_REC_NEGOTIATE in the middle of a session\n");
+		/* Do a complete reset of the sound state */
+		rdpsnd_reset_state();
+	}
 
 	if (!current_driver)
 		device_available = rdpsnd_auto_select();
@@ -426,6 +445,8 @@ rdpsnd_process_rec_negotiate(STREAM in)
 	DEBUG_SOUND(("RDPSND: -> RDPSND_REC_NEGOTIATE(formats: %d)\n", (int) rec_format_count));
 
 	rdpsnd_send(out);
+
+	rdpsnd_rec_negotiated = True;
 }
 
 static void
@@ -743,14 +764,14 @@ rdpsnd_reset_state(void)
 	if (device_open)
 		current_driver->wave_out_close();
 	device_open = False;
-
 	rdpsnd_queue_clear();
+	rdpsnd_negotiated = False;
 
 	if (rec_device_open)
 		current_driver->wave_in_close();
 	rec_device_open = False;
-
 	rdpsnd_clear_record();
+	rdpsnd_rec_negotiated = False;
 }
 
 
