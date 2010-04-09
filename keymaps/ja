@@ -1,4 +1,6 @@
 # generated from XKB map jp106
+# See OADG Technical reference for official scancodes:
+# http://www.oadg.or.jp/tosho/index.htm#techref
 include common
 map 0xe0010411
 keyboard_type 0x7
@@ -72,6 +74,7 @@ colon 0x28
 asterisk 0x28 shift
 kana_KE 0x28 altgr
 Zenkaku_Hankaku 0x29
+Kanji 0x29
 bracketright 0x2b
 braceright 0x2b shift
 kana_MU 0x2b altgr
@@ -96,12 +99,21 @@ slash 0x35
 question 0x35 shift
 kana_ME 0x35 altgr
 kana_conjunctive 0x35 shift altgr
-Eisu_toggle 0x3a shift
 Execute 0x54 shift
-Kanji 0x70
 backslash 0x73
 bar 0x7d shift
 underscore 0x73 shift
 Henkan_Mode 0x79
+Hiragana_Katakana 0x70 localstate
 Katakana 0x70
+Romaji 0x70
 Muhenkan 0x7b
+# Plain [Eisu_toggle/Caps_Lock] should NOT have shift
+Eisu_toggle 0x3a
+# [Eisu_toggle/Caps_Lock] key will generate Caps_Lock keysym 
+# only with shift+capslock stroke. Windows also expect this, so prefix a shift
+Caps_Lock 0x3a shift
+# Windows,Menu
+F13 0xdc
+Menu 0xdd
+#todo: Alt_R+Romaji doesnt romaji the IME (Alt_L+Romaji works)
