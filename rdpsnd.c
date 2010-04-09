@@ -73,6 +73,7 @@ void (*wave_out_play) (void);
 
 static void rdpsnd_queue_write(STREAM s, uint16 tick, uint8 index);
 static void rdpsnd_queue_init(void);
+static void rdpsnd_queue_clear(void);
 static void rdpsnd_queue_complete_pending(void);
 static long rdpsnd_queue_next_completion(void);
 
@@ -147,6 +148,16 @@ rdpsnd_flush_record(void)
 		DEBUG_SOUND(("RDPSND: -> RDPSND_REC_DATA(length: %u)\n", (unsigned) chunk_size));
 	}
 
+	record_buffer_size = 0;
+}
+
+static void
+rdpsnd_clear_record(void)
+{
+	/*
+	 * Silently drop everything we have in the record buffer as
+	 * we've somehow gotten a reset in regard to the server.
+	 */
 	record_buffer_size = 0;
 }
 
@@ -727,6 +738,23 @@ rdpsnd_init(char *optarg)
 }
 
 void
+rdpsnd_reset_state(void)
+{
+	if (device_open)
+		current_driver->wave_out_close();
+	device_open = False;
+
+	rdpsnd_queue_clear();
+
+	if (rec_device_open)
+		current_driver->wave_in_close();
+	rec_device_open = False;
+
+	rdpsnd_clear_record();
+}
+
+
+void
 rdpsnd_show_help(void)
 {
 	struct audio_driver *pos;
@@ -808,6 +836,23 @@ rdpsnd_queue_empty(void)
 static void
 rdpsnd_queue_init(void)
 {
+	queue_pending = queue_lo = queue_hi = 0;
+}
+
+static void
+rdpsnd_queue_clear(void)
+{
+	struct audio_packet *packet;
+
+	/* Go through everything, not just the pending packets */
+	while (queue_pending != queue_hi)
+	{
+		packet = &packet_queue[queue_pending];
+		xfree(packet->s.data);
+		queue_pending = (queue_pending + 1) % MAX_QUEUE;
+	}
+
+	/* Reset everything back to the initial state */
 	queue_pending = queue_lo = queue_hi = 0;
 }
 

@@ -354,6 +354,9 @@ rdesktop_reset_state(void)
 #ifdef WITH_SCARD
 	scard_reset_state();
 #endif
+#ifdef WITH_RDPSND
+	rdpsnd_reset_state();
+#endif
 }
 
 static RD_BOOL
