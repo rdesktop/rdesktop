@@ -32,6 +32,9 @@
 #include <wintypes.h>
 #include <pcsclite.h>
 #include <winscard.h>
+#ifdef PCSCLITE_VERSION_NUMBER
+#include <reader.h>
+#endif
 #endif /* PCSC_OSX */
 #include "rdesktop.h"
 #include "scard.h"
@@ -965,21 +968,6 @@ mappedStatus(MYPCSC_DWORD code)
 }
 #endif
 
-static MYPCSC_DWORD
-incStatus(MYPCSC_DWORD code, RD_BOOL mapped)
-{
-	if (mapped || (code & SCARD_STATE_CHANGED))
-	{
-		MYPCSC_DWORD count = (code >> 16) & 0x0000FFFF;
-		count++;
-		if (mapped && !(count % 2))
-			count++;
-		return (code & 0x0000FFFF) | (count << 16);
-	}
-	else
-		return code;
-}
-
 static void
 copyReaderState_MyPCSCToServer(MYPCSC_LPSCARD_READERSTATE_A src, SERVER_LPSCARD_READERSTATE_A dst,
 			       MYPCSC_DWORD readerCount)
@@ -1027,13 +1015,9 @@ TS_SCardGetStatusChange(STREAM in, STREAM out, RD_BOOL wide)
 	SERVER_DWORD dwTimeout;
 	SERVER_DWORD dwCount;
 	SERVER_LPSCARD_READERSTATE_A rsArray, cur;
-	SERVER_DWORD *stateArray = NULL, *curState;
 	MYPCSC_LPSCARD_READERSTATE_A myRsArray;
 	long i;
 	PMEM_HANDLE lcHandle = NULL;
-#if 0
-	RD_BOOL mapped = False;
-#endif
 
 	in->p += 0x18;
 	in_uint32_le(in, dwTimeout);
@@ -1051,9 +1035,6 @@ TS_SCardGetStatusChange(STREAM in, STREAM out, RD_BOOL wide)
 		if (!rsArray)
 			return SC_returnNoMemoryError(&lcHandle, in, out);
 		memset(rsArray, 0, dwCount * sizeof(SERVER_SCARD_READERSTATE_A));
-		stateArray = SC_xmalloc(&lcHandle, dwCount * sizeof(MYPCSC_DWORD));
-		if (!stateArray)
-			return SC_returnNoMemoryError(&lcHandle, in, out);
 		/* skip two pointers at beginning of struct */
 		for (i = 0, cur = (SERVER_LPSCARD_READERSTATE_A) ((unsigned char **) rsArray + 2);
 		     i < dwCount; i++, cur++)
@@ -1062,8 +1043,7 @@ TS_SCardGetStatusChange(STREAM in, STREAM out, RD_BOOL wide)
 			in_uint8a(in, cur, SERVER_SCARDSTATESIZE);
 		}
 
-		for (i = 0, cur = rsArray, curState = stateArray;
-		     i < dwCount; i++, cur++, curState++)
+		for (i = 0, cur = rsArray; i < dwCount; i++, cur++)
 		{
 			SERVER_DWORD dataLength;
 
@@ -1071,31 +1051,6 @@ TS_SCardGetStatusChange(STREAM in, STREAM out, RD_BOOL wide)
 			cur->dwCurrentState = swap32(cur->dwCurrentState);
 			cur->dwEventState = swap32(cur->dwEventState);
 			cur->cbAtr = swap32(cur->cbAtr);
-
-			/* reset Current state hign bytes; */
-			*curState = cur->dwCurrentState;
-			cur->dwCurrentState &= 0x0000FFFF;
-			cur->dwEventState &= 0x0000FFFF;
-
-#if 0
-			if (cur->dwCurrentState == (SCARD_STATE_CHANGED | SCARD_STATE_PRESENT))
-			{
-				cur->dwCurrentState = 0x00000000;
-				mapped = True;
-			}
-
-			if (mappedStatus(*curState))
-			{
-				cur->dwCurrentState &= ~SCARD_STATE_INUSE;
-				cur->dwEventState &= ~SCARD_STATE_INUSE;
-
-				if (cur->dwCurrentState & SCARD_STATE_EMPTY)
-				{
-					cur->dwCurrentState &= ~SCARD_STATE_EMPTY;
-					cur->dwCurrentState |= SCARD_STATE_UNKNOWN;
-				}
-			}
-#endif
 
 			in->p += 0x08;
 			in_uint32_le(in, dataLength);
@@ -1110,14 +1065,11 @@ TS_SCardGetStatusChange(STREAM in, STREAM out, RD_BOOL wide)
 			DEBUG_SCARD(("SCARD:        user: 0x%08x, state: 0x%08x, event: 0x%08x\n",
 				     (unsigned) cur->pvUserData, (unsigned) cur->dwCurrentState,
 				     (unsigned) cur->dwEventState));
-			DEBUG_SCARD(("SCARD:            current state: 0x%08x\n",
-				     (unsigned) *curState));
 		}
 	}
 	else
 	{
 		rsArray = NULL;
-		stateArray = NULL;
 	}
 
 	myRsArray = SC_xmalloc(&lcHandle, dwCount * sizeof(MYPCSC_SCARD_READERSTATE_A));
@@ -1144,36 +1096,8 @@ TS_SCardGetStatusChange(STREAM in, STREAM out, RD_BOOL wide)
 	out_uint32_le(out, 0x00084dd8);
 	out_uint32_le(out, dwCount);
 
-	for (i = 0, cur = rsArray, curState = stateArray; i < dwCount; i++, cur++, curState++)
+	for (i = 0, cur = rsArray; i < dwCount; i++, cur++)
 	{
-
-		cur->dwCurrentState = (*curState);
-		cur->dwEventState |= (*curState) & 0xFFFF0000;
-
-#if 0
-		if (mapped && (cur->dwCurrentState & SCARD_STATE_PRESENT)
-		    && (cur->dwCurrentState & SCARD_STATE_CHANGED)
-		    && (cur->dwEventState & SCARD_STATE_PRESENT)
-		    && (cur->dwEventState & SCARD_STATE_CHANGED))
-		{
-			cur->dwEventState |= SCARD_STATE_INUSE;
-		}
-		else if (cur->dwEventState & SCARD_STATE_UNKNOWN)
-		{
-			cur->dwEventState &= ~SCARD_STATE_UNKNOWN;
-			cur->dwEventState |= SCARD_STATE_EMPTY;
-			mapped = True;
-		}
-		else if ((!mapped) && (cur->dwEventState & SCARD_STATE_INUSE))
-		{
-			mapped = True;
-			cur->dwEventState &= ~SCARD_STATE_INUSE;
-		}
-
-		cur->dwEventState = incStatus(cur->dwEventState, mapped);
-#endif
-		cur->dwEventState = incStatus(cur->dwEventState, False);
-
 		DEBUG_SCARD(("SCARD:    \"%s\"\n", cur->szReader ? cur->szReader : "NULL"));
 		DEBUG_SCARD(("SCARD:        user: 0x%08x, state: 0x%08x, event: 0x%08x\n",
 			     (unsigned) cur->pvUserData, (unsigned) cur->dwCurrentState,
