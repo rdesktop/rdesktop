@@ -2037,6 +2037,14 @@ TS_SCardControl(STREAM in, STREAM out)
 		in_uint8a(in, pInBuffer, nInBufferSize);
 	}
 
+	/* Is this a proper Windows smart card ioctl? */
+	if ((dwControlCode & 0xffff0000) != (49 << 16))
+		return SCARD_E_INVALID_PARAMETER;
+
+	/* Translate to local encoding */
+	dwControlCode = (dwControlCode & 0x3ffc) >> 2;
+	dwControlCode = SCARD_CTL_CODE(dwControlCode);
+
 #if 0
 	if (nOutBufferSize > 0)
 	{
