@@ -2033,10 +2033,13 @@ TS_SCardControl(STREAM in, STREAM out)
 	{
 		/* read real input size */
 		in_uint32_le(in, nInBufferSize);
-		pInBuffer = SC_xmalloc(&lcHandle, nInBufferSize);
-		if (!pInBuffer)
-			return SC_returnNoMemoryError(&lcHandle, in, out);
-		in_uint8a(in, pInBuffer, nInBufferSize);
+		if (nInBufferSize > 0)
+		{
+			pInBuffer = SC_xmalloc(&lcHandle, nInBufferSize);
+			if (!pInBuffer)
+				return SC_returnNoMemoryError(&lcHandle, in, out);
+			in_uint8a(in, pInBuffer, nInBufferSize);
+		}
 	}
 
 	DEBUG_SCARD(("SCARD: SCardControl(context: 0x%08x, hcard: 0x%08x, code: 0x%08x, in: %d bytes, out: %d bytes)\n", (unsigned) hContext, (unsigned) hCard, (unsigned) dwControlCode, (int) nInBufferSize, (int) nOutBufferSize));
