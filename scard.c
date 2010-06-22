@@ -24,6 +24,7 @@
 #include <strings.h>
 #include <sys/types.h>
 #include <time.h>
+#include <arpa/inet.h>
 #ifndef MAKE_PROTO
 #ifdef __APPLE__
 #include <PCSC/wintypes.h>
@@ -2089,6 +2090,24 @@ TS_SCardControl(STREAM in, STREAM out)
 	{
 		DEBUG_SCARD(("SCARD: -> Success (out: %d bytes)\n", (int) nBytesReturned));
 	}
+
+#ifdef PCSCLITE_VERSION_NUMBER
+	if (dwControlCode == SCARD_CTL_CODE(3400))
+	{
+		int i;
+		SERVER_DWORD cc;
+
+		for (i = 0; i < nBytesReturned / 6; i++)
+		{
+			memcpy(&cc, pOutBuffer + 2 + i * 6, 4);
+			cc = ntohl(cc);
+			cc = cc - 0x42000000;
+			cc = (49 << 16) | (cc << 2);
+			cc = htonl(cc);
+			memcpy(pOutBuffer + 2 + i * 6, &cc, 4);
+		}
+	}
+#endif
 
 	out_uint32_le(out, nBytesReturned);
 	out_uint32_le(out, 0x00000004);
