@@ -2038,13 +2038,19 @@ TS_SCardControl(STREAM in, STREAM out)
 		in_uint8a(in, pInBuffer, nInBufferSize);
 	}
 
-	/* Is this a proper Windows smart card ioctl? */
-	if ((dwControlCode & 0xffff0000) != (49 << 16))
-		return SCARD_E_INVALID_PARAMETER;
+	DEBUG_SCARD(("SCARD: SCardControl(context: 0x%08x, hcard: 0x%08x, code: 0x%08x, in: %d bytes, out: %d bytes)\n", (unsigned) hContext, (unsigned) hCard, (unsigned) dwControlCode, (int) nInBufferSize, (int) nOutBufferSize));
 
-	/* Translate to local encoding */
-	dwControlCode = (dwControlCode & 0x3ffc) >> 2;
-	dwControlCode = SCARD_CTL_CODE(dwControlCode);
+	/* Is this a proper Windows smart card ioctl? */
+	if ((dwControlCode & 0xffff0000) == (49 << 16))
+	{
+		/* Translate to local encoding */
+		dwControlCode = (dwControlCode & 0x3ffc) >> 2;
+		dwControlCode = SCARD_CTL_CODE(dwControlCode);
+	}
+	else
+	{
+		warning("Bogus smart card control code 0x%08x\n", dwControlCode);
+	}
 
 #if 0
 	if (nOutBufferSize > 0)
@@ -2061,8 +2067,6 @@ TS_SCardControl(STREAM in, STREAM out)
 	pOutBuffer = SC_xmalloc(&lcHandle, nOutBufferRealSize);
 	if (!pOutBuffer)
 		return SC_returnNoMemoryError(&lcHandle, in, out);
-
-	DEBUG_SCARD(("SCARD: SCardControl(context: 0x%08x, hcard: 0x%08x, code: 0x%08x, in: %d bytes, out: %d bytes)\n", (unsigned) hContext, (unsigned) hCard, (unsigned) dwControlCode, (int) nInBufferSize, (int) nOutBufferSize));
 
 	sc_nBytesReturned = nBytesReturned;
 	myHCard = scHandleToMyPCSC(hCard);
