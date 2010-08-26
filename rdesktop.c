@@ -449,7 +449,7 @@ main(int argc, char *argv[])
 {
 	char server[64];
 	char fullhostname[64];
-	char domain[16];
+	char domain[256];
 	char password[64];
 	char shell[256];
 	char directory[256];
