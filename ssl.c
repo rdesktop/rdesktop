@@ -160,7 +160,7 @@ ssl_cert_to_rkey(SSL_CERT * cert, uint32 * key_len)
 		return NULL;
 	}
 
-	lkey = RSAPublicKey_dup((RSA *) epk->pkey.ptr);
+	lkey = RSAPublicKey_dup(EVP_PKEY_get1_RSA(epk));
 	EVP_PKEY_free(epk);
 	*key_len = RSA_size(lkey);
 	return lkey;
