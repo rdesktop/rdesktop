@@ -838,9 +838,9 @@ rdpdr_process(STREAM s)
 }
 
 RD_BOOL
-rdpdr_init()
+rdpdr_init(RD_BOOL force)
 {
-	if (g_num_devices > 0)
+	if (g_num_devices > 0 || force)
 	{
 		rdpdr_channel =
 			channel_register("rdpdr",
