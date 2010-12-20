@@ -740,7 +740,7 @@ rdpdr_process_irp(STREAM s)
 }
 
 static void
-rdpdr_send_clientcapabilty(void)
+rdpdr_send_clientcapability(void)
 {
 	uint8 magic[4] = "rDPC";
 	STREAM s;
@@ -785,6 +785,9 @@ rdpdr_process(STREAM s)
 	uint32 handle;
 	uint8 *magic;
 
+	printf("--- rdpdr_process ---\n");
+	hexdump(s->p, s->end - s->p);
+	
 #if WITH_DEBUG_RDP5
 	printf("--- rdpdr_process ---\n");
 	hexdump(s->p, s->end - s->p);
@@ -807,7 +810,7 @@ rdpdr_process(STREAM s)
 		if ((magic[2] == 'C') && (magic[3] == 'C'))
 		{
 			/* connect from server */
-			rdpdr_send_clientcapabilty();
+			rdpdr_send_clientcapability();
 			rdpdr_send_available();
 			return;
 		}
@@ -840,7 +843,7 @@ rdpdr_process(STREAM s)
 RD_BOOL
 rdpdr_init()
 {
-	if (g_num_devices > 0)
+	//if (g_num_devices > 0)
 	{
 		rdpdr_channel =
 			channel_register("rdpdr",
