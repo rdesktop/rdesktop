@@ -785,9 +785,6 @@ rdpdr_process(STREAM s)
 	uint32 handle;
 	uint8 *magic;
 
-	printf("--- rdpdr_process ---\n");
-	hexdump(s->p, s->end - s->p);
-	
 #if WITH_DEBUG_RDP5
 	printf("--- rdpdr_process ---\n");
 	hexdump(s->p, s->end - s->p);
@@ -843,7 +840,7 @@ rdpdr_process(STREAM s)
 RD_BOOL
 rdpdr_init()
 {
-	//if (g_num_devices > 0)
+	if (g_num_devices > 0)
 	{
 		rdpdr_channel =
 			channel_register("rdpdr",
