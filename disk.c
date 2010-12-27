@@ -1086,6 +1086,18 @@ disk_query_volume_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 			out_uint32_le(out, 0x200);	/* Bytes per sector */
 			break;
 
+		case FileFsFullSizeInformation:
+
+			out_uint32_le(out, stat_fs.f_blocks);   /* Total allocation units low */
+			out_uint32_le(out, 0);  /* Total allocation units high */
+			out_uint32_le(out, stat_fs.f_blocks);   /* Caller allocation units low */
+			out_uint32_le(out, 0);  /* Caller allocation units high */
+			out_uint32_le(out, stat_fs.f_bfree);    /* Available allocation units */
+			out_uint32_le(out, 0);  /* Available allowcation units */
+			out_uint32_le(out, stat_fs.f_bsize / 0x200);    /* Sectors per allocation unit */
+			out_uint32_le(out, 0x200);      /* Bytes per sector */
+			break;
+
 		case FileFsAttributeInformation:
 
 			out_uint32_le(out, FS_CASE_SENSITIVE | FS_CASE_IS_PRESERVED);	/* fs attributes */
@@ -1098,7 +1110,6 @@ disk_query_volume_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 		case FileFsLabelInformation:
 		case FileFsDeviceInformation:
 		case FileFsControlInformation:
-		case FileFsFullSizeInformation:
 		case FileFsObjectIdInformation:
 		case FileFsMaximumInformation:
 
