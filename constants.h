@@ -397,6 +397,7 @@ enum RDP_INPUT_DEVICE
 #define RD_STATUS_TIMEOUT                  0xc0000102
 #define RD_STATUS_NOTIFY_ENUM_DIR          0xc000010c
 #define RD_STATUS_CANCELLED                0xc0000120
+#define RD_STATUS_DIRECTORY_NOT_EMPTY      0xc0000101
 
 
 /* RDPDR constants */
