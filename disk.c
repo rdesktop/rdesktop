@@ -1169,9 +1169,13 @@ disk_query_directory(RD_NTHANDLE handle, uint32 info_class, char *pattern, STREA
 	dirname = pfinfo->path;
 	file_attributes = 0;
 
+
 	switch (info_class)
 	{
 		case FileBothDirectoryInformation:
+		case FileDirectoryInformation:
+		case FileFullDirectoryInformation:
+		case FileNamesInformation:
 
 			/* If a search pattern is received, remember this pattern, and restart search */
 			if (pattern[0] != 0)
@@ -1220,7 +1224,53 @@ disk_query_directory(RD_NTHANDLE handle, uint32 info_class, char *pattern, STREA
 				file_attributes |= FILE_ATTRIBUTE_READONLY;
 
 			/* Return requested information */
-			out_uint8s(out, 8);	/* unknown zero */
+			out_uint32_le(out, 0);	/* NextEntryOffset */
+			out_uint32_le(out, 0);	/* FileIndex zero */
+			break;
+
+		default:
+			unimpl("IRP Query Directory sub: 0x%x\n", info_class);
+			return RD_STATUS_INVALID_PARAMETER;
+	}
+
+	switch (info_class)
+	{
+		case FileBothDirectoryInformation:
+
+			seconds_since_1970_to_filetime(get_create_time(&filestat), &ft_high,
+						       &ft_low);
+			out_uint32_le(out, ft_low);	/* create time */
+			out_uint32_le(out, ft_high);
+
+			seconds_since_1970_to_filetime(filestat.st_atime, &ft_high, &ft_low);
+			out_uint32_le(out, ft_low);	/* last_access_time */
+			out_uint32_le(out, ft_high);
+
+			seconds_since_1970_to_filetime(filestat.st_mtime, &ft_high, &ft_low);
+			out_uint32_le(out, ft_low);	/* last_write_time */
+			out_uint32_le(out, ft_high);
+
+			seconds_since_1970_to_filetime(filestat.st_ctime, &ft_high, &ft_low);
+			out_uint32_le(out, ft_low);	/* change_write_time */
+			out_uint32_le(out, ft_high);
+
+			out_uint32_le(out, filestat.st_size);	/* filesize low */
+			out_uint32_le(out, 0);	/* filesize high */
+			out_uint32_le(out, filestat.st_size);	/* filesize low */
+			out_uint32_le(out, 0);	/* filesize high */
+			out_uint32_le(out, file_attributes);	/* FileAttributes */
+			out_uint32_le(out, 2 * strlen(pdirent->d_name) + 2);	/* unicode length */
+			out_uint32_le(out, 0);	/* EaSize */
+			out_uint8(out, 0);	/* ShortNameLength */
+			/* this should be correct according to MS-FSCC specification
+			   but it only works when commented out...
+			   out_uint8(out, 0);   /* Reserved/Padding */
+			out_uint8s(out, 2 * 12);	/* ShortName (8.3 name) */
+			rdp_out_unistr(out, pdirent->d_name, 2 * strlen(pdirent->d_name));
+			break;
+
+
+		case FileDirectoryInformation:
 
 			seconds_since_1970_to_filetime(get_create_time(&filestat), &ft_high,
 						       &ft_low);
@@ -1244,17 +1294,49 @@ disk_query_directory(RD_NTHANDLE handle, uint32 info_class, char *pattern, STREA
 			out_uint32_le(out, filestat.st_size);	/* filesize low */
 			out_uint32_le(out, 0);	/* filesize high */
 			out_uint32_le(out, file_attributes);
-			out_uint8(out, 2 * strlen(pdirent->d_name) + 2);	/* unicode length */
-			out_uint8s(out, 7);	/* pad? */
-			out_uint8(out, 0);	/* 8.3 file length */
-			out_uint8s(out, 2 * 12);	/* 8.3 unicode length */
+			out_uint32_le(out, 2 * strlen(pdirent->d_name) + 2);	/* unicode length */
 			rdp_out_unistr(out, pdirent->d_name, 2 * strlen(pdirent->d_name));
 			break;
 
+
+		case FileFullDirectoryInformation:
+
+			seconds_since_1970_to_filetime(get_create_time(&filestat), &ft_high,
+						       &ft_low);
+			out_uint32_le(out, ft_low);	/* create time */
+			out_uint32_le(out, ft_high);
+
+			seconds_since_1970_to_filetime(filestat.st_atime, &ft_high, &ft_low);
+			out_uint32_le(out, ft_low);	/* last_access_time */
+			out_uint32_le(out, ft_high);
+
+			seconds_since_1970_to_filetime(filestat.st_mtime, &ft_high, &ft_low);
+			out_uint32_le(out, ft_low);	/* last_write_time */
+			out_uint32_le(out, ft_high);
+
+			seconds_since_1970_to_filetime(filestat.st_ctime, &ft_high, &ft_low);
+			out_uint32_le(out, ft_low);	/* change_write_time */
+			out_uint32_le(out, ft_high);
+
+			out_uint32_le(out, filestat.st_size);	/* filesize low */
+			out_uint32_le(out, 0);	/* filesize high */
+			out_uint32_le(out, filestat.st_size);	/* filesize low */
+			out_uint32_le(out, 0);	/* filesize high */
+			out_uint32_le(out, file_attributes);
+			out_uint32_le(out, 2 * strlen(pdirent->d_name) + 2);	/* unicode length */
+			out_uint32_le(out, 0);	/* EaSize */
+			rdp_out_unistr(out, pdirent->d_name, 2 * strlen(pdirent->d_name));
+			break;
+
+
+		case FileNamesInformation:
+
+			out_uint32_le(out, 2 * strlen(pdirent->d_name) + 2);	/* unicode length */
+			rdp_out_unistr(out, pdirent->d_name, 2 * strlen(pdirent->d_name));
+			break;
+
+
 		default:
-			/* FIXME: Support FileDirectoryInformation,
-			   FileFullDirectoryInformation, and
-			   FileNamesInformation */
 
 			unimpl("IRP Query Directory sub: 0x%x\n", info_class);
 			return RD_STATUS_INVALID_PARAMETER;
