@@ -828,19 +828,20 @@ disk_set_information(RD_NTHANDLE handle, uint32 info_class, STREAM in, STREAM ou
 			   DeleteFile set to FALSE should unschedule
 			   the delete. See
 			   http://www.osronline.com/article.cfm?article=245. */
-		
+
 			/* FileDispositionInformation always sets delete_on_close to true.
 			   "STREAM in" includes Length(4bytes) , Padding(24bytes) and SetBuffer(zero byte).
 			   Length is always set to zero.
 			   [MS-RDPEFS] http://msdn.microsoft.com/en-us/library/cc241305%28PROT.10%29.aspx
 			   - 2.2.3.3.9 Server Drive Set Information Request
-			*/
-			in_uint8s(in , 4); /* length of SetBuffer */
-			in_uint8s(in , 24); /* padding */
- 
+			 */
+			in_uint8s(in, 4);	/* length of SetBuffer */
+			in_uint8s(in, 24);	/* padding */
 
-			if ((pfinfo->accessmask & (FILE_DELETE_ON_CLOSE | FILE_COMPLETE_IF_OPLOCKED)))
- 			{
+
+			if ((pfinfo->accessmask &
+			     (FILE_DELETE_ON_CLOSE | FILE_COMPLETE_IF_OPLOCKED)))
+			{
 				/* if file exists in directory , necessary to return RD_STATUS_DIRECTORY_NOT_EMPTY with win2008
 				   [MS-RDPEFS] http://msdn.microsoft.com/en-us/library/cc241305%28PROT.10%29.aspx
 				   - 2.2.3.3.9 Server Drive Set Information Request
@@ -849,15 +850,16 @@ disk_set_information(RD_NTHANDLE handle, uint32 info_class, STREAM in, STREAM ou
 				   - 2.4.11 FileDispositionInformation
 				   [FSBO] http://msdn.microsoft.com/en-us/library/cc246487%28PROT.13%29.aspx
 				   - 4.3.2 Set Delete-on-close using FileDispositionInformation Information Class (IRP_MJ_SET_INFORMATION)
-				*/
+				 */
 				if (pfinfo->pdir)
 				{
 					DIR *dp = opendir(pfinfo->path);
 					struct dirent *dir;
 
-					while((dir = readdir(dp)) != NULL)
+					while ((dir = readdir(dp)) != NULL)
 					{
-						if(strcmp(dir->d_name , ".") != 0 && strcmp(dir->d_name , "..") != 0)
+						if (strcmp(dir->d_name, ".") != 0
+						    && strcmp(dir->d_name, "..") != 0)
 						{
 							closedir(dp);
 							return RD_STATUS_DIRECTORY_NOT_EMPTY;
@@ -1119,14 +1121,14 @@ disk_query_volume_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 
 		case FileFsFullSizeInformation:
 
-			out_uint32_le(out, stat_fs.f_blocks);   /* Total allocation units low */
-			out_uint32_le(out, 0);  /* Total allocation units high */
-			out_uint32_le(out, stat_fs.f_blocks);   /* Caller allocation units low */
-			out_uint32_le(out, 0);  /* Caller allocation units high */
-			out_uint32_le(out, stat_fs.f_bfree);    /* Available allocation units */
-			out_uint32_le(out, 0);  /* Available allowcation units */
-			out_uint32_le(out, stat_fs.f_bsize / 0x200);    /* Sectors per allocation unit */
-			out_uint32_le(out, 0x200);      /* Bytes per sector */
+			out_uint32_le(out, stat_fs.f_blocks);	/* Total allocation units low */
+			out_uint32_le(out, 0);	/* Total allocation units high */
+			out_uint32_le(out, stat_fs.f_blocks);	/* Caller allocation units low */
+			out_uint32_le(out, 0);	/* Caller allocation units high */
+			out_uint32_le(out, stat_fs.f_bfree);	/* Available allocation units */
+			out_uint32_le(out, 0);	/* Available allowcation units */
+			out_uint32_le(out, stat_fs.f_bsize / 0x200);	/* Sectors per allocation unit */
+			out_uint32_le(out, 0x200);	/* Bytes per sector */
 			break;
 
 		case FileFsAttributeInformation:

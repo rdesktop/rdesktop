@@ -303,7 +303,7 @@ sun_set_format(RD_WAVEFORMATEX * pwfx)
 		if ((pwfx->wBitsPerSample == 16) && (format != AUDIO_ENCODING_LINEAR))
 			return False;
 
-		if ((pwfx->nChannels == 2) != !!stereo)
+		if ((pwfx->nChannels == 2) != ! !stereo)
 			return False;
 
 		if (pwfx->nSamplesPerSec != snd_rate)
