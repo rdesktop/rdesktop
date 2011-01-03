@@ -461,7 +461,6 @@ main(int argc, char *argv[])
 	char *locale = NULL;
 	int username_option = 0;
 	RD_BOOL geometry_option = False;
-	RD_BOOL force_rdpdr = False;
 #ifdef WITH_RDPSND
 	char *rdpsnd_optarg = NULL;
 #endif
@@ -958,18 +957,14 @@ main(int argc, char *argv[])
 	if (g_rdpsnd)
 	{
 		if (!rdpsnd_init(rdpsnd_optarg))
-		{
 			warning("Initializing sound-support failed!\n");
-		}
-		else
-			force_rdpdr = True;
 	}
 #endif
 
 	if (g_lspci_enabled)
 		lspci_init();
 
-	rdpdr_init (force_rdpdr);
+	rdpdr_init();
 
 	while (1)
 	{

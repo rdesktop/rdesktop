@@ -158,7 +158,7 @@ int get_device_index(RD_NTHANDLE handle);
 void convert_to_unix_filename(char *filename);
 void rdpdr_send_completion(uint32 device, uint32 id, uint32 status, uint32 result, uint8 * buffer,
 			   uint32 length);
-RD_BOOL rdpdr_init(RD_BOOL force);
+RD_BOOL rdpdr_init();
 void rdpdr_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv, RD_BOOL * timeout);
 struct async_iorequest *rdpdr_remove_iorequest(struct async_iorequest *prev,
 					       struct async_iorequest *iorq);
