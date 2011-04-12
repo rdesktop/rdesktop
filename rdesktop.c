@@ -27,6 +27,7 @@
 #include <sys/times.h>		/* times */
 #include <ctype.h>		/* toupper */
 #include <errno.h>
+#include <signal.h>
 #include "rdesktop.h"
 
 #ifdef HAVE_LOCALE_H
@@ -474,6 +475,15 @@ main(int argc, char *argv[])
 	}
 
 #endif
+
+	/* Ignore SIGPIPE, since we are using popen() */
+	struct sigaction act;
+	memset(&act, 0, sizeof(act));
+	act.sa_handler = SIG_IGN;
+	sigemptyset(&act.sa_mask);
+	act.sa_flags = 0;
+	sigaction(SIGPIPE, &act, NULL);
+
 	flags = RDP_LOGON_NORMAL;
 	prompt_password = False;
 	domain[0] = password[0] = shell[0] = directory[0] = 0;
