@@ -2,8 +2,8 @@
    rdesktop: A Remote Desktop Protocol client.
    Sound Channel Process Functions - SGI/IRIX
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 2003-2008
-   Copyright (C) GuoJunBo guojunbo@ict.ac.cn 2003
-   Copyright (C) Jeremy Meng void.foo@gmail.com 2004, 2005
+   Copyright (C) GuoJunBo <guojunbo@ict.ac.cn> 2003
+   Copyright (C) Jeremy Meng <void.foo@gmail.com> 2004-2005
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by

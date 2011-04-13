@@ -2,8 +2,8 @@
    rdesktop: A Remote Desktop Protocol client.
    Sound Channel Process Functions - libao-driver
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 2003-2008
-   Copyright (C) GuoJunBo guojunbo@ict.ac.cn 2003
-   Copyright (C) Michael Gernoth mike@zerfleddert.de 2005-2008
+   Copyright (C) GuoJunBo <guojunbo@ict.ac.cn> 2003
+   Copyright (C) Michael Gernoth <mike@zerfleddert.de> 2005-2008
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
