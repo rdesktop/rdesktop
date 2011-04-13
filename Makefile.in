@@ -159,6 +159,6 @@ configure: configure.ac
 .c.o:
 	$(CC) $(CFLAGS) -o $@ -c $<
 
-.PHONY:
+.PHONY: doc/AUTHORS
 doc/AUTHORS:
 	./genauthors *.c
