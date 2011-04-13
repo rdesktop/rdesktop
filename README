@@ -2,10 +2,10 @@
 rdesktop: A Remote Desktop Protocol client
 ==========================================
 
-rdesktop is a client for Microsoft Windows NT Terminal Server, Windows 2000
-Terminal Services, Windows 2003 Terminal Services/Remote Desktop, Windows XP
-Remote Desktop, and possibly other Terminal Services products.
-rdesktop currently implements the RDP version 4 and 5 protocols.
+rdesktop is an open source client for Microsoft's RDP protocol. It is
+known to work with Windows versions such as NT 4 Terminal Server,
+2000, XP, 2003, 2003 R2, Vista, 2008, 7, and 2008 R2. rdesktop
+currently implements the RDP version 4 and 5 protocols.
 
 Installation
 ------------
@@ -19,11 +19,12 @@ to install rdesktop is the following::
 The default is to install under /usr/local.  This can be changed by adding
 --prefix=directory to the configure line.
 
-Note for CVS users
-------------------
-If you have downloaded a snapshot of rdesktop using CVS, you will first need to
-run ./bootstrap in order to generate the build infrastructure.  This is not
-necessary for release versions of rdesktop.
+Note for Subversion users
+-------------------------
+If you have downloaded a snapshot of rdesktop using Subversion, you
+will first need to run ./bootstrap in order to generate the build
+infrastructure.  This is not necessary for release versions of
+rdesktop.
 
 Invocation
 ----------
