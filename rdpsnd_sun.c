@@ -5,6 +5,7 @@
    Copyright (C) GuoJunBo guojunbo@ict.ac.cn 2003
    Copyright (C) Michael Gernoth mike@zerfleddert.de 2003-2008
    Copyright 2007-2008 Pierre Ossman <ossman@cendio.se> for Cendio AB
+   Copyright 2008-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by

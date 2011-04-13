@@ -4,7 +4,7 @@
    Support functions for Extended Window Manager Hints,
    http://www.freedesktop.org/wiki/Standards_2fwm_2dspec
 
-   Copyright 2005 Peter Astrand <astrand@cendio.se> for Cendio AB
+   Copyright 2005-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
    Copyright 2007 Pierre Ossman <ossman@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify

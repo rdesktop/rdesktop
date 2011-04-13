@@ -2,6 +2,7 @@
    rdesktop: A Remote Desktop Protocol client.
    Protocol services - ISO layer
    Copyright (C) Matthew Chapman 1999-2008
+   Copyright 2005-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by

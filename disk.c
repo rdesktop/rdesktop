@@ -2,6 +2,7 @@
    rdesktop: A Remote Desktop Protocol client.
    Disk Redirection
    Copyright (C) Jeroen Meijer 2003-2008
+   Copyright 2003-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
