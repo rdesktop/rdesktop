@@ -1,7 +1,7 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    User interface services - X Window System
-   Copyright (C) Matthew Chapman 1999-2008
+   Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2007-2008 Pierre Ossman <ossman@cendio.se> for Cendio AB
    Copyright 2002-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
 

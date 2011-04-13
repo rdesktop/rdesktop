@@ -2,7 +2,7 @@
    rdesktop: A Remote Desktop Protocol client.
    Protocol services - Clipboard functions
    Copyright (C) Erik Forsberg <forsberg@cendio.se> 2003-2008
-   Copyright (C) Matthew Chapman 2003-2008
+   Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 2003-2008
    Copyright 2006-2011 Pierre Ossman <ossman@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify

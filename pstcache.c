@@ -1,7 +1,7 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    Persistent Bitmap Cache routines
-   Copyright (C) Jeroen Meijer 2004-2008
+   Copyright (C) Jeroen Meijer <jeroen@oldambt7.com> 2004-2008
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by

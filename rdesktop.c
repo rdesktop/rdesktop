@@ -1,7 +1,7 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    Entrypoint and utility functions
-   Copyright (C) Matthew Chapman 1999-2008
+   Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2002-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
    Copyright 2010-2011 Henrik Andersson <hean01@cendio.se> for Cendio AB
 

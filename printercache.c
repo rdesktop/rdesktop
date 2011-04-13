@@ -1,8 +1,8 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    Entrypoint and utility functions
-   Copyright (C) Matthew Chapman 1999-2008
-   Copyright (C) Jeroen Meijer 2003-2008
+   Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
+   Copyright (C) Jeroen Meijer <jeroen@oldambt7.com> 2003-2008
   
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by

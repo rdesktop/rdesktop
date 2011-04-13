@@ -3,7 +3,7 @@
    Sound Channel Process Functions
    Copyright 2006-2010 Pierre Ossman <ossman@cendio.se> for Cendio AB
    Copyright 2009-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
-   Copyright (C) Matthew Chapman 2003-2008
+   Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 2003-2008
    Copyright (C) GuoJunBo guojunbo@ict.ac.cn 2003
 
    This program is free software: you can redistribute it and/or modify

@@ -1,8 +1,8 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    Secure sockets abstraction layer
-   Copyright (C) Matthew Chapman 1999-2008
-   Copyright (C) Jay Sorg 2006-2008
+   Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
+   Copyright (C) Jay Sorg <j@american-data.com> 2006-2008
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
