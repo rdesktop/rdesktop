@@ -1,0 +1,58 @@
+#!/usr/bin/env python
+# -*-mode: python; coding: utf-8 -*-
+
+import re
+import sys
+
+# Filled in with historical authors which are not mentioned in the source
+authors = {
+    "Hugo Trippaers <spark@ision.nl>": 1,
+    "Michal Mihalik <mmihalik@sme.sk>": 1,
+    "Norbert Federa <nob@thinstuff.com>": 1,
+    "Peter Kallden <peter.kallden@ub.oru.se>": 1,
+    }
+
+
+def dostatement(s):
+    # Get rid of (C)
+    s = re.sub('\(C\)', '', s).strip()
+
+    # Get rid of years
+    s = re.sub('\d\d\d\d(-\d\d\d\d)?', '', s).strip()
+
+    # Get rid of in-code statements
+    if s.find('"') != -1:
+        return
+
+    global authors
+    authors[s] = 1
+
+
+def dofile(fname):
+    f = open(fname)
+    pt = re.compile('\sCopyright (.*)')
+    for line in f:
+        m = pt.search(line)
+        if m != None:
+            dostatement(m.group(1).strip())
+
+
+def main():
+    for fname in sys.argv[1:]:
+        dofile(fname)
+
+    print """This is an attempt at a list of people who have made significant
+contributions to the code.  If you have been unintentionally omitted
+please let one of the team members know.
+"""
+
+    keys = authors.keys()
+    keys.sort()
+    for k in keys:
+        print k
+
+
+
+
+
+main()
