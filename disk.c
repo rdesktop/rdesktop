@@ -1264,8 +1264,8 @@ disk_query_directory(RD_NTHANDLE handle, uint32 info_class, char *pattern, STREA
 			out_uint32_le(out, 0);	/* EaSize */
 			out_uint8(out, 0);	/* ShortNameLength */
 			/* this should be correct according to MS-FSCC specification
-			   but it only works when commented out...
-			   out_uint8(out, 0);   /* Reserved/Padding */
+			   but it only works when commented out... */
+			/* out_uint8(out, 0); *//* Reserved/Padding */
 			out_uint8s(out, 2 * 12);	/* ShortName (8.3 name) */
 			rdp_out_unistr(out, pdirent->d_name, 2 * strlen(pdirent->d_name));
 			break;
