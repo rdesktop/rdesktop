@@ -13,6 +13,8 @@
 
 * Do a new SF file release
 
+* Update web page
+
 * Send announcement to the mailing list
 
 * Update Freshmeat entry
