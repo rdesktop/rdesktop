@@ -41,8 +41,6 @@
 #include <sysexits.h>
 #endif
 
-#define VERSION "1.6.0"
-
 /* standard exit codes */
 #ifndef EX_OK
 #define EX_OK           0

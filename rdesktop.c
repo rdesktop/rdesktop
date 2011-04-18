@@ -135,7 +135,7 @@ static void
 usage(char *program)
 {
 	fprintf(stderr, "rdesktop: A Remote Desktop Protocol client.\n");
-	fprintf(stderr, "Version " VERSION ". Copyright (C) 1999-2008 Matthew Chapman.\n");
+	fprintf(stderr, "Version " PACKAGE_VERSION ". Copyright (C) 1999-2008 Matthew Chapman.\n");
 	fprintf(stderr, "See http://www.rdesktop.org/ for more information.\n\n");
 
 	fprintf(stderr, "Usage: %s [options] server[:port]\n", program);
