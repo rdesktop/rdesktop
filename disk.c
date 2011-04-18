@@ -356,6 +356,19 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 		filename[strlen(filename) - 1] = 0;
 	sprintf(path, "%s%s", g_rdpdr_device[device_id].local_path, filename);
 
+	/* Protect against mailicous servers:
+	   somelongpath/..     not allowed
+	   somelongpath/../b   not allowed
+	   somelongpath/..b    in principle ok, but currently not allowed
+	   somelongpath/b..    ok
+	   somelongpath/b..b   ok
+	   somelongpath/b../c  ok
+	 */
+	if (strstr(path, "/.."))
+	{
+		return RD_STATUS_ACCESS_DENIED;
+	}
+
 	switch (create_disposition)
 	{
 		case CREATE_ALWAYS:
