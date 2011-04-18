@@ -1,0 +1,20 @@
+
+* Update doc/ChangeLog
+
+* Update version in configure.ac and rdesktop.spec
+
+* Create a tarball: "make dist". Verify that it contains only relevant files
+
+* Test build the tarball on a few systems. Test "rpmbuild -ta" as well
+
+* Tag:
+  svn copy https://rdesktop.svn.sourceforge.net/svnroot/rdesktop/rdesktop/trunk \
+  https://rdesktop.svn.sourceforge.net/svnroot/rdesktop/rdesktop/tags/rdesktop-x.y.z
+
+* Do a new SF file release
+
+* Send announcement to the mailing list
+
+* Update Freshmeat entry
+
+* Append "post" to VERSION
