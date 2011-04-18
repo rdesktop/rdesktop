@@ -1,3 +1,27 @@
+rdesktop (1.7.0)
+  * Security: Directory traversal vulnerability with disk redirection (disallow /.. requests)
+  * New maintainer: Peter Åstrand <astrand@cendio.se>
+  * Brush cache support
+  * Removed the hardcoded limit of the username length
+  * Increased domain name length to 255 chars
+  * Improved compatibility with PulseAudio/padsp
+  * Cleaned up and documented the return values
+  * Keyboard fix: avoid stuck keys in certain cases
+  * Support for new pointers
+  * License has been changed to GPLv3
+  * EWMH fixes for 64-bit machines
+  * RandR support: automatically resize session if using relative screen size
+  * Improved support for Windows 2008 Session Broker
+  * Japanese keyboard map has been improved
+  * New keyboard map: fr-bepo
+  * Many stability fixes regarding smart card redirection
+  * Windows 2008 R2 / 7: Fix sound playback when not using other redirections
+  * Windows 2008 R2 / 7: Solve disk redirection read-only issues
+  * Windows 2008 R2 / 7: Solve issue with recursive deletion
+  * Avoid exit when printing, if lpr command terminates early
+
+  -- Peter Åstrand <astrand@cendio.se> 2011-04-13
+
 rdesktop (1.6.0)
   * Fix for crash with recent versions of X.Org
   * Fix for potential vulnerability against compromised/malicious servers (reported by iDefense)

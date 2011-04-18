@@ -1,4 +1,4 @@
-AC_INIT(rdesktop, 1.6.0)
+AC_INIT(rdesktop, 1.7.0)
 
 AC_CONFIG_SRCDIR([rdesktop.c])
 
