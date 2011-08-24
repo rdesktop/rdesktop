@@ -2,6 +2,8 @@ AC_INIT(rdesktop, 1.7.0post)
 
 AC_CONFIG_SRCDIR([rdesktop.c])
 
+AC_CANONICAL_HOST
+
 AC_PROG_CC
 if test "$GCC" = yes; then
     CFLAGS="$CFLAGS -Wall"
@@ -48,8 +50,6 @@ m4_ifdef([PKG_CHECK_MODULES], [], [
 			$4
 		])
 ])
-
-rpath=""
 
 #
 # OpenSSL detection borrowed from stunnel
@@ -98,13 +98,28 @@ dnl Add OpenSSL includes and libraries
 CFLAGS="$CFLAGS -I$ssldir/include"
 AC_ARG_ENABLE(static-openssl, 
              [  --enable-static-openssl link OpenSSL statically],
-             [ 
-LIBS="$LIBS $ssldir/lib/libcrypto.a" 
-             ],
-             [ 
-LIBS="$LIBS -L$ssldir/lib -lcrypto" 
-rpath="$rpath:$ssldir/lib"
-             ])
+             [static_openssl=yes], 
+             [static_openssl=no])
+if test x"$static_openssl" = "xyes"; then
+    # OpenSSL generally relies on libz
+    AC_SEARCH_LIBS(deflate, z)
+    LIBS="$ssldir/lib/libcrypto.a $LIBS"
+else
+    LIBS="-L$ssldir/lib -lcrypto $LIBS"
+
+    #
+    # target-specific stuff
+    #
+    case "$host" in
+    *-*-solaris*)
+        LDFLAGS="$LDFLAGS -R$ssldir/lib"
+        ;;
+    *-dec-osf*)
+        LDFLAGS="$LDFLAGS -Wl,-rpath,$ssldir/lib"
+        ;;
+    esac
+fi
+
 # xrandr
 if test -n "$PKG_CONFIG"; then
     PKG_CHECK_MODULES(XRANDR, xrandr, [HAVE_XRANDR=1], [HAVE_XRANDR=0])
@@ -244,8 +259,8 @@ if test -n "$PKG_CONFIG"; then
         if test x"$static_libsamplerate" = "xyes"; then
             _libsamplerate_libdir=`$PKG_CONFIG --errors-to-stdout --variable=libdir samplerate`
             LIBSAMPLERATE_LIBS="$_libsamplerate_libdir""/libsamplerate.a"
+            LIBSAMPLERATE_LIBS="$LIBSAMPLERATE_LIBS -lm"
         fi
-        LIBSAMPLERATE_LIBS="$LIBSAMPLERATE_LIBS -lm"
     fi
 fi
 
@@ -893,25 +908,15 @@ AC_ARG_WITH(debug-smartcard,
 #
 # target-specific stuff
 #
-# strip leading colon from rpath
-rpath=`echo $rpath |sed 's/^://'`
-AC_CANONICAL_HOST
 case "$host" in
-*-*-solaris*)
-    LDFLAGS="$LDFLAGS -R$rpath"
-    ;;
-*-dec-osf*)
-    LDFLAGS="$LDFLAGS -Wl,-rpath,$rpath"
-    ;;
 *-*-hpux*)
     CFLAGS="$CFLAGS -D_XOPEN_SOURCE_EXTENDED"
     ;;
 *-*-irix6.5*)
-    LIBS="$LIBS -L$ssldir/lib32 -lcrypto"
+    LIBS="-L$ssldir/lib32 $LIBS"
     CFLAGS="$CFLAGS -D__SGI_IRIX__"
     ;;
 esac
-
 
 AC_OUTPUT(Makefile)
 
