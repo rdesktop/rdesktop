@@ -27,7 +27,7 @@ if test "$no_x" = "yes"; then
     exit 1
 fi
     
-AC_PATH_PROG(PKG_CONFIG, pkg-config)
+AC_PATH_TOOL(PKG_CONFIG, pkg-config)
 
 AC_SEARCH_LIBS(socket, socket)
 AC_SEARCH_LIBS(inet_aton, resolv)
