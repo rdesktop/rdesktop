@@ -894,13 +894,13 @@ serial_device_control(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 		case SERIAL_PURGE:
 			in_uint32(in, purge_mask);
 			DEBUG_SERIAL(("serial_ioctl -> SERIAL_PURGE purge_mask %X\n", purge_mask));
-			flush_mask = 0;
-			if (purge_mask & SERIAL_PURGE_TXCLEAR)
-				flush_mask |= TCOFLUSH;
-			if (purge_mask & SERIAL_PURGE_RXCLEAR)
-				flush_mask |= TCIFLUSH;
-			if (flush_mask != 0)
-				tcflush(handle, flush_mask);
+			if ((purge_mask & SERIAL_PURGE_TXCLEAR)
+			    && (purge_mask & SERIAL_PURGE_RXCLEAR))
+				tcflush(handle, TCIOFLUSH);
+			else if (purge_mask & SERIAL_PURGE_TXCLEAR)
+				tcflush(handle, TCOFLUSH);
+			else if (purge_mask & SERIAL_PURGE_RXCLEAR)
+				tcflush(handle, TCIFLUSH);
 			if (purge_mask & SERIAL_PURGE_TXABORT)
 				rdpdr_abort_io(handle, 4, RD_STATUS_CANCELLED);
 			if (purge_mask & SERIAL_PURGE_RXABORT)
