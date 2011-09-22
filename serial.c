@@ -699,7 +699,7 @@ serial_write(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uin
 static RD_NTSTATUS
 serial_device_control(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 {
-	int flush_mask, purge_mask;
+	int purge_mask;
 	uint32 result, modemstate;
 	uint8 immediate;
 	SERIAL_DEVICE *pser_inf;
