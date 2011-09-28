@@ -1,7 +1,7 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    Protocol services - Clipboard functions
-   Copyright (C) Erik Forsberg <forsberg@cendio.se> 2003
+   Copyright 2003 Erik Forsberg <forsberg@cendio.se> for Cendio AB
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 2003-2008
 
    This program is free software: you can redistribute it and/or modify

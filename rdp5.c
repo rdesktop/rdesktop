@@ -2,7 +2,7 @@
    rdesktop: A Remote Desktop Protocol client.
    Protocol services - RDP5 short form PDU processing
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
-   Copyright (C) Erik Forsberg <forsberg@cendio.se> 2003-2008
+   Copyright 2003-2008 Erik Forsberg <forsberg@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
