@@ -139,7 +139,7 @@ Embed rdesktop-window in another window. The windowid is expected to
 be decimal or hexadecimal (prefixed by 0x).
 .TP
 .BR "-a <bpp>"
-Sets the colour depth for the connection (8, 15, 16 or 24).
+Sets the colour depth for the connection (8, 15, 16, 24 or 32).
 More than 8 bpp are only supported when connecting to Windows XP
 (up to 16 bpp) or newer.  Note that the colour depth may also be
 limited by the server configuration. The default value is the depth 
@@ -161,8 +161,8 @@ number containing the flags.
 Enable caching of bitmaps to disk (persistent bitmap caching). This generally
 improves performance (especially on low bandwidth connections) and reduces
 network traffic at the cost of slightly longer startup and some disk space.
-(10MB for 8-bit colour, 20MB for 15/16-bit colour and 30MB for 24-bit colour
-sessions)
+(10MB for 8-bit colour, 20MB for 15/16-bit colour, 30MB for 24-bit colour
+and 40MB for 32-bit colour sessions)
 .TP
 .BR "-r <device>"
 Enable redirection of the specified device on the client, such
