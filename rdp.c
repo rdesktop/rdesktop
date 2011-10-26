@@ -1520,7 +1520,7 @@ process_redirect_pdu(STREAM s /*, uint32 * ext_disc_reason */ )
 
 		/* read username string */
 		g_redirect_username = (char *) xmalloc(len + 1);
-		rdp_in_unistr(s, g_redirect_username, strlen(g_redirect_username), len);
+		rdp_in_unistr(s, g_redirect_username, len + 1, len);
 	}
 
 	if (g_redirect_flags & PDU_REDIRECT_HAS_DOMAIN)

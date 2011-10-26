@@ -988,7 +988,7 @@ main(int argc, char *argv[])
 			STRNCPY(domain, g_redirect_domain, sizeof(domain));
 			xfree(g_username);
 			g_username = (char *) xmalloc(strlen(g_redirect_username) + 1);
-			STRNCPY(g_username, g_redirect_username, sizeof(g_username));
+			STRNCPY(g_username, g_redirect_username, strlen(g_redirect_username) + 1);
 			STRNCPY(password, g_redirect_password, sizeof(password));
 			STRNCPY(server, g_redirect_server, sizeof(server));
 			flags |= RDP_LOGON_AUTO;
