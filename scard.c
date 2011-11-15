@@ -1165,10 +1165,10 @@ TS_SCardLocateCardsByATR(STREAM in, STREAM out, RD_BOOL wide)
 	in_uint8a(in, pAtrMasks, atrMaskCount * sizeof(SCARD_ATRMASK_L));
 
 	in_uint32_le(in, readerCount);
-	rsArray = SC_xmalloc(&lcHandle, readerCount * sizeof(SCARD_READERSTATE_A));
+	rsArray = SC_xmalloc(&lcHandle, readerCount * sizeof(SCARD_READERSTATE));
 	if (!rsArray)
 		return SC_returnNoMemoryError(&lcHandle, in, out);
-	memset(rsArray, 0, readerCount * sizeof(SCARD_READERSTATE_A));
+	memset(rsArray, 0, readerCount * sizeof(SCARD_READERSTATE));
 
 	DEBUG_SCARD(("SCARD: SCardLocateCardsByATR(context: 0x%08x, atrs: %d, readers: %d)\n",
 		     (unsigned) hContext, (int) atrMaskCount, (int) readerCount));
@@ -1253,7 +1253,7 @@ TS_SCardLocateCardsByATR(STREAM in, STREAM out, RD_BOOL wide)
 				if (equal)
 				{
 					rsCur->dwEventState |= 0x00000040;	/* SCARD_STATE_ATRMATCH 0x00000040 */
-					memcpy(ResArray + j, rsCur, sizeof(SCARD_READERSTATE_A));
+					memcpy(ResArray + j, rsCur, sizeof(SCARD_READERSTATE));
 					DEBUG_SCARD(("SCARD:    \"%s\"\n",
 						     rsCur->szReader ? rsCur->szReader : "NULL"));
 					DEBUG_SCARD(("SCARD:        user: 0x%08x, state: 0x%08x, event: 0x%08x\n", (unsigned) rsCur->pvUserData, (unsigned) rsCur->dwCurrentState, (unsigned) rsCur->dwEventState));
@@ -1274,7 +1274,7 @@ TS_SCardLocateCardsByATR(STREAM in, STREAM out, RD_BOOL wide)
 		rsCur->cbAtr = swap32(rsCur->cbAtr);
 
 		out_uint8p(out, (void *) ((unsigned char **) rsCur + 2),
-			   sizeof(SCARD_READERSTATE_A) - 2 * sizeof(unsigned char *));
+			   sizeof(SCARD_READERSTATE) - 2 * sizeof(unsigned char *));
 	}
 
 	outForceAlignment(out, 8);
