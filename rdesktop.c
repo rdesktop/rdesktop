@@ -28,6 +28,7 @@
 #include <sys/time.h>		/* gettimeofday */
 #include <sys/times.h>		/* times */
 #include <ctype.h>		/* toupper */
+#include <limits.h>
 #include <errno.h>
 #include <signal.h>
 #include "rdesktop.h"
@@ -48,6 +49,13 @@
 #endif
 
 #include "ssl.h"
+
+#define RDESKTOP_LICENSE_STORE "/.local/share/rdesktop/licenses"
+
+uint8 g_static_rdesktop_salt_16[16] = {
+	0xb8, 0x82, 0x29, 0x31, 0xc5, 0x39, 0xd9, 0x44, 
+	0x54, 0x15, 0x5e, 0x14, 0x71, 0x38, 0xd5, 0x4d
+};
 
 char g_title[64] = "";
 char *g_username;
@@ -320,7 +328,7 @@ handle_disconnect_reason(RD_BOOL deactivated, uint16 reason)
 			break;
 
 		case exDiscReasonLicenseErrClientEncryption:
-			text = "Incorrect client license enryption";
+			text = "Incorrect client license encryption";
 			retval = EXRD_LIC_ENC;
 			break;
 
@@ -1493,11 +1501,72 @@ l_to_a(long N, int base)
 	return ret;
 }
 
+static int 
+safe_mkdir(const char *path, int mask)
+{
+	int res = 0;
+	struct stat st;
+
+	res = stat(path, &st);
+	if (res == -1 )
+		return mkdir(path, mask);
+
+	if (!S_ISDIR(st.st_mode))
+	{
+		errno = EEXIST;
+		return -1;
+	}
+
+	return 0;
+}
+
+static int 
+mkdir_p(const char *path, int mask)
+{
+	int res;
+	char *ptok;
+	char pt[PATH_MAX];
+	char bp[PATH_MAX];
+
+	if (!path || strlen(path) == 0)
+	{
+		errno = EINVAL;
+		return -1;
+	}
+	if (strlen(path) > PATH_MAX)
+	{
+		errno = E2BIG;
+		return -1;
+	}
+	
+	res = 0;	
+	pt[0] = bp[0] = '\0';
+	strcpy(bp, path);
+	
+	ptok = strtok(bp, "/");
+	if (ptok == NULL)
+		return safe_mkdir(path,mask);
+
+	do
+	{
+		if (ptok != bp)
+			strcat(pt, "/");
+		
+		strcat(pt, ptok);		
+		res = safe_mkdir(pt, mask);
+		if (res != 0)
+			return res;
+		
+	} while ((ptok = strtok(NULL, "/")) != NULL);
+		
+	return 0;
+}
 
 int
 load_licence(unsigned char **data)
 {
-	char *home, *path;
+	uint8 ho[16], hi[16];
+	char *home, path[PATH_MAX], hash[33];
 	struct stat st;
 	int fd, length;
 
@@ -1505,48 +1574,68 @@ load_licence(unsigned char **data)
 	if (home == NULL)
 		return -1;
 
-	path = (char *) xmalloc(strlen(home) + strlen(g_hostname) + sizeof("/.rdesktop/licence."));
-	sprintf(path, "%s/.rdesktop/licence.%s", home, g_hostname);
+	snprintf((char*)hi, 16, g_hostname);
+	sec_hash_sha1_16(ho, hi, g_static_rdesktop_salt_16);
+	sec_hash_to_string(hash, 33, ho, 16);
+
+	snprintf(path, PATH_MAX, "%s"RDESKTOP_LICENSE_STORE"/%s.cal", 
+		 home, hash);
+	path[sizeof(path)-1] = '\0';
 
 	fd = open(path, O_RDONLY);
 	if (fd == -1)
-		return -1;
+	{
+		/* fallback to try reading old license file */
+		snprintf(path, PATH_MAX, "%s/.rdesktop/license.%s", 
+			 home, g_hostname);
+		path[sizeof(path)-1] = '\0';
+		if ((fd = open(path, O_RDONLY)) == -1)
+			return -1;
+	}
 
 	if (fstat(fd, &st))
+	{
+		close(fd);
 		return -1;
+	}
 
 	*data = (uint8 *) xmalloc(st.st_size);
 	length = read(fd, *data, st.st_size);
 	close(fd);
-	xfree(path);
 	return length;
 }
 
 void
 save_licence(unsigned char *data, int length)
 {
-	char *home, *path, *tmppath;
+	uint8 ho[16], hi[16];
+	char *home, path[PATH_MAX], tmppath[PATH_MAX], hash[33];
 	int fd;
 
 	home = getenv("HOME");
 	if (home == NULL)
 		return;
 
-	path = (char *) xmalloc(strlen(home) + strlen(g_hostname) + sizeof("/.rdesktop/licence."));
-
-	sprintf(path, "%s/.rdesktop", home);
-	if ((mkdir(path, 0700) == -1) && errno != EEXIST)
+	snprintf(path, PATH_MAX, "%s"RDESKTOP_LICENSE_STORE, home);
+	path[sizeof(path)-1] = '\0';
+	if ( mkdir_p(path, 0700) == -1)
 	{
 		perror(path);
 		return;
 	}
 
-	/* write licence to licence.hostname.new, then atomically rename to licence.hostname */
+	snprintf((char*)hi,16,g_hostname);
+	sec_hash_sha1_16(ho, hi, g_static_rdesktop_salt_16);
+	sec_hash_to_string(hash, 33, ho, 16);
 
-	sprintf(path, "%s/.rdesktop/licence.%s", home, g_hostname);
-	tmppath = (char *) xmalloc(strlen(path) + sizeof(".new"));
-	strcpy(tmppath, path);
-	strcat(tmppath, ".new");
+	/* write licence to {sha1}.cal.new, then atomically 
+	   rename to {sha1}.cal */
+	snprintf(path, PATH_MAX, "%s"RDESKTOP_LICENSE_STORE"/%s.cal", 
+		 home, hash);
+	path[sizeof(path)-1] = '\0';
+
+	snprintf(tmppath, PATH_MAX, "%s.new", path);
+	path[sizeof(path)-1] = '\0';
 
 	fd = open(tmppath, O_WRONLY | O_CREAT | O_TRUNC, 0600);
 	if (fd == -1)
@@ -1567,8 +1656,6 @@ save_licence(unsigned char *data, int length)
 	}
 
 	close(fd);
-	xfree(tmppath);
-	xfree(path);
 }
 
 /* Create the bitmap cache directory */
