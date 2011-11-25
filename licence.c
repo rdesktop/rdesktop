@@ -103,7 +103,9 @@ licence_send_request(uint8 * client_random, uint8 * rsa_data, char *user, char *
 	uint32 sec_flags = SEC_LICENCE_NEG;
 	uint16 userlen = strlen(user) + 1;
 	uint16 hostlen = strlen(host) + 1;
-	uint16 length = 128 + userlen + hostlen;
+	uint16 length = 
+		24 + SEC_RANDOM_SIZE + SEC_MODULUS_SIZE + SEC_PADDING_SIZE + 
+		userlen + hostlen;
 	STREAM s;
 
 	s = sec_init(sec_flags, length + 2);
