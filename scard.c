@@ -690,6 +690,7 @@ TS_SCardEstablishContext(STREAM in, STREAM out)
 	/* i hope it's not a pointer because i just downcasted it - jlj */
 	out_uint32_le(out, 0x00000004);
 	out_uint32_le(out, hContext);
+	outForceAlignment(out, 8);
 	return rv;
 }
 
@@ -721,6 +722,7 @@ TS_SCardReleaseContext(STREAM in, STREAM out)
 		DEBUG_SCARD(("SCARD: -> Success\n"));
 	}
 
+	outForceAlignment(out, 8);
 	return rv;
 }
 
