@@ -966,8 +966,8 @@ TS_SCardReconnect(STREAM in, STREAM out)
 		DEBUG_SCARD(("SCARD: -> Success (proto: 0x%08x)\n", (unsigned) dwActiveProtocol));
 	}
 
-	outForceAlignment(out, 8);
 	out_uint32_le(out, (SERVER_DWORD) dwActiveProtocol);
+	outForceAlignment(out, 8);
 	return rv;
 }
 
