@@ -1167,7 +1167,7 @@ TS_SCardGetStatusChange(STREAM in, STREAM out, RD_BOOL wide)
 	}
 
 	myRsArray = SC_xmalloc(&lcHandle, dwCount * sizeof(MYPCSC_SCARD_READERSTATE_A));
-	if (!rsArray)
+	if (!myRsArray)
 		return SC_returnNoMemoryError(&lcHandle, in, out);
 	memset(myRsArray, 0, dwCount * sizeof(SERVER_SCARD_READERSTATE_A));
 	copyReaderState_ServerToMyPCSC(rsArray, myRsArray, (SERVER_DWORD) dwCount);
