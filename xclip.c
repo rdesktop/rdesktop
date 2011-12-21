@@ -389,7 +389,7 @@ xclip_send_data_with_convert(uint8 * source, size_t source_size, Atom target)
 		translated_data = lf2crlf(source, &length);
 		if (translated_data != NULL)
 		{
-			helper_cliprdr_send_response(translated_data, length);
+			helper_cliprdr_send_response(translated_data, length+1);
 			xfree(translated_data);	/* Not the same thing as XFree! */
 		}
 
