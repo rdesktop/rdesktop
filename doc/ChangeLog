@@ -1,3 +1,13 @@
+rdesktop (1.7.1)
+  * Fix clipboard issue when not building with unicode support
+  * Fix compilation against newer PCSC lite versions
+  * Fix for per-device license mode on Windows 2008 R2 terminal server
+  * Fix building 64bit version with static openssl linkage
+  * Rewrite of smartcard handling for 64bit support, fixes several bugs
+  * Improved license handling using XDG directories
+
+  -- Henrik Andersson <hean01@users.sourceforge.net> 2012-01-09
+
 rdesktop (1.7.0)
   * Security: Directory traversal vulnerability with disk redirection (disallow /.. requests)
   * New maintainer: Peter Åstrand <astrand@cendio.se>
