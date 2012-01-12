@@ -1137,7 +1137,7 @@ disk_query_volume_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 
 			out_uint32_le(out, stat_fs.f_blocks);	/* Total allocation units low */
 			out_uint32_le(out, 0);	/* Total allocation units high */
-			out_uint32_le(out, stat_fs.f_blocks);	/* Caller allocation units low */
+			out_uint32_le(out, stat_fs.f_bavail);	/* Caller allocation units low */
 			out_uint32_le(out, 0);	/* Caller allocation units high */
 			out_uint32_le(out, stat_fs.f_bfree);	/* Available allocation units */
 			out_uint32_le(out, 0);	/* Available allowcation units */
