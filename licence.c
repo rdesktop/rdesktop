@@ -69,7 +69,7 @@ licence_present(uint8 * client_random, uint8 * rsa_data,
 	s = sec_init(sec_flags, length + 2);
 
 	out_uint8(s, LICENCE_TAG_PRESENT);
-	out_uint8(s, (g_use_rdp5? 3 : 2));	/* version */
+	out_uint8(s, (g_use_rdp5 ? 3 : 2));	/* version */
 	out_uint16_le(s, length);
 
 	out_uint32_le(s, 1);
@@ -103,15 +103,14 @@ licence_send_request(uint8 * client_random, uint8 * rsa_data, char *user, char *
 	uint32 sec_flags = SEC_LICENCE_NEG;
 	uint16 userlen = strlen(user) + 1;
 	uint16 hostlen = strlen(host) + 1;
-	uint16 length = 
-		24 + SEC_RANDOM_SIZE + SEC_MODULUS_SIZE + SEC_PADDING_SIZE + 
-		userlen + hostlen;
+	uint16 length =
+		24 + SEC_RANDOM_SIZE + SEC_MODULUS_SIZE + SEC_PADDING_SIZE + userlen + hostlen;
 	STREAM s;
 
 	s = sec_init(sec_flags, length + 2);
 
 	out_uint8(s, LICENCE_TAG_REQUEST);
-	out_uint8(s, (g_use_rdp5? 3 : 2));	/* version */
+	out_uint8(s, (g_use_rdp5 ? 3 : 2));	/* version */
 	out_uint16_le(s, length);
 
 	out_uint32_le(s, 1);
@@ -193,7 +192,7 @@ licence_send_authresp(uint8 * token, uint8 * crypt_hwid, uint8 * signature)
 	s = sec_init(sec_flags, length + 2);
 
 	out_uint8(s, LICENCE_TAG_AUTHRESP);
-	out_uint8(s, (g_use_rdp5? 3 : 2));	/* version */
+	out_uint8(s, (g_use_rdp5 ? 3 : 2));	/* version */
 	out_uint16_le(s, length);
 
 	out_uint16_le(s, 1);

@@ -53,7 +53,7 @@
 #define RDESKTOP_LICENSE_STORE "/.local/share/rdesktop/licenses"
 
 uint8 g_static_rdesktop_salt_16[16] = {
-	0xb8, 0x82, 0x29, 0x31, 0xc5, 0x39, 0xd9, 0x44, 
+	0xb8, 0x82, 0x29, 0x31, 0xc5, 0x39, 0xd9, 0x44,
 	0x54, 0x15, 0x5e, 0x14, 0x71, 0x38, 0xd5, 0x4d
 };
 
@@ -1501,14 +1501,14 @@ l_to_a(long N, int base)
 	return ret;
 }
 
-static int 
+static int
 safe_mkdir(const char *path, int mask)
 {
 	int res = 0;
 	struct stat st;
 
 	res = stat(path, &st);
-	if (res == -1 )
+	if (res == -1)
 		return mkdir(path, mask);
 
 	if (!S_ISDIR(st.st_mode))
@@ -1520,7 +1520,7 @@ safe_mkdir(const char *path, int mask)
 	return 0;
 }
 
-static int 
+static int
 mkdir_p(const char *path, int mask)
 {
 	int res;
@@ -1538,27 +1538,28 @@ mkdir_p(const char *path, int mask)
 		errno = E2BIG;
 		return -1;
 	}
-	
-	res = 0;	
+
+	res = 0;
 	pt[0] = bp[0] = '\0';
 	strcpy(bp, path);
-	
+
 	ptok = strtok(bp, "/");
 	if (ptok == NULL)
-		return safe_mkdir(path,mask);
+		return safe_mkdir(path, mask);
 
 	do
 	{
 		if (ptok != bp)
 			strcat(pt, "/");
-		
-		strcat(pt, ptok);		
+
+		strcat(pt, ptok);
 		res = safe_mkdir(pt, mask);
 		if (res != 0)
 			return res;
-		
-	} while ((ptok = strtok(NULL, "/")) != NULL);
-		
+
+	}
+	while ((ptok = strtok(NULL, "/")) != NULL);
+
 	return 0;
 }
 
@@ -1574,21 +1575,19 @@ load_licence(unsigned char **data)
 	if (home == NULL)
 		return -1;
 
-	snprintf((char*)hi, 16, g_hostname);
+	snprintf((char *) hi, 16, g_hostname);
 	sec_hash_sha1_16(ho, hi, g_static_rdesktop_salt_16);
 	sec_hash_to_string(hash, 40, ho, 22);
 
-	snprintf(path, PATH_MAX, "%s"RDESKTOP_LICENSE_STORE"/%s.cal", 
-		 home, hash);
-	path[sizeof(path)-1] = '\0';
+	snprintf(path, PATH_MAX, "%s" RDESKTOP_LICENSE_STORE "/%s.cal", home, hash);
+	path[sizeof(path) - 1] = '\0';
 
 	fd = open(path, O_RDONLY);
 	if (fd == -1)
 	{
 		/* fallback to try reading old license file */
-		snprintf(path, PATH_MAX, "%s/.rdesktop/license.%s", 
-			 home, g_hostname);
-		path[sizeof(path)-1] = '\0';
+		snprintf(path, PATH_MAX, "%s/.rdesktop/license.%s", home, g_hostname);
+		path[sizeof(path) - 1] = '\0';
 		if ((fd = open(path, O_RDONLY)) == -1)
 			return -1;
 	}
@@ -1616,26 +1615,25 @@ save_licence(unsigned char *data, int length)
 	if (home == NULL)
 		return;
 
-	snprintf(path, PATH_MAX, "%s"RDESKTOP_LICENSE_STORE, home);
-	path[sizeof(path)-1] = '\0';
-	if ( mkdir_p(path, 0700) == -1)
+	snprintf(path, PATH_MAX, "%s" RDESKTOP_LICENSE_STORE, home);
+	path[sizeof(path) - 1] = '\0';
+	if (mkdir_p(path, 0700) == -1)
 	{
 		perror(path);
 		return;
 	}
 
-	snprintf((char*)hi,16,g_hostname);
+	snprintf((char *) hi, 16, g_hostname);
 	sec_hash_sha1_16(ho, hi, g_static_rdesktop_salt_16);
 	sec_hash_to_string(hash, 40, ho, 20);
 
 	/* write licence to {sha1}.cal.new, then atomically 
 	   rename to {sha1}.cal */
-	snprintf(path, PATH_MAX, "%s"RDESKTOP_LICENSE_STORE"/%s.cal", 
-		 home, hash);
-	path[sizeof(path)-1] = '\0';
+	snprintf(path, PATH_MAX, "%s" RDESKTOP_LICENSE_STORE "/%s.cal", home, hash);
+	path[sizeof(path) - 1] = '\0';
 
 	snprintf(tmppath, PATH_MAX, "%s.new", path);
-	path[sizeof(path)-1] = '\0';
+	path[sizeof(path) - 1] = '\0';
 
 	fd = open(tmppath, O_WRONLY | O_CREAT | O_TRUNC, 0600);
 	if (fd == -1)

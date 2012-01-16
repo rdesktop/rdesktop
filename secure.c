@@ -114,7 +114,8 @@ sec_hash_16(uint8 * out, uint8 * in, uint8 * salt1, uint8 * salt2)
 /*
  * 16-byte sha1 hash
  */
-void sec_hash_sha1_16(uint8 * out, uint8 * in, uint8 *salt1)
+void
+sec_hash_sha1_16(uint8 * out, uint8 * in, uint8 * salt1)
 {
 	SSL_SHA1 sha1;
 	ssl_sha1_init(&sha1);
@@ -124,14 +125,15 @@ void sec_hash_sha1_16(uint8 * out, uint8 * in, uint8 *salt1)
 }
 
 /* create string from hash */
-void sec_hash_to_string(char * out, int out_size, uint8 * in, int in_size)
+void
+sec_hash_to_string(char *out, int out_size, uint8 * in, int in_size)
 {
 	int k;
-	memset(out,0,out_size);
-	for (k=0;k<in_size;k++,out+=2)
+	memset(out, 0, out_size);
+	for (k = 0; k < in_size; k++, out += 2)
 	{
-		sprintf(out,"%.2x",in[k]);
-	}	
+		sprintf(out, "%.2x", in[k]);
+	}
 }
 
 /* Reduce key entropy from 64 to 40 bits */

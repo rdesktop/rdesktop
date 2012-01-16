@@ -176,8 +176,8 @@ void rdpsnd_queue_next(unsigned long completed_in_us);
 int rdpsnd_queue_next_tick(void);
 void rdpsnd_reset_state(void);
 /* secure.c */
-void sec_hash_to_string(char * out, int out_size, uint8 * in, int in_size);
-void sec_hash_sha1_16(uint8 * out, uint8 * in, uint8 *salt1);
+void sec_hash_to_string(char *out, int out_size, uint8 * in, int in_size);
+void sec_hash_sha1_16(uint8 * out, uint8 * in, uint8 * salt1);
 void sec_hash_48(uint8 * out, uint8 * in, uint8 * salt1, uint8 * salt2, uint8 salt);
 void sec_hash_16(uint8 * out, uint8 * in, uint8 * salt1, uint8 * salt2);
 void buf_out_uint32(uint8 * buffer, uint32 value);
