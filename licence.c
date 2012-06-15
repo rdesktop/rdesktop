@@ -23,12 +23,13 @@
 
 extern char *g_username;
 extern char g_hostname[16];
-extern RD_BOOL g_use_rdp5;
+extern RDP_VERSION g_rdp_version;
 
 static uint8 g_licence_key[16];
 static uint8 g_licence_sign_key[16];
 
 RD_BOOL g_licence_issued = False;
+RD_BOOL g_licence_error_result = False;
 
 /* Generate a session key and RC4 keys, given client and server randoms */
 static void
@@ -69,7 +70,7 @@ licence_present(uint8 * client_random, uint8 * rsa_data,
 	s = sec_init(sec_flags, length + 2);
 
 	out_uint8(s, LICENCE_TAG_PRESENT);
-	out_uint8(s, (g_use_rdp5 ? 3 : 2));	/* version */
+	out_uint8(s, ((g_rdp_version >= RDP_V5) ? 3 : 2));	/* version */
 	out_uint16_le(s, length);
 
 	out_uint32_le(s, 1);
@@ -110,7 +111,7 @@ licence_send_request(uint8 * client_random, uint8 * rsa_data, char *user, char *
 	s = sec_init(sec_flags, length + 2);
 
 	out_uint8(s, LICENCE_TAG_REQUEST);
-	out_uint8(s, (g_use_rdp5 ? 3 : 2));	/* version */
+	out_uint8(s, ((g_rdp_version >= RDP_V5) ? 3 : 2));	/* version */
 	out_uint16_le(s, length);
 
 	out_uint32_le(s, 1);
@@ -192,7 +193,7 @@ licence_send_authresp(uint8 * token, uint8 * crypt_hwid, uint8 * signature)
 	s = sec_init(sec_flags, length + 2);
 
 	out_uint8(s, LICENCE_TAG_AUTHRESP);
-	out_uint8(s, (g_use_rdp5 ? 3 : 2));	/* version */
+	out_uint8(s, ((g_rdp_version >= RDP_V5) ? 3 : 2));	/* version */
 	out_uint16_le(s, length);
 
 	out_uint16_le(s, 1);
@@ -333,6 +334,7 @@ licence_process(STREAM s)
 			break;
 
 		case LICENCE_TAG_RESULT:
+			g_licence_error_result = True;
 			break;
 
 		default:

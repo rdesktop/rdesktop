@@ -20,6 +20,11 @@
 
 #include "rdesktop.h"
 
+extern RD_BOOL g_encryption;
+extern RDP_VERSION g_rdp_version;
+
+static RD_BOOL g_negotiate_rdp_protocol = True;
+
 /* Send a self-contained ISO PDU */
 static void
 iso_send_msg(uint8 code)
@@ -48,6 +53,9 @@ iso_send_connection_request(char *username)
 	STREAM s;
 	int length = 30 + strlen(username);
 
+	if (g_rdp_version >= RDP_V5 && g_negotiate_rdp_protocol)
+		length += 8;
+
 	s = tcp_init(length);
 
 	out_uint8(s, 3);	/* version */
@@ -63,8 +71,17 @@ iso_send_connection_request(char *username)
 	out_uint8p(s, "Cookie: mstshash=", strlen("Cookie: mstshash="));
 	out_uint8p(s, username, strlen(username));
 
-	out_uint8(s, 0x0d);	/* Unknown */
-	out_uint8(s, 0x0a);	/* Unknown */
+	out_uint8(s, 0x0d);	/* cookie termination string: CR+LF */
+	out_uint8(s, 0x0a);
+
+	if (g_rdp_version >= RDP_V5 && g_negotiate_rdp_protocol)
+	{
+		/* optional rdp protocol negotiation request for RDPv5 */
+		out_uint8(s, RDP_NEG_REQ);
+		out_uint8(s, 0);
+		out_uint16(s, 8);
+		out_uint32(s, PROTOCOL_SSL);
+	}
 
 	s_mark_end(s);
 	tcp_send(s);
@@ -174,9 +191,16 @@ iso_recv(uint8 * rdpver)
 
 /* Establish a connection up to the ISO layer */
 RD_BOOL
-iso_connect(char *server, char *username, RD_BOOL reconnect)
+iso_connect(char *server, char *username, RD_BOOL reconnect, uint32 * selected_protocol)
 {
-	uint8 code = 0;
+	STREAM s;
+	uint8 code;
+
+	g_negotiate_rdp_protocol = True;
+
+      retry:
+	*selected_protocol = PROTOCOL_RDP;
+	code = 0;
 
 	if (!tcp_connect(server))
 		return False;
@@ -190,7 +214,8 @@ iso_connect(char *server, char *username, RD_BOOL reconnect)
 		iso_send_connection_request(username);
 	}
 
-	if (iso_recv_msg(&code, NULL) == NULL)
+	s = iso_recv_msg(&code, NULL);
+	if (s == NULL)
 		return False;
 
 	if (code != ISO_PDU_CC)
@@ -200,6 +225,87 @@ iso_connect(char *server, char *username, RD_BOOL reconnect)
 		return False;
 	}
 
+	if (g_rdp_version >= RDP_V5 && s_check_rem(s, 8))
+	{
+		/* handle RDP_NEG_REQ response */
+		const char *reason = NULL;
+
+		uint8 type = 0, flags = 0;
+		uint16 length = 0;
+		uint32 data = 0;
+
+		in_uint8(s, type);
+		in_uint8(s, flags);
+		in_uint16(s, length);
+		in_uint32(s, data);
+
+		if (type == RDP_NEG_FAILURE)
+		{
+			switch (data)
+			{
+				case SSL_REQUIRED_BY_SERVER:
+					reason = "SSL required by server";
+					break;
+				case SSL_WITH_USER_AUTH_REQUIRED_BY_SERVER:
+					reason = "SSL with user authentication required by server";
+					break;
+				case SSL_NOT_ALLOWED_BY_SERVER:
+					reason = "SSL not allowed by server";
+					break;
+				case SSL_CERT_NOT_ON_SERVER:
+					reason = "SSL certificated not on server";
+					break;
+				case INCONSISTENT_FLAGS:
+					reason = "inconsistent flags";
+					break;
+				case HYBRID_REQUIRED_BY_SERVER:
+					reason = "hybrid authentication (CredSSP) required by server";
+					break;
+				default:
+					reason = "unknown reason";
+			}
+
+			tcp_disconnect();
+			warning("RDP protocol negotiation failed with reason: %s (error 0x%x),\n",
+				reason, data);
+			warning("retrying without negotiation using plain RDP protocol.\n");
+
+			g_negotiate_rdp_protocol = False;
+			goto retry;
+		}
+
+		if (type != RDP_NEG_RSP)
+		{
+			tcp_disconnect();
+			error("expected RDP_NEG_RSP, got type = 0x%x\n", type);
+			warning("retrying without negotiation using plain RDP protocol.\n");
+
+			g_negotiate_rdp_protocol = False;
+			goto retry;
+		}
+
+		/* handle negotiation response */
+		if (data == PROTOCOL_SSL)
+		{
+			if (!tcp_tls_connect())
+			{
+				tcp_disconnect();
+				return False;
+			}
+
+			/* do not use encryption when using TLS */
+			g_encryption = False;
+		}
+		else if (data != PROTOCOL_RDP)
+		{
+			tcp_disconnect();
+			error("unexpected protocol in neqotiation response, got data = 0x%x.\n",
+			      data);
+			return False;
+		}
+
+		*selected_protocol = data;
+	}
 	return True;
 }
 

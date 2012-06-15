@@ -47,7 +47,7 @@ extern int g_keyboard_subtype;
 extern int g_keyboard_functionkeys;
 extern int g_win_button_size;
 extern RD_BOOL g_enable_compose;
-extern RD_BOOL g_use_rdp5;
+extern RDP_VERSION g_rdp_version;
 extern RD_BOOL g_numlock_sync;
 
 static RD_BOOL keymap_loaded;
@@ -467,7 +467,7 @@ send_winkey(uint32 ev_time, RD_BOOL pressed, RD_BOOL leftkey)
 
 	if (pressed)
 	{
-		if (g_use_rdp5)
+		if (g_rdp_version >= RDP_V5)
 		{
 			rdp_send_scancode(ev_time, RDP_KEYPRESS, winkey);
 		}
@@ -481,7 +481,7 @@ send_winkey(uint32 ev_time, RD_BOOL pressed, RD_BOOL leftkey)
 	else
 	{
 		/* key released */
-		if (g_use_rdp5)
+		if (g_rdp_version >= RDP_V5)
 		{
 			rdp_send_scancode(ev_time, RDP_KEYRELEASE, winkey);
 		}
@@ -496,7 +496,7 @@ send_winkey(uint32 ev_time, RD_BOOL pressed, RD_BOOL leftkey)
 static void
 reset_winkey(uint32 ev_time)
 {
-	if (g_use_rdp5)
+	if (g_rdp_version >= RDP_V5)
 	{
 		/* For some reason, it seems to suffice to release
 		 *either* the left or right winkey. */

@@ -36,6 +36,15 @@ typedef void *RD_HGLYPH;
 typedef void *RD_HCOLOURMAP;
 typedef void *RD_HCURSOR;
 
+
+typedef enum _RDP_VERSION
+{
+	RDP_V4 = 4,
+	RDP_V5 = 5,
+	RDP_V6 = 6
+} RDP_VERSION;
+
+
 typedef struct _RD_POINT
 {
 	sint16 x, y;

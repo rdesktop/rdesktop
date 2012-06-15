@@ -22,7 +22,7 @@
 
 extern uint8 *g_next_packet;
 static RDP_ORDER_STATE g_order_state;
-extern RD_BOOL g_use_rdp5;
+extern RDP_VERSION g_rdp_version;
 
 /* Read field indicating which parameters are present */
 static void
@@ -968,7 +968,7 @@ process_bmpcache(STREAM s)
 	in_uint16_le(s, bufsize);	/* bufsize */
 	in_uint16_le(s, cache_idx);
 
-	if (g_use_rdp5)
+	if (g_rdp_version >= RDP_V5)
 	{
 		size = bufsize;
 	}

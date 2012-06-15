@@ -26,7 +26,7 @@
 #define CHANNEL_FLAG_LAST		0x02
 #define CHANNEL_FLAG_SHOW_PROTOCOL	0x10
 
-extern RD_BOOL g_use_rdp5;
+extern RDP_VERSION g_rdp_version;
 extern RD_BOOL g_encryption;
 
 VCHANNEL g_channels[MAX_CHANNELS];
@@ -47,7 +47,7 @@ channel_register(char *name, uint32 flags, void (*callback) (STREAM))
 {
 	VCHANNEL *channel;
 
-	if (!g_use_rdp5)
+	if (g_rdp_version < RDP_V5)
 		return NULL;
 
 	if (g_num_channels >= MAX_CHANNELS)

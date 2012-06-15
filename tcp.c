@@ -29,6 +29,10 @@
 #include <errno.h>		/* errno */
 #endif
 
+#include <openssl/ssl.h>
+#include <openssl/x509.h>
+#include <openssl/err.h>
+
 #include "rdesktop.h"
 
 #ifdef _WIN32
@@ -52,6 +56,8 @@
 #define STREAM_COUNT 1
 #endif
 
+static SSL *g_ssl = NULL;
+static SSL_CTX *g_ssl_ctx = NULL;
 static int g_sock;
 static struct stream g_in;
 static struct stream g_out[STREAM_COUNT];
@@ -109,6 +115,7 @@ tcp_init(uint32 maxlen)
 void
 tcp_send(STREAM s)
 {
+	int ssl_err;
 	int length = s->end - s->data;
 	int sent, total = 0;
 
@@ -117,18 +124,40 @@ tcp_send(STREAM s)
 #endif
 	while (total < length)
 	{
-		sent = send(g_sock, s->data + total, length - total, 0);
-		if (sent <= 0)
+		if (g_ssl)
 		{
-			if (sent == -1 && TCP_BLOCKS)
+			sent = SSL_write(g_ssl, s->data + total, length - total);
+			if (sent <= 0)
 			{
-				tcp_can_send(g_sock, 100);
-				sent = 0;
+				ssl_err = SSL_get_error(g_ssl, sent);
+				if (sent < 0 && (ssl_err == SSL_ERROR_WANT_READ ||
+						 ssl_err == SSL_ERROR_WANT_WRITE))
+				{
+					tcp_can_send(g_sock, 100);
+					sent = 0;
+				}
+				else
+				{
+					error("SSL_write: %d (%s)\n", ssl_err, TCP_STRERROR);
+					return;
+				}
 			}
-			else
+		}
+		else
+		{
+			sent = send(g_sock, s->data + total, length - total, 0);
+			if (sent <= 0)
 			{
-				error("send: %s\n", TCP_STRERROR);
-				return;
+				if (sent == -1 && TCP_BLOCKS)
+				{
+					tcp_can_send(g_sock, 100);
+					sent = 0;
+				}
+				else
+				{
+					error("send: %s\n", TCP_STRERROR);
+					return;
+				}
 			}
 		}
 		total += sent;
@@ -143,7 +172,7 @@ STREAM
 tcp_recv(STREAM s, uint32 length)
 {
 	uint32 new_length, end_offset, p_offset;
-	int rcvd = 0;
+	int rcvd = 0, ssl_err;
 
 	if (s == NULL)
 	{
@@ -173,30 +202,55 @@ tcp_recv(STREAM s, uint32 length)
 
 	while (length > 0)
 	{
-		if (!ui_select(g_sock))
+		if ((!g_ssl || SSL_pending(g_ssl) <= 0) && !ui_select(g_sock))
 		{
 			/* User quit */
 			g_user_quit = True;
 			return NULL;
 		}
 
-		rcvd = recv(g_sock, s->end, length, 0);
-		if (rcvd < 0)
+		if (g_ssl)
 		{
-			if (rcvd == -1 && TCP_BLOCKS)
+			rcvd = SSL_read(g_ssl, s->end, length);
+			ssl_err = SSL_get_error(g_ssl, rcvd);
+
+			if (ssl_err == SSL_ERROR_SSL)
+			{
+				ERR_print_errors_fp(stdout);
+				return NULL;
+			}
+
+			if (ssl_err == SSL_ERROR_WANT_READ || ssl_err == SSL_ERROR_WANT_WRITE)
 			{
 				rcvd = 0;
 			}
-			else
+			else if (ssl_err != SSL_ERROR_NONE)
 			{
-				error("recv: %s\n", TCP_STRERROR);
+				error("SSL_read: %d (%s)\n", ssl_err, TCP_STRERROR);
 				return NULL;
 			}
+
 		}
-		else if (rcvd == 0)
+		else
 		{
-			error("Connection closed\n");
-			return NULL;
+			rcvd = recv(g_sock, s->end, length, 0);
+			if (rcvd < 0)
+			{
+				if (rcvd == -1 && TCP_BLOCKS)
+				{
+					rcvd = 0;
+				}
+				else
+				{
+					error("recv: %s\n", TCP_STRERROR);
+					return NULL;
+				}
+			}
+			else if (rcvd == 0)
+			{
+				error("Connection closed\n");
+				return NULL;
+			}
 		}
 
 		s->end += rcvd;
@@ -204,6 +258,108 @@ tcp_recv(STREAM s, uint32 length)
 	}
 
 	return s;
+}
+
+/* Establish a SSL/TLS 1.0 connection */
+RD_BOOL
+tcp_tls_connect(void)
+{
+	int err;
+
+	SSL_load_error_strings();
+	SSL_library_init();
+
+	g_ssl_ctx = SSL_CTX_new(TLSv1_client_method());
+	if (g_ssl_ctx == NULL)
+	{
+		error("tcp_tls_connect: SSL_CTX_new() failed to create TLS v1.0 context\n");
+		goto fail;
+	}
+
+	SSL_CTX_set_options(g_ssl_ctx, SSL_OP_ALL);
+
+	g_ssl = SSL_new(g_ssl_ctx);
+	if (g_ssl == NULL)
+	{
+		error("tcp_tls_connect: SSL_new() failed\n");
+		goto fail;
+	}
+
+	if (SSL_set_fd(g_ssl, g_sock) < 1)
+	{
+		error("tcp_tls_connect: SSL_set_fd() failed\n");
+		goto fail;
+	}
+
+	do
+	{
+		err = SSL_connect(g_ssl);
+	}
+	while (SSL_get_error(g_ssl, err) == SSL_ERROR_WANT_READ);
+
+	if (err < 0)
+	{
+		ERR_print_errors_fp(stdout);
+		goto fail;
+	}
+
+	return True;
+
+      fail:
+	if (g_ssl)
+		SSL_free(g_ssl);
+	if (g_ssl_ctx)
+		SSL_CTX_free(g_ssl_ctx);
+
+	g_ssl = NULL;
+	g_ssl_ctx = NULL;
+	return False;
+}
+
+/* Get public key from server of TLS 1.0 connection */
+RD_BOOL
+tcp_tls_get_server_pubkey(STREAM s)
+{
+	X509 *cert = NULL;
+	EVP_PKEY *pkey = NULL;
+
+	s->data = s->p = NULL;
+	s->size = 0;
+
+	if (g_ssl == NULL)
+		goto out;
+
+	cert = SSL_get_peer_certificate(g_ssl);
+	if (cert == NULL)
+	{
+		error("tcp_tls_get_server_pubkey: SSL_get_peer_certificate() failed\n");
+		goto out;
+	}
+
+	pkey = X509_get_pubkey(cert);
+	if (pkey == NULL)
+	{
+		error("tcp_tls_get_server_pubkey: X509_get_pubkey() failed\n");
+		goto out;
+	}
+
+	s->size = i2d_PublicKey(pkey, NULL);
+	if (s->size < 1)
+	{
+		error("tcp_tls_get_server_pubkey: i2d_PublicKey() failed\n");
+		goto out;
+	}
+
+	s->data = s->p = xmalloc(s->size + 1);
+	i2d_PublicKey(pkey, &s->p);
+	s->end = s->p;
+
+      out:
+	if (cert)
+		X509_free(cert);
+	if (pkey)
+		EVP_PKEY_free(pkey);
+	return (s->size != 0);
 }
 
 /* Establish a connection on the TCP layer */
@@ -318,6 +474,16 @@ tcp_connect(char *server)
 void
 tcp_disconnect(void)
 {
+	int err;
+	if (g_ssl)
+	{
+		err = SSL_shutdown(g_ssl);
+		SSL_free(g_ssl);
+		g_ssl = NULL;
+		SSL_CTX_free(g_ssl_ctx);
+		g_ssl_ctx = NULL;
+	}
+
 	TCP_CLOSE(g_sock);
 }
 

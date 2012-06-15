@@ -44,7 +44,7 @@ extern RD_BOOL g_orders;
 extern RD_BOOL g_encryption;
 extern RD_BOOL g_desktop_save;
 extern RD_BOOL g_polygon_ellipse_orders;
-extern RD_BOOL g_use_rdp5;
+extern RDP_VERSION g_rdp_version;
 extern uint16 g_server_rdp_version;
 extern uint32 g_rdp5_performanceflags;
 extern int g_server_depth;
@@ -341,7 +341,7 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 	time_t tzone;
 	uint8 security_verifier[16];
 
-	if (!g_use_rdp5 || 1 == g_server_rdp_version)
+	if (g_rdp_version == RDP_V4 || 1 == g_server_rdp_version)
 	{
 		DEBUG_RDP5(("Sending RDP4-style Logon packet\n"));
 
@@ -644,7 +644,7 @@ rdp_out_general_caps(STREAM s)
 	out_uint16_le(s, 0x200);	/* Protocol version */
 	out_uint16(s, 0);	/* Pad */
 	out_uint16(s, 0);	/* Compression types */
-	out_uint16_le(s, g_use_rdp5 ? 0x40d : 0);
+	out_uint16_le(s, (g_rdp_version >= RDP_V5) ? 0x40d : 0);
 	/* Pad, according to T.128. 0x40d seems to 
 	   trigger
 	   the server to start sending RDP5 packets. 
@@ -896,7 +896,7 @@ rdp_send_confirm_active(void)
 		RDP_CAPLEN_BRUSHCACHE + 0x58 + 0x08 + 0x08 + 0x34 /* unknown caps */  +
 		4 /* w2k fix, sessionid */ ;
 
-	if (g_use_rdp5)
+	if (g_rdp_version >= RDP_V5)
 	{
 		caplen += RDP_CAPLEN_BMPCACHE2;
 		caplen += RDP_CAPLEN_NEWPOINTER;
@@ -925,7 +925,7 @@ rdp_send_confirm_active(void)
 	rdp_out_general_caps(s);
 	rdp_out_bitmap_caps(s);
 	rdp_out_order_caps(s);
-	if (g_use_rdp5)
+	if (g_rdp_version >= RDP_V5)
 	{
 		rdp_out_bmpcache2_caps(s);
 		rdp_out_newpointer_caps(s);
@@ -960,7 +960,7 @@ rdp_process_general_caps(STREAM s)
 	in_uint16_le(s, pad2octetsB);
 
 	if (!pad2octetsB)
-		g_use_rdp5 = False;
+		g_rdp_version = RDP_V4;
 }
 
 /* Process a bitmap capability set */
@@ -1060,7 +1060,7 @@ process_demand_active(STREAM s)
 	rdp_send_input(0, RDP_INPUT_SYNCHRONIZE, 0,
 		       g_numlock_sync ? ui_get_numlock_state(read_keyboard_state()) : 0, 0);
 
-	if (g_use_rdp5)
+	if (g_rdp_version >= RDP_V5)
 	{
 		rdp_enum_bmpcache2();
 		rdp_send_fonts(3);
@@ -1633,10 +1633,20 @@ RD_BOOL
 rdp_connect(char *server, uint32 flags, char *domain, char *password,
 	    char *command, char *directory, RD_BOOL reconnect)
 {
+	RD_BOOL deactivated = False;
+	uint32 ext_disc_reason = 0;
+
 	if (!sec_connect(server, g_username, reconnect))
 		return False;
 
 	rdp_send_logon_info(flags, domain, g_username, password, command, directory);
+
+	/* run RDP loop until first licence demand active PDU */
+	while (!g_rdp_shareid)
+	{
+		if (!rdp_loop(&deactivated, &ext_disc_reason))
+			return False;
+	}
 	return True;
 }
 

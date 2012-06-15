@@ -92,7 +92,7 @@ RD_BOOL g_polygon_ellipse_orders = True;	/* polygon / ellipse orders */
 RD_BOOL g_fullscreen = False;
 RD_BOOL g_grab_keyboard = True;
 RD_BOOL g_hide_decorations = False;
-RD_BOOL g_use_rdp5 = True;
+RDP_VERSION g_rdp_version = RDP_V5;	/* Default to version 5 */
 RD_BOOL g_rdpclip = True;
 RD_BOOL g_console_session = False;
 RD_BOOL g_numlock_sync = False;
@@ -838,11 +838,11 @@ main(int argc, char *argv[])
 				break;
 
 			case '4':
-				g_use_rdp5 = False;
+				g_rdp_version = RDP_V4;
 				break;
 
 			case '5':
-				g_use_rdp5 = True;
+				g_rdp_version = RDP_V5;
 				break;
 
 			case 'h':
@@ -890,7 +890,7 @@ main(int argc, char *argv[])
 			error("You cannot use -X and -A at the same time\n");
 			return EX_USAGE;
 		}
-		if (!g_use_rdp5)
+		if (g_rdp_version < RDP_V5)
 		{
 			error("You cannot use -4 and -A at the same time\n");
 			return EX_USAGE;
