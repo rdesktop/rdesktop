@@ -1567,7 +1567,7 @@ int
 load_licence(unsigned char **data)
 {
 	uint8 ho[20], hi[16];
-	char *home, path[PATH_MAX], hash[40];
+	char *home, path[PATH_MAX], hash[41];
 	struct stat st;
 	int fd, length;
 
@@ -1577,7 +1577,7 @@ load_licence(unsigned char **data)
 
 	snprintf((char *) hi, 16, g_hostname);
 	sec_hash_sha1_16(ho, hi, g_static_rdesktop_salt_16);
-	sec_hash_to_string(hash, 40, ho, 22);
+	sec_hash_to_string(hash, 41, ho, 20);
 
 	snprintf(path, PATH_MAX, "%s" RDESKTOP_LICENSE_STORE "/%s.cal", home, hash);
 	path[sizeof(path) - 1] = '\0';
@@ -1608,7 +1608,7 @@ void
 save_licence(unsigned char *data, int length)
 {
 	uint8 ho[20], hi[16];
-	char *home, path[PATH_MAX], tmppath[PATH_MAX], hash[40];
+	char *home, path[PATH_MAX], tmppath[PATH_MAX], hash[41];
 	int fd;
 
 	home = getenv("HOME");
@@ -1625,7 +1625,7 @@ save_licence(unsigned char *data, int length)
 
 	snprintf((char *) hi, 16, g_hostname);
 	sec_hash_sha1_16(ho, hi, g_static_rdesktop_salt_16);
-	sec_hash_to_string(hash, 40, ho, 20);
+	sec_hash_to_string(hash, 41, ho, 20);
 
 	/* write licence to {sha1}.cal.new, then atomically 
 	   rename to {sha1}.cal */
