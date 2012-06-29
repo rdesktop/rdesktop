@@ -772,8 +772,14 @@ seamless_restack_test()
 	}
 
 	/* Destroy windows */
-	for (i = 0; i < 3; i++)
+	for (i = 0; i < 3; i++) {
 		XDestroyWindow(g_display, wnds[i]);
+		do
+		{
+			XWindowEvent(g_display, wnds[i], StructureNotifyMask, &xevent);
+		}
+		while (xevent.type != DestroyNotify);
+	}
 }
 
 #define SPLITCOLOUR15(colour, rv) \
