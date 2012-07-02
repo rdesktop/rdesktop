@@ -1098,7 +1098,7 @@ generate_random(uint8 * random)
 {
 	struct stat st;
 	struct tms tmsbuf;
-	SSL_MD5 md5;
+	RDSSL_MD5 md5;
 	uint32 *r;
 	int fd, n;
 
@@ -1130,11 +1130,11 @@ generate_random(uint8 * random)
 	r[7] = st.st_ctime;
 
 	/* Hash both halves with MD5 to obscure possible patterns */
-	ssl_md5_init(&md5);
-	ssl_md5_update(&md5, random, 16);
-	ssl_md5_final(&md5, random);
-	ssl_md5_update(&md5, random + 16, 16);
-	ssl_md5_final(&md5, random + 16);
+	rdssl_md5_init(&md5);
+	rdssl_md5_update(&md5, random, 16);
+	rdssl_md5_final(&md5, random);
+	rdssl_md5_update(&md5, random + 16, 16);
+	rdssl_md5_final(&md5, random + 16);
 }
 
 /* malloc; exit if out of memory */

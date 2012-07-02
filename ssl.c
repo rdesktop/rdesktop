@@ -22,49 +22,49 @@
 #include "ssl.h"
 
 void
-ssl_sha1_init(SSL_SHA1 * sha1)
+rdssl_sha1_init(RDSSL_SHA1 * sha1)
 {
 	SHA1_Init(sha1);
 }
 
 void
-ssl_sha1_update(SSL_SHA1 * sha1, uint8 * data, uint32 len)
+rdssl_sha1_update(RDSSL_SHA1 * sha1, uint8 * data, uint32 len)
 {
 	SHA1_Update(sha1, data, len);
 }
 
 void
-ssl_sha1_final(SSL_SHA1 * sha1, uint8 * out_data)
+rdssl_sha1_final(RDSSL_SHA1 * sha1, uint8 * out_data)
 {
 	SHA1_Final(out_data, sha1);
 }
 
 void
-ssl_md5_init(SSL_MD5 * md5)
+rdssl_md5_init(RDSSL_MD5 * md5)
 {
 	MD5_Init(md5);
 }
 
 void
-ssl_md5_update(SSL_MD5 * md5, uint8 * data, uint32 len)
+rdssl_md5_update(RDSSL_MD5 * md5, uint8 * data, uint32 len)
 {
 	MD5_Update(md5, data, len);
 }
 
 void
-ssl_md5_final(SSL_MD5 * md5, uint8 * out_data)
+rdssl_md5_final(RDSSL_MD5 * md5, uint8 * out_data)
 {
 	MD5_Final(out_data, md5);
 }
 
 void
-ssl_rc4_set_key(SSL_RC4 * rc4, uint8 * key, uint32 len)
+rdssl_rc4_set_key(RDSSL_RC4 * rc4, uint8 * key, uint32 len)
 {
 	RC4_set_key(rc4, len, key);
 }
 
 void
-ssl_rc4_crypt(SSL_RC4 * rc4, uint8 * in_data, uint8 * out_data, uint32 len)
+rdssl_rc4_crypt(RDSSL_RC4 * rc4, uint8 * in_data, uint8 * out_data, uint32 len)
 {
 	RC4(rc4, len, in_data, out_data);
 }
@@ -84,7 +84,7 @@ reverse(uint8 * p, int len)
 }
 
 void
-ssl_rsa_encrypt(uint8 * out, uint8 * in, int len, uint32 modulus_size, uint8 * modulus,
+rdssl_rsa_encrypt(uint8 * out, uint8 * in, int len, uint32 modulus_size, uint8 * modulus,
 		uint8 * exponent)
 {
 	BN_CTX *ctx;
@@ -119,26 +119,26 @@ ssl_rsa_encrypt(uint8 * out, uint8 * in, int len, uint32 modulus_size, uint8 * m
 	BN_CTX_free(ctx);
 }
 
-/* returns newly allocated SSL_CERT or NULL */
-SSL_CERT *
-ssl_cert_read(uint8 * data, uint32 len)
+/* returns newly allocated RDSSL_CERT or NULL */
+RDSSL_CERT *
+rdssl_cert_read(uint8 * data, uint32 len)
 {
 	/* this will move the data pointer but we don't care, we don't use it again */
 	return d2i_X509(NULL, (D2I_X509_CONST unsigned char **) &data, len);
 }
 
 void
-ssl_cert_free(SSL_CERT * cert)
+rdssl_cert_free(RDSSL_CERT * cert)
 {
 	X509_free(cert);
 }
 
-/* returns newly allocated SSL_RKEY or NULL */
-SSL_RKEY *
-ssl_cert_to_rkey(SSL_CERT * cert, uint32 * key_len)
+/* returns newly allocated RDSSL_RKEY or NULL */
+RDSSL_RKEY *
+rdssl_cert_to_rkey(RDSSL_CERT * cert, uint32 * key_len)
 {
 	EVP_PKEY *epk = NULL;
-	SSL_RKEY *lkey;
+	RDSSL_RKEY *lkey;
 	int nid;
 
 	/* By some reason, Microsoft sets the OID of the Public RSA key to
@@ -168,7 +168,7 @@ ssl_cert_to_rkey(SSL_CERT * cert, uint32 * key_len)
 
 /* returns boolean */
 RD_BOOL
-ssl_certs_ok(SSL_CERT * server_cert, SSL_CERT * cacert)
+rdssl_certs_ok(RDSSL_CERT * server_cert, RDSSL_CERT * cacert)
 {
 	/* Currently, we don't use the CA Certificate.
 	   FIXME:
@@ -183,20 +183,20 @@ ssl_certs_ok(SSL_CERT * server_cert, SSL_CERT * cacert)
 }
 
 int
-ssl_cert_print_fp(FILE * fp, SSL_CERT * cert)
+rdssl_cert_print_fp(FILE * fp, RDSSL_CERT * cert)
 {
 	return X509_print_fp(fp, cert);
 }
 
 void
-ssl_rkey_free(SSL_RKEY * rkey)
+rdssl_rkey_free(RDSSL_RKEY * rkey)
 {
 	RSA_free(rkey);
 }
 
 /* returns error */
 int
-ssl_rkey_get_exp_mod(SSL_RKEY * rkey, uint8 * exponent, uint32 max_exp_len, uint8 * modulus,
+rdssl_rkey_get_exp_mod(RDSSL_RKEY * rkey, uint8 * exponent, uint32 max_exp_len, uint8 * modulus,
 		     uint32 max_mod_len)
 {
 	int len;
@@ -215,7 +215,7 @@ ssl_rkey_get_exp_mod(SSL_RKEY * rkey, uint8 * exponent, uint32 max_exp_len, uint
 
 /* returns boolean */
 RD_BOOL
-ssl_sig_ok(uint8 * exponent, uint32 exp_len, uint8 * modulus, uint32 mod_len,
+rdssl_sig_ok(uint8 * exponent, uint32 exp_len, uint8 * modulus, uint32 mod_len,
 	   uint8 * signature, uint32 sig_len)
 {
 	/* Currently, we don't check the signature
@@ -226,7 +226,7 @@ ssl_sig_ok(uint8 * exponent, uint32 exp_len, uint8 * modulus, uint32 mod_len,
 
 
 void
-ssl_hmac_md5(const void *key, int key_len, const unsigned char *msg, int msg_len, unsigned char *md)
+rdssl_hmac_md5(const void *key, int key_len, const unsigned char *msg, int msg_len, unsigned char *md)
 {
 	HMAC_CTX ctx;
 	HMAC_CTX_init(&ctx);

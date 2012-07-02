@@ -146,7 +146,7 @@ licence_process_demand(STREAM s)
 	uint8 hwid[LICENCE_HWID_SIZE];
 	uint8 *licence_data;
 	int licence_size;
-	SSL_RC4 crypt_key;
+	RDSSL_RC4 crypt_key;
 
 	/* Retrieve the server random from the incoming packet */
 	in_uint8p(s, server_random, SEC_RANDOM_SIZE);
@@ -164,8 +164,8 @@ licence_process_demand(STREAM s)
 		sec_sign(signature, 16, g_licence_sign_key, 16, hwid, sizeof(hwid));
 
 		/* Now encrypt the HWID */
-		ssl_rc4_set_key(&crypt_key, g_licence_key, 16);
-		ssl_rc4_crypt(&crypt_key, hwid, hwid, sizeof(hwid));
+		rdssl_rc4_set_key(&crypt_key, g_licence_key, 16);
+		rdssl_rc4_crypt(&crypt_key, hwid, hwid, sizeof(hwid));
 
 #if WITH_DEBUG
 		DEBUG(("Sending licensing PDU (message type 0x%02x)\n", LICENCE_TAG_PRESENT));
@@ -240,15 +240,15 @@ licence_process_authreq(STREAM s)
 	uint8 hwid[LICENCE_HWID_SIZE], crypt_hwid[LICENCE_HWID_SIZE];
 	uint8 sealed_buffer[LICENCE_TOKEN_SIZE + LICENCE_HWID_SIZE];
 	uint8 out_sig[LICENCE_SIGNATURE_SIZE];
-	SSL_RC4 crypt_key;
+	RDSSL_RC4 crypt_key;
 
 	/* Parse incoming packet and save the encrypted token */
 	licence_parse_authreq(s, &in_token, &in_sig);
 	memcpy(out_token, in_token, LICENCE_TOKEN_SIZE);
 
 	/* Decrypt the token. It should read TEST in Unicode. */
-	ssl_rc4_set_key(&crypt_key, g_licence_key, 16);
-	ssl_rc4_crypt(&crypt_key, in_token, decrypt_token, LICENCE_TOKEN_SIZE);
+	rdssl_rc4_set_key(&crypt_key, g_licence_key, 16);
+	rdssl_rc4_crypt(&crypt_key, in_token, decrypt_token, LICENCE_TOKEN_SIZE);
 
 	/* Generate a signature for a buffer of token and HWID */
 	licence_generate_hwid(hwid);
@@ -257,8 +257,8 @@ licence_process_authreq(STREAM s)
 	sec_sign(out_sig, 16, g_licence_sign_key, 16, sealed_buffer, sizeof(sealed_buffer));
 
 	/* Now encrypt the HWID */
-	ssl_rc4_set_key(&crypt_key, g_licence_key, 16);
-	ssl_rc4_crypt(&crypt_key, hwid, crypt_hwid, LICENCE_HWID_SIZE);
+	rdssl_rc4_set_key(&crypt_key, g_licence_key, 16);
+	rdssl_rc4_crypt(&crypt_key, hwid, crypt_hwid, LICENCE_HWID_SIZE);
 
 #if WITH_DEBUG
 	DEBUG(("Sending licensing PDU (message type 0x%02x)\n", LICENCE_TAG_AUTHRESP));
@@ -270,7 +270,7 @@ licence_process_authreq(STREAM s)
 static void
 licence_process_issue(STREAM s)
 {
-	SSL_RC4 crypt_key;
+	RDSSL_RC4 crypt_key;
 	uint32 length;
 	uint16 check;
 	int i;
@@ -280,8 +280,8 @@ licence_process_issue(STREAM s)
 	if (!s_check_rem(s, length))
 		return;
 
-	ssl_rc4_set_key(&crypt_key, g_licence_key, 16);
-	ssl_rc4_crypt(&crypt_key, s->p, s->p, length);
+	rdssl_rc4_set_key(&crypt_key, g_licence_key, 16);
+	rdssl_rc4_crypt(&crypt_key, s->p, s->p, length);
 
 	in_uint16(s, check);
 	if (check != 0)
