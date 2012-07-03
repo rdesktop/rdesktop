@@ -116,6 +116,7 @@ struct dummy_statfs_t
 {
 	long f_bfree;
 	long f_bsize;
+	long f_bavail;
 	long f_blocks;
 	int f_namelen;
 	int f_namemax;
@@ -126,6 +127,7 @@ dummy_statfs(struct dummy_statfs_t *buf)
 {
 	buf->f_blocks = 262144;
 	buf->f_bfree = 131072;
+	buf->f_bavail = 131072;
 	buf->f_bsize = 512;
 	buf->f_namelen = 255;
 	buf->f_namemax = 255;
