@@ -49,7 +49,7 @@ void rdssl_md5_final(RDSSL_MD5 * md5, uint8 * out_data);
 void rdssl_rc4_set_key(RDSSL_RC4 * rc4, uint8 * key, uint32 len);
 void rdssl_rc4_crypt(RDSSL_RC4 * rc4, uint8 * in_data, uint8 * out_data, uint32 len);
 void rdssl_rsa_encrypt(uint8 * out, uint8 * in, int len, uint32 modulus_size, uint8 * modulus,
-		     uint8 * exponent);
+		       uint8 * exponent);
 RDSSL_CERT *rdssl_cert_read(uint8 * data, uint32 len);
 void rdssl_cert_free(RDSSL_CERT * cert);
 RDSSL_RKEY *rdssl_cert_to_rkey(RDSSL_CERT * cert, uint32 * key_len);
@@ -57,11 +57,11 @@ RD_BOOL rdssl_certs_ok(RDSSL_CERT * server_cert, RDSSL_CERT * cacert);
 int rdssl_cert_print_fp(FILE * fp, RDSSL_CERT * cert);
 void rdssl_rkey_free(RDSSL_RKEY * rkey);
 int rdssl_rkey_get_exp_mod(RDSSL_RKEY * rkey, uint8 * exponent, uint32 max_exp_len, uint8 * modulus,
-			 uint32 max_mod_len);
+			   uint32 max_mod_len);
 RD_BOOL rdssl_sig_ok(uint8 * exponent, uint32 exp_len, uint8 * modulus, uint32 mod_len,
-		   uint8 * signature, uint32 sig_len);
+		     uint8 * signature, uint32 sig_len);
 
 void rdssl_hmac_md5(const void *key, int key_len,
-		  const unsigned char *msg, int msg_len, unsigned char *md);
+		    const unsigned char *msg, int msg_len, unsigned char *md);
 
 #endif

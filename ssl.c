@@ -85,7 +85,7 @@ reverse(uint8 * p, int len)
 
 void
 rdssl_rsa_encrypt(uint8 * out, uint8 * in, int len, uint32 modulus_size, uint8 * modulus,
-		uint8 * exponent)
+		  uint8 * exponent)
 {
 	BN_CTX *ctx;
 	BIGNUM mod, exp, x, y;
@@ -197,7 +197,7 @@ rdssl_rkey_free(RDSSL_RKEY * rkey)
 /* returns error */
 int
 rdssl_rkey_get_exp_mod(RDSSL_RKEY * rkey, uint8 * exponent, uint32 max_exp_len, uint8 * modulus,
-		     uint32 max_mod_len)
+		       uint32 max_mod_len)
 {
 	int len;
 
@@ -216,7 +216,7 @@ rdssl_rkey_get_exp_mod(RDSSL_RKEY * rkey, uint8 * exponent, uint32 max_exp_len, 
 /* returns boolean */
 RD_BOOL
 rdssl_sig_ok(uint8 * exponent, uint32 exp_len, uint8 * modulus, uint32 mod_len,
-	   uint8 * signature, uint32 sig_len)
+	     uint8 * signature, uint32 sig_len)
 {
 	/* Currently, we don't check the signature
 	   FIXME:
@@ -226,7 +226,8 @@ rdssl_sig_ok(uint8 * exponent, uint32 exp_len, uint8 * modulus, uint32 mod_len,
 
 
 void
-rdssl_hmac_md5(const void *key, int key_len, const unsigned char *msg, int msg_len, unsigned char *md)
+rdssl_hmac_md5(const void *key, int key_len, const unsigned char *msg, int msg_len,
+	       unsigned char *md)
 {
 	HMAC_CTX ctx;
 	HMAC_CTX_init(&ctx);

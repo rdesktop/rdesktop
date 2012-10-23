@@ -526,7 +526,7 @@ sec_parse_public_sig(STREAM s, uint32 len, uint8 * modulus, uint8 * exponent)
 	sig_len = len - 8;
 	in_uint8a(s, signature, sig_len);
 	return rdssl_sig_ok(exponent, SEC_EXPONENT_SIZE, modulus, g_server_public_key_len,
-			  signature, sig_len);
+			    signature, sig_len);
 }
 
 /* Parse a crypto information structure */
@@ -683,7 +683,7 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 			return False;
 		}
 		if (rdssl_rkey_get_exp_mod(server_public_key, exponent, SEC_EXPONENT_SIZE,
-					 modulus, SEC_MAX_MODULUS_SIZE) != 0)
+					   modulus, SEC_MAX_MODULUS_SIZE) != 0)
 		{
 			error("Problem extracting RSA exponent, modulus");
 			rdssl_rkey_free(server_public_key);
