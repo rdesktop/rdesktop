@@ -253,7 +253,7 @@ iso_connect(char *server, char *username, RD_BOOL reconnect, uint32 * selected_p
 					reason = "SSL not allowed by server";
 					break;
 				case SSL_CERT_NOT_ON_SERVER:
-					reason = "SSL certificated not on server";
+					reason = "The server does not have a valid authentication certificate";
 					break;
 				case INCONSISTENT_FLAGS:
 					reason = "inconsistent flags";
