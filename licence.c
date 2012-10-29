@@ -272,10 +272,9 @@ licence_process_issue(STREAM s)
 {
 	RDSSL_RC4 crypt_key;
 	uint32 length;
-	uint16 check;
 	int i;
 
-	in_uint8s(s, 2);	/* 3d 45 - unknown */
+	in_uint8s(s, 2);	// Skip license binary blob type
 	in_uint16_le(s, length);
 	if (!s_check_rem(s, length))
 		return;
@@ -283,15 +282,11 @@ licence_process_issue(STREAM s)
 	rdssl_rc4_set_key(&crypt_key, g_licence_key, 16);
 	rdssl_rc4_crypt(&crypt_key, s->p, s->p, length);
 
-	in_uint16(s, check);
-	if (check != 0)
-		return;
+	/* Parse NEW_LICENSE_INFO block */
+	in_uint8s(s, 4);	// skip dwVersion
 
-	g_licence_issued = True;
-
-	in_uint8s(s, 2);	/* pad */
-
-	/* advance to fourth string */
+	/* Skip strings, Scope, CompanyName and ProductId to get
+	   to the LicenseInfo which we store in license blob. */
 	length = 0;
 	for (i = 0; i < 4; i++)
 	{
