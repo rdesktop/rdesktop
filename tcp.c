@@ -3,6 +3,7 @@
    Protocol services - TCP layer
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2005-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
+   Copyright 2012 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -216,6 +217,12 @@ tcp_recv(STREAM s, uint32 length)
 
 			if (ssl_err == SSL_ERROR_SSL)
 			{
+				if (SSL_get_shutdown(g_ssl) & SSL_RECEIVED_SHUTDOWN)
+				{
+					error("Remote peer initiated ssl shutdown.\n");
+					return NULL;
+				}
+
 				ERR_print_errors_fp(stdout);
 				return NULL;
 			}
@@ -265,6 +272,7 @@ RD_BOOL
 tcp_tls_connect(void)
 {
 	int err;
+	long options;
 
 	SSL_load_error_strings();
 	SSL_library_init();
@@ -276,7 +284,11 @@ tcp_tls_connect(void)
 		goto fail;
 	}
 
-	SSL_CTX_set_options(g_ssl_ctx, SSL_OP_ALL);
+	options = 0;
+	options |= SSL_OP_NO_COMPRESSION;
+	options |= SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS;
+
+	SSL_CTX_set_options(g_ssl_ctx, options);
 
 	g_ssl = SSL_new(g_ssl_ctx);
 	if (g_ssl == NULL)
@@ -350,9 +362,10 @@ tcp_tls_get_server_pubkey(STREAM s)
 		goto out;
 	}
 
-	s->data = s->p = xmalloc(s->size + 1);
+	s->data = s->p = xmalloc(s->size);
 	i2d_PublicKey(pkey, &s->p);
-	s->end = s->p;
+	s->p = s->data;
+	s->end = s->p + s->size;
 
       out:
 	if (cert)
@@ -474,10 +487,9 @@ tcp_connect(char *server)
 void
 tcp_disconnect(void)
 {
-	int err;
 	if (g_ssl)
 	{
-		err = SSL_shutdown(g_ssl);
+		(void) SSL_shutdown(g_ssl);
 		SSL_free(g_ssl);
 		g_ssl = NULL;
 		SSL_CTX_free(g_ssl_ctx);
