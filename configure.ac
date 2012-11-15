@@ -120,6 +120,27 @@ else
     esac
 fi
 
+AC_ARG_ENABLE(credssp,
+	[  --enable-credssp        enables CredSSP support (Kerberos only).
+	], [
+	  if test -n "$PKG_CONFIG"; then
+	    PKG_CHECK_MODULES(GSSGLUE, libgssglue, [
+	      CREDSSPOBJ="cssp.o"
+	      CFLAGS="$CFLAGS $GSSGLUE_CFLAGS"
+	      LIBS="$LIBS $GSSGLUE_LIBS"
+	      AC_DEFINE(WITH_CREDSSP)
+	      WITH_CREDSSP=1
+	    ], [
+	      AC_MSG_RESULT([Not found])
+	      echo
+	      echo "ERROR: Could not find gssglue headers/libraries required for CredSSP."
+	      exit 1
+	    ])
+	  fi
+	])
+
+AC_SUBST(CREDSSPOBJ)
+
 # xrandr
 if test -n "$PKG_CONFIG"; then
     PKG_CHECK_MODULES(XRANDR, xrandr, [HAVE_XRANDR=1], [HAVE_XRANDR=0])
@@ -131,7 +152,7 @@ if test x"$HAVE_XRANDR" = "x1"; then
 fi
 
 AC_ARG_ENABLE(smartcard, 
-             [  --enable-smartcard	  Enables smart-card support.
+             [  --enable-smartcard	  enables smart-card support.
 	     ],
              [ 
 	     	case "$OSTYPE" in
@@ -901,6 +922,17 @@ AC_ARG_WITH(debug-smartcard,
         then
 		if test x"$WITH_SCARD" = "x1"; then
 			AC_DEFINE(WITH_DEBUG_SCARD,1)
+		fi
+	fi
+    ])
+
+AC_ARG_WITH(debug-credssp,
+    [  --with-debug-credssp	enable debugging of CredSSP code],
+    [
+	if test $withval != "no";
+	then
+		if test x"$WITH_CREDSSP" = "x1"; then
+		   AC_DEFINE(WITH_DEBUG_CREDSSP,1)
 		fi
 	fi
     ])

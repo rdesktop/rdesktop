@@ -74,7 +74,8 @@ void ewmh_init(void);
 STREAM iso_init(int length);
 void iso_send(STREAM s);
 STREAM iso_recv(uint8 * rdpver);
-RD_BOOL iso_connect(char *server, char *username, RD_BOOL reconnect, uint32 * selected_protocol);
+RD_BOOL iso_connect(char *server, char *username, char *domain, char *password, RD_BOOL reconnect,
+		    uint32 * selected_protocol);
 void iso_disconnect(void);
 void iso_reset_state(void);
 /* licence.c */
@@ -84,8 +85,8 @@ STREAM mcs_init(int length);
 void mcs_send_to_channel(STREAM s, uint16 channel);
 void mcs_send(STREAM s);
 STREAM mcs_recv(uint16 * channel, uint8 * rdpver);
-RD_BOOL mcs_connect_start(char *server, char *username, RD_BOOL reconnect,
-			  uint32 * selected_protocol);
+RD_BOOL mcs_connect_start(char *server, char *username, char *domain, char *password,
+			  RD_BOOL reconnect, uint32 * selected_protocol);
 RD_BOOL mcs_connect_finalize(STREAM s);
 void mcs_disconnect(void);
 void mcs_reset_state(void);
@@ -191,7 +192,7 @@ void sec_send_to_channel(STREAM s, uint32 flags, uint16 channel);
 void sec_send(STREAM s, uint32 flags);
 void sec_process_mcs_data(STREAM s);
 STREAM sec_recv(uint8 * rdpver);
-RD_BOOL sec_connect(char *server, char *username, RD_BOOL reconnect);
+RD_BOOL sec_connect(char *server, char *username, char *domain, char *password, RD_BOOL reconnect);
 void sec_disconnect(void);
 void sec_reset_state(void);
 /* serial.c */
@@ -207,6 +208,15 @@ RD_BOOL tcp_connect(char *server);
 void tcp_disconnect(void);
 char *tcp_get_address(void);
 void tcp_reset_state(void);
+RD_BOOL tcp_tls_connect(void);
+RD_BOOL tcp_tls_get_server_pubkey(STREAM s);
+
+/* asn.c */
+RD_BOOL ber_in_header(STREAM s, int *tagval, int *length);
+void ber_out_header(STREAM s, int tagval, int length);
+RD_BOOL ber_parse_header(STREAM s, int tagval, int *length);
+void ber_out_integer(STREAM s, int value);
+
 /* xclip.c */
 void ui_clip_format_announce(uint8 * data, uint32 length);
 void ui_clip_handle_data(uint8 * data, uint32 length);

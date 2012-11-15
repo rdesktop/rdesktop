@@ -24,71 +24,6 @@ uint16 g_mcs_userid;
 extern VCHANNEL g_channels[];
 extern unsigned int g_num_channels;
 
-/* Parse an ASN.1 BER header */
-static RD_BOOL
-ber_parse_header(STREAM s, int tagval, int *length)
-{
-	int tag, len;
-
-	if (tagval > 0xff)
-	{
-		in_uint16_be(s, tag);
-	}
-	else
-	{
-		in_uint8(s, tag);
-	}
-
-	if (tag != tagval)
-	{
-		error("expected tag %d, got %d\n", tagval, tag);
-		return False;
-	}
-
-	in_uint8(s, len);
-
-	if (len & 0x80)
-	{
-		len &= ~0x80;
-		*length = 0;
-		while (len--)
-			next_be(s, *length);
-	}
-	else
-		*length = len;
-
-	return s_check(s);
-}
-
-/* Output an ASN.1 BER header */
-static void
-ber_out_header(STREAM s, int tagval, int length)
-{
-	if (tagval > 0xff)
-	{
-		out_uint16_be(s, tagval);
-	}
-	else
-	{
-		out_uint8(s, tagval);
-	}
-
-	if (length >= 0x80)
-	{
-		out_uint8(s, 0x82);
-		out_uint16_be(s, length);
-	}
-	else
-		out_uint8(s, length);
-}
-
-/* Output an ASN.1 BER integer */
-static void
-ber_out_integer(STREAM s, int value)
-{
-	ber_out_header(s, BER_TAG_INTEGER, 2);
-	out_uint16_be(s, value);
-}
 
 /* Output a DOMAIN_PARAMS structure (ASN.1 BER) */
 static void
@@ -373,9 +308,10 @@ mcs_recv(uint16 * channel, uint8 * rdpver)
 }
 
 RD_BOOL
-mcs_connect_start(char *server, char *username, RD_BOOL reconnect, uint32 * selected_protocol)
+mcs_connect_start(char *server, char *username, char *domain, char *password,
+		  RD_BOOL reconnect, uint32 * selected_protocol)
 {
-	return iso_connect(server, username, reconnect, selected_protocol);
+	return iso_connect(server, username, domain, password, reconnect, selected_protocol);
 }
 
 RD_BOOL

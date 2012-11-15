@@ -3,6 +3,7 @@
    Protocol services - ISO layer
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2005-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
+   Copyright 2012 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -80,7 +81,11 @@ iso_send_connection_request(char *username)
 		out_uint8(s, RDP_NEG_REQ);
 		out_uint8(s, 0);
 		out_uint16(s, 8);
+#ifdef WITH_CREDSSP
+		out_uint32(s, PROTOCOL_SSL | PROTOCOL_HYBRID);
+#else
 		out_uint32(s, PROTOCOL_SSL);
+#endif
 	}
 
 	s_mark_end(s);
@@ -191,7 +196,8 @@ iso_recv(uint8 * rdpver)
 
 /* Establish a connection up to the ISO layer */
 RD_BOOL
-iso_connect(char *server, char *username, RD_BOOL reconnect, uint32 * selected_protocol)
+iso_connect(char *server, char *username, char *domain, char *password,
+	    RD_BOOL reconnect, uint32 * selected_protocol)
 {
 	STREAM s;
 	uint8 code;
@@ -292,10 +298,22 @@ iso_connect(char *server, char *username, RD_BOOL reconnect, uint32 * selected_p
 				tcp_disconnect();
 				return False;
 			}
+			/* do not use encryption when using TLS */
+			g_encryption = False;
+		}
+#ifdef WITH_CREDSSP
+		else if (data == PROTOCOL_HYBRID)
+		{
+			if (!cssp_connect(server, username, domain, password, s))
+			{
+				tcp_disconnect();
+				return False;
+			}
 
 			/* do not use encryption when using TLS */
 			g_encryption = False;
 		}
+#endif
 		else if (data != PROTOCOL_RDP)
 		{
 			tcp_disconnect();

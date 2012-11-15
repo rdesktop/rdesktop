@@ -1636,7 +1636,7 @@ rdp_connect(char *server, uint32 flags, char *domain, char *password,
 	RD_BOOL deactivated = False;
 	uint32 ext_disc_reason = 0;
 
-	if (!sec_connect(server, g_username, reconnect))
+	if (!sec_connect(server, g_username, domain, password, reconnect))
 		return False;
 
 	rdp_send_logon_info(flags, domain, g_username, password, command, directory);

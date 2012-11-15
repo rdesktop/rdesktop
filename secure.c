@@ -881,13 +881,13 @@ sec_recv(uint8 * rdpver)
 
 /* Establish a secure connection */
 RD_BOOL
-sec_connect(char *server, char *username, RD_BOOL reconnect)
+sec_connect(char *server, char *username, char *domain, char *password, RD_BOOL reconnect)
 {
 	uint32 selected_proto;
 	struct stream mcs_data;
 
 	/* Start a MCS connect sequence */
-	if (!mcs_connect_start(server, username, reconnect, &selected_proto))
+	if (!mcs_connect_start(server, username, domain, password, reconnect, &selected_proto))
 		return False;
 
 	/* We exchange some RDP data during the MCS-Connect */
@@ -899,7 +899,7 @@ sec_connect(char *server, char *username, RD_BOOL reconnect)
 	if (!mcs_connect_finalize(&mcs_data))
 		return False;
 
-	/*      sec_process_mcs_data(&mcs_data); */
+	/* sec_process_mcs_data(&mcs_data); */
 	if (g_encryption)
 		sec_establish_key();
 	xfree(mcs_data.data);
