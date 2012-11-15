@@ -2,6 +2,7 @@
    rdesktop: A Remote Desktop Protocol client.
    Parsing primitives
    Copyright (C) Matthew Chapman 1999-2008
+   Copyright 2012 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -41,6 +42,8 @@ typedef struct stream
 #define s_check(s)		((s)->p <= (s)->end)
 #define s_check_rem(s,n)	((s)->p + n <= (s)->end)
 #define s_check_end(s)		((s)->p == (s)->end)
+#define s_length(s)		((s)->end - (s)->data)
+#define s_reset(s)		((s)->end = (s)->p = (s)->data)
 
 #if defined(L_ENDIAN) && !defined(NEED_ALIGN)
 #define in_uint16_le(s,v)	{ v = *(uint16 *)((s)->p); (s)->p += 2; }
