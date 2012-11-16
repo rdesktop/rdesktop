@@ -120,25 +120,26 @@ else
     esac
 fi
 
-AC_ARG_ENABLE(credssp,
-	[  --enable-credssp        enables CredSSP support (Kerberos only).
-	], [
+dnl CredSSP feature
+AC_ARG_ENABLE([credssp], AS_HELP_STRING([--disable-credssp], [disable support for CredSSP]))
+AS_IF([test "x$enable_credssp" != "xno"], [
 	  if test -n "$PKG_CONFIG"; then
-	    PKG_CHECK_MODULES(GSSGLUE, libgssglue, [
+	    PKG_CHECK_MODULES(GSSGLUE, libgssglue, [WITH_CREDSSP=1], [WITH_CREDSSP=0])
+	  fi
+
+	  if test x"$WITH_CREDSSP" = "x1"; then
 	      CREDSSPOBJ="cssp.o"
 	      CFLAGS="$CFLAGS $GSSGLUE_CFLAGS"
 	      LIBS="$LIBS $GSSGLUE_LIBS"
 	      AC_DEFINE(WITH_CREDSSP)
-	      WITH_CREDSSP=1
-	    ], [
-	      AC_MSG_RESULT([Not found])
-	      echo
-	      echo "ERROR: Could not find gssglue headers/libraries required for CredSSP."
-	      exit 1
-	    ])
+	  else
+		echo
+		echo "CredSPP support requires libggsglue, install the dependency"
+		echo "or disable the feature using --disable-credssp."
+		echo
+		exit 1
 	  fi
-	])
-
+])
 AC_SUBST(CREDSSPOBJ)
 
 # xrandr
@@ -151,46 +152,49 @@ if test x"$HAVE_XRANDR" = "x1"; then
     AC_DEFINE(HAVE_XRANDR)
 fi
 
-AC_ARG_ENABLE(smartcard, 
-             [  --enable-smartcard	  enables smart-card support.
-	     ],
-             [ 
-	     	case "$OSTYPE" in
-			darwin*)
-				AC_CHECK_HEADER(PCSC/pcsclite.h, [WITH_SCARD=1], [WITH_SCARD=0])
-				PCSCLITE_CFLAGS=""
-				PCSCLITE_LIBS="-framework PCSC"
-				;;
-			*)
-				if test -n "$PKG_CONFIG"; then
-					PKG_CHECK_MODULES(PCSCLITE, libpcsclite, [WITH_SCARD=1], [WITH_SCARD=0])
-				fi
-				;;
-		esac
-
-		if test x"$WITH_SCARD" = "x1"; then
-			SCARDOBJ="scard.o"
-			CFLAGS="$CFLAGS $PCSCLITE_CFLAGS"
-			LIBS="$LIBS $PCSCLITE_LIBS"
-			AC_DEFINE(WITH_SCARD)
+dnl Smartcard support
+AC_ARG_ENABLE(smartcard, AS_HELP_STRING([--disable-smartcard], [disable support for smartcard]))
+AS_IF([test "x$enable_smartcard" != "xno"], [
+	case "$OSTYPE" in
+	     darwin*)
+		AC_CHECK_HEADER(PCSC/pcsclite.h, [WITH_SCARD=1], [WITH_SCARD=0])
+		PCSCLITE_CFLAGS=""
+		PCSCLITE_LIBS="-framework PCSC"
+		;;
+	     *)
+		if test -n "$PKG_CONFIG"; then
+		   PKG_CHECK_MODULES(PCSCLITE, libpcsclite, [WITH_SCARD=1], [WITH_SCARD=0])
 		fi
+		;;
+	esac
 
-		AC_MSG_CHECKING([for old version of PCSC])
-		AC_TRY_LINK([
-			#include <stdlib.h>
-			#ifdef __APPLE__
-			#include <PCSC/wintypes.h>
-			#include <PCSC/winscard.h>
-			#else
-			#include <winscard.h>
-			#endif
-			],
-			[SCardControl(NULL, NULL, 0, NULL, NULL);],
-			[AC_MSG_RESULT(yes) AC_DEFINE(WITH_PCSC120, 1, [old version of PCSC])],
-			[AC_MSG_RESULT(no)]
-		)
-             ])
+	if test x"$WITH_SCARD" = "x1"; then
+	   SCARDOBJ="scard.o"
+	   CFLAGS="$CFLAGS $PCSCLITE_CFLAGS"
+	   LIBS="$LIBS $PCSCLITE_LIBS"
+	   AC_DEFINE(WITH_SCARD)
+	else
+	   echo
+	   echo "SmartCard support requires PCSC, install the dependency"
+	   echo "or disable the feature using --disable-smartcard."
+	   echo
+	   exit 1
+	fi
 
+	AC_MSG_CHECKING([for old version of PCSC])
+	AC_TRY_LINK([
+		#include <stdlib.h>
+		#ifdef __APPLE__
+		#include <PCSC/wintypes.h>
+		#include <PCSC/winscard.h>
+		#else
+		#include <winscard.h>
+		#endif
+		],
+		[SCardControl(NULL, NULL, 0, NULL, NULL);],
+		[AC_MSG_RESULT(yes) AC_DEFINE(WITH_PCSC120, 1, [old version of PCSC])],
+		[AC_MSG_RESULT(no)])
+])
 AC_SUBST(SCARDOBJ)
 
 #
