@@ -1,7 +1,7 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    ASN.1 utility functions
-   Copyright 2010-2011 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2012 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
