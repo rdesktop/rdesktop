@@ -1023,7 +1023,8 @@ main(int argc, char *argv[])
 		rdp_main_loop(&deactivated, &ext_disc_reason);
 
 		DEBUG(("Disconnecting...\n"));
-		rdp_disconnect();
+		if (!tcp_is_connected())
+			rdp_disconnect();
 
 		if (g_redirect)
 			continue;

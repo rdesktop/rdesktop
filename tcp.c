@@ -515,6 +515,16 @@ tcp_get_address()
 	return ipaddr;
 }
 
+RD_BOOL
+tcp_is_connected()
+{
+	struct sockaddr_in sockaddr;
+	socklen_t len = sizeof(sockaddr);
+	if (getpeername(g_sock, (struct sockaddr *) &sockaddr, &len))
+		return True;
+	return False;
+}
+
 /* reset the state of the tcp layer */
 /* Support for Session Directory */
 void
