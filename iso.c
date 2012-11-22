@@ -247,47 +247,52 @@ iso_connect(char *server, char *username, char *domain, char *password,
 
 		if (type == RDP_NEG_FAILURE)
 		{
+			RD_BOOL retry_without_neg = False;
+
 			switch (data)
 			{
-				case SSL_REQUIRED_BY_SERVER:
-					reason = "SSL required by server";
-					break;
 				case SSL_WITH_USER_AUTH_REQUIRED_BY_SERVER:
 					reason = "SSL with user authentication required by server";
 					break;
 				case SSL_NOT_ALLOWED_BY_SERVER:
 					reason = "SSL not allowed by server";
+					retry_without_neg = True;
 					break;
 				case SSL_CERT_NOT_ON_SERVER:
-					reason = "The server does not have a valid authentication certificate";
+					reason = "no valid authentication certificate on server";
 					break;
 				case INCONSISTENT_FLAGS:
-					reason = "inconsistent flags";
+					reason = "inconsistent negotiation flags";
+					break;
+				case SSL_REQUIRED_BY_SERVER:
+					reason = "SSL required by server";
 					break;
 				case HYBRID_REQUIRED_BY_SERVER:
-					reason = "hybrid authentication (CredSSP) required by server";
+					reason = "CredSSP required by server";
 					break;
 				default:
 					reason = "unknown reason";
 			}
 
 			tcp_disconnect();
-			warning("RDP protocol negotiation failed with reason: %s (error 0x%x),\n",
-				reason, data);
-			warning("retrying without negotiation using plain RDP protocol.\n");
 
-			g_negotiate_rdp_protocol = False;
-			goto retry;
+			if (retry_without_neg)
+			{
+				fprintf(stderr,
+					"Failed to negotiate protocol, retrying with plain RDP.\n");
+				g_negotiate_rdp_protocol = False;
+				goto retry;
+			}
+
+			fprintf(stderr, "Failed to connect, %s.\n", reason);
+			return False;
 		}
 
 		if (type != RDP_NEG_RSP)
 		{
 			tcp_disconnect();
-			error("expected RDP_NEG_RSP, got type = 0x%x\n", type);
-			warning("retrying without negotiation using plain RDP protocol.\n");
-
-			g_negotiate_rdp_protocol = False;
-			goto retry;
+			error("Expected RDP_NEG_RSP, got type = 0x%x\n", type);
+			return False;
 		}
 
 		/* handle negotiation response */
@@ -300,6 +305,7 @@ iso_connect(char *server, char *username, char *domain, char *password,
 			}
 			/* do not use encryption when using TLS */
 			g_encryption = False;
+			fprintf(stderr, "Connection established using SSL.\n");
 		}
 #ifdef WITH_CREDSSP
 		else if (data == PROTOCOL_HYBRID)
@@ -311,13 +317,18 @@ iso_connect(char *server, char *username, char *domain, char *password,
 			}
 
 			/* do not use encryption when using TLS */
+			fprintf(stderr, "Connection established using CredSSP.\n");
 			g_encryption = False;
 		}
 #endif
+		else if (data == PROTOCOL_RDP)
+		{
+			fprintf(stderr, "Connection established using plain RDP.\n");
+		}
 		else if (data != PROTOCOL_RDP)
 		{
 			tcp_disconnect();
-			error("unexpected protocol in neqotiation response, got data = 0x%x.\n",
+			error("Unexpected protocol in negotiation response, got data = 0x%x.\n",
 			      data);
 			return False;
 		}
