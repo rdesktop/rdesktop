@@ -316,7 +316,7 @@ seamless_process_line(const char *line, void *data)
 		if (*endptr)
 			return False;
 
-		ui_seamless_begin(!!(flags & SEAMLESSRDP_HELLO_HIDDEN));
+		ui_seamless_begin(! !(flags & SEAMLESSRDP_HELLO_HIDDEN));
 	}
 	else if (!strcmp("ACK", tok1))
 	{

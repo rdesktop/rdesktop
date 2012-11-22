@@ -261,7 +261,7 @@ oss_set_format(RD_WAVEFORMATEX * pwfx)
 		if ((pwfx->wBitsPerSample == 16) && (format != AFMT_S16_LE))
 			return False;
 
-		if ((pwfx->nChannels == 2) != !!stereo)
+		if ((pwfx->nChannels == 2) != ! !stereo)
 			return False;
 
 		if (pwfx->nSamplesPerSec != snd_rate)

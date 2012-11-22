@@ -327,7 +327,7 @@ cssp_encode_tscredentials(char *username, char *password, char *domain)
 
 #if WITH_DEBUG_CREDSSP
 	streamsave(out, "tscredentials.raw");
-printf("Out TSCredentials %ld bytes\n", s_length(out));
+	printf("Out TSCredentials %ld bytes\n", s_length(out));
 	hexdump(out->data, s_length(out));
 #endif
 
