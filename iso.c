@@ -49,7 +49,7 @@ iso_send_msg(uint8 code)
 }
 
 static void
-iso_send_connection_request(char *username)
+iso_send_connection_request(char *username, uint32 neg_proto)
 {
 	STREAM s;
 	int length = 30 + strlen(username);
@@ -81,11 +81,7 @@ iso_send_connection_request(char *username)
 		out_uint8(s, RDP_NEG_REQ);
 		out_uint8(s, 0);
 		out_uint16(s, 8);
-#ifdef WITH_CREDSSP
-		out_uint32(s, PROTOCOL_SSL | PROTOCOL_HYBRID);
-#else
-		out_uint32(s, PROTOCOL_SSL);
-#endif
+		out_uint32(s, neg_proto);
 	}
 
 	s_mark_end(s);
@@ -201,8 +197,15 @@ iso_connect(char *server, char *username, char *domain, char *password,
 {
 	STREAM s;
 	uint8 code;
+	uint32 neg_proto;
 
 	g_negotiate_rdp_protocol = True;
+
+#ifdef WITH_CREDSSP
+	neg_proto = PROTOCOL_SSL | PROTOCOL_HYBRID;
+#else
+	neg_proto = PROTOCOL_SSL;
+#endif
 
       retry:
 	*selected_protocol = PROTOCOL_RDP;
@@ -217,7 +220,7 @@ iso_connect(char *server, char *username, char *domain, char *password,
 	}
 	else
 	{
-		iso_send_connection_request(username);
+		iso_send_connection_request(username, neg_proto);
 	}
 
 	s = iso_recv_msg(&code, NULL);
@@ -300,8 +303,10 @@ iso_connect(char *server, char *username, char *domain, char *password,
 		{
 			if (!tcp_tls_connect())
 			{
+				/* failed to connect using cssp, let retry with plain TLS */
 				tcp_disconnect();
-				return False;
+				neg_proto = PROTOCOL_RDP;
+				goto retry;
 			}
 			/* do not use encryption when using TLS */
 			g_encryption = False;
@@ -312,8 +317,10 @@ iso_connect(char *server, char *username, char *domain, char *password,
 		{
 			if (!cssp_connect(server, username, domain, password, s))
 			{
+				/* failed to connect using cssp, let retry with plain TLS */
 				tcp_disconnect();
-				return False;
+				neg_proto = PROTOCOL_SSL;
+				goto retry;
 			}
 
 			/* do not use encryption when using TLS */
