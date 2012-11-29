@@ -78,6 +78,8 @@ RD_BOOL iso_connect(char *server, char *username, char *domain, char *password, 
 		    uint32 * selected_protocol);
 void iso_disconnect(void);
 void iso_reset_state(void);
+/* cssp.c */
+RD_BOOL cssp_connect(char *server, char *user, char *domain, char *password, STREAM s);
 /* licence.c */
 void licence_process(STREAM s);
 /* mcs.c */
