@@ -17,8 +17,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <gssapi.h>
-#include <gssapi/gssapi_krb5.h>
+#include <gssapi/gssapi.h>
 #include "rdesktop.h"
 
 static gss_OID_desc _gss_spnego_krb5_mechanism_oid_desc =
@@ -88,7 +87,7 @@ cssp_gss_mech_available(gss_OID mech)
 	mech_found = 0;
 
 	if (mech == GSS_C_NO_OID)
-		return TRUE;
+		return True;
 
 	major_status = gss_indicate_mechs(&minor_status, &mech_set);
 
@@ -155,7 +154,7 @@ cssp_gss_wrap(gss_ctx_id_t * ctx, STREAM in, STREAM out)
 	inbuf.value = in->data;
 	inbuf.length = s_length(in);
 
-	major_status = gss_wrap(&minor_status, ctx, TRUE,
+	major_status = gss_wrap(&minor_status, ctx, True,
 				GSS_C_QOP_DEFAULT, &inbuf, &conf_state, &outbuf);
 
 	if (major_status != GSS_S_COMPLETE)
@@ -430,7 +429,7 @@ cssp_send_tsrequest(STREAM token, STREAM auth, STREAM pubkey)
 	free(message.data);
 	free(tmp.data);
 
-	return TRUE;
+	return True;
 }
 
 
