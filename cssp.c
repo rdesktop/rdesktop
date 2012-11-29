@@ -90,6 +90,8 @@ cssp_gss_mech_available(gss_OID mech)
 		return True;
 
 	major_status = gss_indicate_mechs(&minor_status, &mech_set);
+	if (!mech_set)
+		return False;
 
 	if (GSS_ERROR(major_status))
 	{
