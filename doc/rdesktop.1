@@ -72,6 +72,11 @@ size is changed, rdesktop will automatically reconnect using the new
 screen size. This requires that rdesktop has been compiled with RandR
 support.
 .TP
+.BR "-i"
+Use password as smartcard pin, if a valid user certificate is matched in smart card
+reader the password passed with \f-p\fR argument is used as pin for the smart card. This
+feature also requires that smart card redirection is used using \f-r scard\fR argument.
+.TP
 .BR "-f"
 Enable fullscreen mode.  This overrides the window manager and causes the
 rdesktop window to fully cover the current screen.  Fullscreen mode can be

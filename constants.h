@@ -311,6 +311,7 @@ enum RDP_INPUT_DEVICE
 #define RDP_LOGON_BLOB		0x0100
 #define RDP_LOGON_COMPRESSION2	0x0200	/* rdp5 mppc compression with 64kB history buffer */
 #define RDP_LOGON_LEAVE_AUDIO	0x2000
+#define RDP_LOGON_PASSWORD_IS_SC_PIN 0x40000
 
 #define RDP5_DISABLE_NOTHING	0x00
 #define RDP5_NO_WALLPAPER	0x01

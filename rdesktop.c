@@ -160,6 +160,9 @@ usage(char *program)
 	fprintf(stderr, "   -n: client hostname\n");
 	fprintf(stderr, "   -k: keyboard layout on server (en-us, de, sv, etc.)\n");
 	fprintf(stderr, "   -g: desktop geometry (WxH)\n");
+#ifdef WITH_SCARD
+	fprintf(stderr, "   -i: password is smartcard pin\n");
+#endif
 	fprintf(stderr, "   -f: full-screen mode\n");
 	fprintf(stderr, "   -b: force bitmap updates\n");
 #ifdef HAVE_ICONV
@@ -509,7 +512,7 @@ main(int argc, char *argv[])
 #endif
 
 	while ((c = getopt(argc, argv,
-			   VNCOPT "Au:L:d:s:c:p:n:k:g:fbBeEmzCDKS:T:NX:a:x:Pr:045h?")) != -1)
+			   VNCOPT "Au:L:d:s:c:p:n:k:g:fbBeEimzCDKS:T:NX:a:x:Pr:045h?")) != -1)
 	{
 		switch (c)
 		{
@@ -572,6 +575,11 @@ main(int argc, char *argv[])
 				while (*p)
 					*(p++) = 'X';
 				break;
+#ifdef WITH_SCARD
+			case 'i':
+				flags |= RDP_LOGON_PASSWORD_IS_SC_PIN;
+				break;
+#endif
 
 			case 'n':
 				STRNCPY(g_hostname, optarg, sizeof(g_hostname));
