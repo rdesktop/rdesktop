@@ -514,7 +514,7 @@ main(int argc, char *argv[])
 #endif
 
 	while ((c = getopt(argc, argv,
-			   VNCOPT "Au:L:d:s:c:p:n:k:g:fbBeEimzCDKS:T:NX:a:x:Pr:045h?")) != -1)
+			   VNCOPT "Au:L:d:s:c:p:n:k:g:fbBeEitmzCDKS:T:NX:a:x:Pr:045h?")) != -1)
 	{
 		switch (c)
 		{
