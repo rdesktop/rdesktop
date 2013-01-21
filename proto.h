@@ -24,6 +24,12 @@
 extern "C" {
 #endif
 /* *INDENT-ON* */
+/* utils.c */
+char *utils_string_escape(const char *str);
+char *utils_string_unescape(const char *str);
+int utils_locale_to_utf8(const char *src, size_t is, char *dest, size_t os);
+int utils_mkdir_safe(const char *path, int mask);
+int utils_mkdir_p(const char *path, int mask);
 /* bitmap.c */
 RD_BOOL bitmap_decompress(uint8 * output, int width, int height, uint8 * input, int size, int Bpp);
 /* cache.c */
@@ -57,6 +63,14 @@ void cliprdr_send_data_request(uint32 format);
 void cliprdr_send_data(uint8 * data, uint32 length);
 void cliprdr_set_mode(const char *optarg);
 RD_BOOL cliprdr_init(void);
+/* ctrl.c */
+int ctrl_init(const char *user, const char *domain, const char *host);
+void ctrl_cleanup();
+RD_BOOL ctrl_is_slave();
+int ctrl_send_command(const char *cmd, const char *args);
+void ctrl_add_fds(int *n, fd_set * rfds);
+void ctrl_check_fds(fd_set * rfds, fd_set * wfds);
+
 /* disk.c */
 int disk_enum_devices(uint32 * id, char *optarg);
 RD_NTSTATUS disk_query_information(RD_NTHANDLE handle, uint32 info_class, STREAM out);
@@ -327,6 +341,8 @@ void seamless_select_timeout(struct timeval *tv);
 unsigned int seamless_send_zchange(unsigned long id, unsigned long below, unsigned long flags);
 unsigned int seamless_send_focus(unsigned long id, unsigned long flags);
 unsigned int seamless_send_destroy(unsigned long id);
+unsigned int seamless_send_spawn(char *cmd);
+
 /* scard.c */
 void scard_lock(int lock);
 void scard_unlock(int lock);

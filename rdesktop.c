@@ -3,7 +3,7 @@
    Entrypoint and utility functions
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2002-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
-   Copyright 2010-2011 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2010-2013 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -85,6 +85,7 @@ RD_BOOL g_sendmotion = True;
 RD_BOOL g_bitmap_cache = True;
 RD_BOOL g_bitmap_cache_persist_enable = False;
 RD_BOOL g_bitmap_cache_precache = True;
+RD_BOOL g_use_ctrl = True;
 RD_BOOL g_encryption = True;
 RD_BOOL g_packet_encryption = True;
 RD_BOOL g_desktop_save = True;	/* desktop save order */
@@ -178,6 +179,7 @@ usage(char *program)
 	fprintf(stderr, "   -K: keep window manager key bindings\n");
 	fprintf(stderr, "   -S: caption button size (single application mode)\n");
 	fprintf(stderr, "   -T: window title\n");
+	fprintf(stderr, "   -t: disable use of remote ctrl\n");
 	fprintf(stderr, "   -N: enable numlock syncronization\n");
 	fprintf(stderr, "   -X: embed into another window with a given id.\n");
 	fprintf(stderr, "   -a: connection colour depth\n");
@@ -580,6 +582,9 @@ main(int argc, char *argv[])
 				flags |= RDP_LOGON_PASSWORD_IS_SC_PIN;
 				break;
 #endif
+			case 't':
+				g_use_ctrl = False;
+				break;
 
 			case 'n':
 				STRNCPY(g_hostname, optarg, sizeof(g_hostname));
@@ -978,6 +983,24 @@ main(int argc, char *argv[])
 	rdp2vnc_connect(server, flags, domain, password, shell, directory);
 	return EX_OK;
 #else
+
+	/* Only startup ctrl functionality is seamless are used for now. */
+	if (g_use_ctrl && g_seamless_rdp)
+	{
+		if (ctrl_init(server, domain, g_username) < 0)
+		{
+			error("Failed to initialize ctrl mode.");
+			exit(1);
+		}
+
+		if (ctrl_is_slave())
+		{
+			fprintf(stdout,
+				"rdesktop in slave mode sending command to master process.\n");
+
+			return ctrl_send_command("seamless.spawn", shell);
+		}
+	}
 
 	if (!ui_init())
 		return EX_OSERR;
@@ -1510,68 +1533,6 @@ l_to_a(long N, int base)
 	return ret;
 }
 
-static int
-safe_mkdir(const char *path, int mask)
-{
-	int res = 0;
-	struct stat st;
-
-	res = stat(path, &st);
-	if (res == -1)
-		return mkdir(path, mask);
-
-	if (!S_ISDIR(st.st_mode))
-	{
-		errno = EEXIST;
-		return -1;
-	}
-
-	return 0;
-}
-
-static int
-mkdir_p(const char *path, int mask)
-{
-	int res;
-	char *ptok;
-	char pt[PATH_MAX];
-	char bp[PATH_MAX];
-
-	if (!path || strlen(path) == 0)
-	{
-		errno = EINVAL;
-		return -1;
-	}
-	if (strlen(path) > PATH_MAX)
-	{
-		errno = E2BIG;
-		return -1;
-	}
-
-	res = 0;
-	pt[0] = bp[0] = '\0';
-	strcpy(bp, path);
-
-	ptok = strtok(bp, "/");
-	if (ptok == NULL)
-		return safe_mkdir(path, mask);
-
-	do
-	{
-		if (ptok != bp)
-			strcat(pt, "/");
-
-		strcat(pt, ptok);
-		res = safe_mkdir(pt, mask);
-		if (res != 0)
-			return res;
-
-	}
-	while ((ptok = strtok(NULL, "/")) != NULL);
-
-	return 0;
-}
-
 int
 load_licence(unsigned char **data)
 {
@@ -1626,7 +1587,7 @@ save_licence(unsigned char *data, int length)
 
 	snprintf(path, PATH_MAX, "%s" RDESKTOP_LICENSE_STORE, home);
 	path[sizeof(path) - 1] = '\0';
-	if (mkdir_p(path, 0700) == -1)
+	if (utils_mkdir_p(path, 0700) == -1)
 	{
 		perror(path);
 		return;

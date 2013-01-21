@@ -4,6 +4,7 @@
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2007-2008 Pierre Ossman <ossman@cendio.se> for Cendio AB
    Copyright 2002-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
+   Copyright 2012-2013 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -2668,6 +2669,9 @@ ui_select(int rdp_socket)
 		rdpdr_add_fds(&n, &rfds, &wfds, &tv, &s_timeout);
 		seamless_select_timeout(&tv);
 
+		/* add ctrl slaves handles */
+		ctrl_add_fds(&n, &rfds);
+
 		n++;
 
 		switch (select(n, &rfds, &wfds, NULL, &tv))
@@ -2691,6 +2695,8 @@ ui_select(int rdp_socket)
 #endif
 
 		rdpdr_check_fds(&rfds, &wfds, (RD_BOOL) False);
+
+		ctrl_check_fds(&rfds, &wfds);
 
 		if (FD_ISSET(rdp_socket, &rfds))
 			return 1;

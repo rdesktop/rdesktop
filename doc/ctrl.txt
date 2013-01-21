@@ -1,0 +1,61 @@
+TODO
+----
+
+Overview
+========
+
+The protocol is a UTF-8 line based bidirectional protocol were a slave sends
+a method with optional argument to the master and a result of operation is
+returned to the slave in a synchronous send recv operation.
+
+
+A method call from Slave to the Master have the following syntax:
+
+	METHOD [ARG1[ ARG2 [...]]]
+
+Argument string sent for a method call should be escaped as descibed below under 
+String escaping section.
+
+
+A result from Master to the Slave have the following syntax:
+
+	"OK" || "ERROR" <CODE>
+
+Result CODE is specific to the method implementation except for 0xffffffff which
+is internal to the protocol and means that method does not exist.
+
+
+One line may not exceed 1024 bytes, including newline.
+
+
+String escaping
+===============
+Percentage sign has been choosen as escaping character.
+
+The rules for escaping are:
+
+        Characters < 32 and % are escaped to %xx where xx is the byte value of the
+        escaped character.
+
+
+Implemented methods
+=======================
+
+seamless.spawn
+--------------
+
+Spawns a new windows command in the current seamless channel of the master.
+
+Syntax:
+	seamless.spawn <COMMANDLINE>
+
+Spawns a seamless process in the current seamless channel of the master with COMMANDLINE.
+
+Errorcodes:
+
+	0x1                Master does not have a seamless rdp channel established.
+
+
+
+
+

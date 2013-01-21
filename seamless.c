@@ -3,6 +3,7 @@
    Seamless Windows support
    Copyright 2005-2008 Peter Astrand <astrand@cendio.se> for Cendio AB
    Copyright 2007-2008 Pierre Ossman <ossman@cendio.se> for Cendio AB
+   Copyright 2013 Henrik Andersson  <hean01@cendio.se> for Cendio AB   
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -411,7 +412,7 @@ seamless_send(const char *command, const char *format, ...)
 	STREAM s;
 	size_t len;
 	va_list argp;
-	char buf[1025];
+	char *escaped, buf[1025];
 
 	len = snprintf(buf, sizeof(buf) - 1, "%s,%u,", command, seamless_serial);
 
@@ -421,6 +422,11 @@ seamless_send(const char *command, const char *format, ...)
 	len += vsnprintf(buf + len, sizeof(buf) - len - 1, format, argp);
 	va_end(argp);
 
+	assert(len < (sizeof(buf) - 1));
+
+	escaped = utils_string_escape(buf);
+	len = snprintf(buf, sizeof(buf), "%s", escaped);
+	free(escaped);
 	assert(len < (sizeof(buf) - 1));
 
 	buf[len] = '\n';
@@ -514,4 +520,16 @@ unsigned int
 seamless_send_destroy(unsigned long id)
 {
 	return seamless_send("DESTROY", "0x%08lx", id);
+}
+
+unsigned int
+seamless_send_spawn(char *cmdline)
+{
+	unsigned int res;
+	if (!g_seamless_rdp)
+		return (unsigned int) -1;
+
+	res = seamless_send("SPAWN", cmdline);
+
+	return res;
 }
