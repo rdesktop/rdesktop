@@ -101,6 +101,8 @@ RD_BOOL g_lspci_enabled = False;
 RD_BOOL g_owncolmap = False;
 RD_BOOL g_ownbackstore = True;	/* We can't rely on external BackingStore */
 RD_BOOL g_seamless_rdp = False;
+char g_seamless_shell[512];
+char g_seamless_spawn_cmd[512];
 RD_BOOL g_user_quit = False;
 uint32 g_embed_wnd;
 uint32 g_rdp5_performanceflags =
@@ -155,7 +157,7 @@ usage(char *program)
 #endif
 	fprintf(stderr, "   -u: user name\n");
 	fprintf(stderr, "   -d: domain\n");
-	fprintf(stderr, "   -s: shell\n");
+	fprintf(stderr, "   -s: shell / seamless application to start remotly\n");
 	fprintf(stderr, "   -c: working directory\n");
 	fprintf(stderr, "   -p: password (- to prompt)\n");
 	fprintf(stderr, "   -n: client hostname\n");
@@ -169,7 +171,7 @@ usage(char *program)
 #ifdef HAVE_ICONV
 	fprintf(stderr, "   -L: local codepage\n");
 #endif
-	fprintf(stderr, "   -A: enable SeamlessRDP mode\n");
+	fprintf(stderr, "   -A: path to SeamlessRDP shell, this enables SeamlessRDP mode\n");
 	fprintf(stderr, "   -B: use BackingStore of X-server (if available)\n");
 	fprintf(stderr, "   -e: disable encryption (French TS)\n");
 	fprintf(stderr, "   -E: disable encryption from client to server\n");
@@ -502,7 +504,7 @@ main(int argc, char *argv[])
 
 	flags = RDP_LOGON_NORMAL;
 	prompt_password = False;
-	domain[0] = password[0] = shell[0] = directory[0] = 0;
+	g_seamless_spawn_cmd[0] = domain[0] = password[0] = shell[0] = directory[0] = 0;
 	g_embed_wnd = 0;
 
 	g_num_devices = 0;
@@ -514,7 +516,7 @@ main(int argc, char *argv[])
 #endif
 
 	while ((c = getopt(argc, argv,
-			   VNCOPT "Au:L:d:s:c:p:n:k:g:fbBeEitmzCDKS:T:NX:a:x:Pr:045h?")) != -1)
+			   VNCOPT "A:u:L:d:s:c:p:n:k:g:fbBeEitmzCDKS:T:NX:a:x:Pr:045h?")) != -1)
 	{
 		switch (c)
 		{
@@ -534,6 +536,7 @@ main(int argc, char *argv[])
 
 			case 'A':
 				g_seamless_rdp = True;
+				STRNCPY(g_seamless_shell, optarg, sizeof(g_seamless_shell));
 				break;
 
 			case 'u':
@@ -877,6 +880,11 @@ main(int argc, char *argv[])
 
 	if (g_seamless_rdp)
 	{
+		if (shell[0])
+			STRNCPY(g_seamless_spawn_cmd, shell, sizeof(g_seamless_spawn_cmd));
+
+		STRNCPY(shell, g_seamless_shell, sizeof(shell));
+
 		if (g_win_button_size)
 		{
 			error("You cannot use -S and -A at the same time\n");
@@ -998,7 +1006,11 @@ main(int argc, char *argv[])
 			fprintf(stdout,
 				"rdesktop in slave mode sending command to master process.\n");
 
-			return ctrl_send_command("seamless.spawn", shell);
+			if (g_seamless_spawn_cmd[0])
+				return ctrl_send_command("seamless.spawn", g_seamless_spawn_cmd);
+
+			fprintf(stdout, "No command specified to be spawn in seamless mode.\n");
+			return EX_USAGE;
 		}
 	}
 

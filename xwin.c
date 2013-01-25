@@ -46,6 +46,7 @@ extern RD_BOOL g_grab_keyboard;
 extern RD_BOOL g_hide_decorations;
 extern RD_BOOL g_pending_resize;
 extern char g_title[];
+extern char g_seamless_spawn_cmd[];
 /* Color depth of the RDP session.
    As of RDP 5.1, it may be 8, 15, 16 or 24. */
 extern int g_server_depth;
@@ -3805,6 +3806,9 @@ ui_seamless_begin(RD_BOOL hidden)
 
 	if (!hidden)
 		ui_seamless_toggle();
+
+	if (g_seamless_spawn_cmd[0])
+		seamless_send_spawn(g_seamless_spawn_cmd);
 }
 
 
