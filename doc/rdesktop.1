@@ -20,7 +20,8 @@ Username for authentication on the server.
 Domain for authentication.
 .TP
 .BR "-s <shell>"
-Startup shell for the user - starts a specific application instead of Explorer.
+Startup shell for the user - starts a specific application instead of Explore.
+If SeamlessRDP is enabled this is the application which i started in seamless mode.
 .TP
 .BR "-c <directory>"
 The initial working directory for the user.  Often used in combination with -s
@@ -90,15 +91,21 @@ higher-level drawing operations.
 Disable use of remote control. This will disable features like seamless connection
 sharing.
 .TP
-.BR "-A"
-Enable SeamlessRDP. In this mode, rdesktop creates a X11 window for
-each window on the server side. This mode requires the SeamlessRDP
-server side component, which is available from 
+.BR "-A <seamlessrdpshell>"
+Enable SeamlessRDP by specifying the path to seamless rdp shell. 
+In this mode, rdesktop creates a X11 window for each window on the server side. 
+This mode requires the SeamlessRDP server side component, which is available from 
 \fIhttp://www.cendio.com/seamlessrdp/\fR.
-When using this option, you should specify a startup shell which
+
+When using this option, you should normally specify a startup shell which
 launches the desired application through SeamlessRDP. 
 
-Example: rdesktop -A -s 'seamlessrdpshell notepad'.
+Example: rdesktop -A 'c:\\seamlessrdp\\seamlessrdpshell.exe' -s 'notepad' mywts.domain.com
+
+Any subsequential call to the above commandline example will make use of the seamless 
+connection sharing feature which spawns another notepad in the current connection to the
+specified server and then exit.
+
 .TP
 .BR "-B"
 Use the BackingStore of the Xserver instead of the integrated one in
