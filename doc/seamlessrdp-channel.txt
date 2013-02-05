@@ -1,8 +1,6 @@
 TODO
 ----
 
-* Command for executing new programs.
-
 * Commands for changing z order and focus.
 
 * Think about protocol version management
@@ -331,6 +329,16 @@ DESTROY
 -------
 
 Identical to the command sent from server to client.
+
+SPAWN
+-------
+
+Spawn a new application.
+
+Syntax:
+	SPAWN,<SERIAL>,<COMMANDLINE>
+
+Spawns a new application specified by commandline.
 
 
 Test Cases
