@@ -30,7 +30,7 @@
 
 #define CTRL_LINEBUF_SIZE 1024
 #define CTRL_RESULT_SIZE 32
-#define RDESKTOP_CTRLSOCK_STORE "/.local/var/run/rdesktop"
+#define RDESKTOP_CTRLSOCK_STORE "/.local/share/rdesktop/ctrl"
 
 #define CTRL_HASH_FLAG_SEAMLESS  1
 
