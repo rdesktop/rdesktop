@@ -208,7 +208,7 @@ iso_connect(char *server, char *username, char *domain, char *password,
 	if (!g_use_password_as_pin)
 		neg_proto |= PROTOCOL_HYBRID;
 	else
-		warning("CredSSP will be disabled if smartcard SSO is used.");
+		warning("CredSSP will be disabled if smartcard SSO is used.\n");
 #endif
 
       retry:
