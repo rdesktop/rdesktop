@@ -101,6 +101,7 @@ RD_BOOL g_lspci_enabled = False;
 RD_BOOL g_owncolmap = False;
 RD_BOOL g_ownbackstore = True;	/* We can't rely on external BackingStore */
 RD_BOOL g_seamless_rdp = False;
+RD_BOOL g_use_password_as_pin = False;
 char g_seamless_shell[512];
 char g_seamless_spawn_cmd[512];
 RD_BOOL g_user_quit = False;
@@ -583,6 +584,7 @@ main(int argc, char *argv[])
 #ifdef WITH_SCARD
 			case 'i':
 				flags |= RDP_LOGON_PASSWORD_IS_SC_PIN;
+				g_use_password_as_pin = True;
 				break;
 #endif
 			case 't':

@@ -23,6 +23,7 @@
 
 extern RD_BOOL g_encryption;
 extern RDP_VERSION g_rdp_version;
+extern RD_BOOL g_use_password_as_pin;
 
 static RD_BOOL g_negotiate_rdp_protocol = True;
 
@@ -201,10 +202,13 @@ iso_connect(char *server, char *username, char *domain, char *password,
 
 	g_negotiate_rdp_protocol = True;
 
-#ifdef WITH_CREDSSP
-	neg_proto = PROTOCOL_SSL | PROTOCOL_HYBRID;
-#else
 	neg_proto = PROTOCOL_SSL;
+
+#ifdef WITH_CREDSSP
+	if (!g_use_password_as_pin)
+		neg_proto |= PROTOCOL_HYBRID;
+	else
+		warning("CredSSP will be disabled if smartcard SSO is used.");
 #endif
 
       retry:
