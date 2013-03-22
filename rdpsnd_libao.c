@@ -4,6 +4,7 @@
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 2003-2008
    Copyright (C) GuoJunBo <guojunbo@ict.ac.cn> 2003
    Copyright (C) Michael Gernoth <mike@zerfleddert.de> 2005-2008
+   Copyright (C) 2013 Henrik Andersson
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -71,11 +72,11 @@ libao_open(void)
 		default_driver = ao_default_driver_id();
 	}
 
+	memset(&format, 0, sizeof(format));
 	format.bits = 16;
 	format.channels = 2;
 	format.rate = 44100;
 	format.byte_format = AO_FMT_NATIVE;
-
 
 	o_device = ao_open_live(default_driver, &format, NULL);
 	if (o_device == NULL)
