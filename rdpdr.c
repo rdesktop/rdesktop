@@ -2,7 +2,7 @@
    rdesktop: A Remote Desktop Protocol client.
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2004-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
-   Copyright 2010-2011 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2010-2013 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -413,6 +413,7 @@ rdpdr_process_irp(STREAM s)
 		default:
 
 			error("IRP for bad device %ld\n", device);
+			xfree(buffer);
 			return;
 	}
 
