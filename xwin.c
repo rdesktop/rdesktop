@@ -2279,6 +2279,14 @@ handle_button_event(XEvent xevent, RD_BOOL down)
 		}
 	}
 
+	/* Ignore mouse scroll button release event which will be handled as an additional
+	 * scrolldown event on the Windows side.
+	 */
+	if (!down && (button == MOUSE_FLAG_BUTTON4 || button == MOUSE_FLAG_BUTTON5))
+	{
+		return;
+	}
+
 	if (xevent.xmotion.window == g_wnd)
 	{
 		rdp_send_input(time(NULL), RDP_INPUT_MOUSE,
