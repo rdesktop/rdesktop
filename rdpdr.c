@@ -379,6 +379,14 @@ rdpdr_process_irp(STREAM s)
 	buffer = (uint8 *) xmalloc(1024);
 	buffer[0] = 0;
 
+	if (device >= RDPDR_MAX_DEVICES)
+	{
+		error("invalid irp device 0x%lx file 0x%lx id 0x%lx major 0x%lx minor 0x%lx\n", 
+		      device, file, id, major, minor);
+		xfree(buffer);
+		return;
+	}
+
 	switch (g_rdpdr_device[device].device_type)
 	{
 		case DEVICE_TYPE_SERIAL:
