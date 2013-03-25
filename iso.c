@@ -27,6 +27,12 @@ extern RD_BOOL g_use_password_as_pin;
 
 static RD_BOOL g_negotiate_rdp_protocol = True;
 
+extern char *g_sc_csp_name;
+extern char *g_sc_reader_name;
+extern char *g_sc_card_name;
+extern char *g_sc_container_name;
+
+
 /* Send a self-contained ISO PDU */
 static void
 iso_send_msg(uint8 code)
@@ -207,8 +213,10 @@ iso_connect(char *server, char *username, char *domain, char *password,
 #ifdef WITH_CREDSSP
 	if (!g_use_password_as_pin)
 		neg_proto |= PROTOCOL_HYBRID;
+	else if (g_sc_csp_name || g_sc_reader_name || g_sc_card_name || g_sc_container_name)
+		neg_proto |= PROTOCOL_HYBRID;
 	else
-		warning("CredSSP will be disabled if smartcard SSO is used.\n");
+		warning("Disables CredSSP due to missing smartcard information for SSO.\n");
 #endif
 
       retry:

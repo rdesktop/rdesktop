@@ -74,9 +74,9 @@ screen size. This requires that rdesktop has been compiled with RandR
 support.
 .TP
 .BR "-i"
-Use password as smartcard pin, if a valid user certificate is matched in smart card
-reader the password passed with \f-p\fR argument is used as pin for the smart card. This
-feature also requires that smart card redirection is used using \f-r scard\fR argument.
+Use password as smartcard pin. If a valid user certificate is matched in smart card
+reader the password passed with \f-p\fR argument is used as pin for the smart card.
+This feature also requires that smart card redirection is used using \f-r scard\fR argument.
 .TP
 .BR "-f"
 Enable fullscreen mode.  This overrides the window manager and causes the
@@ -241,6 +241,27 @@ Use RDP version 4.
 .BR "-5"
 Use RDP version 5 (default).
 .PP
+
+.SH "CredSSP Smartcard options"
+.TP
+.BR "--sc-csp-name <name>"
+Specify the CSP (Crypto Service Provider) to use on the windows side for the smartcard
+authentication. CSP is the driver for your smartcard and it seems like this is required
+to be specified for CredSSP authentication. For swedish NetID the following CSP name is
+used; "Net iD - CSP".
+.TP
+.BR "--sc-container-name <name>"
+Specify the container name, usally this is the username for default container and it seems
+like this is required to be specified for CredSSP authentication.
+.TP
+.BR "--sc-reader-name <name>"
+Specify the reader name to be used to prevent the pin code being sent to wrong card if there
+are several readers.
+.TP
+.BR "--sc-card-name <name>"
+Specify the card name for example; "Telia EID IP5a".
+.PP
+
 .SH "EXIT VALUES"
 .PP 
 .IP "\fB0\fP"

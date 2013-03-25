@@ -1,7 +1,7 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    CredSSP layer and kerberos support.
-   Copyright 2012 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2012-2013 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -19,6 +19,13 @@
 
 #include <gssapi/gssapi.h>
 #include "rdesktop.h"
+
+extern RD_BOOL g_use_password_as_pin;
+
+extern char *g_sc_csp_name;
+extern char *g_sc_reader_name;
+extern char *g_sc_card_name;
+extern char *g_sc_container_name;
 
 static gss_OID_desc _gss_spnego_krb5_mechanism_oid_desc =
 	{ 9, (void *) "\x2a\x86\x48\x86\xf7\x12\x01\x02\x02" };
@@ -285,6 +292,178 @@ cssp_encode_tspasswordcreds(char *username, char *password, char *domain)
 	return out;
 }
 
+/* KeySpecs from wincrypt.h */
+#define AT_KEYEXCHANGE 1
+#define AT_SIGNATURE   2
+
+static STREAM
+cssp_encode_tscspdatadetail(unsigned char keyspec, char *card, char *reader, char *container, char *csp)
+{
+	int i;
+	STREAM out;
+	STREAM h1, h2;
+	struct stream tmp = { 0 };
+	struct stream message = { 0 };
+
+	// allocate local streams
+	tmp.size = 4096;
+	tmp.data = xmalloc(tmp.size);
+	s_reset(&tmp);
+
+	message.size = 4096;
+	message.data = xmalloc(message.size);
+	s_reset(&message);
+
+	// keySpec [0]
+	s_reset(&tmp);
+	out_uint8(&tmp, keyspec);
+	s_mark_end(&tmp);
+	h2 = ber_wrap_hdr_data(BER_TAG_INTEGER, &tmp);
+	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 0, h2);
+	out_uint8p(&message, h1->data, s_length(h1));
+	s_free(h2);
+	s_free(h1);
+
+	// cardName [1]
+	if (card)
+        {
+		s_reset(&tmp);
+		for (i = 0; i < strlen(card); i++)
+			out_uint16_le(&tmp, card[i]);
+		s_mark_end(&tmp);
+		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
+		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 1, h2);
+		out_uint8p(&message, h1->data, s_length(h1));
+		s_free(h2);
+		s_free(h1);
+	}
+
+	// readerName [2]
+	if (reader)
+	{
+		s_reset(&tmp);
+		for (i = 0; i < strlen(reader); i++)
+			out_uint16_le(&tmp, reader[i]);
+		s_mark_end(&tmp);
+		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
+		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 2, h2);
+		out_uint8p(&message, h1->data, s_length(h1));
+		s_free(h2);
+		s_free(h1);
+	}
+
+	// containerName [3]
+	if (container)
+	{
+		s_reset(&tmp);
+		for (i = 0; i < strlen(container); i++)
+			out_uint16_le(&tmp, container[i]);
+		s_mark_end(&tmp);
+		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
+		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 3, h2);
+		out_uint8p(&message, h1->data, s_length(h1));
+		s_free(h2);
+		s_free(h1);
+	}
+
+	// cspName [4]
+	if (csp) {
+		s_reset(&tmp);
+		for (i = 0; i < strlen(csp); i++)
+			out_uint16_le(&tmp, csp[i]);
+		s_mark_end(&tmp);
+		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
+		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 4, h2);
+		out_uint8p(&message, h1->data, s_length(h1));
+		s_free(h2);
+		s_free(h1);
+	}
+
+	s_mark_end(&message);
+
+	// build message
+	out = ber_wrap_hdr_data(BER_TAG_SEQUENCE | BER_TAG_CONSTRUCTED, &message);
+
+	// cleanup
+	free(tmp.data);
+	free(message.data);
+	return out;	
+}
+
+static STREAM
+cssp_encode_tssmartcardcreds(char *username, char *password,char *domain)
+{
+	int i;
+	STREAM out, h1, h2;
+	struct stream tmp = { 0 };
+	struct stream message = { 0 };
+
+	// allocate local streams
+	tmp.size = 4096;
+	tmp.data = xmalloc(tmp.size);
+	s_reset(&tmp);
+
+	message.size = 4096;
+	message.data = xmalloc(message.size);
+	s_reset(&message);
+
+	// pin [0]
+	s_reset(&tmp);
+	for (i = 0; i < strlen(password); i++)
+		out_uint16_le(&tmp, password[i]);
+	s_mark_end(&tmp);
+	h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
+	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 0, h2);
+	out_uint8p(&message, h1->data, s_length(h1));
+	s_free(h2);
+	s_free(h1);
+
+	// cspData[1]        
+	h2 = cssp_encode_tscspdatadetail(AT_KEYEXCHANGE, g_sc_card_name, g_sc_reader_name, g_sc_container_name, g_sc_csp_name);
+	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 1, h2);
+	out_uint8p(&message, h1->data, s_length(h1));
+	s_free(h2);
+	s_free(h1);
+
+	// userHint [2]
+	if (username && strlen(username))
+	{
+		s_reset(&tmp);
+		for (i = 0; i < strlen(username); i++)
+			out_uint16_le(&tmp, username[i]);
+		s_mark_end(&tmp);
+		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
+		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 2, h2);
+		out_uint8p(&message, h1->data, s_length(h1));
+		s_free(h2);
+		s_free(h1);
+	}
+
+	// domainHint [3]
+	if (domain && strlen(domain))
+	{
+		s_reset(&tmp);
+		for (i = 0; i < strlen(domain); i++)
+			out_uint16_le(&tmp, domain[i]);
+		s_mark_end(&tmp);
+		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
+		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 3, h2);
+		out_uint8p(&message, h1->data, s_length(h1));
+		s_free(h2);
+		s_free(h1);
+	}
+
+	s_mark_end(&message);
+
+	// build message
+	out = ber_wrap_hdr_data(BER_TAG_SEQUENCE | BER_TAG_CONSTRUCTED, &message);
+
+	// cleanup
+	free(tmp.data);
+	free(message.data);
+	return out;	
+}
+
 STREAM
 cssp_encode_tscredentials(char *username, char *password, char *domain)
 {
@@ -304,7 +483,15 @@ cssp_encode_tscredentials(char *username, char *password, char *domain)
 
 	// credType [0]
 	s_reset(&tmp);
-	out_uint8(&tmp, 1);	// TSPasswordCreds
+	if (g_use_password_as_pin == False)
+	{
+		out_uint8(&tmp, 1);	// TSPasswordCreds
+	}
+	else
+	{
+		out_uint8(&tmp, 2);     // TSSmartCardCreds
+	}
+	
 	s_mark_end(&tmp);
 	h2 = ber_wrap_hdr_data(BER_TAG_INTEGER, &tmp);
 	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 0, h2);
@@ -313,7 +500,15 @@ cssp_encode_tscredentials(char *username, char *password, char *domain)
 	s_free(h1);
 
 	// credentials [1]
-	h3 = cssp_encode_tspasswordcreds(username, password, domain);
+	if (g_use_password_as_pin == False)
+	{
+		h3 = cssp_encode_tspasswordcreds(username, password, domain);
+	}
+	else
+	{
+		h3 = cssp_encode_tssmartcardcreds(username, password, domain);
+	}
+
 	h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, h3);
 	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 1, h2);
 	out_uint8p(&message, h1->data, s_length(h1));
