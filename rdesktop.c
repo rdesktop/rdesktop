@@ -21,7 +21,6 @@
 
 #include <stdarg.h>		/* va_list va_start va_end */
 #include <unistd.h>		/* read close getuid getgid getpid getppid gethostname */
-#include <getopt.h>
 #include <fcntl.h>		/* open */
 #include <pwd.h>		/* getpwuid */
 #include <termios.h>		/* tcgetattr tcsetattr */
@@ -132,26 +131,10 @@ RD_BOOL g_rdpsnd = False;
 char g_codepage[16] = "";
 #endif
 
-
-
-
 char *g_sc_csp_name = NULL; /* Smartcard CSP name  */
 char *g_sc_reader_name = NULL;
 char *g_sc_card_name = NULL;
 char *g_sc_container_name = NULL;
-#define OPT_BASE 256
-#define OPT_SC_CSP_NAME (OPT_BASE+1)
-#define OPT_SC_READER_NAME (OPT_BASE+2)
-#define OPT_SC_CARD_NAME (OPT_BASE+3)
-#define OPT_SC_CONTAINER_NAME (OPT_BASE+4)
-
-struct option longopts[] = {
-	{"sc-csp-name", 1, 0, OPT_SC_CSP_NAME},
-	{"sc-reader-name", 1, 0, OPT_SC_READER_NAME},
-	{"sc-card-name", 1, 0, OPT_SC_CARD_NAME},
-	{"sc-container-name", 1, 0, OPT_SC_CONTAINER_NAME},
-	{NULL}
-};
 
 extern RDPDR_DEVICE g_rdpdr_device[];
 extern uint32 g_num_devices;
@@ -259,12 +242,12 @@ usage(char *program)
 	fprintf(stderr, "   -4: use RDP version 4\n");
 	fprintf(stderr, "   -5: use RDP version 5 (default)\n");
 #ifdef WITH_SCARD
-	fprintf(stderr, "\nCredSSP Smartcard hinting\n");
-	fprintf(stderr, "   --sc-csp-name        Specifies the Crypto Service Provider name which\n");
-	fprintf(stderr, "                        is used to authenticate the user by smartcard\n");
-	fprintf(stderr, "   --sc-container-name  Specifies the container name, this is usally the username\n");
-	fprintf(stderr, "   --sc-reader-name     Smartcard reader name to use\n");
-	fprintf(stderr, "   --sc-card-name       Specifies the card name of the smartcard to use\n");
+	fprintf(stderr, "   -o: name=value: Adds an additional option to rdesktop.\n");
+	fprintf(stderr, "           sc-csp-name        Specifies the Crypto Service Provider name which\n");
+	fprintf(stderr, "                              is used to authenticate the user by smartcard\n");
+	fprintf(stderr, "           sc-container-name  Specifies the container name, this is usally the username\n");
+	fprintf(stderr, "           sc-reader-name     Smartcard reader name to use\n");
+	fprintf(stderr, "           sc-card-name       Specifies the card name of the smartcard to use\n");
 #endif
 
 	fprintf(stderr, "\n");
@@ -549,8 +532,8 @@ main(int argc, char *argv[])
 #else
 #define VNCOPT
 #endif
-	while ((c = getopt_long(argc, argv,
-				VNCOPT "A:u:L:d:s:c:p:n:k:g:fbBeEitmzCDKS:T:NX:a:x:Pr:045h?", longopts, &longidx)) != -1)
+	while ((c = getopt(argc, argv,
+				VNCOPT "A:u:L:d:s:c:p:n:k:g:o:fbBeEitmzCDKS:T:NX:a:x:Pr:045h?")) != -1)
 	{
 		switch (c)
 		{
@@ -896,21 +879,24 @@ main(int argc, char *argv[])
 				g_rdp_version = RDP_V5;
 				break;
 #if WITH_SCARD
- 		        case OPT_SC_CSP_NAME:
-				g_sc_csp_name = strdup(optarg);
-				break;
+		        case 'o': 
+			{
+				char *p = strchr(optarg, '=');
+				if (p == NULL) {
+					warning("Skipping option '%s' specified, lacks name=value format.\n");
+					continue;
+				}
 
- 		        case OPT_SC_READER_NAME:
-				g_sc_reader_name = strdup(optarg);
-				break;
-
-		        case OPT_SC_CARD_NAME:
-				g_sc_card_name = strdup(optarg);
-				break;
-
-		        case OPT_SC_CONTAINER_NAME:
-				g_sc_container_name = strdup(optarg);
-				break;
+				if (strncmp(optarg, "sc-csp-name", strlen("sc-scp-name")) == 0)
+					g_sc_csp_name = strdup(p+1);
+				else if (strncmp(optarg, "sc-reader-name", strlen("sc-reader-name")) == 0)
+					g_sc_reader_name = strdup(p+1);
+				else if (strncmp(optarg, "sc-card-name", strlen("sc-card-name")) == 0)
+					g_sc_card_name = strdup(p+1);
+				else if (strncmp(optarg, "sc-container-name", strlen("sc-container-name")) == 0)
+					g_sc_container_name = strdup(p+1);
+				    
+			} break;
 #endif
 			case 'h':
 			case '?':
