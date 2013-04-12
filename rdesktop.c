@@ -133,7 +133,7 @@ RD_BOOL g_rdpsnd = False;
 char g_codepage[16] = "";
 #endif
 
-char *g_sc_csp_name = NULL; /* Smartcard CSP name  */
+char *g_sc_csp_name = NULL;	/* Smartcard CSP name  */
 char *g_sc_reader_name = NULL;
 char *g_sc_card_name = NULL;
 char *g_sc_container_name = NULL;
@@ -245,11 +245,15 @@ usage(char *program)
 	fprintf(stderr, "   -5: use RDP version 5 (default)\n");
 #ifdef WITH_SCARD
 	fprintf(stderr, "   -o: name=value: Adds an additional option to rdesktop.\n");
-	fprintf(stderr, "           sc-csp-name        Specifies the Crypto Service Provider name which\n");
-	fprintf(stderr, "                              is used to authenticate the user by smartcard\n");
-	fprintf(stderr, "           sc-container-name  Specifies the container name, this is usally the username\n");
+	fprintf(stderr,
+		"           sc-csp-name        Specifies the Crypto Service Provider name which\n");
+	fprintf(stderr,
+		"                              is used to authenticate the user by smartcard\n");
+	fprintf(stderr,
+		"           sc-container-name  Specifies the container name, this is usally the username\n");
 	fprintf(stderr, "           sc-reader-name     Smartcard reader name to use\n");
-	fprintf(stderr, "           sc-card-name       Specifies the card name of the smartcard to use\n");
+	fprintf(stderr,
+		"           sc-card-name       Specifies the card name of the smartcard to use\n");
 #endif
 
 	fprintf(stderr, "\n");
@@ -536,7 +540,7 @@ main(int argc, char *argv[])
 #define VNCOPT
 #endif
 	while ((c = getopt(argc, argv,
-				VNCOPT "A:u:L:d:s:c:p:n:k:g:o:fbBeEitmzCDKS:T:NX:a:x:Pr:045h?")) != -1)
+			   VNCOPT "A:u:L:d:s:c:p:n:k:g:o:fbBeEitmzCDKS:T:NX:a:x:Pr:045h?")) != -1)
 	{
 		switch (c)
 		{
@@ -882,24 +886,33 @@ main(int argc, char *argv[])
 				g_rdp_version = RDP_V5;
 				break;
 #if WITH_SCARD
-		        case 'o': 
-			{
-				char *p = strchr(optarg, '=');
-				if (p == NULL) {
-					warning("Skipping option '%s' specified, lacks name=value format.\n");
-					continue;
-				}
+			case 'o':
+				{
+					char *p = strchr(optarg, '=');
+					if (p == NULL)
+					{
+						warning("Skipping option '%s' specified, lacks name=value format.\n");
+						continue;
+					}
 
-				if (strncmp(optarg, "sc-csp-name", strlen("sc-scp-name")) == 0)
-					g_sc_csp_name = strdup(p+1);
-				else if (strncmp(optarg, "sc-reader-name", strlen("sc-reader-name")) == 0)
-					g_sc_reader_name = strdup(p+1);
-				else if (strncmp(optarg, "sc-card-name", strlen("sc-card-name")) == 0)
-					g_sc_card_name = strdup(p+1);
-				else if (strncmp(optarg, "sc-container-name", strlen("sc-container-name")) == 0)
-					g_sc_container_name = strdup(p+1);
-				    
-			} break;
+					if (strncmp(optarg, "sc-csp-name", strlen("sc-scp-name")) ==
+					    0)
+						g_sc_csp_name = strdup(p + 1);
+					else if (strncmp
+						 (optarg, "sc-reader-name",
+						  strlen("sc-reader-name")) == 0)
+						g_sc_reader_name = strdup(p + 1);
+					else if (strncmp
+						 (optarg, "sc-card-name",
+						  strlen("sc-card-name")) == 0)
+						g_sc_card_name = strdup(p + 1);
+					else if (strncmp
+						 (optarg, "sc-container-name",
+						  strlen("sc-container-name")) == 0)
+						g_sc_container_name = strdup(p + 1);
+
+				}
+				break;
 #endif
 			case 'h':
 			case '?':
@@ -1098,7 +1111,7 @@ main(int argc, char *argv[])
 			if (time(NULL) - g_reconnect_random_ts > (3600 + 600))
 				return EX_PROTOCOL;
 
-			fprintf(stderr,	"Failed to connect, retry in 4 secs...\n");
+			fprintf(stderr, "Failed to connect, retry in 4 secs...\n");
 			sleep(4);
 			continue;
 		}

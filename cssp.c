@@ -297,7 +297,8 @@ cssp_encode_tspasswordcreds(char *username, char *password, char *domain)
 #define AT_SIGNATURE   2
 
 static STREAM
-cssp_encode_tscspdatadetail(unsigned char keyspec, char *card, char *reader, char *container, char *csp)
+cssp_encode_tscspdatadetail(unsigned char keyspec, char *card, char *reader, char *container,
+			    char *csp)
 {
 	int i;
 	STREAM out;
@@ -326,7 +327,7 @@ cssp_encode_tscspdatadetail(unsigned char keyspec, char *card, char *reader, cha
 
 	// cardName [1]
 	if (card)
-        {
+	{
 		s_reset(&tmp);
 		for (i = 0; i < strlen(card); i++)
 			out_uint16_le(&tmp, card[i]);
@@ -367,7 +368,8 @@ cssp_encode_tscspdatadetail(unsigned char keyspec, char *card, char *reader, cha
 	}
 
 	// cspName [4]
-	if (csp) {
+	if (csp)
+	{
 		s_reset(&tmp);
 		for (i = 0; i < strlen(csp); i++)
 			out_uint16_le(&tmp, csp[i]);
@@ -387,11 +389,11 @@ cssp_encode_tscspdatadetail(unsigned char keyspec, char *card, char *reader, cha
 	// cleanup
 	free(tmp.data);
 	free(message.data);
-	return out;	
+	return out;
 }
 
 static STREAM
-cssp_encode_tssmartcardcreds(char *username, char *password,char *domain)
+cssp_encode_tssmartcardcreds(char *username, char *password, char *domain)
 {
 	int i;
 	STREAM out, h1, h2;
@@ -419,7 +421,8 @@ cssp_encode_tssmartcardcreds(char *username, char *password,char *domain)
 	s_free(h1);
 
 	// cspData[1]        
-	h2 = cssp_encode_tscspdatadetail(AT_KEYEXCHANGE, g_sc_card_name, g_sc_reader_name, g_sc_container_name, g_sc_csp_name);
+	h2 = cssp_encode_tscspdatadetail(AT_KEYEXCHANGE, g_sc_card_name, g_sc_reader_name,
+					 g_sc_container_name, g_sc_csp_name);
 	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 1, h2);
 	out_uint8p(&message, h1->data, s_length(h1));
 	s_free(h2);
@@ -461,7 +464,7 @@ cssp_encode_tssmartcardcreds(char *username, char *password,char *domain)
 	// cleanup
 	free(tmp.data);
 	free(message.data);
-	return out;	
+	return out;
 }
 
 STREAM
@@ -489,9 +492,9 @@ cssp_encode_tscredentials(char *username, char *password, char *domain)
 	}
 	else
 	{
-		out_uint8(&tmp, 2);     // TSSmartCardCreds
+		out_uint8(&tmp, 2);	// TSSmartCardCreds
 	}
-	
+
 	s_mark_end(&tmp);
 	h2 = ber_wrap_hdr_data(BER_TAG_INTEGER, &tmp);
 	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 0, h2);
