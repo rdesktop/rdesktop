@@ -64,6 +64,7 @@ static struct stream g_in;
 static struct stream g_out[STREAM_COUNT];
 int g_tcp_port_rdp = TCP_PORT_RDP;
 extern RD_BOOL g_user_quit;
+extern RD_BOOL g_network_error;
 
 /* wait till socket is ready to write or timeout */
 static RD_BOOL
@@ -140,6 +141,10 @@ tcp_send(STREAM s)
 				else
 				{
 					error("SSL_write: %d (%s)\n", ssl_err, TCP_STRERROR);
+					g_network_error = True;
+#ifdef WITH_SCARD
+					scard_unlock(SCARD_LOCK_TCP);
+#endif
 					return;
 				}
 			}
@@ -157,6 +162,10 @@ tcp_send(STREAM s)
 				else
 				{
 					error("send: %s\n", TCP_STRERROR);
+					g_network_error = True;
+#ifdef WITH_SCARD
+					scard_unlock(SCARD_LOCK_TCP);
+#endif
 					return;
 				}
 			}
@@ -224,6 +233,7 @@ tcp_recv(STREAM s, uint32 length)
 				}
 
 				ERR_print_errors_fp(stdout);
+				g_network_error = True;
 				return NULL;
 			}
 
@@ -234,6 +244,7 @@ tcp_recv(STREAM s, uint32 length)
 			else if (ssl_err != SSL_ERROR_NONE)
 			{
 				error("SSL_read: %d (%s)\n", ssl_err, TCP_STRERROR);
+				g_network_error = True;
 				return NULL;
 			}
 
@@ -250,6 +261,7 @@ tcp_recv(STREAM s, uint32 length)
 				else
 				{
 					error("recv: %s\n", TCP_STRERROR);
+					g_network_error = True;
 					return NULL;
 				}
 			}
@@ -531,6 +543,12 @@ void
 tcp_reset_state(void)
 {
 	int i;
+
+	if (g_ssl)
+	{
+		SSL_free(g_ssl);
+		g_ssl = NULL;
+	}
 
 	g_sock = -1;		/* reset socket */
 

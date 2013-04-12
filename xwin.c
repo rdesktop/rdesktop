@@ -2160,6 +2160,12 @@ ui_resize_window()
 	}
 }
 
+RD_BOOL
+ui_have_window()
+{
+	return g_wnd ? True : False;
+}
+
 void
 ui_destroy_window(void)
 {

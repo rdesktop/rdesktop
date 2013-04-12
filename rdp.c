@@ -54,6 +54,7 @@ extern RD_BOOL g_bitmap_cache;
 extern RD_BOOL g_bitmap_cache_persist_enable;
 extern RD_BOOL g_numlock_sync;
 extern RD_BOOL g_pending_resize;
+extern RD_BOOL g_network_error;
 
 uint8 *g_next_packet;
 uint32 g_rdp_shareid;
@@ -72,6 +73,7 @@ extern uint32 g_redirect_flags;
 
 extern uint32 g_reconnect_logonid;
 extern char g_reconnect_random[16];
+extern time_t g_reconnect_random_ts;
 extern RD_BOOL g_has_reconnect_random;
 extern uint8 g_client_random[SEC_RANDOM_SIZE];
 
@@ -1369,6 +1371,7 @@ process_pdu_logon(STREAM s)
 			in_uint32_le(s, g_reconnect_logonid);
 			in_uint8a(s, g_reconnect_random, 16);
 			g_has_reconnect_random = True;
+			g_reconnect_random_ts = time(NULL);
 			DEBUG(("Saving auto-reconnect cookie, id=%u\n", g_reconnect_logonid));
 		}
 	}
@@ -1644,6 +1647,9 @@ rdp_connect(char *server, uint32 flags, char *domain, char *password,
 	/* run RDP loop until first licence demand active PDU */
 	while (!g_rdp_shareid)
 	{
+		if (g_network_error)
+			return False;
+
 		if (!rdp_loop(&deactivated, &ext_disc_reason))
 			return False;
 	}

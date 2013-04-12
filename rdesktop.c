@@ -80,6 +80,7 @@ int g_pos = 0;			/* 0 position unspecified,
 extern int g_tcp_port_rdp;
 int g_server_depth = -1;
 int g_win_button_size = 0;	/* If zero, disable single app mode */
+RD_BOOL g_network_error = False;
 RD_BOOL g_bitmap_compression = True;
 RD_BOOL g_sendmotion = True;
 RD_BOOL g_bitmap_cache = True;
@@ -119,6 +120,7 @@ uint32 g_redirect_flags = 0;
 
 uint32 g_reconnect_logonid = 0;
 char g_reconnect_random[16];
+time_t g_reconnect_random_ts;
 RD_BOOL g_has_reconnect_random = False;
 uint8 g_client_random[SEC_RANDOM_SIZE];
 RD_BOOL g_pending_resize = False;
@@ -489,6 +491,7 @@ main(int argc, char *argv[])
 	char password[64];
 	char shell[256];
 	char directory[256];
+	RD_BOOL reconnect_loop;
 	RD_BOOL prompt_password, deactivated;
 	struct passwd *pw;
 	uint32 flags, ext_disc_reason = 0;
@@ -1066,7 +1069,7 @@ main(int argc, char *argv[])
 		lspci_init();
 
 	rdpdr_init();
-
+	reconnect_loop = False;
 	while (1)
 	{
 		rdesktop_reset_state();
@@ -1084,7 +1087,21 @@ main(int argc, char *argv[])
 
 		ui_init_connection();
 		if (!rdp_connect(server, flags, domain, password, shell, directory, g_redirect))
-			return EX_PROTOCOL;
+		{
+
+			g_network_error = False;
+
+			if (reconnect_loop == False)
+				return EX_PROTOCOL;
+
+			/* check if auto reconnect cookie has timed out */
+			if (time(NULL) - g_reconnect_random_ts > (3600 + 600))
+				return EX_PROTOCOL;
+
+			fprintf(stderr,	"Failed to connect, retry in 4 secs...\n");
+			sleep(4);
+			continue;
+		}
 
 		/* By setting encryption to False here, we have an encrypted login 
 		   packet but unencrypted transfer of other packets */
@@ -1095,11 +1112,15 @@ main(int argc, char *argv[])
 		DEBUG(("Connection successful.\n"));
 		memset(password, 0, sizeof(password));
 
-		if (!g_redirect)
+		/* only create a window if we dont have one intialized */
+		if (!ui_have_window())
+		{
 			if (!ui_create_window())
 				return EX_OSERR;
+		}
 
 		g_redirect = False;
+		reconnect_loop = False;
 		rdp_main_loop(&deactivated, &ext_disc_reason);
 
 		DEBUG(("Disconnecting...\n"));
@@ -1109,12 +1130,22 @@ main(int argc, char *argv[])
 		if (g_redirect)
 			continue;
 
+		/* handle network error and start autoreconnect */
+		if (g_network_error)
+		{
+			g_network_error = False;
+			reconnect_loop = True;
+			continue;
+		}
+
 		ui_seamless_end();
 		ui_destroy_window();
+
+		/* Enter a reconnect loop if we have a pending resize request */
 		if (g_pending_resize)
 		{
-			/* If we have a pending resize, reconnect using the new size, rather than exit */
 			g_pending_resize = False;
+			reconnect_loop = True;
 			continue;
 		}
 		break;
