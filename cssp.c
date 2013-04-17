@@ -32,6 +32,26 @@ static gss_OID_desc _gss_spnego_krb5_mechanism_oid_desc =
 
 
 static void
+s_realloc(STREAM s, unsigned int size)
+{
+	unsigned char *data;
+
+	if(s->size >= size)
+		return;
+
+	data = s->data;
+	s->size = size;
+	s->data = xrealloc(data, size);
+	s->p = s->data + (s->p - data);
+	s->end = s->data + (s->end - data);
+	s->iso_hdr = s->data + (s->iso_hdr - data);
+	s->mcs_hdr = s->data + (s->mcs_hdr - data);
+	s->sec_hdr = s->data + (s->sec_hdr - data);
+	s->rdp_hdr = s->data + (s->rdp_hdr - data);
+	s->channel_hdr = s->data + (s->channel_hdr - data);
+}
+
+static void
 s_free(STREAM s)
 {
 	free(s->data);
@@ -45,7 +65,7 @@ ber_wrap_hdr_data(int tagval, STREAM in)
 	int size = s_length(in) + 16;
 
 	out = xmalloc(sizeof(struct stream));
-
+	memset(out, 0, sizeof(struct stream));
 	out->data = xmalloc(size);
 	out->size = size;
 	out->p = out->data;
@@ -239,56 +259,57 @@ cssp_encode_tspasswordcreds(char *username, char *password, char *domain)
 	struct stream tmp = { 0 };
 	struct stream message = { 0 };
 
-	// allocate local streams
-	tmp.size = 4096;
-	tmp.data = xmalloc(tmp.size);
-	s_reset(&tmp);
-
-	message.size = 4096;
-	message.data = xmalloc(message.size);
-	s_reset(&message);
+	memset(&tmp, 0, sizeof(tmp));
+	memset(&message, 0, sizeof(message));
 
 	// domainName [0]
+	s_realloc(&tmp, strlen(domain)*sizeof(uint16));
 	s_reset(&tmp);
 	for (i = 0; i < strlen(domain); i++)
 		out_uint16_le(&tmp, domain[i]);
 	s_mark_end(&tmp);
 	h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 0, h2);
+	s_realloc(&message, s_length(&message) + s_length(h1));
 	out_uint8p(&message, h1->data, s_length(h1));
+	s_mark_end(&message);
 	s_free(h2);
 	s_free(h1);
 
 	// userName [1]
+	s_realloc(&tmp, strlen(username)*sizeof(uint16));
 	s_reset(&tmp);
 	for (i = 0; i < strlen(username); i++)
 		out_uint16_le(&tmp, username[i]);
 	s_mark_end(&tmp);
 	h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 1, h2);
+	s_realloc(&message, s_length(&message) + s_length(h1));
 	out_uint8p(&message, h1->data, s_length(h1));
+	s_mark_end(&message);
 	s_free(h2);
 	s_free(h1);
 
 	// password [2]
+	s_realloc(&tmp, strlen(password)*sizeof(uint16));
 	s_reset(&tmp);
 	for (i = 0; i < strlen(password); i++)
 		out_uint16_le(&tmp, password[i]);
 	s_mark_end(&tmp);
 	h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 2, h2);
+	s_realloc(&message, s_length(&message) + s_length(h1));
 	out_uint8p(&message, h1->data, s_length(h1));
+	s_mark_end(&message);
 	s_free(h2);
 	s_free(h1);
-
-	s_mark_end(&message);
 
 	// build message
 	out = ber_wrap_hdr_data(BER_TAG_SEQUENCE | BER_TAG_CONSTRUCTED, &message);
 
 	// cleanup
-	free(tmp.data);
-	free(message.data);
+	xfree(tmp.data);
+	xfree(message.data);
 	return out;
 }
 
@@ -306,35 +327,32 @@ cssp_encode_tscspdatadetail(unsigned char keyspec, char *card, char *reader, cha
 	struct stream tmp = { 0 };
 	struct stream message = { 0 };
 
-	// allocate local streams
-	tmp.size = 4096;
-	tmp.data = xmalloc(tmp.size);
-	s_reset(&tmp);
-
-	message.size = 4096;
-	message.data = xmalloc(message.size);
-	s_reset(&message);
-
 	// keySpec [0]
+	s_realloc(&tmp, sizeof(uint8));
 	s_reset(&tmp);
 	out_uint8(&tmp, keyspec);
 	s_mark_end(&tmp);
 	h2 = ber_wrap_hdr_data(BER_TAG_INTEGER, &tmp);
 	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 0, h2);
+	s_realloc(&message, s_length(&message) + s_length(h1));
 	out_uint8p(&message, h1->data, s_length(h1));
+	s_mark_end(&message);
 	s_free(h2);
 	s_free(h1);
 
 	// cardName [1]
 	if (card)
 	{
+		s_realloc(&tmp, strlen(card) * sizeof(uint16));
 		s_reset(&tmp);
 		for (i = 0; i < strlen(card); i++)
 			out_uint16_le(&tmp, card[i]);
 		s_mark_end(&tmp);
 		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 1, h2);
+		s_realloc(&message, s_length(&message) + s_length(h1));
 		out_uint8p(&message, h1->data, s_length(h1));
+		s_mark_end(&message);
 		s_free(h2);
 		s_free(h1);
 	}
@@ -342,13 +360,16 @@ cssp_encode_tscspdatadetail(unsigned char keyspec, char *card, char *reader, cha
 	// readerName [2]
 	if (reader)
 	{
+		s_realloc(&tmp, strlen(reader) * sizeof(uint16));
 		s_reset(&tmp);
 		for (i = 0; i < strlen(reader); i++)
 			out_uint16_le(&tmp, reader[i]);
 		s_mark_end(&tmp);
 		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 2, h2);
+		s_realloc(&message, s_length(&message) + s_length(h1));
 		out_uint8p(&message, h1->data, s_length(h1));
+		s_mark_end(&message);
 		s_free(h2);
 		s_free(h1);
 	}
@@ -356,13 +377,16 @@ cssp_encode_tscspdatadetail(unsigned char keyspec, char *card, char *reader, cha
 	// containerName [3]
 	if (container)
 	{
+		s_realloc(&tmp, strlen(container) * sizeof(uint16));
 		s_reset(&tmp);
 		for (i = 0; i < strlen(container); i++)
 			out_uint16_le(&tmp, container[i]);
 		s_mark_end(&tmp);
 		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 3, h2);
+		s_realloc(&message, s_length(&message) + s_length(h1));
 		out_uint8p(&message, h1->data, s_length(h1));
+		s_mark_end(&message);
 		s_free(h2);
 		s_free(h1);
 	}
@@ -370,13 +394,16 @@ cssp_encode_tscspdatadetail(unsigned char keyspec, char *card, char *reader, cha
 	// cspName [4]
 	if (csp)
 	{
+		s_realloc(&tmp, strlen(csp) * sizeof(uint16));
 		s_reset(&tmp);
 		for (i = 0; i < strlen(csp); i++)
 			out_uint16_le(&tmp, csp[i]);
 		s_mark_end(&tmp);
 		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 4, h2);
+		s_realloc(&message, s_length(&message) + s_length(h1));
 		out_uint8p(&message, h1->data, s_length(h1));
+		s_mark_end(&message);
 		s_free(h2);
 		s_free(h1);
 	}
@@ -400,23 +427,17 @@ cssp_encode_tssmartcardcreds(char *username, char *password, char *domain)
 	struct stream tmp = { 0 };
 	struct stream message = { 0 };
 
-	// allocate local streams
-	tmp.size = 4096;
-	tmp.data = xmalloc(tmp.size);
-	s_reset(&tmp);
-
-	message.size = 4096;
-	message.data = xmalloc(message.size);
-	s_reset(&message);
-
 	// pin [0]
+	s_realloc(&tmp, strlen(password) * sizeof(uint16));
 	s_reset(&tmp);
 	for (i = 0; i < strlen(password); i++)
 		out_uint16_le(&tmp, password[i]);
 	s_mark_end(&tmp);
 	h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 0, h2);
+	s_realloc(&message, s_length(&message) + s_length(h1));
 	out_uint8p(&message, h1->data, s_length(h1));
+	s_mark_end(&message);
 	s_free(h2);
 	s_free(h1);
 
@@ -424,20 +445,25 @@ cssp_encode_tssmartcardcreds(char *username, char *password, char *domain)
 	h2 = cssp_encode_tscspdatadetail(AT_KEYEXCHANGE, g_sc_card_name, g_sc_reader_name,
 					 g_sc_container_name, g_sc_csp_name);
 	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 1, h2);
+	s_realloc(&message, s_length(&message) + s_length(h1));
 	out_uint8p(&message, h1->data, s_length(h1));
+	s_mark_end(&message);
 	s_free(h2);
 	s_free(h1);
 
 	// userHint [2]
 	if (username && strlen(username))
 	{
+		s_realloc(&tmp, strlen(username) * sizeof(uint16));
 		s_reset(&tmp);
 		for (i = 0; i < strlen(username); i++)
 			out_uint16_le(&tmp, username[i]);
 		s_mark_end(&tmp);
 		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 2, h2);
+		s_realloc(&message, s_length(&message) + s_length(h1));
 		out_uint8p(&message, h1->data, s_length(h1));
+		s_mark_end(&message);
 		s_free(h2);
 		s_free(h1);
 	}
@@ -445,13 +471,16 @@ cssp_encode_tssmartcardcreds(char *username, char *password, char *domain)
 	// domainHint [3]
 	if (domain && strlen(domain))
 	{
+		s_realloc(&tmp, strlen(domain) * sizeof(uint16));
 		s_reset(&tmp);
 		for (i = 0; i < strlen(domain); i++)
 			out_uint16_le(&tmp, domain[i]);
 		s_mark_end(&tmp);
 		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 3, h2);
+		s_realloc(&message, s_length(&message) + s_length(h1));
 		out_uint8p(&message, h1->data, s_length(h1));
+		s_mark_end(&message);
 		s_free(h2);
 		s_free(h1);
 	}
@@ -475,16 +504,8 @@ cssp_encode_tscredentials(char *username, char *password, char *domain)
 	struct stream tmp = { 0 };
 	struct stream message = { 0 };
 
-	// allocate local streams
-	tmp.size = 4096;
-	tmp.data = xmalloc(tmp.size);
-	s_reset(&tmp);
-
-	message.size = 4096;
-	message.data = xmalloc(message.size);
-	s_reset(&message);
-
 	// credType [0]
+	s_realloc(&tmp, sizeof(uint8));
 	s_reset(&tmp);
 	if (g_use_password_as_pin == False)
 	{
@@ -498,7 +519,9 @@ cssp_encode_tscredentials(char *username, char *password, char *domain)
 	s_mark_end(&tmp);
 	h2 = ber_wrap_hdr_data(BER_TAG_INTEGER, &tmp);
 	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 0, h2);
+	s_realloc(&message, s_length(&message) + s_length(h1));
 	out_uint8p(&message, h1->data, s_length(h1));
+	s_mark_end(&message);
 	s_free(h2);
 	s_free(h1);
 
@@ -514,12 +537,12 @@ cssp_encode_tscredentials(char *username, char *password, char *domain)
 
 	h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, h3);
 	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 1, h2);
+	s_realloc(&message, s_length(&message) + s_length(h1));
 	out_uint8p(&message, h1->data, s_length(h1));
+	s_mark_end(&message);
 	s_free(h3);
 	s_free(h2);
 	s_free(h1);
-
-	s_mark_end(&message);
 
 	// Construct ASN.1 message
 	out = ber_wrap_hdr_data(BER_TAG_SEQUENCE | BER_TAG_CONSTRUCTED, &message);
@@ -531,8 +554,8 @@ cssp_encode_tscredentials(char *username, char *password, char *domain)
 #endif
 
 	// cleanup
-	free(message.data);
-	free(tmp.data);
+	xfree(message.data);
+	xfree(tmp.data);
 
 	return out;
 }
@@ -546,23 +569,19 @@ cssp_send_tsrequest(STREAM token, STREAM auth, STREAM pubkey)
 	struct stream tmp = { 0 };
 	struct stream message = { 0 };
 
-	// allocate local streams
-	tmp.size = 4096;
-	tmp.data = xmalloc(tmp.size);
-	s_reset(&tmp);
-
-	message.size = 4096;
-	message.data = xmalloc(message.size);
-	s_reset(&message);
+	memset(&message, 0, sizeof(message));
+	memset(&tmp, 0, sizeof(tmp));
 
 	// version [0]
+	s_realloc(&tmp, sizeof(uint8));
 	s_reset(&tmp);
 	out_uint8(&tmp, 2);
 	s_mark_end(&tmp);
-
 	h2 = ber_wrap_hdr_data(BER_TAG_INTEGER, &tmp);
 	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 0, h2);
+	s_realloc(&message, s_length(&message) + s_length(h1));
 	out_uint8p(&message, h1->data, s_length(h1));
+	s_mark_end(&message);
 	s_free(h2);
 	s_free(h1);
 
@@ -574,9 +593,9 @@ cssp_send_tsrequest(STREAM token, STREAM auth, STREAM pubkey)
 		h3 = ber_wrap_hdr_data(BER_TAG_SEQUENCE | BER_TAG_CONSTRUCTED, h4);
 		h2 = ber_wrap_hdr_data(BER_TAG_SEQUENCE | BER_TAG_CONSTRUCTED, h3);
 		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 1, h2);
-
+		s_realloc(&message, s_length(&message) + s_length(h1));	
 		out_uint8p(&message, h1->data, s_length(h1));
-
+		s_mark_end(&message);
 		s_free(h5);
 		s_free(h4);
 		s_free(h3);
@@ -590,6 +609,7 @@ cssp_send_tsrequest(STREAM token, STREAM auth, STREAM pubkey)
 		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, auth);
 		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 2, h2);
 
+		s_realloc(&message, s_length(&message) + s_length(h1));	
 		out_uint8p(&message, h1->data, s_length(h1));
 
 		s_free(h2);
@@ -602,8 +622,9 @@ cssp_send_tsrequest(STREAM token, STREAM auth, STREAM pubkey)
 		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, pubkey);
 		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 3, h2);
 
+		s_realloc(&message, s_length(&message) + s_length(h1));	
 		out_uint8p(&message, h1->data, s_length(h1));
-
+		s_mark_end(&message);
 		s_free(h2);
 		s_free(h1);
 	}
@@ -626,8 +647,8 @@ cssp_send_tsrequest(STREAM token, STREAM auth, STREAM pubkey)
 	tcp_send(s);
 
 	// cleanup
-	free(message.data);
-	free(tmp.data);
+	xfree(message.data);
+	xfree(tmp.data);
 
 	return True;
 }
@@ -769,12 +790,6 @@ cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 	streamsave(&pubkey, "PubKey.raw");
 #endif
 
-
-	// TODO: Could this be prettier ??
-	token.data = token.p = xmalloc(4096);
-	token.size = 4096;
-	token.end = token.data + token.size;
-
 	// Enter the spnego loop
 	OM_uint32 actual_services;
 	gss_OID actual_mech;
@@ -814,24 +829,28 @@ cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 			cssp_gss_report_error(GSS_C_GSS_CODE, "CredSSP: SPNEGO negotiation failed.",
 					      major_status, minor_status);
 #endif
-			return False;
+			goto bail_out;
 		}
 
 		// validate required services
 		if (!(actual_services & GSS_C_CONF_FLAG))
 		{
 			error("CredSSP: Confidiality service required but is not available.\n");
-			return False;
+			goto bail_out;
 		}
 
 		// Send token to server
 		if (output_tok.length != 0)
 		{
+			if (output_tok.length > token.size)
+				s_realloc(&token, output_tok.length);
+			s_reset(&token);
+
 			out_uint8p(&token, output_tok.value, output_tok.length);
 			s_mark_end(&token);
 
 			if (!cssp_send_tsrequest(&token, NULL, NULL))
-				return False;
+				goto bail_out;
 
 			(void) gss_release_buffer(&minor_status, &output_tok);
 		}
@@ -842,7 +861,7 @@ cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 			(void) gss_release_buffer(&minor_status, &input_tok);
 
 			if (!cssp_read_tsrequest(&token, NULL))
-				return False;
+				goto bail_out;
 
 			input_tok.value = token.data;
 			input_tok.length = s_length(&token);
@@ -853,10 +872,10 @@ cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 			context_established = 1;
 
 			if (!cssp_gss_wrap(gss_ctx, &pubkey, &blob))
-				return False;
+				goto bail_out;
 
 			if (!cssp_send_tsrequest(NULL, NULL, &blob))
-				return False;
+				goto bail_out;
 
 			context_established = 1;
 		}
@@ -868,10 +887,10 @@ cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 
 	// read tsrequest response and decrypt for public key validation
 	if (!cssp_read_tsrequest(NULL, &blob))
-		return False;
+		goto bail_out;
 
 	if (!cssp_gss_unwrap(gss_ctx, &blob, &pubkey_cmp))
-		return False;
+		goto bail_out;
 
 	pubkey_cmp.data[0] -= 1;
 
@@ -880,19 +899,23 @@ cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 	{
 		error("CredSSP: Cannot guarantee integrity of server connection, MITM ? "
 		      "(public key data mismatch)\n");
-		return False;
+		goto bail_out;
 	}
 
 	// Send TSCredentials
 	ts_creds = cssp_encode_tscredentials(user, password, domain);
 
 	if (!cssp_gss_wrap(gss_ctx, ts_creds, &blob))
-		return False;
+		goto bail_out;
 
 	s_free(ts_creds);
 
 	if (!cssp_send_tsrequest(NULL, &blob, NULL))
-		return False;
+		goto bail_out;
 
 	return True;
+
+bail_out:
+	xfree(token.data);
+	return False;
 }
