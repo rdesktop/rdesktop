@@ -275,6 +275,7 @@ iso_connect(char *server, char *username, char *domain, char *password,
 					break;
 				case SSL_CERT_NOT_ON_SERVER:
 					reason = "no valid authentication certificate on server";
+					retry_without_neg = True;
 					break;
 				case INCONSISTENT_FLAGS:
 					reason = "inconsistent negotiation flags";
