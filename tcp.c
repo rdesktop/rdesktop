@@ -3,7 +3,7 @@
    Protocol services - TCP layer
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2005-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
-   Copyright 2012 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2012-2013 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -140,11 +140,14 @@ tcp_send(STREAM s)
 				}
 				else
 				{
-					error("SSL_write: %d (%s)\n", ssl_err, TCP_STRERROR);
-					g_network_error = True;
 #ifdef WITH_SCARD
 					scard_unlock(SCARD_LOCK_TCP);
 #endif
+					if (g_network_error == True)
+						return;
+
+					error("SSL_write: %d (%s)\n", ssl_err, TCP_STRERROR);
+					g_network_error = True;
 					return;
 				}
 			}
@@ -161,11 +164,14 @@ tcp_send(STREAM s)
 				}
 				else
 				{
-					error("send: %s\n", TCP_STRERROR);
-					g_network_error = True;
 #ifdef WITH_SCARD
 					scard_unlock(SCARD_LOCK_TCP);
 #endif
+					if (g_network_error == True)
+						return;
+
+					error("send: %s\n", TCP_STRERROR);
+					g_network_error = True;
 					return;
 				}
 			}
