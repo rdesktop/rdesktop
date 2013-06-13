@@ -50,6 +50,8 @@
 
 #include "ssl.h"
 
+/* Reconnect timeout based on approxiamted cookie life-time */
+#define RECONNECT_TIMEOUT (3600+600)
 #define RDESKTOP_LICENSE_STORE "/.local/share/rdesktop/licenses"
 
 uint8 g_static_rdesktop_salt_16[16] = {
@@ -1108,10 +1110,12 @@ main(int argc, char *argv[])
 				return EX_PROTOCOL;
 
 			/* check if auto reconnect cookie has timed out */
-			if (time(NULL) - g_reconnect_random_ts > (3600 + 600))
+			if (time(NULL) - g_reconnect_random_ts > RECONNECT_TIMEOUT)
+			{
+				fprintf(stderr, "Tried to reconnect for %d minutes, giving up.\n", RECONNECT_TIMEOUT/60);
 				return EX_PROTOCOL;
+			}
 
-			fprintf(stderr, "Failed to connect, retry in 4 secs...\n");
 			sleep(4);
 			continue;
 		}
@@ -1146,6 +1150,8 @@ main(int argc, char *argv[])
 		/* handle network error and start autoreconnect */
 		if (g_network_error)
 		{
+			fprintf(stderr, "Disconnected due to network error, retrying to reconnect for %d minutes.\n",
+				RECONNECT_TIMEOUT/60);
 			g_network_error = False;
 			reconnect_loop = True;
 			continue;
