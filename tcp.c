@@ -65,6 +65,7 @@ static struct stream g_out[STREAM_COUNT];
 int g_tcp_port_rdp = TCP_PORT_RDP;
 extern RD_BOOL g_user_quit;
 extern RD_BOOL g_network_error;
+extern RD_BOOL g_reconnect_loop;
 
 /* wait till socket is ready to write or timeout */
 static RD_BOOL
@@ -467,7 +468,9 @@ tcp_connect(char *server)
 
 	if (connect(g_sock, (struct sockaddr *) &servaddr, sizeof(struct sockaddr)) < 0)
 	{
-		error("connect: %s\n", TCP_STRERROR);
+		if (!g_reconnect_loop)
+			error("connect: %s\n", TCP_STRERROR);
+
 		TCP_CLOSE(g_sock);
 		return False;
 	}

@@ -124,6 +124,7 @@ uint32 g_reconnect_logonid = 0;
 char g_reconnect_random[16];
 time_t g_reconnect_random_ts;
 RD_BOOL g_has_reconnect_random = False;
+RD_BOOL g_reconnect_loop = False;
 uint8 g_client_random[SEC_RANDOM_SIZE];
 RD_BOOL g_pending_resize = False;
 
@@ -497,7 +498,6 @@ main(int argc, char *argv[])
 	char password[64];
 	char shell[256];
 	char directory[256];
-	RD_BOOL reconnect_loop;
 	RD_BOOL prompt_password, deactivated;
 	struct passwd *pw;
 	uint32 flags, ext_disc_reason = 0;
@@ -1084,7 +1084,7 @@ main(int argc, char *argv[])
 		lspci_init();
 
 	rdpdr_init();
-	reconnect_loop = False;
+	g_reconnect_loop = False;
 	while (1)
 	{
 		rdesktop_reset_state();
@@ -1106,7 +1106,7 @@ main(int argc, char *argv[])
 
 			g_network_error = False;
 
-			if (reconnect_loop == False)
+			if (g_reconnect_loop == False)
 				return EX_PROTOCOL;
 
 			/* check if auto reconnect cookie has timed out */
@@ -1119,6 +1119,9 @@ main(int argc, char *argv[])
 			sleep(4);
 			continue;
 		}
+
+		g_network_error = False;
+
 
 		/* By setting encryption to False here, we have an encrypted login 
 		   packet but unencrypted transfer of other packets */
@@ -1137,7 +1140,7 @@ main(int argc, char *argv[])
 		}
 
 		g_redirect = False;
-		reconnect_loop = False;
+		g_reconnect_loop = False;
 		rdp_main_loop(&deactivated, &ext_disc_reason);
 
 		DEBUG(("Disconnecting...\n"));
@@ -1153,7 +1156,7 @@ main(int argc, char *argv[])
 			fprintf(stderr, "Disconnected due to network error, retrying to reconnect for %d minutes.\n",
 				RECONNECT_TIMEOUT/60);
 			g_network_error = False;
-			reconnect_loop = True;
+			g_reconnect_loop = True;
 			continue;
 		}
 
@@ -1164,7 +1167,7 @@ main(int argc, char *argv[])
 		if (g_pending_resize)
 		{
 			g_pending_resize = False;
-			reconnect_loop = True;
+			g_reconnect_loop = True;
 			continue;
 		}
 		break;
