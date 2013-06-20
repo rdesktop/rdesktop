@@ -57,6 +57,7 @@
 #define STREAM_COUNT 1
 #endif
 
+static RD_BOOL g_ssl_initialized = False;
 static SSL *g_ssl = NULL;
 static SSL_CTX *g_ssl_ctx = NULL;
 static int g_sock;
@@ -293,8 +294,12 @@ tcp_tls_connect(void)
 	int err;
 	long options;
 
-	SSL_load_error_strings();
-	SSL_library_init();
+	if (!g_ssl_initialized)
+	{
+		SSL_load_error_strings();
+		SSL_library_init();
+		g_ssl_initialized = True;
+	}
 
 	g_ssl_ctx = SSL_CTX_new(TLSv1_client_method());
 	if (g_ssl_ctx == NULL)
