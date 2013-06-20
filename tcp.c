@@ -301,19 +301,27 @@ tcp_tls_connect(void)
 		g_ssl_initialized = True;
 	}
 
-	g_ssl_ctx = SSL_CTX_new(TLSv1_client_method());
+	/* create process context */
 	if (g_ssl_ctx == NULL)
 	{
-		error("tcp_tls_connect: SSL_CTX_new() failed to create TLS v1.0 context\n");
-		goto fail;
+		g_ssl_ctx = SSL_CTX_new(TLSv1_client_method());		
+		if (g_ssl_ctx == NULL)
+		{
+			error("tcp_tls_connect: SSL_CTX_new() failed to create TLS v1.0 context\n");
+			goto fail;
+		}
+
+		options = 0;
+		options |= SSL_OP_NO_COMPRESSION;
+		options |= SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS;
+		SSL_CTX_set_options(g_ssl_ctx, options);
 	}
 
-	options = 0;
-	options |= SSL_OP_NO_COMPRESSION;
-	options |= SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS;
+	/* free old connection */
+	if (g_ssl)
+		SSL_free(g_ssl);
 
-	SSL_CTX_set_options(g_ssl_ctx, options);
-
+	/* create new ssl connection */
 	g_ssl = SSL_new(g_ssl_ctx);
 	if (g_ssl == NULL)
 	{
@@ -559,12 +567,6 @@ void
 tcp_reset_state(void)
 {
 	int i;
-
-	if (g_ssl)
-	{
-		SSL_free(g_ssl);
-		g_ssl = NULL;
-	}
 
 	/* Clear the incoming stream */
 	if (g_in.data != NULL)
