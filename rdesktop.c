@@ -90,6 +90,7 @@ RD_BOOL g_bitmap_cache_persist_enable = False;
 RD_BOOL g_bitmap_cache_precache = True;
 RD_BOOL g_use_ctrl = True;
 RD_BOOL g_encryption = True;
+RD_BOOL g_encryption_initial = True;
 RD_BOOL g_packet_encryption = True;
 RD_BOOL g_desktop_save = True;	/* desktop save order */
 RD_BOOL g_polygon_ellipse_orders = True;	/* polygon / ellipse orders */
@@ -683,7 +684,7 @@ main(int argc, char *argv[])
 				break;
 
 			case 'e':
-				g_encryption = False;
+				g_encryption_initial = g_encryption = False;
 				break;
 			case 'E':
 				g_packet_encryption = False;
@@ -1126,7 +1127,7 @@ main(int argc, char *argv[])
 		/* By setting encryption to False here, we have an encrypted login 
 		   packet but unencrypted transfer of other packets */
 		if (!g_packet_encryption)
-			g_encryption = False;
+			g_encryption_initial = g_encryption = False;
 
 
 		DEBUG(("Connection successful.\n"));

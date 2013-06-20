@@ -22,6 +22,7 @@
 #include "rdesktop.h"
 
 extern RD_BOOL g_encryption;
+extern RD_BOOL g_encryption_initial;
 extern RDP_VERSION g_rdp_version;
 extern RD_BOOL g_use_password_as_pin;
 
@@ -370,5 +371,6 @@ iso_disconnect(void)
 void
 iso_reset_state(void)
 {
+	g_encryption = g_encryption_initial;
 	tcp_reset_state();
 }
