@@ -1121,8 +1121,6 @@ main(int argc, char *argv[])
 			continue;
 		}
 
-		g_network_error = False;
-
 
 		/* By setting encryption to False here, we have an encrypted login 
 		   packet but unencrypted transfer of other packets */
@@ -1140,13 +1138,16 @@ main(int argc, char *argv[])
 				return EX_OSERR;
 		}
 
+		tcp_run_ui(True);
+
 		g_redirect = False;
 		g_reconnect_loop = False;
 		rdp_main_loop(&deactivated, &ext_disc_reason);
 
+		tcp_run_ui(False);
+
 		DEBUG(("Disconnecting...\n"));
-		if (!tcp_is_connected())
-			rdp_disconnect();
+		rdp_disconnect();
 
 		if (g_redirect)
 			continue;

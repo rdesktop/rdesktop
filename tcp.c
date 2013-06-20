@@ -61,6 +61,7 @@ static RD_BOOL g_ssl_initialized = False;
 static SSL *g_ssl = NULL;
 static SSL_CTX *g_ssl_ctx = NULL;
 static int g_sock;
+static RD_BOOL g_run_ui = False;
 static struct stream g_in;
 static struct stream g_out[STREAM_COUNT];
 int g_tcp_port_rdp = TCP_PORT_RDP;
@@ -123,7 +124,7 @@ tcp_send(STREAM s)
 	int length = s->end - s->data;
 	int sent, total = 0;
 
-	if (g_network_error)
+	if (g_network_error == True)
 		return;
 
 #ifdef WITH_SCARD
@@ -148,8 +149,6 @@ tcp_send(STREAM s)
 #ifdef WITH_SCARD
 					scard_unlock(SCARD_LOCK_TCP);
 #endif
-					if (g_network_error == True)
-						return;
 
 					error("SSL_write: %d (%s)\n", ssl_err, TCP_STRERROR);
 					g_network_error = True;
@@ -172,8 +171,6 @@ tcp_send(STREAM s)
 #ifdef WITH_SCARD
 					scard_unlock(SCARD_LOCK_TCP);
 #endif
-					if (g_network_error == True)
-						return;
 
 					error("send: %s\n", TCP_STRERROR);
 					g_network_error = True;
@@ -195,8 +192,8 @@ tcp_recv(STREAM s, uint32 length)
 	uint32 new_length, end_offset, p_offset;
 	int rcvd = 0, ssl_err;
 
-	if (g_network_error)
-		return NULL;
+	if (g_network_error == True)
+		return;
 
 	if (s == NULL)
 	{
@@ -226,11 +223,14 @@ tcp_recv(STREAM s, uint32 length)
 
 	while (length > 0)
 	{
-		if ((!g_ssl || SSL_pending(g_ssl) <= 0) && !ui_select(g_sock))
+		if ((!g_ssl || SSL_pending(g_ssl) <= 0) && g_run_ui)
 		{
-			/* User quit */
-			g_user_quit = True;
-			return NULL;
+			if (!ui_select(g_sock))
+			{
+				/* User quit */
+				g_user_quit = True;
+				return NULL;
+			}
 		}
 
 		if (g_ssl)
@@ -602,4 +602,10 @@ tcp_reset_state(void)
 		g_out[i].rdp_hdr = NULL;
 		g_out[i].channel_hdr = NULL;
 	}
+}
+
+void
+tcp_run_ui(RD_BOOL run)
+{
+	g_run_ui = run;
 }

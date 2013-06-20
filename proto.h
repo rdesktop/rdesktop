@@ -227,6 +227,7 @@ RD_BOOL tcp_is_connected(void);
 void tcp_reset_state(void);
 RD_BOOL tcp_tls_connect(void);
 RD_BOOL tcp_tls_get_server_pubkey(STREAM s);
+void tcp_run_ui(RD_BOOL run);
 
 /* asn.c */
 RD_BOOL ber_in_header(STREAM s, int *tagval, int *length);
