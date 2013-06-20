@@ -123,6 +123,9 @@ tcp_send(STREAM s)
 	int length = s->end - s->data;
 	int sent, total = 0;
 
+	if (g_network_error)
+		return;
+
 #ifdef WITH_SCARD
 	scard_lock(SCARD_LOCK_TCP);
 #endif
@@ -191,6 +194,9 @@ tcp_recv(STREAM s, uint32 length)
 {
 	uint32 new_length, end_offset, p_offset;
 	int rcvd = 0, ssl_err;
+
+	if (g_network_error)
+		return NULL;
 
 	if (s == NULL)
 	{
