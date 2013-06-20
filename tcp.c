@@ -310,7 +310,7 @@ tcp_tls_connect(void)
 	/* create process context */
 	if (g_ssl_ctx == NULL)
 	{
-		g_ssl_ctx = SSL_CTX_new(TLSv1_client_method());		
+		g_ssl_ctx = SSL_CTX_new(TLSv1_client_method());
 		if (g_ssl_ctx == NULL)
 		{
 			error("tcp_tls_connect: SSL_CTX_new() failed to create TLS v1.0 context\n");

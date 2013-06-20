@@ -1113,7 +1113,8 @@ main(int argc, char *argv[])
 			/* check if auto reconnect cookie has timed out */
 			if (time(NULL) - g_reconnect_random_ts > RECONNECT_TIMEOUT)
 			{
-				fprintf(stderr, "Tried to reconnect for %d minutes, giving up.\n", RECONNECT_TIMEOUT/60);
+				fprintf(stderr, "Tried to reconnect for %d minutes, giving up.\n",
+					RECONNECT_TIMEOUT / 60);
 				return EX_PROTOCOL;
 			}
 
@@ -1155,8 +1156,9 @@ main(int argc, char *argv[])
 		/* handle network error and start autoreconnect */
 		if (g_network_error)
 		{
-			fprintf(stderr, "Disconnected due to network error, retrying to reconnect for %d minutes.\n",
-				RECONNECT_TIMEOUT/60);
+			fprintf(stderr,
+				"Disconnected due to network error, retrying to reconnect for %d minutes.\n",
+				RECONNECT_TIMEOUT / 60);
 			g_network_error = False;
 			g_reconnect_loop = True;
 			continue;

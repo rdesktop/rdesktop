@@ -36,7 +36,7 @@ s_realloc(STREAM s, unsigned int size)
 {
 	unsigned char *data;
 
-	if(s->size >= size)
+	if (s->size >= size)
 		return;
 
 	data = s->data;
@@ -263,7 +263,7 @@ cssp_encode_tspasswordcreds(char *username, char *password, char *domain)
 	memset(&message, 0, sizeof(message));
 
 	// domainName [0]
-	s_realloc(&tmp, strlen(domain)*sizeof(uint16));
+	s_realloc(&tmp, strlen(domain) * sizeof(uint16));
 	s_reset(&tmp);
 	for (i = 0; i < strlen(domain); i++)
 		out_uint16_le(&tmp, domain[i]);
@@ -277,7 +277,7 @@ cssp_encode_tspasswordcreds(char *username, char *password, char *domain)
 	s_free(h1);
 
 	// userName [1]
-	s_realloc(&tmp, strlen(username)*sizeof(uint16));
+	s_realloc(&tmp, strlen(username) * sizeof(uint16));
 	s_reset(&tmp);
 	for (i = 0; i < strlen(username); i++)
 		out_uint16_le(&tmp, username[i]);
@@ -291,7 +291,7 @@ cssp_encode_tspasswordcreds(char *username, char *password, char *domain)
 	s_free(h1);
 
 	// password [2]
-	s_realloc(&tmp, strlen(password)*sizeof(uint16));
+	s_realloc(&tmp, strlen(password) * sizeof(uint16));
 	s_reset(&tmp);
 	for (i = 0; i < strlen(password); i++)
 		out_uint16_le(&tmp, password[i]);
@@ -593,7 +593,7 @@ cssp_send_tsrequest(STREAM token, STREAM auth, STREAM pubkey)
 		h3 = ber_wrap_hdr_data(BER_TAG_SEQUENCE | BER_TAG_CONSTRUCTED, h4);
 		h2 = ber_wrap_hdr_data(BER_TAG_SEQUENCE | BER_TAG_CONSTRUCTED, h3);
 		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 1, h2);
-		s_realloc(&message, s_length(&message) + s_length(h1));	
+		s_realloc(&message, s_length(&message) + s_length(h1));
 		out_uint8p(&message, h1->data, s_length(h1));
 		s_mark_end(&message);
 		s_free(h5);
@@ -609,7 +609,7 @@ cssp_send_tsrequest(STREAM token, STREAM auth, STREAM pubkey)
 		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, auth);
 		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 2, h2);
 
-		s_realloc(&message, s_length(&message) + s_length(h1));	
+		s_realloc(&message, s_length(&message) + s_length(h1));
 		out_uint8p(&message, h1->data, s_length(h1));
 
 		s_free(h2);
@@ -622,7 +622,7 @@ cssp_send_tsrequest(STREAM token, STREAM auth, STREAM pubkey)
 		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, pubkey);
 		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 3, h2);
 
-		s_realloc(&message, s_length(&message) + s_length(h1));	
+		s_realloc(&message, s_length(&message) + s_length(h1));
 		out_uint8p(&message, h1->data, s_length(h1));
 		s_mark_end(&message);
 		s_free(h2);
@@ -915,7 +915,7 @@ cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 
 	return True;
 
-bail_out:
+      bail_out:
 	xfree(token.data);
 	return False;
 }
