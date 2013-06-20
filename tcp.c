@@ -472,6 +472,7 @@ tcp_connect(char *server)
 			error("connect: %s\n", TCP_STRERROR);
 
 		TCP_CLOSE(g_sock);
+		g_sock = -1;
 		return False;
 	}
 
@@ -518,6 +519,7 @@ tcp_disconnect(void)
 	}
 
 	TCP_CLOSE(g_sock);
+	g_sock = -1;
 }
 
 char *
@@ -558,8 +560,6 @@ tcp_reset_state(void)
 		SSL_free(g_ssl);
 		g_ssl = NULL;
 	}
-
-	g_sock = -1;		/* reset socket */
 
 	/* Clear the incoming stream */
 	if (g_in.data != NULL)
