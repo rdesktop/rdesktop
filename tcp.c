@@ -530,7 +530,8 @@ tcp_disconnect(void)
 {
 	if (g_ssl)
 	{
-		(void) SSL_shutdown(g_ssl);
+		if (!g_network_error)
+			(void) SSL_shutdown(g_ssl);
 		SSL_free(g_ssl);
 		g_ssl = NULL;
 		SSL_CTX_free(g_ssl_ctx);
