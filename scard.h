@@ -59,7 +59,7 @@ typedef struct
 	SERVER_DWORD dwCurrentState;
 	SERVER_DWORD dwEventState;
 	SERVER_DWORD cbAtr;
-	unsigned char rgbAtr[MAX_ATR_SIZE];
+	unsigned char rgbAtr[36];
 }
 SERVER_SCARD_READERSTATE_A;
 

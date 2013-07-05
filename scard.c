@@ -1131,31 +1131,30 @@ TS_SCardGetStatusChange(STREAM in, STREAM out, RD_BOOL wide)
 		if (!rsArray)
 			return SC_returnNoMemoryError(&lcHandle, in, out);
 		memset(rsArray, 0, dwCount * sizeof(SERVER_SCARD_READERSTATE_A));
-		/* skip two pointers at beginning of struct */
-		for (i = 0, cur = (SERVER_LPSCARD_READERSTATE_A) ((unsigned char **) rsArray + 2);
-		     i < dwCount; i++, cur++)
+		for (i = 0, cur = rsArray; i < dwCount; i++, cur++)
 		{
-			in->p += 0x04;
-			in_uint8a(in, cur, SERVER_SCARDSTATESIZE);
+			in_uint32_le(in, cur->szReader);
+			in_uint32_le(in, cur->dwCurrentState);
+			in_uint32_le(in, cur->dwEventState);
+			in_uint32_le(in, cur->cbAtr);
+			in_uint8a(in, cur->rgbAtr, sizeof(cur->rgbAtr));
 		}
 
 		for (i = 0, cur = rsArray; i < dwCount; i++, cur++)
 		{
-			SERVER_DWORD dataLength;
+			if (cur->szReader != NULL)
+			{
+				SERVER_DWORD dataLength;
 
-			/* Do endian swaps... */
-			cur->dwCurrentState = swap32(cur->dwCurrentState);
-			cur->dwEventState = swap32(cur->dwEventState);
-			cur->cbAtr = swap32(cur->cbAtr);
+				in->p += 0x08;
+				in_uint32_le(in, dataLength);
+				inRepos(in,
+					inString(&lcHandle, in, (char **) &(cur->szReader),
+						 dataLength, wide));
 
-			in->p += 0x08;
-			in_uint32_le(in, dataLength);
-			inRepos(in,
-				inString(&lcHandle, in, (char **) &(cur->szReader), dataLength,
-					 wide));
-
-			if (strcmp(cur->szReader, "\\\\?PnP?\\Notification") == 0)
-				cur->dwCurrentState |= SCARD_STATE_IGNORE;
+				if (strcmp(cur->szReader, "\\\\?PnP?\\Notification") == 0)
+					cur->dwCurrentState |= SCARD_STATE_IGNORE;
+			}
 
 			DEBUG_SCARD(("SCARD:    \"%s\"\n", cur->szReader ? cur->szReader : "NULL"));
 			DEBUG_SCARD(("SCARD:        user: %p, state: 0x%08x, event: 0x%08x\n",
