@@ -1962,7 +1962,6 @@ TS_SCardGetAttrib(STREAM in, STREAM out)
 	in->p += 0x0C;
 	in_uint32_le(in, hCard);
 	myHCard = _scard_handle_list_get_pcsc_handle(hCard);
-	dwAttrId = dwAttrId & 0x0000FFFF;
 
 	DEBUG_SCARD(("SCARD: SCardGetAttrib(hcard: 0x%08x [0x%08lx], attrib: 0x%08x (%d bytes))\n",
 		     (unsigned) hCard, (unsigned long) myHCard,
@@ -1990,7 +1989,7 @@ TS_SCardGetAttrib(STREAM in, STREAM out)
 	rv = SCardGetAttrib(myHCard, (MYPCSC_DWORD) dwAttrId, pbAttr, &attrLen);
 	dwAttrLen = attrLen;
 
-	if (dwAttrId == 0x00000100 && rv != SCARD_S_SUCCESS)
+	if (dwAttrId == SCARD_ATTR_VENDOR_NAME && rv != SCARD_S_SUCCESS)
 	{
 		DEBUG_SCARD(("SCARD:    Faking attribute ATTR_VENDOR_NAME\n"));
 		pthread_mutex_lock(&hcardAccess);
@@ -2058,8 +2057,6 @@ TS_SCardSetAttrib(STREAM in, STREAM out)
 	in->p += 0x0C;
 	in_uint32_le(in, hCard);
 	myHCard = scHandleToMyPCSC(hCard);
-
-	dwAttrId = dwAttrId & 0x0000FFFF;
 
 	DEBUG_SCARD(("SCARD: SCardSetAttrib(hcard: 0x%08x [0x%08lx], attrib: 0x%08x (%d bytes))\n",
 		     (unsigned) hCard, (unsigned long) myHCard,
