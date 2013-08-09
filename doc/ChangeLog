@@ -1,3 +1,18 @@
+rdesktop (1.8.0)
+  * Support for protocol negotiation eg. SSL/TLSv1 and CredSSP
+  * Support for CredSSP + Kerberos authentication (NLA)
+  * Support for smart card single-sign-on
+  * Support passing smart card pin as password as argument
+  * Added IPC for controlling a master rdesktop process
+  * Support for connection sharing when using SeamlessRDP
+  * Improved handling of network connection failures
+  * Autoreconnect using the connection cookie at network failure
+  * Fix a few smart card issues
+  * Fix bug with mouse scroll handling
+  * Fix for left/right braces in Italian keymap
+  * Fix crash and memory leak in local drive redirection
+  * Fixes issues with license files loading/saving
+
 rdesktop (1.7.1)
   * Fix clipboard issue when not building with unicode support
   * Fix compilation against newer PCSC lite versions
