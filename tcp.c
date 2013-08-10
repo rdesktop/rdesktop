@@ -193,7 +193,7 @@ tcp_recv(STREAM s, uint32 length)
 	int rcvd = 0, ssl_err;
 
 	if (g_network_error == True)
-		return;
+		return NULL;
 
 	if (s == NULL)
 	{
