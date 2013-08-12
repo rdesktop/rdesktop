@@ -2,8 +2,8 @@
    rdesktop: A Remote Desktop Protocol client.
    Smart Card support
    Copyright (C) Alexi Volkov <alexi@myrealbox.com> 2006
-   Copyright 2010 Pierre Ossman <ossman@cendio.se> for Cendio AB
-   Copyright 2011 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2010-2013 Pierre Ossman <ossman@cendio.se> for Cendio AB
+   Copyright 2011-2013 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -1109,6 +1109,7 @@ TS_SCardGetStatusChange(STREAM in, STREAM out, RD_BOOL wide)
 	MYPCSC_SCARDCONTEXT myHContext;
 	SERVER_DWORD dwTimeout;
 	SERVER_DWORD dwCount;
+	SERVER_DWORD dwPointerId;
 	SERVER_LPSCARD_READERSTATE_A rsArray, cur;
 	MYPCSC_LPSCARD_READERSTATE_A myRsArray;
 	long i;
@@ -1133,7 +1134,8 @@ TS_SCardGetStatusChange(STREAM in, STREAM out, RD_BOOL wide)
 		memset(rsArray, 0, dwCount * sizeof(SERVER_SCARD_READERSTATE_A));
 		for (i = 0, cur = rsArray; i < dwCount; i++, cur++)
 		{
-			in_uint32_le(in, cur->szReader);
+			in_uint32_le(in, dwPointerId);
+			cur->szReader = (char *)(intptr_t)dwPointerId;
 			in_uint32_le(in, cur->dwCurrentState);
 			in_uint32_le(in, cur->dwEventState);
 			in_uint32_le(in, cur->cbAtr);
