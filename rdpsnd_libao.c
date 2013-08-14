@@ -111,6 +111,7 @@ libao_set_format(RD_WAVEFORMATEX * pwfx)
 {
 	ao_sample_format format;
 
+	memset(&format, 0, sizeof(format));
 	format.bits = pwfx->wBitsPerSample;
 	format.channels = pwfx->nChannels;
 	format.rate = 44100;
