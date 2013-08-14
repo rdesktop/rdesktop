@@ -1044,6 +1044,9 @@ process_demand_active(STREAM s)
 	uint8 type;
 	uint16 len_src_descriptor, len_combined_caps;
 
+	/* at this point we need to ensure that we have ui created */
+	rd_create_ui();
+
 	in_uint32_le(s, g_rdp_shareid);
 	in_uint16_le(s, len_src_descriptor);
 	in_uint16_le(s, len_combined_caps);

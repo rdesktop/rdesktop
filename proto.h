@@ -144,6 +144,7 @@ RD_BOOL subprocess(char *const argv[], str_handle_lines_t linehandler, void *dat
 char *l_to_a(long N, int base);
 int load_licence(unsigned char **data);
 void save_licence(unsigned char *data, int length);
+void rd_create_ui(void);
 RD_BOOL rd_pstcache_mkdir(void);
 int rd_open_file(char *filename);
 void rd_close_file(int fd);

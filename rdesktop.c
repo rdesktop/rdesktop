@@ -87,7 +87,7 @@ RD_BOOL g_bitmap_compression = True;
 RD_BOOL g_sendmotion = True;
 RD_BOOL g_bitmap_cache = True;
 RD_BOOL g_bitmap_cache_persist_enable = False;
-RD_BOOL g_bitmap_cache_precache = False;
+RD_BOOL g_bitmap_cache_precache = True;
 RD_BOOL g_use_ctrl = True;
 RD_BOOL g_encryption = True;
 RD_BOOL g_encryption_initial = True;
@@ -1132,13 +1132,7 @@ main(int argc, char *argv[])
 		DEBUG(("Connection successful.\n"));
 		memset(password, 0, sizeof(password));
 
-		/* only create a window if we dont have one intialized */
-		if (!ui_have_window())
-		{
-			if (!ui_create_window())
-				return EX_OSERR;
-		}
-
+		rd_create_ui();
 		tcp_run_ui(True);
 
 		g_redirect = False;
@@ -1730,6 +1724,18 @@ save_licence(unsigned char *data, int length)
 	}
 
 	close(fd);
+}
+
+/* create rdesktop ui */
+void
+rd_create_ui()
+{
+	/* only create a window if we dont have one intialized */
+	if (!ui_have_window())
+	{
+		if (!ui_create_window())
+			return EX_OSERR;
+	}
 }
 
 /* Create the bitmap cache directory */
