@@ -318,7 +318,9 @@ tcp_tls_connect(void)
 		}
 
 		options = 0;
+#ifdef SSL_OP_NO_COMPRESSION
 		options |= SSL_OP_NO_COMPRESSION;
+#endif // __SSL_OP_NO_COMPRESSION
 		options |= SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS;
 		SSL_CTX_set_options(g_ssl_ctx, options);
 	}
