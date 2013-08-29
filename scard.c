@@ -1991,26 +1991,6 @@ TS_SCardGetAttrib(STREAM in, STREAM out)
 	rv = SCardGetAttrib(myHCard, (MYPCSC_DWORD) dwAttrId, pbAttr, &attrLen);
 	dwAttrLen = attrLen;
 
-	if (dwAttrId == SCARD_ATTR_VENDOR_NAME && rv != SCARD_S_SUCCESS)
-	{
-		DEBUG_SCARD(("SCARD:    Faking attribute ATTR_VENDOR_NAME\n"));
-		pthread_mutex_lock(&hcardAccess);
-		PSCHCardRec hcard = hcardFirst;
-		while (hcard)
-		{
-			if (hcard->hCard == hCard)
-			{
-				dwAttrLen = strlen(hcard->vendor);
-				memcpy(pbAttr, hcard->vendor, dwAttrLen);
-				rv = SCARD_S_SUCCESS;
-				break;
-			}
-			hcard = hcard->next;
-		}
-		pthread_mutex_unlock(&hcardAccess);
-		DEBUG_SCARD(("[0x%.8x]\n", (unsigned int) rv));
-	}
-
 	if (rv != SCARD_S_SUCCESS)
 	{
 		DEBUG_SCARD(("SCARD: -> Failure: %s (0x%08x)\n",
