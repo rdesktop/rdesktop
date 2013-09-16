@@ -437,7 +437,7 @@ seamless_send(const char *command, const char *format, ...)
 	s = channel_init(seamless_channel, len);
 	out_uint8p(s, buf, len) s_mark_end(s);
 
-	DEBUG_SEAMLESS(("SeamlessRDP sending:%s", buf));
+	DEBUG_SEAMLESS(("seamlessrdp sending:%s", buf));
 
 #if 0
 	printf("seamless send:\n");
