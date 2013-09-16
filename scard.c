@@ -1135,7 +1135,7 @@ TS_SCardGetStatusChange(STREAM in, STREAM out, RD_BOOL wide)
 		for (i = 0, cur = rsArray; i < dwCount; i++, cur++)
 		{
 			in_uint32_le(in, dwPointerId);
-			cur->szReader = (char *)(intptr_t)dwPointerId;
+			cur->szReader = (char *) (intptr_t) dwPointerId;
 			in_uint32_le(in, cur->dwCurrentState);
 			in_uint32_le(in, cur->dwEventState);
 			in_uint32_le(in, cur->cbAtr);
