@@ -255,7 +255,7 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 #ifdef HAVE_LIBSAMPLERATE
 	if (src_converter == NULL)
 	{
-		warning("no samplerate converter available!!\n");
+		warning("no samplerate converter available!\n");
 		return 0;
 	}
 
