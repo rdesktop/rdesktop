@@ -4181,19 +4181,20 @@ ui_seamless_move_window(unsigned long id, int x, int y, int width, int height, u
 		/* X11 windows must be at least 1x1 */
 		return;
 
-	sw->xoffset = x;
-	sw->yoffset = y;
-	sw->width = width;
-	sw->height = height;
-
 	/* If we move the window in a maximized state, then KDE won't
 	   accept restoration */
 	switch (sw->state)
 	{
 		case SEAMLESSRDP_MINIMIZED:
 		case SEAMLESSRDP_MAXIMIZED:
+			sw_update_position(sw);
 			return;
 	}
+
+	sw->xoffset = x;
+	sw->yoffset = y;
+	sw->width = width;
+	sw->height = height;
 
 	/* FIXME: Perhaps use ewmh_net_moveresize_window instead */
 	XMoveResizeWindow(g_display, sw->wnd, sw->xoffset, sw->yoffset, sw->width, sw->height);
