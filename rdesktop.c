@@ -510,7 +510,6 @@ main(int argc, char *argv[])
 #ifdef WITH_RDPSND
 	char *rdpsnd_optarg = NULL;
 #endif
-	int longidx;
 
 #ifdef HAVE_LOCALE_H
 	/* Set locale according to environment */
