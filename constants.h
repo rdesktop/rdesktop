@@ -454,7 +454,10 @@ enum RDP_INPUT_DEVICE
 #define exDiscReasonOutOfMemory				0x0006
 #define exDiscReasonServerDeniedConnection		0x0007
 #define exDiscReasonServerDeniedConnectionFips		0x0008
-#define exDiscReasonWindows7Disconnect                  0x000b	/* unofficial */
+#define exDiscReasonServerInsufficientPrivileges        0x0009
+#define exDiscReasonServerFreshCredentialsRequired      0x000a
+#define exDiscReasonRPCInitiatedDisconnectByUser        0x000b
+#define exDiscReasonByUser                              0x000c
 #define exDiscReasonLicenseInternal			0x0100
 #define exDiscReasonLicenseNoLicenseServer		0x0101
 #define exDiscReasonLicenseNoLicense			0x0102

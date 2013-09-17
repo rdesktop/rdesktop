@@ -281,7 +281,6 @@ handle_disconnect_reason(RD_BOOL deactivated, uint16 reason)
 			break;
 
 		case exDiscReasonAPIInitiatedDisconnect:
-		case exDiscReasonWindows7Disconnect:
 			text = "Server initiated disconnect";
 			retval = EXRD_API_DISCONNECT;
 			break;
@@ -319,6 +318,26 @@ handle_disconnect_reason(RD_BOOL deactivated, uint16 reason)
 		case exDiscReasonServerDeniedConnectionFips:
 			text = "The server denied the connection for security reason";
 			retval = EXRD_DENIED_FIPS;
+			break;
+
+		case exDiscReasonServerInsufficientPrivileges:
+			text = "The user cannot connect to the server due to insufficient access privileges.";
+			retval = EXRD_INSUFFICIENT_PRIVILEGES;
+			break;
+
+		case exDiscReasonServerFreshCredentialsRequired:
+			text = "The server does not accept saved user credentials and requires that the user enter their credentials for each connection.";
+			retval = EXRD_FRESH_CREDENTIALS_REQUIRED;
+			break;
+
+		case exDiscReasonRPCInitiatedDisconnectByUser:
+			text = "Disconnect initiated by administration tool";
+			retval = EXRD_RPC_DISCONNECT_BY_USER;
+			break;
+
+		case exDiscReasonByUser:
+			text = "Disconnect initiated by user";
+			retval = EXRD_DISCONNECT_BY_USER;
 			break;
 
 		case exDiscReasonLicenseInternal:
