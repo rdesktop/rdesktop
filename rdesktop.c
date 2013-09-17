@@ -1733,7 +1733,7 @@ rd_create_ui()
 	if (!ui_have_window())
 	{
 		if (!ui_create_window())
-			return EX_OSERR;
+			exit(EX_OSERR);
 	}
 }
 
