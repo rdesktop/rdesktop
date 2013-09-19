@@ -574,14 +574,14 @@ sw_wait_configurenotify(Window wnd, unsigned long serial)
 	XEvent xevent;
 	sw_configurenotify_context context;
 	struct timeval now;
-	struct timeval nextsecond;
+	struct timeval future;
 	RD_BOOL got = False;
 
 	context.window = wnd;
 	context.serial = serial;
 
-	gettimeofday(&nextsecond, NULL);
-	nextsecond.tv_sec += 1;
+	gettimeofday(&future, NULL);
+	future.tv_usec += 500000;
 
 	do
 	{
@@ -593,7 +593,7 @@ sw_wait_configurenotify(Window wnd, unsigned long serial)
 		usleep(100000);
 		gettimeofday(&now, NULL);
 	}
-	while (timercmp(&now, &nextsecond, <));
+	while (timercmp(&now, &future, <));
 
 	if (!got)
 	{
