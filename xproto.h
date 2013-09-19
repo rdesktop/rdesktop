@@ -12,5 +12,6 @@ int ewmh_set_window_modal(Window wnd);
 void ewmh_set_icon(Window wnd, int width, int height, const char *rgba_data);
 void ewmh_del_icon(Window wnd, int width, int height);
 int ewmh_set_window_above(Window wnd);
+RD_BOOL ewmh_is_window_above(Window w);
 void set_keypress_keysym(unsigned int keycode, KeySym keysym);
 KeySym reset_keypress_keysym(unsigned int keycode, KeySym keysym);

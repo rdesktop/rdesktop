@@ -543,6 +543,33 @@ ewmh_set_window_above(Window wnd)
 	return 0;
 }
 
+RD_BOOL
+ewmh_is_window_above(Window w)
+{
+	unsigned long nitems_return;
+	unsigned char *prop_return;
+	unsigned long *return_words;
+	unsigned long item;
+	RD_BOOL above;
+
+	above = False;
+
+	if (get_property_value(w, "_NET_WM_STATE", 64, &nitems_return, &prop_return, 0) < 0)
+		return False;
+
+	return_words = (unsigned long *) prop_return;
+
+	for (item = 0; item < nitems_return; item++)
+	{
+		if (return_words[item] == g_net_wm_state_above_atom)
+			above = True;
+	}
+
+	XFree(prop_return);
+
+	return above;
+}
+
 #endif /* MAKE_PROTO */
 
 

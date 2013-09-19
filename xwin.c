@@ -4207,6 +4207,7 @@ ui_seamless_restack_window(unsigned long id, unsigned long behind, unsigned long
 	seamless_window *sw;
 	XWindowChanges values;
 	unsigned long restack_serial;
+	unsigned int value_mask;
 
 	if (!g_seamless_active)
 		return;
@@ -4229,24 +4230,42 @@ ui_seamless_restack_window(unsigned long id, unsigned long behind, unsigned long
 			return;
 		}
 
-		if (!g_seamless_broken_restack)
+		values.stack_mode = Below;
+		value_mask = CWStackMode | CWSibling;
+		values.sibling = sw_behind->wnd;
+
+		/* Avoid that topmost windows references non-topmost
+		   windows, and vice versa. */
+		if (ewmh_is_window_above(sw->wnd))
 		{
-			values.stack_mode = Below;
-			values.sibling = sw_behind->wnd;
-			restack_serial = XNextRequest(g_display);
-			XReconfigureWMWindow(g_display, sw->wnd, DefaultScreen(g_display),
-					     CWStackMode | CWSibling, &values);
-			sw_wait_configurenotify(sw->wnd, restack_serial);
+			if (!ewmh_is_window_above(sw_behind->wnd))
+			{
+				/* Disallow, move to bottom of the
+				   topmost stack. */
+				values.stack_mode = Below;
+				value_mask = CWStackMode;	/* Not sibling */
+			}
+		}
+		else
+		{
+			if (ewmh_is_window_above(sw_behind->wnd))
+			{
+				/* Move to top of non-topmost
+				   stack. */
+				values.stack_mode = Above;
+				value_mask = CWStackMode;	/* Not sibling */
+			}
 		}
 	}
 	else
 	{
 		values.stack_mode = Above;
-		restack_serial = XNextRequest(g_display);
-		XReconfigureWMWindow(g_display, sw->wnd, DefaultScreen(g_display), CWStackMode,
-				     &values);
-		sw_wait_configurenotify(sw->wnd, restack_serial);
+		value_mask = CWStackMode;
 	}
+
+	restack_serial = XNextRequest(g_display);
+	XReconfigureWMWindow(g_display, sw->wnd, DefaultScreen(g_display), value_mask, &values);
+	sw_wait_configurenotify(sw->wnd, restack_serial);
 
 	sw_restack_window(sw, behind);
 
