@@ -1153,6 +1153,7 @@ main(int argc, char *argv[])
 		rd_create_ui();
 		tcp_run_ui(True);
 
+		deactivated = False;
 		g_redirect = False;
 		g_reconnect_loop = False;
 		rdp_main_loop(&deactivated, &ext_disc_reason);
@@ -1166,7 +1167,7 @@ main(int argc, char *argv[])
 			continue;
 
 		/* handle network error and start autoreconnect */
-		if (g_network_error)
+		if (g_network_error && !deactivated)
 		{
 			fprintf(stderr,
 				"Disconnected due to network error, retrying to reconnect for %d minutes.\n",
