@@ -406,7 +406,7 @@ ctrl_check_fds(fd_set * rfds, fd_set * wfds)
 				break;
 			}
 
-			if (res >= 0)
+			if (res > 0)
 			{
 				/* Check if we got full command line */
 				char *p;
