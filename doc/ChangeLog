@@ -1,3 +1,16 @@
+rdesktop (1.8.1)
+  * Fix a typo in configure.ac
+  * Fix a bug which made rdesktop steal CPU cycles.
+  * Fix issue with reconnect, make use of deactivate variable
+  * Added 4 new disconnect reasons with exit codes
+  * Fix issues of window handling in SeamlessRDP parts of rdesktop
+  * Fix a backward compability with OpenSSL < 0.9.9
+  * Fix a bug when code needs a x window available but there are none.
+  * Fix a sigsegv zeroing memory
+  * Fix a 64bit portability issue
+
+  -- Henrik Andersson <hean01@users.sourceforge.net> 2013-11-18
+
 rdesktop (1.8.0)
   * Support for protocol negotiation eg. SSL/TLSv1 and CredSSP
   * Support for CredSSP + Kerberos authentication (NLA)
@@ -12,6 +25,8 @@ rdesktop (1.8.0)
   * Fix for left/right braces in Italian keymap
   * Fix crash and memory leak in local drive redirection
   * Fixes issues with license files loading/saving
+
+  -- Henrik Andersson <hean01@users.sourceforge.net> 2013-08-09
 
 rdesktop (1.7.1)
   * Fix clipboard issue when not building with unicode support

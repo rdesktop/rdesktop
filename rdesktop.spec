@@ -1,6 +1,6 @@
 Summary: Remote Desktop Protocol client
 Name: rdesktop
-Version: 1.8.0post
+Version: 1.8.1
 Release: 1
 License: GPL; see COPYING
 Group: Applications/Communications
@@ -11,7 +11,7 @@ Packager: Peter Åstrand <astrand@cendio.se>
 %description
 rdesktop is a client for Remote Desktop Protocol (RDP), used in a number of
 Microsoft products including Windows NT Terminal Server, Windows 2000 Server,
-Windows XP and Windows 2003 Server.
+Windows XP, Windows 2003 Server and Windows 2008r2.
 
 %prep
 rm -rf $RPM_BUILD_ROOT
