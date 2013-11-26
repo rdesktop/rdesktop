@@ -65,6 +65,7 @@ extern RDPCOMP g_mppc_dict;
 /* Session Directory support */
 extern RD_BOOL g_redirect;
 extern char *g_redirect_server;
+extern uint32 g_redirect_server_len;
 extern char g_redirect_domain[16];
 extern char g_redirect_password[64];
 extern char *g_redirect_username;
@@ -1495,10 +1496,14 @@ process_redirect_pdu(STREAM s /*, uint32 * ext_disc_reason */ )
 	if (g_redirect_flags & PDU_REDIRECT_HAS_IP)
 	{
 		/* read length of ip string */
-		in_uint32_le(s, len);
+		in_uint32_le(s, g_redirect_server_len);
+		if (g_redirect_server)
+			free(g_redirect_server);
+
+		g_redirect_server = xmalloc(g_redirect_server_len);
 
 		/* read ip string */
-		rdp_in_unistr(s, g_redirect_server, sizeof(g_redirect_server), len);
+		rdp_in_unistr(s, g_redirect_server, sizeof(g_redirect_server), g_redirect_server_len);
 	}
 
 	if (g_redirect_flags & PDU_REDIRECT_HAS_LOAD_BALANCE_INFO)
@@ -1564,14 +1569,14 @@ process_redirect_pdu(STREAM s /*, uint32 * ext_disc_reason */ )
 	if (g_redirect_flags & PDU_REDIRECT_HAS_TARGET_FQDN)
 	{
 		/* read length of fqdn string */
-		in_uint32_le(s, len);
+		in_uint32_le(s, g_redirect_server_len);
 		if (g_redirect_server)
 			free(g_redirect_server);
 
-		g_redirect_server = xmalloc(len);
+		g_redirect_server = xmalloc(g_redirect_server_len);
 
 		/* read fqdn string */
-		rdp_in_unistr(s, g_redirect_server, sizeof(g_redirect_server), len);
+		rdp_in_unistr(s, g_redirect_server, sizeof(g_redirect_server), g_redirect_server_len);
 	}
 
 	if (g_redirect_flags & PDU_REDIRECT_HAS_TARGET_NETBIOS)
