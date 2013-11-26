@@ -1503,7 +1503,7 @@ process_redirect_pdu(STREAM s /*, uint32 * ext_disc_reason */ )
 		g_redirect_server = xmalloc(g_redirect_server_len);
 
 		/* read ip string */
-		rdp_in_unistr(s, g_redirect_server, sizeof(g_redirect_server), g_redirect_server_len);
+		rdp_in_unistr(s, g_redirect_server, g_redirect_server_len, g_redirect_server_len);
 	}
 
 	if (g_redirect_flags & PDU_REDIRECT_HAS_LOAD_BALANCE_INFO)
@@ -1576,7 +1576,7 @@ process_redirect_pdu(STREAM s /*, uint32 * ext_disc_reason */ )
 		g_redirect_server = xmalloc(g_redirect_server_len);
 
 		/* read fqdn string */
-		rdp_in_unistr(s, g_redirect_server, sizeof(g_redirect_server), g_redirect_server_len);
+		rdp_in_unistr(s, g_redirect_server, g_redirect_server_len, g_redirect_server_len);
 	}
 
 	if (g_redirect_flags & PDU_REDIRECT_HAS_TARGET_NETBIOS)
