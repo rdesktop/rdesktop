@@ -136,9 +136,10 @@ enum RDP_PDU_TYPE
 {
 	RDP_PDU_DEMAND_ACTIVE = 1,
 	RDP_PDU_CONFIRM_ACTIVE = 3,
-	RDP_PDU_REDIRECT = 4,	/* MS Server 2003 Session Redirect */
+	RDP_PDU_REDIRECT = 4,	/* Standard Server Redirect */
 	RDP_PDU_DEACTIVATE = 6,
-	RDP_PDU_DATA = 7
+	RDP_PDU_DATA = 7,
+	RDP_PDU_ENHANCED_REDIRECT = 10	/* Enhanced Server Redirect */
 };
 
 enum RDP_DATA_PDU_TYPE
