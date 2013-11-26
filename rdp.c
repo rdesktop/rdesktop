@@ -1484,6 +1484,8 @@ process_redirect_pdu(STREAM s /*, uint32 * ext_disc_reason */ )
 {
 	uint32 len;
 
+	g_redirect = True;
+
 	/* these 2 bytes are unknown, seem to be zeros */
 	in_uint8s(s, 2);
 
@@ -1554,7 +1556,9 @@ process_redirect_pdu(STREAM s /*, uint32 * ext_disc_reason */ )
 
 	if (g_redirect_flags & PDU_REDIRECT_INFORMATIONAL)
 	{
-		warning("PDU_REDIRECT_INFORMATIONAL set\n");
+		/* By spec this is only for information and doesn't mean that an actual
+		   redirect should be performed. How it should be used is not mentioned. */
+		g_redirect = False;
 	}
 
 	if (g_redirect_flags & PDU_REDIRECT_HAS_TARGET_FQDN)
@@ -1571,8 +1575,6 @@ process_redirect_pdu(STREAM s /*, uint32 * ext_disc_reason */ )
 	{
 		warning("PDU_REDIRECT_HAS_TARGET_IP_ARRAY set\n");
 	}
-
-	g_redirect = True;
 
 	return True;
 }
