@@ -118,7 +118,8 @@ char g_redirect_server[64];
 char g_redirect_domain[16];
 char g_redirect_password[64];
 char *g_redirect_username;
-char g_redirect_cookie[128];
+uint8 *g_redirect_lb_info;
+uint32 g_redirect_lb_info_len;
 uint32 g_redirect_flags = 0;
 
 uint32 g_reconnect_logonid = 0;

@@ -3,6 +3,7 @@
    Protocol services - RDP layer
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2003-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
+   Copyright 2011-2013 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -67,7 +68,8 @@ extern char g_redirect_server[64];
 extern char g_redirect_domain[16];
 extern char g_redirect_password[64];
 extern char *g_redirect_username;
-extern char g_redirect_cookie[128];
+extern uint8 *g_redirect_lb_info;
+extern uint32 g_redirect_lb_info_len;
 extern uint32 g_redirect_flags;
 /* END Session Directory support */
 
@@ -1497,26 +1499,19 @@ process_redirect_pdu(STREAM s /*, uint32 * ext_disc_reason */ )
 		rdp_in_unistr(s, g_redirect_server, sizeof(g_redirect_server), len);
 	}
 
-	if (g_redirect_flags & PDU_REDIRECT_HAS_COOKIE)
+	if (g_redirect_flags & PDU_REDIRECT_HAS_LOAD_BALANCE_INFO)
 	{
-		/* read length of cookie string */
-		in_uint32_le(s, len);
+		/* read length of load balance info blob */
+		in_uint32_le(s, g_redirect_lb_info_len);
 
-		/* read cookie string (plain ASCII) */
-		if (len > sizeof(g_redirect_cookie) - 1)
-		{
-			uint32 rem = len - (sizeof(g_redirect_cookie) - 1);
-			len = sizeof(g_redirect_cookie) - 1;
+		/* reallocate a loadbalance info blob */
+		if (g_redirect_lb_info != NULL)
+			free(g_redirect_lb_info);
 
-			warning("Unexpectedly large redirection cookie\n");
-			in_uint8a(s, g_redirect_cookie, len);
-			in_uint8s(s, rem);
-		}
-		else
-		{
-			in_uint8a(s, g_redirect_cookie, len);
-		}
-		g_redirect_cookie[len] = 0;
+		g_redirect_lb_info = xmalloc(g_redirect_lb_info_len);
+
+		/* read load balance info blob */
+		in_uint8p(s, g_redirect_lb_info, g_redirect_lb_info_len);
 	}
 
 	if (g_redirect_flags & PDU_REDIRECT_HAS_USERNAME)
