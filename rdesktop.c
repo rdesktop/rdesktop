@@ -114,7 +114,7 @@ uint32 g_rdp5_performanceflags =
 	RDP5_NO_WALLPAPER | RDP5_NO_FULLWINDOWDRAG | RDP5_NO_MENUANIMATIONS;
 /* Session Directory redirection */
 RD_BOOL g_redirect = False;
-char g_redirect_server[64];
+char *g_redirect_server;
 char g_redirect_domain[16];
 char g_redirect_password[64];
 char *g_redirect_username;
@@ -513,7 +513,7 @@ parse_server_and_port(char *server)
 int
 main(int argc, char *argv[])
 {
-	char server[64];
+	char server[256];
 	char fullhostname[64];
 	char domain[256];
 	char password[64];

@@ -64,7 +64,7 @@ extern RDPCOMP g_mppc_dict;
 
 /* Session Directory support */
 extern RD_BOOL g_redirect;
-extern char g_redirect_server[64];
+extern char *g_redirect_server;
 extern char g_redirect_domain[16];
 extern char g_redirect_password[64];
 extern char *g_redirect_username;
@@ -1563,7 +1563,15 @@ process_redirect_pdu(STREAM s /*, uint32 * ext_disc_reason */ )
 
 	if (g_redirect_flags & PDU_REDIRECT_HAS_TARGET_FQDN)
 	{
-		warning("PDU_REDIRECT_HAS_TARGET_FQDN set\n");
+		/* read length of fqdn string */
+		in_uint32_le(s, len);
+		if (g_redirect_server)
+			free(g_redirect_server);
+
+		g_redirect_server = xmalloc(len);
+
+		/* read fqdn string */
+		rdp_in_unistr(s, g_redirect_server, sizeof(g_redirect_server), len);
 	}
 
 	if (g_redirect_flags & PDU_REDIRECT_HAS_TARGET_NETBIOS)
