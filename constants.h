@@ -107,12 +107,23 @@ enum MCS_PDU_TYPE
 #define SEC_TAG_CLI_INFO	0xc001
 #define SEC_TAG_CLI_CRYPT	0xc002
 #define SEC_TAG_CLI_CHANNELS    0xc003
-#define SEC_TAG_CLI_4           0xc004
+#define SEC_TAG_CLI_CLUSTER     0xc004
 
 #define SEC_TAG_PUBKEY		0x0006
 #define SEC_TAG_KEYSIG		0x0008
 
 #define SEC_RSA_MAGIC		0x31415352	/* RSA1 */
+
+/* Client cluster constants */
+#define SEC_CC_REDIRECTION_SUPPORTED          0x00000001
+#define SEC_CC_REDIRECT_SESSIONID_FIELD_VALID 0x00000002
+#define SEC_CC_REDIRECTED_SMARTCARD           0x00000040
+#define SEC_CC_REDIRECT_VERSION_MASK          0x0000003c
+
+#define SEC_CC_REDIRECT_VERSION_3             0x02
+#define SEC_CC_REDIRECT_VERSION_4             0x03
+#define SEC_CC_REDIRECT_VERSION_5             0x04
+#define SEC_CC_REDIRECT_VERSION_6             0x05
 
 /* RDP licensing constants */
 #define LICENCE_TOKEN_SIZE	10

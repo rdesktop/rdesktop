@@ -122,6 +122,7 @@ char *g_redirect_username;
 uint8 *g_redirect_lb_info;
 uint32 g_redirect_lb_info_len;
 uint32 g_redirect_flags = 0;
+uint32 g_redirect_session_id = 0;
 
 uint32 g_reconnect_logonid = 0;
 char g_reconnect_random[16];

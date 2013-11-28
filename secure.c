@@ -33,6 +33,7 @@ extern RD_BOOL g_licence_issued;
 extern RD_BOOL g_licence_error_result;
 extern RDP_VERSION g_rdp_version;
 extern RD_BOOL g_console_session;
+extern uint32 g_redirect_session_id;
 extern int g_server_depth;
 extern VCHANNEL g_channels[];
 extern unsigned int g_num_channels;
@@ -453,10 +454,19 @@ sec_out_mcs_data(STREAM s, uint32 selected_protocol)
 	out_uint8s(s, 64);
 	out_uint32_le(s, selected_protocol);	/* End of client info */
 
-	out_uint16_le(s, SEC_TAG_CLI_4);
-	out_uint16_le(s, 12);
-	out_uint32_le(s, g_console_session ? 0xb : 9);
-	out_uint32(s, 0);
+	/* Write a Client Cluster Data (TS_UD_CS_CLUSTER) */
+	uint32 cluster_flags = 0;
+	out_uint16_le(s, SEC_TAG_CLI_CLUSTER);	/* header.type */
+	out_uint16_le(s, 12);	/* length */
+
+	cluster_flags |= SEC_CC_REDIRECTION_SUPPORTED;
+	cluster_flags |= (SEC_CC_REDIRECT_VERSION_3 << 2);
+
+	if (g_console_session || g_redirect_session_id != 0)
+		cluster_flags |= SEC_CC_REDIRECT_SESSIONID_FIELD_VALID;
+
+	out_uint32_le(s, cluster_flags);
+	out_uint32(s, g_redirect_session_id);
 
 	/* Client encryption settings */
 	out_uint16_le(s, SEC_TAG_CLI_CRYPT);
