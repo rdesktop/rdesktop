@@ -343,7 +343,7 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 	int len_program = 2 * strlen(program);
 	int len_directory = 2 * strlen(directory);
 
-	/* length of strings in TS_EXTENDED_PACKET includes null terminator*/
+	/* length of strings in TS_EXTENDED_PACKET includes null terminator */
 	int len_ip = 2 * strlen(ipaddr) + 2;
 	int len_dll = 2 * strlen("C:\\WINNT\\System32\\mstscax.dll") + 2;
 
@@ -379,8 +379,7 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 
 		DEBUG_RDP5(("Sending RDP5-style Logon packet\n"));
 
-		packetlen = 
-
+		packetlen =
 			/* size of TS_INFO_PACKET */
 			4 +	/* CodePage */
 			4 +	/* flags */
@@ -389,36 +388,30 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 			2 +	/* cbPassword */
 			2 +	/* cbAlternateShell */
 			2 +	/* cbWorkingDir */
-
-			2 + len_domain +	  /* Domain */
-			2 + len_user +	          /* UserName */
-			2 + len_password +	  /* Password */
-			2 + len_program +	  /* AlternateShell */
-			2 + len_directory +       /* WorkingDir */
-
+			2 + len_domain +	/* Domain */
+			2 + len_user +	/* UserName */
+			2 + len_password +	/* Password */
+			2 + len_program +	/* AlternateShell */
+			2 + len_directory +	/* WorkingDir */
 			/* size of TS_EXTENDED_INFO_PACKET */
-			2 +       /* clientAdressFamily */
-			2 +	  /* cbClientAdress */
-			len_ip +  /* clientAddress */
-			2 +       /* cbClientDir */
-			len_dll + /* clientDir */
-
+			2 +	/* clientAdressFamily */
+			2 +	/* cbClientAdress */
+			len_ip +	/* clientAddress */
+			2 +	/* cbClientDir */
+			len_dll +	/* clientDir */
 			/* size of TS_TIME_ZONE_INFORMATION */
-			4 +     /* Bias, (UTC = local time + bias */
-			64 +    /* StandardName, 32 unicode char array, Descriptive standard time on client */
-			16 +    /* StandardDate*/
-			4 +     /* StandardBias */
-			64 +    /* DaylightName, 32 unicode char array */
-			16 +    /* DaylightDate */
-			4 +     /* DaylightBias */
-			4 +     /* clientSessionId */
-
-			4 +     /* performanceFlags */
-
-			2 +     /* cbAutoReconnectCookie, either 0 or 0x001c */
-
+			4 +	/* Bias, (UTC = local time + bias */
+			64 +	/* StandardName, 32 unicode char array, Descriptive standard time on client */
+			16 +	/* StandardDate */
+			4 +	/* StandardBias */
+			64 +	/* DaylightName, 32 unicode char array */
+			16 +	/* DaylightDate */
+			4 +	/* DaylightBias */
+			4 +	/* clientSessionId */
+			4 +	/* performanceFlags */
+			2 +	/* cbAutoReconnectCookie, either 0 or 0x001c */
 			/* size of ARC_CS_PRIVATE_PACKET */
-			28;    /* autoReconnectCookie */
+			28;	/* autoReconnectCookie */
 
 
 		s = sec_init(sec_flags, packetlen);
@@ -436,33 +429,33 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 		if (0 < len_domain)
 			rdp_out_unistr(s, domain, len_domain);
 		else
-			out_uint16_le(s, 0); /* mandatory 2 bytes null terminator */
+			out_uint16_le(s, 0);	/* mandatory 2 bytes null terminator */
 
 		if (0 < len_user)
 			rdp_out_unistr(s, user, len_user);
 		else
-			out_uint16_le(s, 0); /* mandatory 2 bytes null terminator */
+			out_uint16_le(s, 0);	/* mandatory 2 bytes null terminator */
 
 		if (0 < len_password)
 			rdp_out_unistr(s, password, len_password);
 		else
-			out_uint16_le(s, 0); /* mandatory 2 bytes null terminator */
+			out_uint16_le(s, 0);	/* mandatory 2 bytes null terminator */
 
 		if (0 < len_program)
 			rdp_out_unistr(s, program, len_program);
 		else
-			out_uint16_le(s, 0); /* mandatory 2 bytes null terminator */
+			out_uint16_le(s, 0);	/* mandatory 2 bytes null terminator */
 
 		if (0 < len_directory)
 			rdp_out_unistr(s, directory, len_directory);
 		else
-			out_uint16_le(s, 0); /* mandatory 2 bytes null terminator */
+			out_uint16_le(s, 0);	/* mandatory 2 bytes null terminator */
 
 		/* TS_EXTENDED_INFO_PACKET */
-		out_uint16_le(s, 2);	           /* clientAddressFamily = AF_INET */
-		out_uint16_le(s, len_ip);	   /* cbClientAddress, Length of client ip */
-		rdp_out_unistr(s, ipaddr, len_ip); /* clientAddress */
-		out_uint16_le(s, len_dll ); 	   /* cbClientDir */
+		out_uint16_le(s, 2);	/* clientAddressFamily = AF_INET */
+		out_uint16_le(s, len_ip);	/* cbClientAddress, Length of client ip */
+		rdp_out_unistr(s, ipaddr, len_ip);	/* clientAddress */
+		out_uint16_le(s, len_dll);	/* cbClientDir */
 		rdp_out_unistr(s, "C:\\WINNT\\System32\\mstscax.dll", len_dll);	/* clientDir */
 
 		/* TS_TIME_ZONE_INFORMATION */
@@ -484,7 +477,7 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 		out_uint32_le(s, 0xffffffc4);	/* DaylightBias */
 
 		/* Rest of TS_EXTENDED_INFO_PACKET */
-		out_uint32_le(s, 0); /* clientSessionId (Ignored by server MUST be 0) */
+		out_uint32_le(s, 0);	/* clientSessionId (Ignored by server MUST be 0) */
 		out_uint32_le(s, g_rdp5_performanceflags);
 
 		/* Client Auto-Reconnect */
@@ -1580,7 +1573,7 @@ process_redirect_pdu(STREAM s, RD_BOOL enhanced_redirect /*, uint32 * ext_disc_r
 	{
 		/* the information in this blob is either a password or a cookie that
 		   should be passed though as blob and not parsed as a unicode string */
- 
+
 		/* read blob length */
 		in_uint32_le(s, g_redirect_cookie_len);
 
