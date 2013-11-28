@@ -1632,8 +1632,6 @@ rdp_loop(RD_BOOL * deactivated, uint32 * ext_disc_reason)
 				return process_redirect_pdu(s);
 				break;
 			case RDP_PDU_ENHANCED_REDIRECT:
-				in_uint8s(s, 6);	/* skip shareControlHeader */
-				in_uint8s(s, 2);	/* skip pad2Octets */
 				return process_redirect_pdu(s);
 				break;
 			case RDP_PDU_DATA:
