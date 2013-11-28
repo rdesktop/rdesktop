@@ -379,6 +379,12 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 
 		DEBUG_RDP5(("Sending RDP5-style Logon packet\n"));
 
+		if (g_redirect_cookie_len > 0)
+		{
+			len_password = g_redirect_cookie_len;
+			len_password -= 2; /* substract 2 bytes which is added below */
+		}
+
 		packetlen =
 			/* size of TS_INFO_PACKET */
 			4 +	/* CodePage */
@@ -437,7 +443,16 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 			out_uint16_le(s, 0);	/* mandatory 2 bytes null terminator */
 
 		if (0 < len_password)
-			rdp_out_unistr(s, password, len_password);
+		{
+			if (0 < g_redirect_cookie_len)
+			{
+				out_uint8p(s, g_redirect_cookie, g_redirect_cookie_len);
+			}
+			else
+			{
+				rdp_out_unistr(s, password, len_password);
+			}
+		}
 		else
 			out_uint16_le(s, 0);	/* mandatory 2 bytes null terminator */
 
