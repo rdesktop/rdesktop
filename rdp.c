@@ -72,6 +72,8 @@ extern char *g_redirect_username;
 extern uint8 *g_redirect_lb_info;
 extern uint32 g_redirect_lb_info_len;
 extern uint32 g_redirect_flags;
+extern uint32 g_redirect_session_id;
+
 /* END Session Directory support */
 
 extern uint32 g_reconnect_logonid;
@@ -1481,14 +1483,34 @@ process_data_pdu(STREAM s, uint32 * ext_disc_reason)
 
 /* Process redirect PDU from Session Directory */
 static RD_BOOL
-process_redirect_pdu(STREAM s /*, uint32 * ext_disc_reason */ )
+process_redirect_pdu(STREAM s, RD_BOOL enhanced_redirect /*, uint32 * ext_disc_reason */ )
 {
 	uint32 len;
+	uint16 redirect_identifier;
 
 	g_redirect = True;
 
 	/* these 2 bytes are unknown, seem to be zeros */
 	in_uint8s(s, 2);
+
+	/* FIXME: Previous implementation only reads 4 bytes which has been working
+	   but todays spec says something different. Investigate and retest
+	   server redirection using WTS 2003 cluster.
+	 */
+
+	if (enhanced_redirect)
+	{
+		/* read identifier */
+		in_uint16_le(s, redirect_identifier);
+		if (redirect_identifier != 0x0400)
+			error("Protocol error in server redirection, unexpected data.");
+
+		/* FIXME: skip total length */
+		in_uint8s(s, 2);
+
+		/* read session_id */
+		in_uint32_le(s, g_redirect_session_id);
+	}
 
 	/* read connection flags */
 	in_uint32_le(s, g_redirect_flags);
@@ -1629,10 +1651,10 @@ rdp_loop(RD_BOOL * deactivated, uint32 * ext_disc_reason)
 				*deactivated = True;
 				break;
 			case RDP_PDU_REDIRECT:
-				return process_redirect_pdu(s);
+				return process_redirect_pdu(s, False);
 				break;
 			case RDP_PDU_ENHANCED_REDIRECT:
-				return process_redirect_pdu(s);
+				return process_redirect_pdu(s, True);
 				break;
 			case RDP_PDU_DATA:
 				process_data_pdu(s, ext_disc_reason);
