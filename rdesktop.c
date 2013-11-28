@@ -117,10 +117,11 @@ RD_BOOL g_redirect = False;
 char *g_redirect_server;
 uint32 g_redirect_server_len;
 char g_redirect_domain[16];
-char g_redirect_password[64];
 char *g_redirect_username;
 uint8 *g_redirect_lb_info;
 uint32 g_redirect_lb_info_len;
+uint8 *g_redirect_cookie;
+uint32 g_redirect_cookie_len;
 uint32 g_redirect_flags = 0;
 uint32 g_redirect_session_id = 0;
 
@@ -1117,7 +1118,6 @@ main(int argc, char *argv[])
 			xfree(g_username);
 			g_username = (char *) xmalloc(strlen(g_redirect_username) + 1);
 			STRNCPY(g_username, g_redirect_username, strlen(g_redirect_username) + 1);
-			STRNCPY(password, g_redirect_password, sizeof(password));
 			STRNCPY(server, g_redirect_server, sizeof(server));
 			flags |= RDP_LOGON_AUTO;
 		}

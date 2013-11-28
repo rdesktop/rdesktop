@@ -71,6 +71,8 @@ extern char g_redirect_password[64];
 extern char *g_redirect_username;
 extern uint8 *g_redirect_lb_info;
 extern uint32 g_redirect_lb_info_len;
+extern uint8 *g_redirect_cookie;
+extern uint32 g_redirect_cookie_len;
 extern uint32 g_redirect_flags;
 extern uint32 g_redirect_session_id;
 
@@ -1564,11 +1566,20 @@ process_redirect_pdu(STREAM s, RD_BOOL enhanced_redirect /*, uint32 * ext_disc_r
 
 	if (g_redirect_flags & PDU_REDIRECT_HAS_PASSWORD)
 	{
-		/* read length of password string */
-		in_uint32_le(s, len);
+		/* the information in this blob is either a password or a cookie that
+		   should be passed though as blob and not parsed as a unicode string */
+ 
+		/* read blob length */
+		in_uint32_le(s, g_redirect_cookie_len);
 
-		/* read password string */
-		rdp_in_unistr(s, g_redirect_password, sizeof(g_redirect_password), len);
+		/* reallocate cookie blob */
+		if (g_redirect_cookie != NULL)
+			free(g_redirect_cookie);
+
+		g_redirect_cookie = xmalloc(g_redirect_cookie_len);
+
+		/* read cookie as is */
+		in_uint8p(s, g_redirect_cookie, g_redirect_cookie_len);
 	}
 
 	if (g_redirect_flags & PDU_REDIRECT_DONT_STORE_USERNAME)
