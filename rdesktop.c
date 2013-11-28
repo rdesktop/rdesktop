@@ -1120,6 +1120,9 @@ main(int argc, char *argv[])
 			STRNCPY(g_username, g_redirect_username, strlen(g_redirect_username) + 1);
 			STRNCPY(server, g_redirect_server, sizeof(server));
 			flags |= RDP_LOGON_AUTO;
+
+			fprintf(stderr, "Redirected to %s@%s session %d.\n",
+				g_redirect_username, g_redirect_server, g_redirect_session_id);
 		}
 
 		ui_init_connection();
