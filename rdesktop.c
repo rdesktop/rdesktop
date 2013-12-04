@@ -1123,6 +1123,11 @@ main(int argc, char *argv[])
 
 			fprintf(stderr, "Redirected to %s@%s session %d.\n",
 				g_redirect_username, g_redirect_server, g_redirect_session_id);
+
+			/* A redirect on SSL from a 2003 WTS will result in a 'connection reset by peer'
+			   and therefor we just clear this error before we connect to redirected server.
+			 */
+			g_network_error = False;
 		}
 
 		ui_init_connection();
