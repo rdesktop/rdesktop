@@ -716,7 +716,7 @@ RD_NTSTATUS
 disk_set_information(RD_NTHANDLE handle, uint32 info_class, STREAM in, STREAM out)
 {
 	uint32 length, file_attributes, ft_high, ft_low;
-	char newname[PATH_MAX], fullpath[PATH_MAX];
+	char *newname, fullpath[PATH_MAX];
 	struct fileinfo *pfinfo;
 	int mode;
 	struct stat filestat;
@@ -726,6 +726,7 @@ disk_set_information(RD_NTHANDLE handle, uint32 info_class, STREAM in, STREAM ou
 
 	pfinfo = &(g_fileinfo[handle]);
 	g_notify_stamp = True;
+	newname = NULL;
 
 	switch (info_class)
 	{
@@ -817,14 +818,17 @@ disk_set_information(RD_NTHANDLE handle, uint32 info_class, STREAM in, STREAM ou
 
 			if (length && (length / 2) < 256)
 			{
-				rdp_in_unistr(in, newname, sizeof(newname), length);
+				rdp_in_unistr(in, length, &newname, &length);
+				if (newname == NULL)
+					return RD_STATUS_INVALID_PARAMETER;
+
 				convert_to_unix_filename(newname);
 			}
 			else
 			{
 				return RD_STATUS_INVALID_PARAMETER;
 			}
-
+			
 			sprintf(fullpath, "%s%s", g_rdpdr_device[pfinfo->device_id].local_path,
 				newname);
 
@@ -1194,7 +1198,7 @@ disk_query_directory(RD_NTHANDLE handle, uint32 info_class, char *pattern, STREA
 		case FileNamesInformation:
 
 			/* If a search pattern is received, remember this pattern, and restart search */
-			if (pattern[0] != 0)
+			if (pattern != NULL && pattern[0] != 0)
 			{
 				strncpy(pfinfo->pattern, 1 + strrchr(pattern, '/'), PATH_MAX - 1);
 				rewinddir(pdir);

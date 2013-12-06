@@ -66,8 +66,8 @@ extern RDPCOMP g_mppc_dict;
 extern RD_BOOL g_redirect;
 extern char *g_redirect_server;
 extern uint32 g_redirect_server_len;
-extern char g_redirect_domain[16];
-extern char g_redirect_password[64];
+extern char *g_redirect_domain;
+extern uint32 g_redirect_domain_len;
 extern char *g_redirect_username;
 extern uint32 g_redirect_username_len;
 extern uint8 *g_redirect_lb_info;
@@ -259,12 +259,16 @@ rdp_out_unistr(STREAM s, char *string, int len)
  *
  * Returns str_len of string
  */
-int
-rdp_in_unistr(STREAM s, char *string, int str_size, int in_len)
+void
+rdp_in_unistr(STREAM s, int in_len, char **string, uint32 *str_size)
 {
+	/* Dynamic allocate of destination string if not provided */
+	*string = xmalloc(in_len * 2);
+	*str_size = in_len * 2;
+
 #ifdef HAVE_ICONV
-	size_t ibl = in_len, obl = str_size - 1;
-	char *pin = (char *) s->p, *pout = string;
+	size_t ibl = in_len, obl = *str_size - 1;
+	char *pin = (char *) s->p, *pout = *string;
 	static iconv_t iconv_h = (iconv_t) - 1;
 
 	if (g_iconv_works)
@@ -277,7 +281,7 @@ rdp_in_unistr(STREAM s, char *string, int str_size, int in_len)
 					WINDOWS_CODEPAGE, g_codepage, iconv_h);
 
 				g_iconv_works = False;
-				return rdp_in_unistr(s, string, str_size, in_len);
+				return rdp_in_unistr(s, in_len, string, str_size);
 			}
 		}
 
@@ -289,12 +293,11 @@ rdp_in_unistr(STREAM s, char *string, int str_size, int in_len)
 			}
 			else
 			{
-				iconv_close(iconv_h);
-				iconv_h = (iconv_t) - 1;
 				warning("rdp_in_unistr: iconv fail, errno %d\n", errno);
-
-				g_iconv_works = False;
-				return rdp_in_unistr(s, string, str_size, in_len);
+				
+				free(*string);
+				*string = NULL;
+				*str_size = 0;
 			}
 		}
 
@@ -302,19 +305,21 @@ rdp_in_unistr(STREAM s, char *string, int str_size, int in_len)
 		s->p += in_len;
 
 		*pout = 0;
-		return pout - string;
+
+		if (*string)
+			*str_size = pout - *string;
 	}
 	else
 #endif
 	{
 		int i = 0;
-		int len = in_len / 2;
 		int rem = 0;
+		uint32 len = in_len / 2;
 
-		if (len > str_size - 1)
+		if (len > *str_size - 1)
 		{
 			warning("server sent an unexpectedly long string, truncating\n");
-			len = str_size - 1;
+			len = *str_size - 1;
 			rem = in_len - 2 * len;
 		}
 
@@ -326,7 +331,7 @@ rdp_in_unistr(STREAM s, char *string, int str_size, int in_len)
 
 		in_uint8s(s, rem);
 		string[len] = 0;
-		return len;
+		*str_size = len;
 	}
 }
 
@@ -1515,7 +1520,19 @@ process_redirect_pdu(STREAM s, RD_BOOL enhanced_redirect /*, uint32 * ext_disc_r
 	uint32 len;
 	uint16 redirect_identifier;
 
+	/* reset any previous redirection information */
 	g_redirect = True;
+	free(g_redirect_server);
+	free(g_redirect_username);
+	free(g_redirect_domain);
+	free(g_redirect_lb_info);
+	free(g_redirect_cookie);
+
+	g_redirect_server = NULL;
+	g_redirect_username = NULL;
+	g_redirect_domain = NULL;
+	g_redirect_lb_info = NULL;
+	g_redirect_cookie = NULL;
 
 	/* these 2 bytes are unknown, seem to be zeros */
 	in_uint8s(s, 2);
@@ -1545,14 +1562,10 @@ process_redirect_pdu(STREAM s, RD_BOOL enhanced_redirect /*, uint32 * ext_disc_r
 	if (g_redirect_flags & PDU_REDIRECT_HAS_IP)
 	{
 		/* read length of ip string */
-		in_uint32_le(s, g_redirect_server_len);
-		if (g_redirect_server)
-			free(g_redirect_server);
-
-		g_redirect_server = xmalloc(g_redirect_server_len);
+		in_uint32_le(s, len);
 
 		/* read ip string */
-		rdp_in_unistr(s, g_redirect_server, g_redirect_server_len, g_redirect_server_len);
+		rdp_in_unistr(s, len, &g_redirect_server, &g_redirect_server_len);
 	}
 
 	if (g_redirect_flags & PDU_REDIRECT_HAS_LOAD_BALANCE_INFO)
@@ -1573,16 +1586,10 @@ process_redirect_pdu(STREAM s, RD_BOOL enhanced_redirect /*, uint32 * ext_disc_r
 	if (g_redirect_flags & PDU_REDIRECT_HAS_USERNAME)
 	{
 		/* read length of username string */
-		in_uint32_le(s, g_redirect_username_len);
-
-		/* reallocate a loadbalance info blob */
-		if (g_redirect_username != NULL)
-			free(g_redirect_username);
-
-		g_redirect_username = xmalloc(g_redirect_username_len);
+		in_uint32_le(s, len);
 
 		/* read username string */
-		rdp_in_unistr(s, g_redirect_username, g_redirect_username_len, g_redirect_username_len);
+		rdp_in_unistr(s, len, &g_redirect_username, &g_redirect_username_len);
 	}
 
 	if (g_redirect_flags & PDU_REDIRECT_HAS_DOMAIN)
@@ -1591,7 +1598,7 @@ process_redirect_pdu(STREAM s, RD_BOOL enhanced_redirect /*, uint32 * ext_disc_r
 		in_uint32_le(s, len);
 
 		/* read domain string */
-		rdp_in_unistr(s, g_redirect_domain, sizeof(g_redirect_domain), len);
+		rdp_in_unistr(s, len, &g_redirect_domain, &g_redirect_domain_len);
 	}
 
 	if (g_redirect_flags & PDU_REDIRECT_HAS_PASSWORD)
@@ -1631,15 +1638,17 @@ process_redirect_pdu(STREAM s, RD_BOOL enhanced_redirect /*, uint32 * ext_disc_r
 
 	if (g_redirect_flags & PDU_REDIRECT_HAS_TARGET_FQDN)
 	{
-		/* read length of fqdn string */
-		in_uint32_le(s, g_redirect_server_len);
+		in_uint32_le(s, len);
+
+		/* Let target fqdn replace target ip address */
 		if (g_redirect_server)
+		{
 			free(g_redirect_server);
-
-		g_redirect_server = xmalloc(g_redirect_server_len);
-
+			g_redirect_server = NULL;
+		}
+		
 		/* read fqdn string */
-		rdp_in_unistr(s, g_redirect_server, g_redirect_server_len, g_redirect_server_len);
+		rdp_in_unistr(s, len, &g_redirect_server, &g_redirect_server_len);
 	}
 
 	if (g_redirect_flags & PDU_REDIRECT_HAS_TARGET_NETBIOS)

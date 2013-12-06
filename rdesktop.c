@@ -116,7 +116,8 @@ uint32 g_rdp5_performanceflags =
 RD_BOOL g_redirect = False;
 char *g_redirect_server;
 uint32 g_redirect_server_len;
-char g_redirect_domain[16];
+char *g_redirect_domain;
+uint32 g_redirect_domain_len;
 char *g_redirect_username;
 uint32 g_redirect_username_len;
 uint8 *g_redirect_lb_info;

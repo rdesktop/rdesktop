@@ -362,7 +362,9 @@ rdpdr_process_irp(STREAM s)
 		error_mode,
 		share_mode, disposition, total_timeout, interval_timeout, flags_and_attributes = 0;
 
-	char filename[PATH_MAX];
+	char *filename;
+	uint32 filename_len;
+
 	uint8 *buffer, *pst_buf;
 	struct stream out;
 	DEVICE_FNS *fns;
@@ -439,22 +441,22 @@ rdpdr_process_irp(STREAM s)
 
 			if (length && (length / 2) < 256)
 			{
-				rdp_in_unistr(s, filename, sizeof(filename), length);
-				convert_to_unix_filename(filename);
-			}
-			else
-			{
-				filename[0] = 0;
+				rdp_in_unistr(s, length, &filename, &filename_len);
+				if (filename)
+					convert_to_unix_filename(filename);
 			}
 
 			if (!fns->create)
 			{
 				status = RD_STATUS_NOT_SUPPORTED;
+				free(filename);
 				break;
 			}
 
 			status = fns->create(device, desired_access, share_mode, disposition,
 					     flags_and_attributes, filename, &result);
+
+			free(filename);
 			buffer_len = 1;
 			break;
 
@@ -631,15 +633,12 @@ rdpdr_process_irp(STREAM s)
 					in_uint32_le(s, length);
 					in_uint8s(s, 0x17);
 					if (length && length < 2 * 255)
-					{
-						rdp_in_unistr(s, filename, sizeof(filename),
-							      length);
-						convert_to_unix_filename(filename);
+					{						
+						rdp_in_unistr(s, length, &filename, &filename_len);
+						if (filename)					       
+							convert_to_unix_filename(filename);
 					}
-					else
-					{
-						filename[0] = 0;
-					}
+
 					out.data = out.p = buffer;
 					out.size = sizeof(buffer);
 					status = disk_query_directory(file, info_level, filename,
@@ -647,6 +646,8 @@ rdpdr_process_irp(STREAM s)
 					result = buffer_len = out.p - out.data;
 					if (!buffer_len)
 						buffer_len++;
+
+					free(filename);
 					break;
 
 				case IRP_MN_NOTIFY_CHANGE_DIRECTORY:
