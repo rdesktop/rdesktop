@@ -832,6 +832,8 @@ disk_set_information(RD_NTHANDLE handle, uint32 info_class, STREAM in, STREAM ou
 			sprintf(fullpath, "%s%s", g_rdpdr_device[pfinfo->device_id].local_path,
 				newname);
 
+			free(newname);
+
 			if (rename(pfinfo->path, fullpath) != 0)
 			{
 				perror("rename");
