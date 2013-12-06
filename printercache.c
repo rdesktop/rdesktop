@@ -3,6 +3,8 @@
    Entrypoint and utility functions
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright (C) Jeroen Meijer <jeroen@oldambt7.com> 2003-2008
+   Copyright (C) Henrik Andersson <hean01@cendio.com> 2013
+   
   
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -249,7 +251,8 @@ printercache_process(STREAM s)
 			rdp_in_unistr(s, printer_length, &printer, &printer_length);
 			rdp_in_unistr(s, driver_length, &driver, &driver_length);
 
-			printercache_rename_blob(printer, driver);
+			if (printer != NULL && driver != NULL)
+				printercache_rename_blob(printer, driver);
 
 			free(printer);
 			free(driver);
