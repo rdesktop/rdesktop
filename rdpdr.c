@@ -377,6 +377,8 @@ rdpdr_process_irp(STREAM s)
 	in_uint32_le(s, major);
 	in_uint32_le(s, minor);
 
+	filename = NULL;
+
 	buffer_len = 0;
 	buffer = (uint8 *) xmalloc(1024);
 	buffer[0] = 0;

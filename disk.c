@@ -354,9 +354,10 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 	flags = 0;
 	mode = S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
 
-	if (*filename && filename[strlen(filename) - 1] == '/')
+	if (filename && *filename && filename[strlen(filename) - 1] == '/')
 		filename[strlen(filename) - 1] = 0;
-	sprintf(path, "%s%s", g_rdpdr_device[device_id].local_path, filename);
+
+	sprintf(path, "%s%s", g_rdpdr_device[device_id].local_path, filename ? filename : "");
 
 	/* Protect against mailicous servers:
 	   somelongpath/..     not allowed
@@ -816,18 +817,14 @@ disk_set_information(RD_NTHANDLE handle, uint32 info_class, STREAM in, STREAM ou
 			in_uint8s(in, 0x1a);	/* unknown */
 			in_uint32_le(in, length);
 
-			if (length && (length / 2) < 256)
-			{
-				rdp_in_unistr(in, length, &newname, &length);
-				if (newname == NULL)
-					return RD_STATUS_INVALID_PARAMETER;
-
-				convert_to_unix_filename(newname);
-			}
-			else
-			{
+			if (length && (length / 2) >= 256)
 				return RD_STATUS_INVALID_PARAMETER;
-			}
+
+			rdp_in_unistr(in, length, &newname, &length);
+			if (newname == NULL)
+				return RD_STATUS_INVALID_PARAMETER;
+
+			convert_to_unix_filename(newname);
 			
 			sprintf(fullpath, "%s%s", g_rdpdr_device[pfinfo->device_id].local_path,
 				newname);
