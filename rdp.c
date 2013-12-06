@@ -69,6 +69,7 @@ extern uint32 g_redirect_server_len;
 extern char g_redirect_domain[16];
 extern char g_redirect_password[64];
 extern char *g_redirect_username;
+extern uint32 g_redirect_username_len;
 extern uint8 *g_redirect_lb_info;
 extern uint32 g_redirect_lb_info_len;
 extern uint8 *g_redirect_cookie;
@@ -1572,11 +1573,16 @@ process_redirect_pdu(STREAM s, RD_BOOL enhanced_redirect /*, uint32 * ext_disc_r
 	if (g_redirect_flags & PDU_REDIRECT_HAS_USERNAME)
 	{
 		/* read length of username string */
-		in_uint32_le(s, len);
+		in_uint32_le(s, g_redirect_username_len);
+
+		/* reallocate a loadbalance info blob */
+		if (g_redirect_username != NULL)
+			free(g_redirect_username);
+
+		g_redirect_username = xmalloc(g_redirect_username_len);
 
 		/* read username string */
-		g_redirect_username = (char *) xmalloc(len + 1);
-		rdp_in_unistr(s, g_redirect_username, len + 1, len);
+		rdp_in_unistr(s, g_redirect_username, g_redirect_username_len, g_redirect_username_len);
 	}
 
 	if (g_redirect_flags & PDU_REDIRECT_HAS_DOMAIN)
