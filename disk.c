@@ -825,7 +825,7 @@ disk_set_information(RD_NTHANDLE handle, uint32 info_class, STREAM in, STREAM ou
 				return RD_STATUS_INVALID_PARAMETER;
 
 			convert_to_unix_filename(newname);
-			
+
 			sprintf(fullpath, "%s%s", g_rdpdr_device[pfinfo->device_id].local_path,
 				newname);
 

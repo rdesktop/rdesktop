@@ -156,7 +156,7 @@ RD_BOOL rd_lock_file(int fd, int start, int len);
 void rdp5_process(STREAM s);
 /* rdp.c */
 void rdp_out_unistr(STREAM s, char *string, int len);
-void rdp_in_unistr(STREAM s, int in_len, char **string, uint32 *str_size);
+void rdp_in_unistr(STREAM s, int in_len, char **string, uint32 * str_size);
 void rdp_send_input(uint32 time, uint16 message_type, uint16 device_flags, uint16 param1,
 		    uint16 param2);
 void rdp_send_client_window_status(int status);

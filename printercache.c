@@ -273,7 +273,8 @@ printercache_process(STREAM s)
 
 			if (printer_unicode_length < 2 * 255)
 			{
-				rdp_in_unistr(s, printer_unicode_length, &printer, &printer_unicode_length);
+				rdp_in_unistr(s, printer_unicode_length, &printer,
+					      &printer_unicode_length);
 				if (printer)
 					printercache_save_blob(printer, s->p, blob_length);
 				free(printer);

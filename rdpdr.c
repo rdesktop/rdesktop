@@ -635,9 +635,9 @@ rdpdr_process_irp(STREAM s)
 					in_uint32_le(s, length);
 					in_uint8s(s, 0x17);
 					if (length && length < 2 * 255)
-					{						
+					{
 						rdp_in_unistr(s, length, &filename, &filename_len);
-						if (filename)					       
+						if (filename)
 							convert_to_unix_filename(filename);
 					}
 

@@ -260,7 +260,7 @@ rdp_out_unistr(STREAM s, char *string, int len)
  * Returns str_len of string
  */
 void
-rdp_in_unistr(STREAM s, int in_len, char **string, uint32 *str_size)
+rdp_in_unistr(STREAM s, int in_len, char **string, uint32 * str_size)
 {
 	/* Dynamic allocate of destination string if not provided */
 	*string = xmalloc(in_len * 2);
@@ -294,7 +294,7 @@ rdp_in_unistr(STREAM s, int in_len, char **string, uint32 *str_size)
 			else
 			{
 				warning("rdp_in_unistr: iconv fail, errno %d\n", errno);
-				
+
 				free(*string);
 				*string = NULL;
 				*str_size = 0;
@@ -388,7 +388,7 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 		if (g_redirect == True && g_redirect_cookie_len > 0)
 		{
 			len_password = g_redirect_cookie_len;
-			len_password -= 2; /* substract 2 bytes which is added below */
+			len_password -= 2;	/* substract 2 bytes which is added below */
 		}
 
 		packetlen =
@@ -1646,7 +1646,7 @@ process_redirect_pdu(STREAM s, RD_BOOL enhanced_redirect /*, uint32 * ext_disc_r
 			free(g_redirect_server);
 			g_redirect_server = NULL;
 		}
-		
+
 		/* read fqdn string */
 		rdp_in_unistr(s, len, &g_redirect_server, &g_redirect_server_len);
 	}

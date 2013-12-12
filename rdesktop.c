@@ -1133,7 +1133,8 @@ main(int argc, char *argv[])
 		}
 
 		ui_init_connection();
-		if (!rdp_connect(server, flags, domain, password, shell, directory, g_reconnect_loop))
+		if (!rdp_connect
+		    (server, flags, domain, password, shell, directory, g_reconnect_loop))
 		{
 
 			g_network_error = False;
