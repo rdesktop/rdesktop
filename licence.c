@@ -3,6 +3,8 @@
    RDP licensing negotiation
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright (C) Thomas Uhle <thomas.uhle@mailbox.tu-dresden.de> 2011
+   Copyright (C) Henrik Andersson <henrik.andersson@cendio.com> 2014
+
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -56,9 +58,9 @@ licence_generate_hwid(uint8 * hwid)
 	strncpy((char *) (hwid + 4), g_hostname, LICENCE_HWID_SIZE - 4);
 }
 
-/* Present an existing licence to the server */
+/* Send a lincece info packet to server */
 static void
-licence_present(uint8 * client_random, uint8 * rsa_data,
+licence_info(uint8 * client_random, uint8 * rsa_data,
 		uint8 * licence_data, int licence_size, uint8 * hwid, uint8 * signature)
 {
 	uint32 sec_flags = SEC_LICENCE_NEG;
@@ -69,7 +71,7 @@ licence_present(uint8 * client_random, uint8 * rsa_data,
 
 	s = sec_init(sec_flags, length + 2);
 
-	out_uint8(s, LICENCE_TAG_PRESENT);
+	out_uint8(s, LICENCE_TAG_LICENCE_INFO);
 	out_uint8(s, ((g_rdp_version >= RDP_V5) ? 3 : 2));	/* version */
 	out_uint16_le(s, length);
 
@@ -97,9 +99,9 @@ licence_present(uint8 * client_random, uint8 * rsa_data,
 	sec_send(s, sec_flags);
 }
 
-/* Send a licence request packet */
+/* Send a new licence request packet */
 static void
-licence_send_request(uint8 * client_random, uint8 * rsa_data, char *user, char *host)
+licence_send_new_licence_request(uint8 * client_random, uint8 * rsa_data, char *user, char *host)
 {
 	uint32 sec_flags = SEC_LICENCE_NEG;
 	uint16 userlen = strlen(user) + 1;
@@ -136,9 +138,9 @@ licence_send_request(uint8 * client_random, uint8 * rsa_data, char *user, char *
 	sec_send(s, sec_flags);
 }
 
-/* Process a licence demand packet */
+/* Process a licence request packet */
 static void
-licence_process_demand(STREAM s)
+licence_process_request(STREAM s)
 {
 	uint8 null_data[SEC_MODULUS_SIZE];
 	uint8 *server_random;
@@ -170,7 +172,7 @@ licence_process_demand(STREAM s)
 #if WITH_DEBUG
 		DEBUG(("Sending licensing PDU (message type 0x%02x)\n", LICENCE_TAG_PRESENT));
 #endif
-		licence_present(null_data, null_data, licence_data, licence_size, hwid, signature);
+		licence_info(null_data, null_data, licence_data, licence_size, hwid, signature);
 
 		xfree(licence_data);
 		return;
@@ -179,12 +181,12 @@ licence_process_demand(STREAM s)
 #if WITH_DEBUG
 	DEBUG(("Sending licensing PDU (message type 0x%02x)\n", LICENCE_TAG_REQUEST));
 #endif
-	licence_send_request(null_data, null_data, g_username, g_hostname);
+	licence_send_new_licence_request(null_data, null_data, g_username, g_hostname);
 }
 
-/* Send an authentication response packet */
+/* Send a platform challange response packet */
 static void
-licence_send_authresp(uint8 * token, uint8 * crypt_hwid, uint8 * signature)
+licence_send_platform_challange_response(uint8 * token, uint8 * crypt_hwid, uint8 * signature)
 {
 	uint32 sec_flags = SEC_LICENCE_NEG;
 	uint16 length = 58;
@@ -192,7 +194,7 @@ licence_send_authresp(uint8 * token, uint8 * crypt_hwid, uint8 * signature)
 
 	s = sec_init(sec_flags, length + 2);
 
-	out_uint8(s, LICENCE_TAG_AUTHRESP);
+	out_uint8(s, LICENCE_TAG_PLATFORM_CHALLANGE_RESPONSE);
 	out_uint8(s, ((g_rdp_version >= RDP_V5) ? 3 : 2));	/* version */
 	out_uint16_le(s, length);
 
@@ -210,9 +212,9 @@ licence_send_authresp(uint8 * token, uint8 * crypt_hwid, uint8 * signature)
 	sec_send(s, sec_flags);
 }
 
-/* Parse an authentication request packet */
+/* Parse an platform challange request packet */
 static RD_BOOL
-licence_parse_authreq(STREAM s, uint8 ** token, uint8 ** signature)
+licence_parse_platform_challange(STREAM s, uint8 ** token, uint8 ** signature)
 {
 	uint16 tokenlen;
 
@@ -231,9 +233,9 @@ licence_parse_authreq(STREAM s, uint8 ** token, uint8 ** signature)
 	return s_check_end(s);
 }
 
-/* Process an authentication request packet */
+/* Process a platform challange  packet */
 static void
-licence_process_authreq(STREAM s)
+licence_process_platform_challange(STREAM s)
 {
 	uint8 *in_token = NULL, *in_sig;
 	uint8 out_token[LICENCE_TOKEN_SIZE], decrypt_token[LICENCE_TOKEN_SIZE];
@@ -243,7 +245,7 @@ licence_process_authreq(STREAM s)
 	RDSSL_RC4 crypt_key;
 
 	/* Parse incoming packet and save the encrypted token */
-	licence_parse_authreq(s, &in_token, &in_sig);
+	licence_parse_platform_challange(s, &in_token, &in_sig);
 	memcpy(out_token, in_token, LICENCE_TOKEN_SIZE);
 
 	/* Decrypt the token. It should read TEST in Unicode. */
@@ -260,15 +262,12 @@ licence_process_authreq(STREAM s)
 	rdssl_rc4_set_key(&crypt_key, g_licence_key, 16);
 	rdssl_rc4_crypt(&crypt_key, hwid, crypt_hwid, LICENCE_HWID_SIZE);
 
-#if WITH_DEBUG
-	DEBUG(("Sending licensing PDU (message type 0x%02x)\n", LICENCE_TAG_AUTHRESP));
-#endif
-	licence_send_authresp(out_token, crypt_hwid, out_sig);
+	licence_send_platform_challange_response(out_token, crypt_hwid, out_sig);
 }
 
-/* Process an licence issue packet */
+/* Process a new licence packet */
 static void
-licence_process_issue(STREAM s)
+licence_process_new_license(STREAM s)
 {
 	RDSSL_RC4 crypt_key;
 	uint32 length;
@@ -315,20 +314,21 @@ licence_process(STREAM s)
 
 	switch (tag)
 	{
-		case LICENCE_TAG_DEMAND:
-			licence_process_demand(s);
+		case LICENCE_TAG_REQUEST:
+			licence_process_request(s);
 			break;
 
-		case LICENCE_TAG_AUTHREQ:
-			licence_process_authreq(s);
+		case LICENCE_TAG_PLATFORM_CHALLANGE:
+			licence_process_platform_challange(s);
 			break;
 
-		case LICENCE_TAG_ISSUE:
-		case LICENCE_TAG_REISSUE:
-			licence_process_issue(s);
+		case LICENCE_TAG_NEW_LICENCE:
+		case LICENCE_TAG_UPGRADE_LICENCE:
+			/* we can handle new and upgrades of licences the same way. */
+			licence_process_new_license(s);
 			break;
 
-		case LICENCE_TAG_RESULT:
+		case LICENCE_TAG_ERROR_ALERT:		       
 			g_licence_error_result = True;
 			break;
 
