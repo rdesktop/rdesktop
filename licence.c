@@ -61,7 +61,7 @@ licence_generate_hwid(uint8 * hwid)
 /* Send a lincece info packet to server */
 static void
 licence_info(uint8 * client_random, uint8 * rsa_data,
-		uint8 * licence_data, int licence_size, uint8 * hwid, uint8 * signature)
+	     uint8 * licence_data, int licence_size, uint8 * hwid, uint8 * signature)
 {
 	uint32 sec_flags = SEC_LICENCE_NEG;
 	uint16 length =
@@ -299,6 +299,53 @@ licence_process_new_license(STREAM s)
 	save_licence(s->p, length);
 }
 
+/* process a licence error alert packet */
+void
+licence_process_error_alert(STREAM s)
+{
+	uint32 error_code;
+	uint32 state_transition;
+	uint32 error_info;
+	in_uint32(s, error_code);
+	in_uint32(s, state_transition);
+	in_uint32(s, error_info);
+
+	/* There is a special case in the error alert handling, when licensing is all good
+	   and the server is not sending a license to client, a "Server License Error PDU -
+	   Valid Client" packet is sent which means, every thing is ok.
+	   
+	   Therefor we should flag that everything is ok with license here.
+	*/
+	if (error_code == 0x07)
+	{
+		g_licence_issued = True;
+		return;
+	}
+
+	/* handle error codes, for now, jsut report them */
+	switch (error_code)
+	{
+		case 0x6:	// ERR_NO_LICENSE_SERVER
+			warning("License error alert from server: No license server\n");
+			break;
+
+		case 0x8:	// ERR_INVALID_CLIENT
+			warning("License error alert from server: Invalid client\n");
+			break;
+
+		case 0x4:	// ERR_INVALID_SCOPE
+		case 0xb:	// ERR_INVALID_PRODUCTID
+		case 0xc:	// ERR_INVALID_MESSAGE_LENGTH
+		default:
+			warning("License error alert from server: code %u, state transition %u\n",
+				error_code, state_transition);
+			break;
+	}
+
+	g_licence_error_result = True;
+}
+ 
+
 /* Process a licence packet */
 void
 licence_process(STREAM s)
@@ -328,8 +375,8 @@ licence_process(STREAM s)
 			licence_process_new_license(s);
 			break;
 
-		case LICENCE_TAG_ERROR_ALERT:		       
-			g_licence_error_result = True;
+		case LICENCE_TAG_ERROR_ALERT:
+			licence_process_error_alert(s);
 			break;
 
 		default:
