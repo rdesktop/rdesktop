@@ -116,7 +116,7 @@ licence_send_new_licence_request(uint8 * client_random, uint8 * rsa_data, char *
 	out_uint8(s, ((g_rdp_version >= RDP_V5) ? 3 : 2));	/* version */
 	out_uint16_le(s, length);
 
-	out_uint32_le(s, 1);
+	out_uint32_le(s, 1); // KEY_EXCHANGE_ALG_RSA
 	out_uint16(s, 0);
 	out_uint16_le(s, 0xff01);
 
@@ -126,11 +126,13 @@ licence_send_new_licence_request(uint8 * client_random, uint8 * rsa_data, char *
 	out_uint8p(s, rsa_data, SEC_MODULUS_SIZE);
 	out_uint8s(s, SEC_PADDING_SIZE);
 
-	out_uint16_le(s, LICENCE_TAG_USER);
+	/* Username LICENSE_BINARY_BLOB */
+	out_uint16_le(s, BB_CLIENT_USER_NAME_BLOB);
 	out_uint16_le(s, userlen);
 	out_uint8p(s, user, userlen);
 
-	out_uint16_le(s, LICENCE_TAG_HOST);
+	/* Machinename LICENSE_BINARY_BLOB */
+	out_uint16_le(s, BB_CLIENT_MACHINE_NAME_BLOB);
 	out_uint16_le(s, hostlen);
 	out_uint8p(s, host, hostlen);
 
