@@ -112,7 +112,7 @@ licence_send_new_licence_request(uint8 * client_random, uint8 * rsa_data, char *
 
 	s = sec_init(sec_flags, length + 2);
 
-	out_uint8(s, LICENCE_TAG_REQUEST);
+	out_uint8(s, LICENCE_TAG_NEW_LICENCE_REQUEST);
 	out_uint8(s, ((g_rdp_version >= RDP_V5) ? 3 : 2));	/* version */
 	out_uint16_le(s, length);
 
