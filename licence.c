@@ -170,7 +170,7 @@ licence_process_request(STREAM s)
 		rdssl_rc4_crypt(&crypt_key, hwid, hwid, sizeof(hwid));
 
 #if WITH_DEBUG
-		DEBUG(("Sending licensing PDU (message type 0x%02x)\n", LICENCE_TAG_PRESENT));
+		DEBUG(("Sending licensing PDU (message type 0x%02x)\n", LICENCE_TAG_LICENCE_INFO));
 #endif
 		licence_info(null_data, null_data, licence_data, licence_size, hwid, signature);
 
@@ -179,7 +179,7 @@ licence_process_request(STREAM s)
 	}
 
 #if WITH_DEBUG
-	DEBUG(("Sending licensing PDU (message type 0x%02x)\n", LICENCE_TAG_REQUEST));
+	DEBUG(("Sending licensing PDU (message type 0x%02x)\n", LICENCE_TAG_NEW_LICENCE_REQUEST));
 #endif
 	licence_send_new_licence_request(null_data, null_data, g_username, g_hostname);
 }
