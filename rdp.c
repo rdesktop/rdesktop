@@ -475,9 +475,9 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 		/* TS_EXTENDED_INFO_PACKET */
 		out_uint16_le(s, 2);	/* clientAddressFamily = AF_INET */
 		out_uint16_le(s, len_ip);	/* cbClientAddress, Length of client ip */
-		rdp_out_unistr(s, ipaddr, len_ip);	/* clientAddress */
+		rdp_out_unistr(s, ipaddr, len_ip - 2);	/* clientAddress */
 		out_uint16_le(s, len_dll);	/* cbClientDir */
-		rdp_out_unistr(s, "C:\\WINNT\\System32\\mstscax.dll", len_dll);	/* clientDir */
+		rdp_out_unistr(s, "C:\\WINNT\\System32\\mstscax.dll", len_dll - 2);	/* clientDir */
 
 		/* TS_TIME_ZONE_INFORMATION */
 		tzone = (mktime(gmtime(&t)) - mktime(localtime(&t))) / 60;
