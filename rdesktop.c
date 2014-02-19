@@ -1678,6 +1678,7 @@ load_licence(unsigned char **data)
 	if (home == NULL)
 		return -1;
 
+	memset(hi, 0, sizeof(hi));
 	snprintf((char *) hi, 16, "%s", g_hostname);
 	sec_hash_sha1_16(ho, hi, g_static_rdesktop_salt_16);
 	sec_hash_to_string(hash, sizeof(hash), ho, sizeof(ho));
@@ -1726,6 +1727,7 @@ save_licence(unsigned char *data, int length)
 		return;
 	}
 
+	memset(hi, 0, sizeof(hi));
 	snprintf((char *) hi, 16, "%s", g_hostname);
 	sec_hash_sha1_16(ho, hi, g_static_rdesktop_salt_16);
 	sec_hash_to_string(hash, sizeof(hash), ho, sizeof(ho));
