@@ -1098,11 +1098,8 @@ main(int argc, char *argv[])
 		return EX_OSERR;
 
 #ifdef WITH_RDPSND
-	if (g_rdpsnd)
-	{
-		if (!rdpsnd_init(rdpsnd_optarg))
-			warning("Initializing sound-support failed!\n");
-	}
+	if (!rdpsnd_init(rdpsnd_optarg))
+		warning("Initializing sound-support failed!\n");
 #endif
 
 	if (g_lspci_enabled)

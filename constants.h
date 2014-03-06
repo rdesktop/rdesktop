@@ -442,6 +442,9 @@ enum RDP_INPUT_DEVICE
 #define RD_STATUS_CANCELLED                0xc0000120
 #define RD_STATUS_DIRECTORY_NOT_EMPTY      0xc0000101
 
+/* RDPSND constants */
+#define TSSNDCAPS_ALIVE                    0x00000001
+#define TSSNDCAPS_VOLUME                   0x00000002
 
 /* RDPDR constants */
 #define RDPDR_MAX_DEVICES               0x10

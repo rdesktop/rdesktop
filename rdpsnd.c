@@ -45,6 +45,8 @@
 #define MAX_FORMATS		10
 #define MAX_QUEUE		50
 
+extern RD_BOOL g_rdpsnd;
+
 static VCHANNEL *rdpsnd_channel;
 static VCHANNEL *rdpsnddbg_channel;
 static struct audio_driver *drivers = NULL;
@@ -255,7 +257,7 @@ rdpsnd_process_negotiate(STREAM in)
 		rdpsnd_reset_state();
 	}
 
-	if (!current_driver)
+	if (!current_driver && g_rdpsnd)
 		device_available = rdpsnd_auto_select();
 
 	if (current_driver && !device_available && current_driver->wave_out_open())
@@ -301,7 +303,15 @@ rdpsnd_process_negotiate(STREAM in)
 	}
 
 	out = rdpsnd_init_packet(RDPSND_NEGOTIATE | 0x200, 20 + 18 * format_count);
-	out_uint32_le(out, 0x00800003);	/* flags */
+
+	uint32 flags = TSSNDCAPS_VOLUME;
+
+	/* if sound is enabled, set snd caps to alive to enable
+	   transmision of audio from server */
+	if (g_rdpsnd)
+		flags |= TSSNDCAPS_ALIVE;
+	out_uint32_le(out, flags);	/* TSSNDCAPS flags */
+
 	out_uint32(out, 0xffffffff);	/* volume */
 	out_uint32(out, 0);	/* pitch */
 	out_uint16(out, 0);	/* UDP port */
