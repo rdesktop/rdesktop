@@ -80,7 +80,7 @@ printer_enum_devices(uint32 * id, char *optarg)
 		}
 
 		if (!pos2 || (*pos2 == (char) 0x00))
-			pprinter_data->driver = "HP Color LaserJet 8500 PS";	/* no printer driver supplied set default */
+			pprinter_data->driver = "MS Publisher Imagesetter";	/* no printer driver supplied set default */
 		else
 		{
 			pprinter_data->driver = xmalloc(strlen(pos2) + 1);
