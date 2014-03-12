@@ -111,7 +111,7 @@ char g_seamless_spawn_cmd[512];
 RD_BOOL g_user_quit = False;
 uint32 g_embed_wnd;
 uint32 g_rdp5_performanceflags =
-	RDP5_NO_WALLPAPER | RDP5_NO_FULLWINDOWDRAG | RDP5_NO_MENUANIMATIONS;
+	RDP5_NO_WALLPAPER | RDP5_NO_FULLWINDOWDRAG | RDP5_NO_MENUANIMATIONS | RDP5_NO_CURSOR_SHADOW;
 /* Session Directory redirection */
 RD_BOOL g_redirect = False;
 char *g_redirect_server;
