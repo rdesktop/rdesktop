@@ -52,7 +52,7 @@ semicolon 0x33 shift
 period 0x34
 colon 0x34 shift
 periodcentered 0x34 altgr
-hyphen 0x35
+minus 0x35
 equal 0x35 shift
 bracketright 0x56
 bracketleft 0x56 shift
