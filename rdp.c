@@ -3,7 +3,7 @@
    Protocol services - RDP layer
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2003-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
-   Copyright 2011-2013 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2011-2014 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -39,6 +39,7 @@
 
 extern uint16 g_mcs_userid;
 extern char *g_username;
+extern char g_password[64];
 extern char g_codepage[16];
 extern RD_BOOL g_bitmap_compression;
 extern RD_BOOL g_orders;
@@ -1711,6 +1712,11 @@ rdp_loop(RD_BOOL * deactivated, uint32 * ext_disc_reason)
 				return process_redirect_pdu(s, True);
 				break;
 			case RDP_PDU_DATA:
+				/* If we got a data PDU, we don't need to keep the password in memory
+				   anymore and therefor we should clear it for security reasons. */
+				if (g_password[0] != '\0')
+					memset(g_password, 0, sizeof(g_password));
+
 				process_data_pdu(s, ext_disc_reason);
 				break;
 			case 0:

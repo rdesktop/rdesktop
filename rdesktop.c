@@ -3,7 +3,7 @@
    Entrypoint and utility functions
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2002-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
-   Copyright 2010-2013 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2010-2014 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -61,6 +61,7 @@ uint8 g_static_rdesktop_salt_16[16] = {
 
 char g_title[64] = "";
 char *g_username;
+char g_password[64] = "";
 char g_hostname[16] = "";
 char g_keymapname[PATH_MAX] = "";
 unsigned int g_keylayout = 0x409;	/* Defaults to US keyboard layout */
@@ -521,7 +522,6 @@ main(int argc, char *argv[])
 	char server[256];
 	char fullhostname[64];
 	char domain[256];
-	char password[64];
 	char shell[256];
 	char directory[256];
 	RD_BOOL prompt_password, deactivated;
@@ -556,7 +556,7 @@ main(int argc, char *argv[])
 
 	flags = RDP_LOGON_NORMAL;
 	prompt_password = False;
-	g_seamless_spawn_cmd[0] = domain[0] = password[0] = shell[0] = directory[0] = 0;
+	g_seamless_spawn_cmd[0] = domain[0] = g_password[0] = shell[0] = directory[0] = 0;
 	g_embed_wnd = 0;
 
 	g_num_devices = 0;
@@ -623,7 +623,7 @@ main(int argc, char *argv[])
 					break;
 				}
 
-				STRNCPY(password, optarg, sizeof(password));
+				STRNCPY(g_password, optarg, sizeof(g_password));
 				flags |= RDP_LOGON_AUTO;
 
 				/* try to overwrite argument so it won't appear in ps */
@@ -1058,7 +1058,7 @@ main(int argc, char *argv[])
 		xfree(locale);
 
 
-	if (prompt_password && read_password(password, sizeof(password)))
+	if (prompt_password && read_password(g_password, sizeof(g_password)))
 		flags |= RDP_LOGON_AUTO;
 
 	if (g_title[0] == 0)
@@ -1068,7 +1068,7 @@ main(int argc, char *argv[])
 	}
 
 #ifdef RDP2VNC
-	rdp2vnc_connect(server, flags, domain, password, shell, directory);
+	rdp2vnc_connect(server, flags, domain, g_password, shell, directory);
 	return EX_OK;
 #else
 
@@ -1131,7 +1131,7 @@ main(int argc, char *argv[])
 
 		ui_init_connection();
 		if (!rdp_connect
-		    (server, flags, domain, password, shell, directory, g_reconnect_loop))
+		    (server, flags, domain, g_password, shell, directory, g_reconnect_loop))
 		{
 
 			g_network_error = False;
@@ -1157,9 +1157,7 @@ main(int argc, char *argv[])
 		if (!g_packet_encryption)
 			g_encryption_initial = g_encryption = False;
 
-
 		DEBUG(("Connection successful.\n"));
-		memset(password, 0, sizeof(password));
 
 		rd_create_ui();
 		tcp_run_ui(True);
