@@ -40,6 +40,7 @@
 #define RDPSND_REC_DATA			42
 #define RDPSND_REC_SET_VOLUME	43
 
+/* Special flag for TLSND record, not defined in MS specs. */
 #define RDPSND_FLAG_RECORD		0x00800000
 
 #define MAX_FORMATS		10
@@ -309,7 +310,10 @@ rdpsnd_process_negotiate(STREAM in)
 	/* if sound is enabled, set snd caps to alive to enable
 	   transmision of audio from server */
 	if (g_rdpsnd)
+	{
 		flags |= TSSNDCAPS_ALIVE;
+		flags |= RDPSND_FLAG_RECORD;
+	}
 	out_uint32_le(out, flags);	/* TSSNDCAPS flags */
 
 	out_uint32(out, 0xffffffff);	/* volume */
