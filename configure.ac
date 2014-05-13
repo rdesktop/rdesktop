@@ -142,7 +142,7 @@ AS_IF([test "x$enable_credssp" != "xno"], [
 	      AC_DEFINE(WITH_CREDSSP)
 	  else
 		echo
-		echo "CredSPP support requires libgssglue, install the dependency"
+		echo "CredSSP support requires libgssglue, install the dependency"
 		echo "or disable the feature using --disable-credssp."
 		echo
 		exit 1
