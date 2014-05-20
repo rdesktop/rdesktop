@@ -1123,7 +1123,7 @@ static void
 process_colour_pointer_common(STREAM s, int bpp)
 {
 	uint16 width, height, cache_idx, masklen, datalen;
-	sint16 x, y;
+	uint16 x, y;
 	uint8 *mask;
 	uint8 *data;
 	RD_HCURSOR cursor;
@@ -1141,10 +1141,9 @@ process_colour_pointer_common(STREAM s, int bpp)
 	{
 		warning("process_colour_pointer_common: " "width %d height %d\n", width, height);
 	}
-	/* sometimes x or y is out of bounds */
-	x = MAX(x, 0);
+
+	/* keep hotspot within cursor bounding box */
 	x = MIN(x, width - 1);
-	y = MAX(y, 0);
 	y = MIN(y, height - 1);
 	cursor = ui_create_cursor(x, y, width, height, mask, data, bpp);
 	ui_set_cursor(cursor);
