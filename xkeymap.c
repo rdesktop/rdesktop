@@ -35,8 +35,8 @@
 #include "rdesktop.h"
 #include "scancodes.h"
 
-#define KEYMAP_SIZE 0xffff+1
-#define KEYMAP_MASK 0xffff
+#define KEYMAP_SIZE 0x7f+1
+#define KEYMAP_MASK 0x7f
 #define KEYMAP_MAX_LINE_LENGTH 80
 
 extern Display *g_display;
