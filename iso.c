@@ -228,7 +228,7 @@ iso_connect(char *server, char *username, char *domain, char *password,
 		return False;
 
 	iso_send_connection_request(username, neg_proto);
-	
+
 	s = iso_recv_msg(&code, NULL);
 	if (s == NULL)
 		return False;

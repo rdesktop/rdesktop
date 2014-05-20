@@ -116,7 +116,7 @@ licence_send_new_licence_request(uint8 * client_random, uint8 * rsa_data, char *
 	out_uint8(s, ((g_rdp_version >= RDP_V5) ? 3 : 2));	/* version */
 	out_uint16_le(s, length);
 
-	out_uint32_le(s, 1); // KEY_EXCHANGE_ALG_RSA
+	out_uint32_le(s, 1);	// KEY_EXCHANGE_ALG_RSA
 	out_uint16(s, 0);
 	out_uint16_le(s, 0xff01);
 
@@ -315,9 +315,9 @@ licence_process_error_alert(STREAM s)
 	/* There is a special case in the error alert handling, when licensing is all good
 	   and the server is not sending a license to client, a "Server License Error PDU -
 	   Valid Client" packet is sent which means, every thing is ok.
-	   
+
 	   Therefor we should flag that everything is ok with license here.
-	*/
+	 */
 	if (error_code == 0x07)
 	{
 		g_licence_issued = True;
@@ -346,7 +346,7 @@ licence_process_error_alert(STREAM s)
 
 	g_licence_error_result = True;
 }
- 
+
 
 /* Process a licence packet */
 void

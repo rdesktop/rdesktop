@@ -1507,7 +1507,7 @@ process_data_pdu(STREAM s, uint32 * ext_disc_reason)
 			 */
 			break;
 
-	        case RDP_DATA_PDU_AUTORECONNECT_STATUS:
+		case RDP_DATA_PDU_AUTORECONNECT_STATUS:
 			warning("Automatic reconnect using cookie, failed.\n");
 			break;
 
