@@ -254,7 +254,6 @@ streamsave(STREAM s, char *fn)
 static STREAM
 cssp_encode_tspasswordcreds(char *username, char *password, char *domain)
 {
-	int i;
 	STREAM out, h1, h2;
 	struct stream tmp = { 0 };
 	struct stream message = { 0 };
@@ -265,8 +264,7 @@ cssp_encode_tspasswordcreds(char *username, char *password, char *domain)
 	// domainName [0]
 	s_realloc(&tmp, strlen(domain) * sizeof(uint16));
 	s_reset(&tmp);
-	for (i = 0; i < strlen(domain); i++)
-		out_uint16_le(&tmp, domain[i]);
+	rdp_out_unistr(&tmp, domain, strlen(domain) * sizeof(uint16));
 	s_mark_end(&tmp);
 	h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 0, h2);
@@ -279,9 +277,9 @@ cssp_encode_tspasswordcreds(char *username, char *password, char *domain)
 	// userName [1]
 	s_realloc(&tmp, strlen(username) * sizeof(uint16));
 	s_reset(&tmp);
-	for (i = 0; i < strlen(username); i++)
-		out_uint16_le(&tmp, username[i]);
+	rdp_out_unistr(&tmp, username, strlen(username) * sizeof(uint16));
 	s_mark_end(&tmp);
+
 	h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 1, h2);
 	s_realloc(&message, s_length(&message) + s_length(h1));
@@ -293,8 +291,7 @@ cssp_encode_tspasswordcreds(char *username, char *password, char *domain)
 	// password [2]
 	s_realloc(&tmp, strlen(password) * sizeof(uint16));
 	s_reset(&tmp);
-	for (i = 0; i < strlen(password); i++)
-		out_uint16_le(&tmp, password[i]);
+	rdp_out_unistr(&tmp, password, strlen(password) * sizeof(uint16));
 	s_mark_end(&tmp);
 	h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 2, h2);
