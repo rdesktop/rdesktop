@@ -4,6 +4,7 @@
 
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2003-2008 Peter Astrand <astrand@cendio.se> for Cendio AB
+   Copyright 2014 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -51,7 +52,7 @@ extern RDP_VERSION g_rdp_version;
 extern RD_BOOL g_numlock_sync;
 
 static RD_BOOL keymap_loaded;
-static key_translation *keymap[KEYMAP_SIZE];
+static key_translation_entry *keymap[KEYMAP_SIZE];
 static KeySym keypress_keysyms[256];
 static int min_keycode;
 static uint16 remote_modifier_state = 0;
@@ -73,11 +74,93 @@ free_key_translation(key_translation * ptr)
 	}
 }
 
+/* Free the key_translation_entry for a given keysym and remove from the table */
+static void
+delete_key_translation_entry(KeySym keysym)
+{
+	uint32 hash;
+	key_translation_entry *ptr;
+	key_translation_entry *next;
+	key_translation_entry *prev;
+	key_translation_entry tmp;
+
+	/* Faking a prev node allows us to keep the algorithm simple */
+	hash = keysym & KEYMAP_MASK;
+	ptr = keymap[hash];
+	tmp.next = ptr;
+	prev = &tmp;
+
+	while (ptr)
+	{
+		next = ptr->next;
+		if (ptr->keysym == keysym)
+		{
+			free_key_translation(ptr->tr);
+			prev->next = next;
+			xfree(ptr);
+		}
+		else
+		{
+			prev = ptr;
+		}
+
+		ptr = next;
+	}
+
+	/* Copy pointer back from our fake node */
+	keymap[hash] = tmp.next;
+}
+
+/* Allocate and return a new entry in the translation table */
+static key_translation_entry *
+new_key_translation_entry(KeySym keysym)
+{
+	uint32 hash;
+	key_translation_entry *entry;
+
+	/* Clear out any existing entry */
+	delete_key_translation_entry(keysym);
+
+	/* Allocate the new one */
+	entry = (key_translation_entry *) xmalloc(sizeof(key_translation_entry));
+	memset(entry, 0, sizeof(key_translation_entry));
+	entry->keysym = keysym;
+
+	/* And insert it at head of list */
+	hash = keysym & KEYMAP_MASK;
+	entry->next = keymap[hash];
+	keymap[hash] = entry;
+
+	return entry;
+}
+
+/* Retrieve the key_translation_entry for a given keysym */
+static key_translation_entry *
+get_key_translation_entry(uint32 keysym)
+{
+	key_translation_entry *ptr;
+	key_translation_entry *next;
+
+	ptr = keymap[keysym & KEYMAP_MASK];
+
+	while (ptr)
+	{
+		next = ptr->next;
+		if (ptr->keysym == keysym)
+			return ptr;
+
+		ptr = next;
+	}
+
+	/* Not found */
+	return NULL;
+}
+
 static void
 add_to_keymap(char *keyname, uint8 scancode, uint16 modifiers, char *mapname)
 {
 	KeySym keysym;
-	key_translation *tr;
+	key_translation_entry *entry;
 
 	keysym = XStringToKeysym(keyname);
 	if (keysym == NoSymbol)
@@ -89,12 +172,14 @@ add_to_keymap(char *keyname, uint8 scancode, uint16 modifiers, char *mapname)
 	DEBUG_KBD(("Adding translation, keysym=0x%x, scancode=0x%x, "
 		   "modifiers=0x%x\n", (unsigned int) keysym, scancode, modifiers));
 
-	tr = (key_translation *) xmalloc(sizeof(key_translation));
-	memset(tr, 0, sizeof(key_translation));
-	tr->scancode = scancode;
-	tr->modifiers = modifiers;
-	free_key_translation(keymap[keysym & KEYMAP_MASK]);
-	keymap[keysym & KEYMAP_MASK] = tr;
+	/* Make a new entry in the table */
+	entry = new_key_translation_entry(keysym);
+
+	/* And add the new translation to it */
+	entry->tr = (key_translation *) xmalloc(sizeof(key_translation));
+	memset(entry->tr, 0, sizeof(key_translation));
+	entry->tr->scancode = scancode;
+	entry->tr->modifiers = modifiers;
 
 	return;
 }
@@ -103,6 +188,8 @@ static void
 add_sequence(char *rest, char *mapname)
 {
 	KeySym keysym;
+	KeySym seq_keysym;
+	key_translation_entry *entry;
 	key_translation *tr, **prev_next;
 	size_t chars;
 	char keyname[KEYMAP_MAX_LINE_LENGTH];
@@ -123,11 +210,10 @@ add_sequence(char *rest, char *mapname)
 		return;
 	}
 
-
 	DEBUG_KBD(("Adding sequence for keysym (0x%lx, %s) -> ", keysym, keyname));
 
-	free_key_translation(keymap[keysym & KEYMAP_MASK]);
-	prev_next = &keymap[keysym & KEYMAP_MASK];
+	entry = new_key_translation_entry(keysym);
+	prev_next = &(entry->tr);
 
 	while (*rest)
 	{
@@ -140,22 +226,28 @@ add_sequence(char *rest, char *mapname)
 		STRNCPY(keyname, rest, chars + 1);
 		rest += chars;
 
-		keysym = XStringToKeysym(keyname);
-		if (keysym == NoSymbol)
+		seq_keysym = XStringToKeysym(keyname);
+		if (seq_keysym == NoSymbol)
 		{
 			DEBUG_KBD(("Bad keysym \"%s\" in keymap %s (ignoring line)\n", keyname,
 				   mapname));
+			delete_key_translation_entry(keysym);
 			return;
 		}
 
 		/* Allocate space for key_translation structure */
 		tr = (key_translation *) xmalloc(sizeof(key_translation));
 		memset(tr, 0, sizeof(key_translation));
+
+		/* Do this straight away so the key_translation won't get orphaned on error */
+		if (!entry->tr)
+			entry->tr = tr;
+
 		*prev_next = tr;
 		prev_next = &tr->next;
-		tr->seq_keysym = keysym;
+		tr->seq_keysym = seq_keysym;
 
-		DEBUG_KBD(("0x%x, ", (unsigned int) keysym));
+		DEBUG_KBD(("0x%x, ", (unsigned int) seq_keysym));
 	}
 	DEBUG_KBD(("\n"));
 }
@@ -638,8 +730,11 @@ xkeymap_translate_key(uint32 keysym, unsigned int keycode, unsigned int state)
 {
 	key_translation tr = { 0, 0, 0, 0 };
 	key_translation *ptr;
+	key_translation_entry *entry;
 
-	ptr = keymap[keysym & KEYMAP_MASK];
+	entry = get_key_translation_entry(keysym);
+	ptr = entry ? entry->tr : NULL;
+
 	if (ptr)
 	{
 		tr = *ptr;
