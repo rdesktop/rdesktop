@@ -318,7 +318,6 @@ static STREAM
 cssp_encode_tscspdatadetail(unsigned char keyspec, char *card, char *reader, char *container,
 			    char *csp)
 {
-	int i;
 	STREAM out;
 	STREAM h1, h2;
 	struct stream tmp = { 0 };
@@ -342,8 +341,7 @@ cssp_encode_tscspdatadetail(unsigned char keyspec, char *card, char *reader, cha
 	{
 		s_realloc(&tmp, strlen(card) * sizeof(uint16));
 		s_reset(&tmp);
-		for (i = 0; i < strlen(card); i++)
-			out_uint16_le(&tmp, card[i]);
+		rdp_out_unistr(&tmp, card, strlen(card) * sizeof(uint16));
 		s_mark_end(&tmp);
 		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 1, h2);
@@ -359,8 +357,7 @@ cssp_encode_tscspdatadetail(unsigned char keyspec, char *card, char *reader, cha
 	{
 		s_realloc(&tmp, strlen(reader) * sizeof(uint16));
 		s_reset(&tmp);
-		for (i = 0; i < strlen(reader); i++)
-			out_uint16_le(&tmp, reader[i]);
+		rdp_out_unistr(&tmp, reader, strlen(reader) * sizeof(uint16));
 		s_mark_end(&tmp);
 		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 2, h2);
@@ -376,8 +373,7 @@ cssp_encode_tscspdatadetail(unsigned char keyspec, char *card, char *reader, cha
 	{
 		s_realloc(&tmp, strlen(container) * sizeof(uint16));
 		s_reset(&tmp);
-		for (i = 0; i < strlen(container); i++)
-			out_uint16_le(&tmp, container[i]);
+		rdp_out_unistr(&tmp, container, strlen(container) * sizeof(uint16));
 		s_mark_end(&tmp);
 		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 3, h2);
@@ -393,8 +389,7 @@ cssp_encode_tscspdatadetail(unsigned char keyspec, char *card, char *reader, cha
 	{
 		s_realloc(&tmp, strlen(csp) * sizeof(uint16));
 		s_reset(&tmp);
-		for (i = 0; i < strlen(csp); i++)
-			out_uint16_le(&tmp, csp[i]);
+		rdp_out_unistr(&tmp, csp, strlen(csp) * sizeof(uint16));
 		s_mark_end(&tmp);
 		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 4, h2);
@@ -419,7 +414,6 @@ cssp_encode_tscspdatadetail(unsigned char keyspec, char *card, char *reader, cha
 static STREAM
 cssp_encode_tssmartcardcreds(char *username, char *password, char *domain)
 {
-	int i;
 	STREAM out, h1, h2;
 	struct stream tmp = { 0 };
 	struct stream message = { 0 };
@@ -427,8 +421,7 @@ cssp_encode_tssmartcardcreds(char *username, char *password, char *domain)
 	// pin [0]
 	s_realloc(&tmp, strlen(password) * sizeof(uint16));
 	s_reset(&tmp);
-	for (i = 0; i < strlen(password); i++)
-		out_uint16_le(&tmp, password[i]);
+	rdp_out_unistr(&tmp, password, strlen(password) * sizeof(uint16));
 	s_mark_end(&tmp);
 	h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 0, h2);
@@ -453,8 +446,7 @@ cssp_encode_tssmartcardcreds(char *username, char *password, char *domain)
 	{
 		s_realloc(&tmp, strlen(username) * sizeof(uint16));
 		s_reset(&tmp);
-		for (i = 0; i < strlen(username); i++)
-			out_uint16_le(&tmp, username[i]);
+		rdp_out_unistr(&tmp, username, strlen(username) * sizeof(uint16));
 		s_mark_end(&tmp);
 		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 2, h2);
@@ -470,8 +462,7 @@ cssp_encode_tssmartcardcreds(char *username, char *password, char *domain)
 	{
 		s_realloc(&tmp, strlen(domain) * sizeof(uint16));
 		s_reset(&tmp);
-		for (i = 0; i < strlen(domain); i++)
-			out_uint16_le(&tmp, domain[i]);
+		rdp_out_unistr(&tmp, domain, strlen(domain) * sizeof(uint16));
 		s_mark_end(&tmp);
 		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 3, h2);
