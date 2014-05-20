@@ -226,6 +226,10 @@ add_sequence(char *rest, char *mapname)
 		STRNCPY(keyname, rest, chars + 1);
 		rest += chars;
 
+		/* Handle trailing whitespace */
+		if (*keyname == 0)
+			break;
+
 		seq_keysym = XStringToKeysym(keyname);
 		if (seq_keysym == NoSymbol)
 		{
