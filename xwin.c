@@ -3822,7 +3822,10 @@ ui_seamless_begin(RD_BOOL hidden)
 		ui_seamless_toggle();
 
 	if (g_seamless_spawn_cmd[0])
+	{
 		seamless_send_spawn(g_seamless_spawn_cmd);
+		g_seamless_spawn_cmd[0] = 0;
+	}
 }
 
 
