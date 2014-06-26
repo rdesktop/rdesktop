@@ -1,0 +1,125 @@
+include en-us
+map 0x20409
+
+# Top row
+dead_grave 0x29
+dead_tilde 0x29 shift
+
+exclamdown  0x02 altgr
+onesuperior 0x02 shift altgr
+
+twosuperior 0x03 altgr
+dead_doubleacute 0x03 shift altgr
+
+threesuperior 0x04 altgr
+dead_macron 0x04 shift altgr
+
+currency 0x05 altgr
+sterling 0x05 shift altgr
+
+EuroSign 0x06 altgr
+
+dead_circumflex 0x7 shift
+onequarter 0x07 altgr
+circumflex 0x7 shift altgr
+
+onehalf 0x08 altgr
+dead_horn 0x08 shift altgr
+
+threequarters 0x09 altgr
+dead_ogonek 0x09 shift altgr
+
+leftsinglequotemark 0x0a altgr
+dead_breve 0x0a shift altgr
+
+rightsinglequotemark 0x0b altgr
+dead_abovering 0x0b shift altgr
+
+yen 0x0c altgr
+dead_belowdot 0x0c shift altgr
+
+multiply 0x0d altgr
+division 0x0d shift altgr
+
+# Qwerty first row
+adiaeresis 0x10 altgr
+Adiaeresis 0x10 shift altgr
+
+aring 0x11 altgr
+Aring 0x11 shift altgr
+
+eacute 0x12 altgr
+Eacute 0x12 shift altgr
+
+registered 0x13 altgr
+
+thorn 0x14 altgr
+THORN 0x14 shift altgr
+
+udiaeresis 0x15 altgr
+Udiaeresis 0x15 shift altgr
+
+uacute 0x16 altgr
+Uacute 0x16 shift altgr
+
+iacute 0x17 altgr
+Iacute 0x17 shift altgr
+
+oacute 0x18 altgr
+Oacute 0x18 shift altgr
+
+odiaeresis 0x19 altgr
+Odiaeresis 0x19 shift altgr
+
+guillemotleft 0x1a altgr
+leftdoublequotemark 0x1a shift altgr
+
+guillemotright 0x1b altgr
+rightdoublequotemark 0x1b shift altgr
+
+# Qwerty second row
+aacute 0x1e altgr
+Aacute 0x1e shift altgr
+
+ssharp 0x1f altgr
+section 0x1f shift altgr
+
+eth 0x20 altgr
+ETH 0x20 shift altgr
+
+oe 0x25 altgr
+OE 0x25 shift altgr
+
+oslash 0x26 altgr
+Oslash 0x26 shift altgr
+
+paragraph 0x27 altgr
+degree 0x27 shift altgr
+
+dead_acute 0x28
+dead_diaeresis 0x28 shift
+apostrophe 0x28 altgr
+quotedbl 0x28 shift altgr
+
+notsign 0x2b altgr
+brokenbar 0x2b shift altgr
+
+# Qwerty third row
+ae 0x2c altgr
+AE 0x2c shift altgr
+
+copyright 0x2e altgr
+cent 0x2e shift altgr
+
+ntilde 0x31 altgr
+Ntilde 0x31 shift altgr
+
+mu 0x32 altgr
+
+ccedilla 0x33 altgr
+Ccedilla 0x33 shift altgr
+
+dead_abovedot 0x34 altgr
+dead_caron 0x34 shift altgr
+
+questiondown 0x35 altgr
