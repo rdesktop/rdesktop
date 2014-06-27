@@ -554,7 +554,11 @@ main(int argc, char *argv[])
 	act.sa_flags = 0;
 	sigaction(SIGPIPE, &act, NULL);
 
-	flags = RDP_LOGON_NORMAL | RDP_LOGON_ENABLEWINDOWSKEY;
+	/* setup default flags for TS_INFO_PACKET */
+	flags = RDP_INFO_MOUSE | RDP_INFO_DISABLECTRLALTDEL
+		| RDP_INFO_UNICODE | RDP_INFO_MAXIMIZESHELL
+		| RDP_INFO_ENABLEWINDOWSKEY;
+
 	prompt_password = False;
 	g_seamless_spawn_cmd[0] = domain[0] = g_password[0] = shell[0] = directory[0] = 0;
 	g_embed_wnd = 0;
@@ -624,7 +628,7 @@ main(int argc, char *argv[])
 				}
 
 				STRNCPY(g_password, optarg, sizeof(g_password));
-				flags |= RDP_LOGON_AUTO;
+				flags |= RDP_INFO_AUTOLOGON;
 
 				/* try to overwrite argument so it won't appear in ps */
 				p = optarg;
@@ -772,7 +776,7 @@ main(int argc, char *argv[])
 
 			case 'z':
 				DEBUG(("rdp compression enabled\n"));
-				flags |= (RDP_LOGON_COMPRESSION | RDP_LOGON_COMPRESSION2);
+				flags |= (RDP_INFO_COMPRESSION | RDP_INFO_COMPRESSION2);
 				break;
 
 			case 'x':
@@ -812,7 +816,7 @@ main(int argc, char *argv[])
 						while ((p = next_arg(optarg, ',')))
 						{
 							if (str_startswith(optarg, "remote"))
-								flags |= RDP_LOGON_LEAVE_AUDIO;
+								flags |= RDP_INFO_REMOTE_CONSOLE_AUDIO;
 
 							if (str_startswith(optarg, "local"))
 #ifdef WITH_RDPSND
@@ -1059,7 +1063,7 @@ main(int argc, char *argv[])
 
 
 	if (prompt_password && read_password(g_password, sizeof(g_password)))
-		flags |= RDP_LOGON_AUTO;
+		flags |= RDP_INFO_AUTOLOGON;
 
 	if (g_title[0] == 0)
 	{
@@ -1118,7 +1122,7 @@ main(int argc, char *argv[])
 			g_username = (char *) xmalloc(strlen(g_redirect_username) + 1);
 			STRNCPY(g_username, g_redirect_username, strlen(g_redirect_username) + 1);
 			STRNCPY(server, g_redirect_server, sizeof(server));
-			flags |= RDP_LOGON_AUTO;
+			flags |= RDP_INFO_AUTOLOGON;
 
 			fprintf(stderr, "Redirected to %s@%s session %d.\n",
 				g_redirect_username, g_redirect_server, g_redirect_session_id);
