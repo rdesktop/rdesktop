@@ -321,7 +321,7 @@ enum RDP_INPUT_DEVICE
 #define RDP_LOGON_AUTO		0x0008
 #define RDP_LOGON_NORMAL	0x0033
 #define RDP_LOGON_COMPRESSION	0x0080	/* mppc compression with 8kB histroy buffer */
-#define RDP_LOGON_BLOB		0x0100
+#define RDP_LOGON_ENABLEWINDOWSKEY 0x0100
 #define RDP_LOGON_COMPRESSION2	0x0200	/* rdp5 mppc compression with 64kB history buffer */
 #define RDP_LOGON_LEAVE_AUDIO	0x2000
 #define RDP_LOGON_PASSWORD_IS_SC_PIN 0x40000

@@ -554,7 +554,7 @@ main(int argc, char *argv[])
 	act.sa_flags = 0;
 	sigaction(SIGPIPE, &act, NULL);
 
-	flags = RDP_LOGON_NORMAL;
+	flags = RDP_LOGON_NORMAL | RDP_LOGON_ENABLEWINDOWSKEY;
 	prompt_password = False;
 	g_seamless_spawn_cmd[0] = domain[0] = g_password[0] = shell[0] = directory[0] = 0;
 	g_embed_wnd = 0;
