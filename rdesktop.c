@@ -782,21 +782,21 @@ main(int argc, char *argv[])
 			case 'x':
 				if (str_startswith(optarg, "m"))	/* modem */
 				{
-					g_rdp5_performanceflags =
+					g_rdp5_performanceflags = RDP5_NO_CURSOR_SHADOW |
 						RDP5_NO_WALLPAPER | RDP5_NO_FULLWINDOWDRAG |
 						RDP5_NO_MENUANIMATIONS | RDP5_NO_THEMING;
 				}
 				else if (str_startswith(optarg, "b"))	/* broadband */
 				{
-					g_rdp5_performanceflags = RDP5_NO_WALLPAPER;
+					g_rdp5_performanceflags = RDP5_NO_CURSOR_SHADOW | RDP5_NO_WALLPAPER;
 				}
 				else if (str_startswith(optarg, "l"))	/* lan */
 				{
-					g_rdp5_performanceflags = RDP5_DISABLE_NOTHING;
+					g_rdp5_performanceflags = RDP5_NO_CURSOR_SHADOW | RDP5_DISABLE_NOTHING;
 				}
 				else
 				{
-					g_rdp5_performanceflags = strtol(optarg, NULL, 16);
+					g_rdp5_performanceflags = RDP5_NO_CURSOR_SHADOW | strtol(optarg, NULL, 16);
 				}
 				break;
 
