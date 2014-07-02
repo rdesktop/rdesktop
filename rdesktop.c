@@ -637,7 +637,7 @@ main(int argc, char *argv[])
 				break;
 #ifdef WITH_SCARD
 			case 'i':
-				flags |= RDP_LOGON_PASSWORD_IS_SC_PIN;
+				flags |= RDP_INFO_PASSWORD_IS_SC_PIN;
 				g_use_password_as_pin = True;
 				break;
 #endif
