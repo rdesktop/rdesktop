@@ -32,6 +32,7 @@
 extern RD_BOOL g_seamless_rdp;
 static VCHANNEL *seamless_channel;
 static unsigned int seamless_serial;
+static char *seamless_rest = NULL;
 static char icon_buf[1024];
 
 static char *
@@ -373,7 +374,6 @@ static void
 seamless_process(STREAM s)
 {
 	unsigned int pkglen;
-	static char *rest = NULL;
 	char *buf;
 
 	pkglen = s->end - s->p;
@@ -385,7 +385,7 @@ seamless_process(STREAM s)
 	hexdump(s->p, pkglen);
 #endif
 
-	str_handle_lines(buf, &rest, seamless_line_handler, NULL);
+	str_handle_lines(buf, &seamless_rest, seamless_line_handler, NULL);
 
 	xfree(buf);
 }
@@ -405,6 +405,15 @@ seamless_init(void)
 	return (seamless_channel != NULL);
 }
 
+void
+seamless_reset_state(void)
+{
+	if (seamless_rest != NULL)
+	{
+		xfree(seamless_rest);
+		seamless_rest = NULL;
+	}
+}
 
 static unsigned int
 seamless_send(const char *command, const char *format, ...)

@@ -2121,6 +2121,7 @@ ui_create_window(void)
 
 	if (g_seamless_rdp)
 	{
+		seamless_reset_state();
 		seamless_restack_test();
 	}
 

@@ -336,6 +336,7 @@ void ui_seamless_ack(unsigned int serial);
 RD_BOOL lspci_init(void);
 /* seamless.c */
 RD_BOOL seamless_init(void);
+void seamless_reset_state(void);
 unsigned int seamless_send_sync(void);
 unsigned int seamless_send_state(unsigned long id, unsigned int state, unsigned long flags);
 unsigned int seamless_send_position(unsigned long id, int x, int y, int width, int height,
