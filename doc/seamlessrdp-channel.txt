@@ -294,6 +294,22 @@ For each window, the server will send CREATE, POSITION and STATE, in that
 order, just as if the window was created. Note that a TITLE may also,
 optionally, be sent before the STATE.
 
+PERSISTENT
+----------
+
+Change persistent mode for the session.
+
+Syntax:
+	PERSISTENT,<SERIAL>,<ENABLE>
+
+A seamless session always starts in persistent mode. This means that
+the session will not terminate if all applications is closed. 
+Upon re-connection to a session, the session will reset to persistent
+mode and client needs to change this if non persistent mode is wanted.
+If a persistent session not have any application running and is in
+disconnected state, it will terminate after a timeout is reached that
+matches the lifetime of the re-connection cookie.
+
 POSITION
 --------
 

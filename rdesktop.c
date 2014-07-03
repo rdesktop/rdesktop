@@ -109,6 +109,7 @@ RD_BOOL g_seamless_rdp = False;
 RD_BOOL g_use_password_as_pin = False;
 char g_seamless_shell[512];
 char g_seamless_spawn_cmd[512];
+RD_BOOL g_seamless_persistent_mode = True;
 RD_BOOL g_user_quit = False;
 uint32 g_embed_wnd;
 uint32 g_rdp5_performanceflags =
@@ -614,6 +615,7 @@ main(int argc, char *argv[])
 
 			case 's':
 				STRNCPY(shell, optarg, sizeof(shell));
+				g_seamless_persistent_mode = False;
 				break;
 
 			case 'c':

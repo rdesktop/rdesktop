@@ -346,6 +346,7 @@ unsigned int seamless_send_zchange(unsigned long id, unsigned long below, unsign
 unsigned int seamless_send_focus(unsigned long id, unsigned long flags);
 unsigned int seamless_send_destroy(unsigned long id);
 unsigned int seamless_send_spawn(char *cmd);
+unsigned int seamless_send_persistent(RD_BOOL);
 
 /* scard.c */
 void scard_lock(int lock);

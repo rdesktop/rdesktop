@@ -3,7 +3,7 @@
    Seamless Windows support
    Copyright 2005-2008 Peter Astrand <astrand@cendio.se> for Cendio AB
    Copyright 2007-2008 Pierre Ossman <ossman@cendio.se> for Cendio AB
-   Copyright 2013 Henrik Andersson  <hean01@cendio.se> for Cendio AB   
+   Copyright 2013-2014 Henrik Andersson  <hean01@cendio.se> for Cendio AB   
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -540,5 +540,17 @@ seamless_send_spawn(char *cmdline)
 
 	res = seamless_send("SPAWN", cmdline);
 
+	return res;
+}
+
+unsigned int
+seamless_send_persistent(RD_BOOL enable)
+{
+	unsigned int res;
+	if (!g_seamless_rdp)
+		return (unsigned int) -1;
+	printf("%s persitent seamless mode.\n", enable?"Enable":"Disable");
+	res = seamless_send("PERSISTENT", "%d", enable);
+	
 	return res;
 }

@@ -95,6 +95,7 @@ static RD_BOOL g_seamless_active = False;	/* We are currently in seamless mode *
 static RD_BOOL g_seamless_hidden = False;	/* Desktop is hidden on server */
 static RD_BOOL g_seamless_broken_restack = False;	/* WM does not properly restack */
 extern RD_BOOL g_seamless_rdp;
+extern RD_BOOL g_seamless_persistent_mode;
 
 extern uint32 g_embed_wnd;
 RD_BOOL g_enable_compose = False;
@@ -3827,6 +3828,8 @@ ui_seamless_begin(RD_BOOL hidden)
 		seamless_send_spawn(g_seamless_spawn_cmd);
 		g_seamless_spawn_cmd[0] = 0;
 	}
+
+	seamless_send_persistent(g_seamless_persistent_mode);
 }
 
 
