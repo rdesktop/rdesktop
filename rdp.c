@@ -189,6 +189,9 @@ rdp_send_data(STREAM s, uint8 data_pdu_type)
 void
 rdp_out_unistr(STREAM s, char *string, int len)
 {
+	if (string == NULL || len == 0)
+		return;
+
 #ifdef HAVE_ICONV
 	size_t ibl = strlen(string), obl = len + 2;
 	static iconv_t iconv_h = (iconv_t) - 1;
