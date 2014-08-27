@@ -1752,6 +1752,9 @@ rdp_connect(char *server, uint32 flags, char *domain, char *password,
 
 		if (!rdp_loop(&deactivated, &ext_disc_reason))
 			return False;
+
+		if (g_redirect)
+			return True;
 	}
 	return True;
 }

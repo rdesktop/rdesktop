@@ -1133,6 +1133,7 @@ main(int argc, char *argv[])
 			   and therefor we just clear this error before we connect to redirected server.
 			 */
 			g_network_error = False;
+			g_redirect = False;
 		}
 
 		ui_init_connection();
@@ -1157,6 +1158,8 @@ main(int argc, char *argv[])
 			continue;
 		}
 
+		if (g_redirect)
+			continue;
 
 		/* By setting encryption to False here, we have an encrypted login 
 		   packet but unencrypted transfer of other packets */
@@ -1169,7 +1172,6 @@ main(int argc, char *argv[])
 		tcp_run_ui(True);
 
 		deactivated = False;
-		g_redirect = False;
 		g_reconnect_loop = False;
 		rdp_main_loop(&deactivated, &ext_disc_reason);
 
