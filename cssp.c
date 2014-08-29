@@ -262,7 +262,7 @@ cssp_encode_tspasswordcreds(char *username, char *password, char *domain)
 	memset(&message, 0, sizeof(message));
 
 	// domainName [0]
-	s_realloc(&tmp, strlen(domain) * sizeof(uint16));
+	s_realloc(&tmp, 4 + strlen(domain) * sizeof(uint16));
 	s_reset(&tmp);
 	rdp_out_unistr(&tmp, domain, strlen(domain) * sizeof(uint16));
 	s_mark_end(&tmp);
@@ -275,7 +275,7 @@ cssp_encode_tspasswordcreds(char *username, char *password, char *domain)
 	s_free(h1);
 
 	// userName [1]
-	s_realloc(&tmp, strlen(username) * sizeof(uint16));
+	s_realloc(&tmp, 4 + strlen(username) * sizeof(uint16));
 	s_reset(&tmp);
 	rdp_out_unistr(&tmp, username, strlen(username) * sizeof(uint16));
 	s_mark_end(&tmp);
@@ -289,7 +289,7 @@ cssp_encode_tspasswordcreds(char *username, char *password, char *domain)
 	s_free(h1);
 
 	// password [2]
-	s_realloc(&tmp, strlen(password) * sizeof(uint16));
+	s_realloc(&tmp, 4 + strlen(password) * sizeof(uint16));
 	s_reset(&tmp);
 	rdp_out_unistr(&tmp, password, strlen(password) * sizeof(uint16));
 	s_mark_end(&tmp);
@@ -339,7 +339,7 @@ cssp_encode_tscspdatadetail(unsigned char keyspec, char *card, char *reader, cha
 	// cardName [1]
 	if (card)
 	{
-		s_realloc(&tmp, strlen(card) * sizeof(uint16));
+		s_realloc(&tmp, 4 + strlen(card) * sizeof(uint16));
 		s_reset(&tmp);
 		rdp_out_unistr(&tmp, card, strlen(card) * sizeof(uint16));
 		s_mark_end(&tmp);
@@ -355,7 +355,7 @@ cssp_encode_tscspdatadetail(unsigned char keyspec, char *card, char *reader, cha
 	// readerName [2]
 	if (reader)
 	{
-		s_realloc(&tmp, strlen(reader) * sizeof(uint16));
+		s_realloc(&tmp, 4 + strlen(reader) * sizeof(uint16));
 		s_reset(&tmp);
 		rdp_out_unistr(&tmp, reader, strlen(reader) * sizeof(uint16));
 		s_mark_end(&tmp);
@@ -371,7 +371,7 @@ cssp_encode_tscspdatadetail(unsigned char keyspec, char *card, char *reader, cha
 	// containerName [3]
 	if (container)
 	{
-		s_realloc(&tmp, strlen(container) * sizeof(uint16));
+		s_realloc(&tmp, 4 + strlen(container) * sizeof(uint16));
 		s_reset(&tmp);
 		rdp_out_unistr(&tmp, container, strlen(container) * sizeof(uint16));
 		s_mark_end(&tmp);
@@ -387,7 +387,7 @@ cssp_encode_tscspdatadetail(unsigned char keyspec, char *card, char *reader, cha
 	// cspName [4]
 	if (csp)
 	{
-		s_realloc(&tmp, strlen(csp) * sizeof(uint16));
+		s_realloc(&tmp, 4 + strlen(csp) * sizeof(uint16));
 		s_reset(&tmp);
 		rdp_out_unistr(&tmp, csp, strlen(csp) * sizeof(uint16));
 		s_mark_end(&tmp);
