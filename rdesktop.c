@@ -1159,7 +1159,10 @@ main(int argc, char *argv[])
 		}
 
 		if (g_redirect)
+		{
+			rdp_disconnect();
 			continue;
+		}
 
 		/* By setting encryption to False here, we have an encrypted login 
 		   packet but unencrypted transfer of other packets */
