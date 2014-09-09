@@ -2,7 +2,7 @@
    rdesktop: A Remote Desktop Protocol client.
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2004-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
-   Copyright 2010-2013 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2010-2014 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -188,11 +188,10 @@ add_async_iorequest(uint32 device, uint32 file, uint32 id, uint32 major, uint32 
 static void
 rdpdr_send_connect(void)
 {
-	uint8 magic[4] = "rDCC";
 	STREAM s;
-
 	s = channel_init(rdpdr_channel, 12);
-	out_uint8a(s, magic, 4);
+	out_uint16_le(s, RDPDR_CTYP_CORE);
+	out_uint16_le(s, PAKID_CORE_CLIENTID_CONFIRM);
 	out_uint16_le(s, 1);	/* unknown */
 	out_uint16_le(s, 5);
 	out_uint32_be(s, 0x815ed39d);	/* IP address (use 127.0.0.1) 0x815ed39d */
@@ -204,7 +203,6 @@ rdpdr_send_connect(void)
 static void
 rdpdr_send_name(void)
 {
-	uint8 magic[4] = "rDNC";
 	STREAM s;
 	uint32 hostlen;
 
@@ -215,7 +213,8 @@ rdpdr_send_name(void)
 	hostlen = (strlen(g_rdpdr_clientname) + 1) * 2;
 
 	s = channel_init(rdpdr_channel, 16 + hostlen);
-	out_uint8a(s, magic, 4);
+	out_uint16_le(s, RDPDR_CTYP_CORE);
+	out_uint16_le(s, PAKID_CORE_CLIENT_NAME);
 	out_uint16_le(s, 0x63);	/* unknown */
 	out_uint16_le(s, 0x72);
 	out_uint32(s, 0);
@@ -256,15 +255,15 @@ announcedata_size()
 static void
 rdpdr_send_available(void)
 {
-
-	uint8 magic[4] = "rDAD";
 	uint32 driverlen, printerlen, bloblen;
 	int i;
 	STREAM s;
 	PRINTER *printerinfo;
 
 	s = channel_init(rdpdr_channel, announcedata_size());
-	out_uint8a(s, magic, 4);
+	out_uint16_le(s, RDPDR_CTYP_CORE);
+	out_uint16_le(s, PAKID_CORE_DEVICE_LIST_ANNOUNCE);
+
 	out_uint32_le(s, g_num_devices);
 
 	for (i = 0; i < g_num_devices; i++)
@@ -317,14 +316,14 @@ void
 rdpdr_send_completion(uint32 device, uint32 id, uint32 status, uint32 result, uint8 * buffer,
 		      uint32 length)
 {
-	uint8 magic[4] = "rDCI";
 	STREAM s;
 
 #ifdef WITH_SCARD
 	scard_lock(SCARD_LOCK_RDPDR);
 #endif
 	s = channel_init(rdpdr_channel, 20 + length);
-	out_uint8a(s, magic, 4);
+	out_uint16_le(s, RDPDR_CTYP_CORE);
+	out_uint16_le(s, PAKID_CORE_DEVICE_IOCOMPLETION);
 	out_uint32_le(s, device);
 	out_uint32_le(s, id);
 	out_uint32_le(s, status);
@@ -756,11 +755,10 @@ rdpdr_process_irp(STREAM s)
 static void
 rdpdr_send_clientcapability(void)
 {
-	uint8 magic[4] = "rDPC";
 	STREAM s;
-
 	s = channel_init(rdpdr_channel, 0x50);
-	out_uint8a(s, magic, 4);
+	out_uint16_le(s, RDPDR_CTYP_CORE);
+	out_uint16_le(s, PAKID_CORE_CLIENT_CAPABILITY);
 	out_uint32_le(s, 5);	/* count */
 	out_uint16_le(s, 1);	/* first */
 	out_uint16_le(s, 0x28);	/* length */
@@ -797,58 +795,58 @@ static void
 rdpdr_process(STREAM s)
 {
 	uint32 handle;
-	uint8 *magic;
+	uint16 component;
+	uint16 pakid;
 
 #if WITH_DEBUG_RDP5
 	printf("--- rdpdr_process ---\n");
 	hexdump(s->p, s->end - s->p);
 #endif
-	in_uint8p(s, magic, 4);
 
-	if ((magic[0] == 'r') && (magic[1] == 'D'))
+	in_uint16(s, component);
+	in_uint16(s, pakid);
+
+	if (component == RDPDR_CTYP_CORE)
 	{
-		if ((magic[2] == 'R') && (magic[3] == 'I'))
+		switch (pakid)
 		{
-			rdpdr_process_irp(s);
-			return;
-		}
-		if ((magic[2] == 'n') && (magic[3] == 'I'))
-		{
-			rdpdr_send_connect();
-			rdpdr_send_name();
-			return;
-		}
-		if ((magic[2] == 'C') && (magic[3] == 'C'))
-		{
-			/* connect from server */
-			rdpdr_send_clientcapability();
-			rdpdr_send_available();
-			return;
-		}
-		if ((magic[2] == 'r') && (magic[3] == 'd'))
-		{
-			/* connect to a specific resource */
-			in_uint32(s, handle);
+			case PAKID_CORE_DEVICE_IOREQUEST:
+				rdpdr_process_irp(s);
+				break;
+
+			case PAKID_CORE_SERVER_ANNOUNCE:
+				rdpdr_send_connect();
+				rdpdr_send_name();
+				break;
+
+			case PAKID_CORE_CLIENTID_CONFIRM:
+				rdpdr_send_clientcapability();
+				rdpdr_send_available();
+				break;
+
+			case PAKID_CORE_DEVICE_REPLY:
+				in_uint32(s, handle);
 #if WITH_DEBUG_RDP5
-			DEBUG(("RDPDR: Server connected to resource %d\n", handle));
+				DEBUG(("RDPDR: Server connected to resource %d\n", handle));
 #endif
-			return;
-		}
-		if ((magic[2] == 'P') && (magic[3] == 'S'))
-		{
-			/* server capability */
-			return;
+				break;
+
+			case PAKID_CORE_SERVER_CAPABILITY:
+				break;
+
+			default:
+				unimpl("RDPDR pakid 0x%x of component 0x%x\n", pakid, component);
+				break;
+
 		}
 	}
-	if ((magic[0] == 'R') && (magic[1] == 'P'))
+	else if (component == RDPDR_CTYP_PRN)
 	{
-		if ((magic[2] == 'C') && (magic[3] == 'P'))
-		{
+		if (pakid == PAKID_PRN_CACHE_DATA)
 			printercache_process(s);
-			return;
-		}
 	}
-	unimpl("RDPDR packet type %c%c%c%c\n", magic[0], magic[1], magic[2], magic[3]);
+	else
+		unimpl("RDPDR component 0x%x\n", component);
 }
 
 RD_BOOL
