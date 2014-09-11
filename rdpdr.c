@@ -300,13 +300,6 @@ rdpdr_send_available(void)
 				out_uint32(s, 0);
 		}
 	}
-#if 0
-	out_uint32_le(s, 0x20);	/* Device type 0x20 - smart card */
-	out_uint32_le(s, 0);
-	out_uint8p(s, "SCARD", 5);
-	out_uint8s(s, 3);
-	out_uint32(s, 0);
-#endif
 
 	s_mark_end(s);
 	channel_send(s, rdpdr_channel);
