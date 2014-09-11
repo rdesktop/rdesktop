@@ -219,10 +219,9 @@ rdpdr_send_client_name_request(void)
 	s = channel_init(rdpdr_channel, 16 + hostlen);
 	out_uint16_le(s, RDPDR_CTYP_CORE);
 	out_uint16_le(s, PAKID_CORE_CLIENT_NAME);
-	out_uint16_le(s, 0x63);	/* unknown */
-	out_uint16_le(s, 0x72);
-	out_uint32(s, 0);
-	out_uint32_le(s, hostlen);
+	out_uint32_le(s, 1);	/* UnicodeFlag */
+	out_uint32_le(s, 0);	/* CodePage */
+	out_uint32_le(s, hostlen);	/* ComputerNameLen */
 	rdp_out_unistr(s, g_rdpdr_clientname, hostlen - 2);
 	s_mark_end(s);
 	channel_send(s, rdpdr_channel);
