@@ -186,8 +186,9 @@ add_async_iorequest(uint32 device, uint32 file, uint32 id, uint32 major, uint32 
 }
 
 static void
-rdpdr_send_connect(void)
+rdpdr_send_client_announce_reply(void)
 {
+	/* DR_CORE_CLIENT_ANNOUNCE_RSP */
 	STREAM s;
 	s = channel_init(rdpdr_channel, 12);
 	out_uint16_le(s, RDPDR_CTYP_CORE);
@@ -201,8 +202,9 @@ rdpdr_send_connect(void)
 
 
 static void
-rdpdr_send_name(void)
+rdpdr_send_client_name_request(void)
 {
+	/* DR_CORE_CLIENT_NAME_REQ */
 	STREAM s;
 	uint32 hostlen;
 
@@ -808,8 +810,8 @@ rdpdr_process(STREAM s)
 				break;
 
 			case PAKID_CORE_SERVER_ANNOUNCE:
-				rdpdr_send_connect();
-				rdpdr_send_name();
+				rdpdr_send_client_announce_reply();
+				rdpdr_send_client_name_request();
 				break;
 
 			case PAKID_CORE_CLIENTID_CONFIRM:
