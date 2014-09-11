@@ -3,7 +3,7 @@
    Smart Card support
    Copyright (C) Alexi Volkov <alexi@myrealbox.com> 2006
    Copyright 2010-2013 Pierre Ossman <ossman@cendio.se> for Cendio AB
-   Copyright 2011-2013 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2011-2014 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -1175,6 +1175,11 @@ TS_SCardGetStatusChange(STREAM in, STREAM out, RD_BOOL wide)
 	memset(myRsArray, 0, dwCount * sizeof(SERVER_SCARD_READERSTATE_A));
 	copyReaderState_ServerToMyPCSC(rsArray, myRsArray, (SERVER_DWORD) dwCount);
 
+	/* Workaround for a bug in pcsclite, timeout value of 0 is handled as INFINIT
+	   but is by Windows PCSC spec. used for polling current state.
+	 */
+	if (dwTimeout == 0)
+	  dwTimeout = 1;
 	rv = SCardGetStatusChange(myHContext, (MYPCSC_DWORD) dwTimeout,
 				  myRsArray, (MYPCSC_DWORD) dwCount);
 	copyReaderState_MyPCSCToServer(myRsArray, rsArray, (MYPCSC_DWORD) dwCount);
