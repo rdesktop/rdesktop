@@ -68,6 +68,7 @@ extern FILEINFO g_fileinfo[];
 extern RD_BOOL g_notify_stamp;
 
 static VCHANNEL *rdpdr_channel;
+static uint32 g_epoch;
 
 /* If select() times out, the request for the device with handle g_min_timeout_fd is aborted */
 RD_NTHANDLE g_min_timeout_fd;
@@ -695,7 +696,7 @@ rdpdr_process_irp(STREAM s)
 			out.size = sizeof(buffer);
 
 #ifdef WITH_SCARD
-			scardSetInfo(device, id, bytes_out + 0x14);
+			scardSetInfo(g_epoch, device, id, bytes_out + 0x14);
 #endif
 			status = fns->device_control(file, request, s, &out);
 			result = buffer_len = out.p - out.data;
@@ -823,6 +824,7 @@ rdpdr_process(STREAM s)
 				   if server version is < 12 */
 				if (vmin < 0x000c)
 					g_client_id = 0x815ed39d;	/* IP address (use 127.0.0.1) 0x815ed39d */
+				g_epoch++;
 
 				rdpdr_send_client_announce_reply();
 				rdpdr_send_client_name_request();

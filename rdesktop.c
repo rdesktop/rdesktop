@@ -557,8 +557,7 @@ main(int argc, char *argv[])
 
 	/* setup default flags for TS_INFO_PACKET */
 	flags = RDP_INFO_MOUSE | RDP_INFO_DISABLECTRLALTDEL
-		| RDP_INFO_UNICODE | RDP_INFO_MAXIMIZESHELL
-		| RDP_INFO_ENABLEWINDOWSKEY;
+		| RDP_INFO_UNICODE | RDP_INFO_MAXIMIZESHELL | RDP_INFO_ENABLEWINDOWSKEY;
 
 	prompt_password = False;
 	g_seamless_spawn_cmd[0] = domain[0] = g_password[0] = shell[0] = directory[0] = 0;
@@ -790,15 +789,18 @@ main(int argc, char *argv[])
 				}
 				else if (str_startswith(optarg, "b"))	/* broadband */
 				{
-					g_rdp5_performanceflags = RDP5_NO_CURSOR_SHADOW | RDP5_NO_WALLPAPER;
+					g_rdp5_performanceflags =
+						RDP5_NO_CURSOR_SHADOW | RDP5_NO_WALLPAPER;
 				}
 				else if (str_startswith(optarg, "l"))	/* lan */
 				{
-					g_rdp5_performanceflags = RDP5_NO_CURSOR_SHADOW | RDP5_DISABLE_NOTHING;
+					g_rdp5_performanceflags =
+						RDP5_NO_CURSOR_SHADOW | RDP5_DISABLE_NOTHING;
 				}
 				else
 				{
-					g_rdp5_performanceflags = RDP5_NO_CURSOR_SHADOW | strtol(optarg, NULL, 16);
+					g_rdp5_performanceflags =
+						RDP5_NO_CURSOR_SHADOW | strtol(optarg, NULL, 16);
 				}
 				break;
 
