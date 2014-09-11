@@ -255,8 +255,9 @@ announcedata_size()
 }
 
 static void
-rdpdr_send_available(void)
+rdpdr_send_client_device_list_announce(void)
 {
+	/* DR_CORE_CLIENT_ANNOUNCE_RSP */
 	uint32 driverlen, printerlen, bloblen;
 	int i;
 	STREAM s;
@@ -748,8 +749,9 @@ rdpdr_process_irp(STREAM s)
 }
 
 static void
-rdpdr_send_clientcapability(void)
+rdpdr_send_client_capability_response(void)
 {
+	/* DR_CORE_CAPABILITY_RSP */
 	STREAM s;
 	s = channel_init(rdpdr_channel, 0x50);
 	out_uint16_le(s, RDPDR_CTYP_CORE);
@@ -815,8 +817,7 @@ rdpdr_process(STREAM s)
 				break;
 
 			case PAKID_CORE_CLIENTID_CONFIRM:
-				rdpdr_send_clientcapability();
-				rdpdr_send_available();
+				rdpdr_send_client_device_list_announce();
 				break;
 
 			case PAKID_CORE_DEVICE_REPLY:
@@ -827,6 +828,7 @@ rdpdr_process(STREAM s)
 				break;
 
 			case PAKID_CORE_SERVER_CAPABILITY:
+				rdpdr_send_client_capability_response();
 				break;
 
 			default:
