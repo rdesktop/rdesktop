@@ -73,6 +73,8 @@ static VCHANNEL *rdpdr_channel;
 RD_NTHANDLE g_min_timeout_fd;
 uint32 g_num_devices;
 
+uint32 g_client_id;
+
 /* Table with information about rdpdr devices */
 RDPDR_DEVICE g_rdpdr_device[RDPDR_MAX_DEVICES];
 char *g_rdpdr_clientname = NULL;
@@ -193,9 +195,9 @@ rdpdr_send_client_announce_reply(void)
 	s = channel_init(rdpdr_channel, 12);
 	out_uint16_le(s, RDPDR_CTYP_CORE);
 	out_uint16_le(s, PAKID_CORE_CLIENTID_CONFIRM);
-	out_uint16_le(s, 1);	/* unknown */
-	out_uint16_le(s, 5);
-	out_uint32_be(s, 0x815ed39d);	/* IP address (use 127.0.0.1) 0x815ed39d */
+	out_uint16_le(s, 1);	/* VersionMajor, MUST be set to 0x1 */
+	out_uint16_le(s, 5);	/* VersionMinor */
+	out_uint32_be(s, g_client_id);	/* ClientID */
 	s_mark_end(s);
 	channel_send(s, rdpdr_channel);
 }
@@ -792,6 +794,7 @@ static void
 rdpdr_process(STREAM s)
 {
 	uint32 handle;
+	uint16 vmin;
 	uint16 component;
 	uint16 pakid;
 
@@ -812,6 +815,16 @@ rdpdr_process(STREAM s)
 				break;
 
 			case PAKID_CORE_SERVER_ANNOUNCE:
+				/* DR_CORE_SERVER_ANNOUNCE_REQ */
+				in_uint8s(s, 2);	/* skip versionMajor */
+				in_uint16_le(s, vmin);	/* VersionMinor */
+				in_uint32_le(s, g_client_id);	/* ClientID */
+
+				/* The RDP client is responsibility to provide a random client id
+				   if server version is < 12 */
+				if (vmin < 0x000c)
+					g_client_id = 0x815ed39d;	/* IP address (use 127.0.0.1) 0x815ed39d */
+
 				rdpdr_send_client_announce_reply();
 				rdpdr_send_client_name_request();
 				break;
