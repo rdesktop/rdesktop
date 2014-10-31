@@ -1,3 +1,24 @@
+rdesktop (1.8.3)
+  * Added a persistent mode used with SeamlessRDP
+  * Added US international keyboard layout with dead keys
+  * Code cleanup to match specifications, use constants defined
+    instead of magic numbers, remove of dead code
+  * Fix regression with failed connection and a invalid licensing
+    message, introduced in 1.8.2
+  * Fix issue with Non ASCII user / password when using CredSSP
+  * Fix issues using smartcard redirection with Windows 2012 R2
+  * Fix issue with windows key functionality
+  * Fix memory corruption when using rdp_out_unistr()
+  * Fix workaround for the lack of support for alpha cursors
+  * Fix silent exit when redirected when using CredSSP
+  * Fix crash when starting rdesktop without domain specified
+    while using CredSSP
+  * Fix issue in SeamlessRDP protocol parser upon reconnect
+  * Fix issue were a new SeamlessRDP application is respawned
+    upon a reconnection
+
+  -- Henrik Andersson <hean01@users.sourceforge.net> 2014-10-31
+
 rdesktop (1.8.2)
   * Support enhanced server redirection (Session broker 2012)
   * Support License Error Alert PDU
