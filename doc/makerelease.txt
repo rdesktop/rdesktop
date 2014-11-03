@@ -8,8 +8,8 @@
 * Test build the tarball on a few systems. Test "rpmbuild -ta" as well
 
 * Tag:
-  svn copy https://rdesktop.svn.sourceforge.net/svnroot/rdesktop/rdesktop/trunk \
-  https://rdesktop.svn.sourceforge.net/svnroot/rdesktop/rdesktop/tags/rdesktop-x.y.z
+  svn copy https://svn.code.sf.net/p/rdesktop/code/rdesktop/trunk \
+  https://svn.code.sf.net/p/rdesktop/code/rdesktop/tags/rdesktop-x.y.z
 
 * Do a new SF file release
 
