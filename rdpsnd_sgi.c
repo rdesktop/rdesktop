@@ -20,8 +20,10 @@
 */
 
 #include "rdesktop.h"
+#include "rdpsnd.h"
 #include <errno.h>
 #include <dmedia/audio.h>
+#include <unistd.h>
 
 /* #define IRIX_DEBUG 1 */
 
@@ -253,7 +255,6 @@ sgi_play(void)
 {
 	struct audio_packet *packet;
 	ssize_t len;
-	unsigned int i;
 	STREAM out;
 	int gf;
 
@@ -263,7 +264,7 @@ sgi_play(void)
 			return;
 
 		packet = rdpsnd_queue_current_packet();
-		out = &packet->s;
+		out = (STREAM)(void *)&(packet->s);
 
 		len = out->end - out->p;
 
