@@ -103,9 +103,9 @@ AC_ARG_ENABLE(static-openssl,
 if test x"$static_openssl" = "xyes"; then
     # OpenSSL generally relies on libz
     AC_SEARCH_LIBS(deflate, z)
-    LIBS="-L$ssldir/lib -L$ssldir/lib64 -Wl,-Bstatic -lssl -lcrypto -Wl,-Bdynamic $LIBS"
+    LIBS="-L$ssldir/lib -L$ssldir/lib64 -Wl,-Bstatic -lssl -lcrypto -Wl,-Bdynamic -ldl $LIBS"
 else
-    LIBS="-L$ssldir/lib -L$ssldir/lib64 -lssl -lcrypto $LIBS"
+    LIBS="-L$ssldir/lib -L$ssldir/lib64 -lssl -lcrypto -ldl $LIBS"
 
     #
     # target-specific stuff
