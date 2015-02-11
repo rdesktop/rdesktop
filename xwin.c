@@ -2649,7 +2649,7 @@ xwin_process_events(void)
 	return 1;
 }
 
-/* Returns 0 after user quit, 1 otherwise */
+/* Returns 0 after user quit or pending resize, 1 otherwise */
 int
 ui_select(int rdp_socket)
 {
@@ -2664,6 +2664,9 @@ ui_select(int rdp_socket)
 		/* Process any events already waiting */
 		if (!xwin_process_events())
 			/* User quit */
+			return 0;
+
+		if (g_pending_resize)
 			return 0;
 
 		if (g_seamless_active)
