@@ -1,4 +1,3 @@
-
 * Update doc/ChangeLog
 
 * Update version in configure.ac and rdesktop.spec
@@ -7,16 +6,22 @@
 
 * Test build the tarball on a few systems. Test "rpmbuild -ta" as well
 
-* Tag:
-  svn copy https://svn.code.sf.net/p/rdesktop/code/rdesktop/trunk \
-  https://svn.code.sf.net/p/rdesktop/code/rdesktop/tags/rdesktop-x.y.z
+* Tag release:
 
-* Do a new SF file release
+    git checkout master
+    git -a vx.y.z
+    git push --tags
+
+
+* Edit release tag on GitHub
+
+  - Add ChangeLog for release
+
+  - Upload tarball for release tag on GitHub
+
 
 * Update web page
 
 * Send announcement to the mailing list
-
-* Update Freshmeat entry
 
 * Append "post" to VERSION
