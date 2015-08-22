@@ -9,7 +9,7 @@
 * Tag release:
 
     git checkout master
-    git -a vx.y.z
+    git tag -a vx.y.z
     git push --tags
 
 
