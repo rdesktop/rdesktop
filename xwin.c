@@ -20,6 +20,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <X11/Xatom.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/Xproto.h>
@@ -507,6 +508,7 @@ sw_find_group(unsigned long id, RD_BOOL dont_create)
 	sg->wnd =
 		XCreateWindow(g_display, RootWindowOfScreen(g_screen), -1, -1, 1, 1, 0,
 			      CopyFromParent, CopyFromParent, CopyFromParent, 0, &attribs);
+	ewmh_set_wm_pid(sg->wnd, getpid());
 
 	sg->id = id;
 	sg->refcnt = 0;
@@ -1834,6 +1836,23 @@ error_handler(Display * dpy, XErrorEvent * eev)
 	return g_old_error_handler(dpy, eev);
 }
 
+static void
+set_wm_client_machine(Display * dpy, Window win)
+{
+	XTextProperty tp;
+	char hostname[HOST_NAME_MAX];
+
+	if (gethostname(hostname, sizeof(hostname)) != 0)
+		return;
+
+	tp.value = hostname;
+	tp.nitems = strlen(hostname);
+	tp.encoding = XA_STRING;
+	tp.format = 8;
+
+	XSetWMClientMachine(dpy, win, &tp);
+}
+
 /* Initialize the UI. This is done once per process. */
 RD_BOOL
 ui_init(void)
@@ -2031,6 +2050,8 @@ ui_create_window(void)
 			      wndheight, 0, g_depth, InputOutput, g_visual,
 			      CWBackPixel | CWBackingStore | CWOverrideRedirect | CWColormap |
 			      CWBorderPixel, &attribs);
+	ewmh_set_wm_pid(g_wnd, getpid());
+	set_wm_client_machine(g_display, g_wnd);
 
 	if (g_gc == NULL)
 	{
@@ -3942,6 +3963,8 @@ ui_seamless_create_window(unsigned long id, unsigned long group, unsigned long p
 	wnd = XCreateWindow(g_display, RootWindowOfScreen(g_screen), -1, -1, 1, 1, 0, g_depth,
 			    InputOutput, g_visual,
 			    CWBackPixel | CWBackingStore | CWColormap | CWBorderPixel, &attribs);
+	ewmh_set_wm_pid(wnd, getpid());
+	set_wm_client_machine(g_display, wnd);
 
 	XStoreName(g_display, wnd, "SeamlessRDP");
 	ewmh_set_wm_name(wnd, "SeamlessRDP");

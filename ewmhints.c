@@ -6,6 +6,7 @@
 
    Copyright 2005-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
    Copyright 2007 Pierre Ossman <ossman@cendio.se> for Cendio AB
+   Copyright 2015 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -35,7 +36,7 @@ extern Display *g_display;
 static Atom g_net_wm_state_maximized_vert_atom, g_net_wm_state_maximized_horz_atom,
 	g_net_wm_state_hidden_atom, g_net_wm_name_atom, g_utf8_string_atom,
 	g_net_wm_state_skip_taskbar_atom, g_net_wm_state_skip_pager_atom,
-	g_net_wm_state_modal_atom, g_net_wm_icon_atom, g_net_wm_state_above_atom;
+	g_net_wm_state_modal_atom, g_net_wm_icon_atom, g_net_wm_state_above_atom, g_net_wm_pid_atom;
 
 Atom g_net_wm_state_atom, g_net_wm_desktop_atom;
 
@@ -190,6 +191,7 @@ ewmh_init()
 	g_net_wm_desktop_atom = XInternAtom(g_display, "_NET_WM_DESKTOP", False);
 	g_net_wm_name_atom = XInternAtom(g_display, "_NET_WM_NAME", False);
 	g_net_wm_icon_atom = XInternAtom(g_display, "_NET_WM_ICON", False);
+	g_net_wm_pid_atom = XInternAtom(g_display, "_NET_WM_PID", False);
 	g_utf8_string_atom = XInternAtom(g_display, "UTF8_STRING", False);
 }
 
@@ -409,6 +411,12 @@ ewmh_set_wm_name(Window wnd, const char *title)
 			8, PropModeReplace, (unsigned char *) title, len);
 }
 
+void
+ewmh_set_wm_pid(Window wnd, pid_t pid)
+{
+	XChangeProperty(g_display, wnd, g_net_wm_pid_atom,
+			XA_CARDINAL, sizeof(pid_t) * 8, PropModeReplace, (unsigned char *) &pid, 1);
+}
 
 int
 ewmh_set_window_popup(Window wnd)

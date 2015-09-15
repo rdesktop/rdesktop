@@ -7,6 +7,7 @@ int ewmh_change_state(Window wnd, int state);
 int ewmh_move_to_desktop(Window wnd, unsigned int desktop);
 int ewmh_get_window_desktop(Window wnd);
 void ewmh_set_wm_name(Window wnd, const char *title);
+void ewmh_set_wm_pid(Window wnd, pid_t pid);
 int ewmh_set_window_popup(Window wnd);
 int ewmh_set_window_modal(Window wnd);
 void ewmh_set_icon(Window wnd, int width, int height, const char *rgba_data);
