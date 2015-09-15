@@ -125,6 +125,8 @@ static RD_HCURSOR g_null_cursor = NULL;
 static Atom g_protocol_atom, g_kill_atom;
 extern Atom g_net_wm_state_atom;
 extern Atom g_net_wm_desktop_atom;
+extern Atom g_net_wm_ping_atom;
+
 static RD_BOOL g_focused;
 static RD_BOOL g_mouse_in_wnd;
 /* Indicates that:
@@ -2134,7 +2136,13 @@ ui_create_window(void)
 	/* handle the WM_DELETE_WINDOW protocol */
 	g_protocol_atom = XInternAtom(g_display, "WM_PROTOCOLS", True);
 	g_kill_atom = XInternAtom(g_display, "WM_DELETE_WINDOW", True);
-	XSetWMProtocols(g_display, g_wnd, &g_kill_atom, 1);
+
+	Atom supported[] = {
+		g_net_wm_ping_atom,
+		g_kill_atom
+	};
+
+	XSetWMProtocols(g_display, g_wnd, supported, 2);
 
 	/* create invisible 1x1 cursor to be used as null cursor */
 	if (g_null_cursor == NULL)
@@ -2373,18 +2381,30 @@ xwin_process_events(void)
 
 				break;
 			case ClientMessage:
-				/* the window manager told us to quit */
-				if ((xevent.xclient.message_type == g_protocol_atom)
-				    && ((Atom) xevent.xclient.data.l[0] == g_kill_atom))
+				if (xevent.xclient.message_type == g_protocol_atom)
 				{
-					/* When killing a seamless window, close the window on the
-					   serverside instead of terminating rdesktop */
-					sw = sw_get_window_by_wnd(xevent.xclient.window);
-					if (!sw)
-						/* Otherwise, quit */
-						return 0;
-					/* send seamless destroy process message */
-					seamless_send_destroy(sw->id);
+					if (xevent.xclient.data.l[0] == g_kill_atom)
+					{
+						/* the window manager told us to quit */
+
+						/* When killing a seamless window, close the window on the
+						   serverside instead of terminating rdesktop */
+						sw = sw_get_window_by_wnd(xevent.xclient.window);
+						if (!sw)
+							/* Otherwise, quit */
+							return 0;
+						/* send seamless destroy process message */
+						seamless_send_destroy(sw->id);
+					}
+					else if (xevent.xclient.data.l[0] == g_net_wm_ping_atom)
+					{
+						/* pass ping message further to root window */
+						xevent.xclient.window =
+							RootWindowOfScreen(g_screen);
+						XSendEvent(g_display, xevent.xclient.window, False,
+							   ClientMessage, &xevent);
+						break;
+					}
 				}
 				break;
 
@@ -4029,8 +4049,13 @@ ui_seamless_create_window(unsigned long id, unsigned long group, unsigned long p
 
 	XSelectInput(g_display, wnd, input_mask);
 
-	/* handle the WM_DELETE_WINDOW protocol. */
-	XSetWMProtocols(g_display, wnd, &g_kill_atom, 1);
+	/* setup supported protocols. */
+	Atom supported[] = {
+		g_net_wm_ping_atom,
+		g_kill_atom
+	};
+
+	XSetWMProtocols(g_display, wnd, supported, 2);
 
 	sw = xmalloc(sizeof(seamless_window));
 

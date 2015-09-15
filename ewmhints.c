@@ -38,7 +38,7 @@ static Atom g_net_wm_state_maximized_vert_atom, g_net_wm_state_maximized_horz_at
 	g_net_wm_state_skip_taskbar_atom, g_net_wm_state_skip_pager_atom,
 	g_net_wm_state_modal_atom, g_net_wm_icon_atom, g_net_wm_state_above_atom, g_net_wm_pid_atom;
 
-Atom g_net_wm_state_atom, g_net_wm_desktop_atom;
+Atom g_net_wm_state_atom, g_net_wm_desktop_atom, g_net_wm_ping_atom;
 
 /* 
    Get window property value (32 bit format) 
@@ -192,6 +192,7 @@ ewmh_init()
 	g_net_wm_name_atom = XInternAtom(g_display, "_NET_WM_NAME", False);
 	g_net_wm_icon_atom = XInternAtom(g_display, "_NET_WM_ICON", False);
 	g_net_wm_pid_atom = XInternAtom(g_display, "_NET_WM_PID", False);
+	g_net_wm_ping_atom = XInternAtom(g_display, "_NET_WM_PING", False);
 	g_utf8_string_atom = XInternAtom(g_display, "UTF8_STRING", False);
 }
 
