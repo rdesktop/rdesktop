@@ -177,7 +177,7 @@ usage(char *program)
 #endif
 	fprintf(stderr, "   -u: user name\n");
 	fprintf(stderr, "   -d: domain\n");
-	fprintf(stderr, "   -s: shell / seamless application to start remotly\n");
+	fprintf(stderr, "   -s: shell / seamless application to start remotely\n");
 	fprintf(stderr, "   -c: working directory\n");
 	fprintf(stderr, "   -p: password (- to prompt)\n");
 	fprintf(stderr, "   -n: client hostname\n");
