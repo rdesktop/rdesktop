@@ -154,6 +154,8 @@ extern RDPDR_DEVICE g_rdpdr_device[];
 extern uint32 g_num_devices;
 extern char *g_rdpdr_clientname;
 
+extern uint32 keepalive_interval;
+
 #ifdef RDP2VNC
 extern int rfb_port;
 extern int defer_time;
@@ -171,6 +173,7 @@ usage(char *program)
 	fprintf(stderr, "See http://www.rdesktop.org/ for more information.\n\n");
 
 	fprintf(stderr, "Usage: %s [options] server[:port]\n", program);
+	fprintf(stderr, "   -M: send keepalive mouse motion events every n seconds\n");
 #ifdef RDP2VNC
 	fprintf(stderr, "   -V: vnc port\n");
 	fprintf(stderr, "   -Q: defer time (ms)\n");
@@ -571,10 +574,14 @@ main(int argc, char *argv[])
 #define VNCOPT
 #endif
 	while ((c = getopt(argc, argv,
-			   VNCOPT "A:u:L:d:s:c:p:n:k:g:o:fbBeEitmzCDKS:T:NX:a:x:Pr:045h?")) != -1)
+			   VNCOPT "A:M:u:L:d:s:c:p:n:k:g:o:fbBeEitmzCDKS:T:NX:a:x:Pr:045h?")) != -1)
 	{
 		switch (c)
 		{
+			case 'M':
+				keepalive_interval = strtoul(optarg, NULL, 10);
+				break;
+
 #ifdef RDP2VNC
 			case 'V':
 				rfb_port = strtol(optarg, NULL, 10);
