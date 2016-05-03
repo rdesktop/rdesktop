@@ -654,7 +654,10 @@ disk_query_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 	if (S_ISDIR(filestat.st_mode))
 		file_attributes |= FILE_ATTRIBUTE_DIRECTORY;
 
-	filename = 1 + strrchr(path, '/');
+	filename = strrchr(path, '/');
+	if (filename)
+		filename += 1;
+
 	if (filename && filename[0] == '.')
 		file_attributes |= FILE_ATTRIBUTE_HIDDEN;
 
