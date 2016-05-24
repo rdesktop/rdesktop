@@ -682,7 +682,14 @@ main(int argc, char *argv[])
 				if (*p == '%')
 				{
 					g_sizeopt = -g_width;
-					g_width = 800;
+					g_width = g_sizeopt;
+
+				    if (*(p + 1) == 'x'){
+                        g_height = -strtol(p + 2, &p, 10);
+                    }else{
+                        g_height = g_sizeopt;
+                    }
+
 					p++;
 				}
 
