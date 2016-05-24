@@ -684,9 +684,12 @@ main(int argc, char *argv[])
 					g_sizeopt = -g_width;
 					g_width = g_sizeopt;
 
-				  if (*(p + 1) == 'x'){
+					if (*(p + 1) == 'x')
+					{
 						g_height = -strtol(p + 2, &p, 10);
-					}else{
+					}
+					else
+					{
 						g_height = g_sizeopt;
 					}
 

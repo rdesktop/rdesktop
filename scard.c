@@ -1180,7 +1180,7 @@ TS_SCardGetStatusChange(STREAM in, STREAM out, RD_BOOL wide)
 	   but is by Windows PCSC spec. used for polling current state.
 	 */
 	if (dwTimeout == 0)
-	  dwTimeout = 1;
+		dwTimeout = 1;
 	rv = SCardGetStatusChange(myHContext, (MYPCSC_DWORD) dwTimeout,
 				  myRsArray, (MYPCSC_DWORD) dwCount);
 	copyReaderState_MyPCSCToServer(myRsArray, rsArray, (MYPCSC_DWORD) dwCount);
