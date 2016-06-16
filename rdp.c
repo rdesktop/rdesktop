@@ -319,6 +319,7 @@ rdp_in_unistr(STREAM s, int in_len, char **string, uint32 * str_size)
 		int i = 0;
 		int rem = 0;
 		uint32 len = in_len / 2;
+		char *pstr = *string;
 
 		if (len > *str_size - 1)
 		{
@@ -329,12 +330,12 @@ rdp_in_unistr(STREAM s, int in_len, char **string, uint32 * str_size)
 
 		while (i < len)
 		{
-			in_uint8a(s, &string[i++], 1);
+			in_uint8a(s, &pstr[i++], 1);
 			in_uint8s(s, 1);
 		}
 
 		in_uint8s(s, rem);
-		string[len] = 0;
+		pstr[len] = 0;
 		*str_size = len;
 	}
 }
