@@ -88,7 +88,7 @@ rdssl_rsa_encrypt(uint8 * out, uint8 * in, int len, uint32 modulus_size, uint8 *
 		  uint8 * exponent)
 {
 	BN_CTX *ctx;
-	BIGNUM mod, exp, x, y;
+	BIGNUM *mod, *exp, *x, *y;
 	uint8 inr[SEC_MAX_MODULUS_SIZE];
 	int outlen;
 
@@ -98,24 +98,24 @@ rdssl_rsa_encrypt(uint8 * out, uint8 * in, int len, uint32 modulus_size, uint8 *
 	reverse(inr, len);
 
 	ctx = BN_CTX_new();
-	BN_init(&mod);
-	BN_init(&exp);
-	BN_init(&x);
-	BN_init(&y);
+	mod = BN_new();
+	exp = BN_new();
+	x = BN_new();
+	y = BN_new();
 
-	BN_bin2bn(modulus, modulus_size, &mod);
-	BN_bin2bn(exponent, SEC_EXPONENT_SIZE, &exp);
-	BN_bin2bn(inr, len, &x);
-	BN_mod_exp(&y, &x, &exp, &mod, ctx);
-	outlen = BN_bn2bin(&y, out);
+	BN_bin2bn(modulus, modulus_size, mod);
+	BN_bin2bn(exponent, SEC_EXPONENT_SIZE, exp);
+	BN_bin2bn(inr, len, x);
+	BN_mod_exp(y, x, exp, mod, ctx);
+	outlen = BN_bn2bin(y, out);
 	reverse(out, outlen);
 	if (outlen < (int) modulus_size)
 		memset(out + outlen, 0, modulus_size - outlen);
 
-	BN_free(&y);
-	BN_clear_free(&x);
-	BN_free(&exp);
-	BN_free(&mod);
+	BN_free(y);
+	BN_clear_free(x);
+	BN_free(exp);
+	BN_free(mod);
 	BN_CTX_free(ctx);
 }
 
@@ -146,12 +146,20 @@ rdssl_cert_to_rkey(RDSSL_CERT * cert, uint32 * key_len)
 
 	   Kudos to Richard Levitte for the following (. intiutive .) 
 	   lines of code that resets the OID and let's us extract the key. */
-	nid = OBJ_obj2nid(cert->cert_info->key->algor->algorithm);
+
+	X509_PUBKEY *key = NULL;
+	X509_ALGOR *algor = NULL;
+
+	key = X509_get_X509_PUBKEY(cert);
+	algor = X509_PUBKEY_get0_param(NULL, NULL, 0, &algor, key);
+
+	nid = OBJ_obj2nid(algor->algorithm);
+
 	if ((nid == NID_md5WithRSAEncryption) || (nid == NID_shaWithRSAEncryption))
 	{
 		DEBUG_RDP5(("Re-setting algorithm type to RSA in server certificate\n"));
-		ASN1_OBJECT_free(cert->cert_info->key->algor->algorithm);
-		cert->cert_info->key->algor->algorithm = OBJ_nid2obj(NID_rsaEncryption);
+		X509_PUBKEY_set0_param(key, OBJ_nid2obj(NID_rsaEncryption),
+				       0, NULL, NULL, 0);
 	}
 	epk = X509_get_pubkey(cert);
 	if (NULL == epk)
@@ -201,14 +209,24 @@ rdssl_rkey_get_exp_mod(RDSSL_RKEY * rkey, uint8 * exponent, uint32 max_exp_len, 
 {
 	int len;
 
-	if ((BN_num_bytes(rkey->e) > (int) max_exp_len) ||
-	    (BN_num_bytes(rkey->n) > (int) max_mod_len))
+	BIGNUM *e = NULL;
+	BIGNUM *n = NULL;
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+	e = rkey->e;
+	n = rkey->n;
+#else
+	RSA_get0_key(rkey, &e, &n, NULL);
+#endif
+
+	if ((BN_num_bytes(e) > (int) max_exp_len) ||
+	    (BN_num_bytes(n) > (int) max_mod_len))
 	{
 		return 1;
 	}
-	len = BN_bn2bin(rkey->e, exponent);
+	len = BN_bn2bin(e, exponent);
 	reverse(exponent, len);
-	len = BN_bn2bin(rkey->n, modulus);
+	len = BN_bn2bin(n, modulus);
 	reverse(modulus, len);
 	return 0;
 }
@@ -229,8 +247,5 @@ void
 rdssl_hmac_md5(const void *key, int key_len, const unsigned char *msg, int msg_len,
 	       unsigned char *md)
 {
-	HMAC_CTX ctx;
-	HMAC_CTX_init(&ctx);
 	HMAC(EVP_md5(), key, key_len, msg, msg_len, md, NULL);
-	HMAC_CTX_cleanup(&ctx);
 }
