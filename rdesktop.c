@@ -936,7 +936,7 @@ main(int argc, char *argv[])
 					char *p = strchr(optarg, '=');
 					if (p == NULL)
 					{
-						warning("Skipping option '%s' specified, lacks name=value format.\n");
+						warning("Skipping option '%s' specified, lacks name=value format.\n", optarg);
 						continue;
 					}
 
