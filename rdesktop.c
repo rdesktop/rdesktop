@@ -3,7 +3,7 @@
    Entrypoint and utility functions
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2002-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
-   Copyright 2010-2014 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2010-2016 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -113,7 +113,8 @@ RD_BOOL g_seamless_persistent_mode = True;
 RD_BOOL g_user_quit = False;
 uint32 g_embed_wnd;
 uint32 g_rdp5_performanceflags =
-	RDP5_NO_WALLPAPER | RDP5_NO_FULLWINDOWDRAG | RDP5_NO_MENUANIMATIONS | RDP5_NO_CURSOR_SHADOW;
+	PERF_DISABLE_WALLPAPER | PERF_DISABLE_FULLWINDOWDRAG | PERF_DISABLE_MENUANIMATIONS |
+	PERF_DISABLE_CURSOR_SHADOW | PERF_ENABLE_FONT_SMOOTHING;
 /* Session Directory redirection */
 RD_BOOL g_redirect = False;
 char *g_redirect_server;
@@ -793,24 +794,24 @@ main(int argc, char *argv[])
 			case 'x':
 				if (str_startswith(optarg, "m"))	/* modem */
 				{
-					g_rdp5_performanceflags = RDP5_NO_CURSOR_SHADOW |
-						RDP5_NO_WALLPAPER | RDP5_NO_FULLWINDOWDRAG |
-						RDP5_NO_MENUANIMATIONS | RDP5_NO_THEMING;
+					g_rdp5_performanceflags = PERF_DISABLE_CURSOR_SHADOW |
+						PERF_DISABLE_WALLPAPER | PERF_DISABLE_FULLWINDOWDRAG
+						| PERF_DISABLE_MENUANIMATIONS |
+						PERF_DISABLE_THEMING;
 				}
 				else if (str_startswith(optarg, "b"))	/* broadband */
 				{
 					g_rdp5_performanceflags =
-						RDP5_NO_CURSOR_SHADOW | RDP5_NO_WALLPAPER;
+						PERF_DISABLE_CURSOR_SHADOW | PERF_DISABLE_WALLPAPER | PERF_ENABLE_FONT_SMOOTHING;
 				}
 				else if (str_startswith(optarg, "l"))	/* lan */
 				{
-					g_rdp5_performanceflags =
-						RDP5_NO_CURSOR_SHADOW | RDP5_DISABLE_NOTHING;
+					g_rdp5_performanceflags = PERF_DISABLE_CURSOR_SHADOW | PERF_ENABLE_FONT_SMOOTHING;
 				}
 				else
 				{
-					g_rdp5_performanceflags =
-						RDP5_NO_CURSOR_SHADOW | strtol(optarg, NULL, 16);
+					g_rdp5_performanceflags = PERF_DISABLE_CURSOR_SHADOW |
+						strtol(optarg, NULL, 16);
 				}
 				break;
 
@@ -988,7 +989,7 @@ main(int argc, char *argv[])
 			error("You cannot use -S and -A at the same time\n");
 			return EX_USAGE;
 		}
-		g_rdp5_performanceflags &= ~RDP5_NO_FULLWINDOWDRAG;
+		g_rdp5_performanceflags &= ~PERF_DISABLE_FULLWINDOWDRAG;
 		if (geometry_option)
 		{
 			error("You cannot use -g and -A at the same time\n");
