@@ -86,6 +86,7 @@ int g_win_button_size = 0;	/* If zero, disable single app mode */
 RD_BOOL g_network_error = False;
 RD_BOOL g_bitmap_compression = True;
 RD_BOOL g_sendmotion = True;
+RD_BOOL g_send_physical_buttons = True;
 RD_BOOL g_bitmap_cache = True;
 RD_BOOL g_bitmap_cache_persist_enable = False;
 RD_BOOL g_bitmap_cache_precache = True;
@@ -196,6 +197,7 @@ usage(char *program)
 	fprintf(stderr, "   -B: use BackingStore of X-server (if available)\n");
 	fprintf(stderr, "   -e: disable encryption (French TS)\n");
 	fprintf(stderr, "   -E: disable encryption from client to server\n");
+        fprintf(stderr, "   -M: send physical mouse buttons (useful for left-handed mouse buttons)\n");
 	fprintf(stderr, "   -m: do not send motion events\n");
 	fprintf(stderr, "   -C: use private colour map\n");
 	fprintf(stderr, "   -D: hide window manager decorations\n");
@@ -572,7 +574,7 @@ main(int argc, char *argv[])
 #define VNCOPT
 #endif
 	while ((c = getopt(argc, argv,
-			   VNCOPT "A:u:L:d:s:c:p:n:k:g:o:fbBeEitmzCDKS:T:NX:a:x:Pr:045h?")) != -1)
+			   VNCOPT "A:u:L:d:s:c:p:n:k:g:o:fbBeEitMmzCDKS:T:NX:a:x:Pr:045h?")) != -1)
 	{
 		switch (c)
 		{
@@ -729,7 +731,10 @@ main(int argc, char *argv[])
 			case 'E':
 				g_packet_encryption = False;
 				break;
-			case 'm':
+                        case 'M':
+                                g_send_physical_buttons = False;
+                                break;
+                        case 'm':
 				g_sendmotion = False;
 				break;
 
