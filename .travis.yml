@@ -1,7 +1,5 @@
 language: c
 
-compiler:
-  -clang
-  -gcc
+compiler: gcc
 
 script: ./bootstrap && ./configure && make
