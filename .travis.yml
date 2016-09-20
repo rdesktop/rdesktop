@@ -1,0 +1,7 @@
+language: c
+
+compile:
+  -clang
+  -gcc
+
+script: ./bootstrap && ./configure && make
