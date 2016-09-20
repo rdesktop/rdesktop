@@ -2,4 +2,4 @@ language: c
 
 compiler: gcc
 
-script: ./bootstrap && ./configure --disable-credssp && make
+script: ./bootstrap && ./configure --disable-credssp --disable-smartcard && make
