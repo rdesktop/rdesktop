@@ -3022,9 +3022,13 @@ ui_create_cursor(unsigned int x, unsigned int y, int width, int height,
 void
 ui_set_cursor(RD_HCURSOR cursor)
 {
-	g_current_cursor = (Cursor) cursor;
-	XDefineCursor(g_display, g_wnd, g_current_cursor);
-	ON_ALL_SEAMLESS_WINDOWS(XDefineCursor, (g_display, sw->wnd, g_current_cursor));
+	extern RD_BOOL g_local_cursor;
+	if (!g_local_cursor)
+	{
+		g_current_cursor = (Cursor) cursor;
+		XDefineCursor(g_display, g_wnd, g_current_cursor);
+		ON_ALL_SEAMLESS_WINDOWS(XDefineCursor, (g_display, sw->wnd, g_current_cursor));
+	}
 }
 
 void

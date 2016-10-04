@@ -24,6 +24,7 @@
 extern char g_hostname[16];
 extern int g_width;
 extern int g_height;
+extern int g_dpi;
 extern unsigned int g_keylayout;
 extern int g_keyboard_type;
 extern int g_keyboard_subtype;
@@ -395,7 +396,7 @@ static void
 sec_out_mcs_data(STREAM s, uint32 selected_protocol)
 {
 	int hostlen = 2 * strlen(g_hostname);
-	int length = 162 + 76 + 12 + 4;
+	int length = 162 + 76 + 12 + 4 + (g_dpi > 0 ? 18 : 0);
 	unsigned int i;
 
 	if (g_num_channels > 0)
@@ -423,7 +424,7 @@ sec_out_mcs_data(STREAM s, uint32 selected_protocol)
 
 	/* Client information */
 	out_uint16_le(s, SEC_TAG_CLI_INFO);
-	out_uint16_le(s, 216);	/* length */
+	out_uint16_le(s, 216 + (g_dpi > 0 ? 18 : 0));	/* length */
 	out_uint16_le(s, (g_rdp_version >= RDP_V5) ? 4 : 1);	/* RDP version. 1 == RDP4, 4 >= RDP5 to RDP8 */
 	out_uint16_le(s, 8);
 	out_uint16_le(s, g_width);
@@ -444,15 +445,25 @@ sec_out_mcs_data(STREAM s, uint32 selected_protocol)
 	out_uint32_le(s, g_keyboard_functionkeys);
 	out_uint8s(s, 64);	/* reserved? 4 + 12 doublewords */
 	out_uint16_le(s, 0xca01);	/* colour depth? */
-	out_uint16_le(s, 1);
+	out_uint16_le(s, 1);		/* product id */
 
-	out_uint32(s, 0);
-	out_uint8(s, g_server_depth);
-	out_uint16_le(s, 0x0700);
+	out_uint32(s, 0);		/* serial number */
+	out_uint8(s, g_server_depth);	/* this stuff is misaligned should be 2,2,2,64,1,1 */
+	out_uint16_le(s, 0x0700);	/* this strange constant is split across fields */
 	out_uint8(s, 0);
 	out_uint32_le(s, 1);
 	out_uint8s(s, 64);
 	out_uint32_le(s, selected_protocol);	/* End of client info */
+	if (g_dpi > 0)
+	{
+		/* Extended client info describing monitor geometry */
+		out_uint32_le(s, g_width * 100 / (g_dpi * 254)); /* desktop physical width */
+		out_uint32_le(s, g_height * 100 / (g_dpi * 254)); /* desktop physical height */
+		out_uint16_le(s, 0); /* orientation: portrait */
+		out_uint32_le(s, g_dpi < 96 ? 100 : (g_dpi * 100 + 48) / 96); /* desktop scale factor */
+		out_uint32_le(s, g_dpi < 134 ? 100 : (g_dpi < 173 ? 140 : 180)); /* device scale factor */
+		/* the only allowed values for device scale factor are 100, 140, and 180. */
+	}
 
 	/* Write a Client Cluster Data (TS_UD_CS_CLUSTER) */
 	uint32 cluster_flags = 0;
@@ -901,7 +912,7 @@ sec_connect(char *server, char *username, char *domain, char *password, RD_BOOL 
 		return False;
 
 	/* We exchange some RDP data during the MCS-Connect */
-	mcs_data.size = 512;
+	mcs_data.size = 542;
 	mcs_data.p = mcs_data.data = (uint8 *) xmalloc(mcs_data.size);
 	sec_out_mcs_data(&mcs_data, selected_proto);
 

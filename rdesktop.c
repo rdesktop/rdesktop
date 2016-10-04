@@ -72,6 +72,7 @@ int g_sizeopt = 0;		/* If non-zero, a special size has been
 				   requested. If 1, the geometry will be fetched
 				   from _NET_WORKAREA. If negative, absolute value
 				   specifies the percent of the whole screen. */
+int g_dpi = 0;			/* device DPI: default not set */
 int g_width = 800;
 int g_height = 600;
 int g_xpos = 0;
@@ -97,6 +98,7 @@ RD_BOOL g_desktop_save = True;	/* desktop save order */
 RD_BOOL g_polygon_ellipse_orders = True;	/* polygon / ellipse orders */
 RD_BOOL g_fullscreen = False;
 RD_BOOL g_grab_keyboard = True;
+RD_BOOL g_local_cursor = False;
 RD_BOOL g_hide_decorations = False;
 RDP_VERSION g_rdp_version = RDP_V5;	/* Default to version 5 */
 RD_BOOL g_rdpclip = True;
@@ -183,7 +185,7 @@ usage(char *program)
 	fprintf(stderr, "   -p: password (- to prompt)\n");
 	fprintf(stderr, "   -n: client hostname\n");
 	fprintf(stderr, "   -k: keyboard layout on server (en-us, de, sv, etc.)\n");
-	fprintf(stderr, "   -g: desktop geometry (WxH)\n");
+	fprintf(stderr, "   -g: desktop geometry (WxH[@dpi])\n");
 #ifdef WITH_SCARD
 	fprintf(stderr, "   -i: enables smartcard authentication, password is used as pin\n");
 #endif
@@ -197,6 +199,7 @@ usage(char *program)
 	fprintf(stderr, "   -e: disable encryption (French TS)\n");
 	fprintf(stderr, "   -E: disable encryption from client to server\n");
 	fprintf(stderr, "   -m: do not send motion events\n");
+	fprintf(stderr, "   -M: use local mouse cursor\n");
 	fprintf(stderr, "   -C: use private colour map\n");
 	fprintf(stderr, "   -D: hide window manager decorations\n");
 	fprintf(stderr, "   -K: keep window manager key bindings\n");
@@ -572,7 +575,7 @@ main(int argc, char *argv[])
 #define VNCOPT
 #endif
 	while ((c = getopt(argc, argv,
-			   VNCOPT "A:u:L:d:s:c:p:n:k:g:o:fbBeEitmzCDKS:T:NX:a:x:Pr:045h?")) != -1)
+			   VNCOPT "A:u:L:d:s:c:p:n:k:g:o:fbBeEitmMzCDKS:T:NX:a:x:Pr:045h?")) != -1)
 	{
 		switch (c)
 		{
@@ -697,6 +700,16 @@ main(int argc, char *argv[])
 					p++;
 				}
 
+				if (*p == '@')
+				{
+					g_dpi = strtol(p + 1, &p, 10);
+					if (g_dpi <= 0)
+					{
+						error("invalid geometry\n");
+						return EX_USAGE;
+					}
+				}
+
 				if (*p == '+' || *p == '-')
 				{
 					g_pos |= (*p == '-') ? 2 : 1;
@@ -732,6 +745,8 @@ main(int argc, char *argv[])
 			case 'm':
 				g_sendmotion = False;
 				break;
+			case 'M':
+				g_local_cursor = True;
 
 			case 'C':
 				g_owncolmap = True;

@@ -63,15 +63,20 @@ basic alphanumeric keys and may not work properly on all platforms
 so its use is discouraged.
 .TP
 .BR "-g <geometry>"
-Desktop geometry (WxH). If geometry is the special word "workarea", the geometry
-will be fetched from the extended window manager hints property _NET_WORKAREA, from
-the root window. The geometry can also be specified as a percentage of the whole
-screen, e.g. "-g 80%", "-g 80%x70%". 
+Desktop geometry (WxH[@DPI][+X[+Y]]). If geometry is the special word
+"workarea", the geometry will be fetched from the extended window
+manager hints property _NET_WORKAREA, from the root window. The
+geometry can also be specified as a percentage of the whole screen,
+e.g. "-g 80%", "-g 80%x70%".
 
 If the specified geometry depends on the screen size, and the screen
 size is changed, rdesktop will automatically reconnect using the new
 screen size. This requires that rdesktop has been compiled with RandR
 support.
+
+The optional DPI parameter should be specified if the screen rdesktop
+is being displayed on is too far from 96 DPI for unscaled Windows to
+be readable. Windows currently accepts values from 96 to 480.
 .TP
 .BR "-i"
 Use password as smartcard pin. If a valid user certificate is matched in smart card
@@ -122,6 +127,11 @@ but everything after this is unencrypted (including interactive logins).
 .BR "-m"
 Do not send mouse motion events.  This saves bandwidth, although some Windows
 applications may rely on receiving mouse motion.
+.TP
+.BR "-M"
+Use the local X cursor rather than the one from the remote machine. This is most
+useful with "-m" but has other uses. If running with no window manager, use
+xsetroot(1) to set a useful cursor first.
 .TP
 .BR "-C"
 Use private colourmap.  This will improve colour accuracy on an 8-bit display,
