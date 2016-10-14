@@ -379,11 +379,31 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 		out_uint16_le(s, len_password);
 		out_uint16_le(s, len_program);
 		out_uint16_le(s, len_directory);
-		rdp_out_unistr(s, domain, len_domain);
-		rdp_out_unistr(s, user, len_user);
-		rdp_out_unistr(s, password, len_password);
-		rdp_out_unistr(s, program, len_program);
-		rdp_out_unistr(s, directory, len_directory);
+
+		if (0 < len_domain)
+			rdp_out_unistr(s, domain, len_domain);
+		else
+			out_uint16_le(s, 0);
+
+		if (0 < len_user)
+			rdp_out_unistr(s, user, len_user);
+		else
+			out_uint16_le(s, 0);
+
+		if (0 < len_password)
+			rdp_out_unistr(s, password, len_password);
+		else
+			out_uint16_le(s, 0);
+
+		if (0 < len_program)
+			rdp_out_unistr(s, program, len_program);
+		else
+			out_uint16_le(s, 0);
+
+		if (0 < len_directory)
+			rdp_out_unistr(s, directory, len_directory);
+		else
+			out_uint16_le(s, 0);
 	}
 	else
 	{
