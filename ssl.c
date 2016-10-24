@@ -3,6 +3,7 @@
    Secure sockets abstraction layer
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright (C) Jay Sorg <j@american-data.com> 2006-2008
+   Copyright (C) Henrik Andersson <hean01@cendio.com> 2016
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -140,6 +141,7 @@ rdssl_cert_to_rkey(RDSSL_CERT * cert, uint32 * key_len)
 	EVP_PKEY *epk = NULL;
 	RDSSL_RKEY *lkey;
 	int nid;
+	int ret;
 
 	/* By some reason, Microsoft sets the OID of the Public RSA key to
 	   the oid for "MD5 with RSA Encryption" instead of "RSA Encryption"
@@ -151,7 +153,18 @@ rdssl_cert_to_rkey(RDSSL_CERT * cert, uint32 * key_len)
 	X509_ALGOR *algor = NULL;
 
 	key = X509_get_X509_PUBKEY(cert);
-	algor = X509_PUBKEY_get0_param(NULL, NULL, 0, &algor, key);
+	if (key == NULL)
+	{
+		error("Failed to get public key from certificate.\n");
+		return NULL;
+	}
+
+	ret = X509_PUBKEY_get0_param(NULL, NULL, 0, &algor, key);
+	if (ret != 1)
+	{
+		error("Faild to get algorithm used for public key.\n");
+		return NULL;
+	}
 
 	nid = OBJ_obj2nid(algor->algorithm);
 
