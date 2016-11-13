@@ -435,8 +435,12 @@ sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 	out_uint16_le(s, g_requested_session_height);	/* desktopHeight */
 	out_uint16_le(s, RNS_UD_COLOR_8BPP);	/* colorDepth */
 	out_uint16_le(s, RNS_UD_SAS_DEL);	/* SASSequence */
-	out_uint32_le(s, g_keylayout);	/* keyboardLayout */
-	out_uint32_le(s, 2600);	/* Client build. We are now 2600 compatible :-) */
+	out_uint32_le(s, g_keylayout);		/* keyboardLayout */
+	/*
+	 * According to s.1.7 of MS-RDPESC if the build number is at least 4,304,
+	 * SCREDIR_VERSION_LONGHORN is assumed; otherwise SCREDIR_VERSIONXP is to be used
+	 */
+	out_uint32_le(s, 2600);			/* Client build. We are now 2600 compatible :-) */
 
 	/* Unicode name of client, padded to 32 bytes */
 	out_utf16s_padded(s, g_hostname, 32, 0x00);

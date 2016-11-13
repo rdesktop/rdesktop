@@ -5,6 +5,7 @@
    Copyright 2003-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
    Copyright 2011-2018 Henrik Andersson <hean01@cendio.se> for Cendio AB
    Copyright 2017 Karl Mikaelsson <derfian@cendio.se> for Cendio AB
+   Copyright 2017 Alexander Zakharov <uglym8gmail.com>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -62,6 +63,8 @@ uint8 *g_next_packet;
 uint32 g_rdp_shareid;
 
 extern RDPCOMP g_mppc_dict;
+
+extern uint32 vc_chunk_size;
 
 /* Session Directory support */
 extern RD_BOOL g_redirect;
@@ -926,6 +929,28 @@ rdp_out_brushcache_caps(STREAM s)
 	out_uint32_le(s, 1);	/* cache type */
 }
 
+/* 2.2.7.1.10 MS-RDPBCGR */
+/* Output virtual channel capability set */
+static void
+rdp_out_virtchan_caps(STREAM s)
+{
+	out_uint16_le(s, RDP_CAPSET_VC);
+	out_uint16_le(s, RDP_CAPLEN_VC);
+	/* VCCAPS_COMPR_SC */
+	out_uint32_le(s, 0x00000001);	/* compression flags */
+}
+
+static void
+rdp_process_virtchan_caps(STREAM s)
+{
+	uint32 flags, chunk_size;
+
+	in_uint32_le(s, flags);
+	in_uint32_le(s, chunk_size);
+
+	vc_chunk_size = chunk_size;
+}
+
 /* Output Input Capability Set */
 static void
 rdp_out_ts_input_capabilityset(STREAM s)
@@ -1043,7 +1068,8 @@ rdp_send_confirm_active(void)
 		RDP_CAPLEN_SOUND +
 		RDP_CAPLEN_GLYPHCACHE +
 		RDP_CAPLEN_MULTIFRAGMENTUPDATE +
-		RDP_CAPLEN_LARGE_POINTER + 4 /* w2k fix, sessionid */ ;
+		RDP_CAPLEN_LARGE_POINTER +
+		RDP_CAPLEN_VC + 4 /* w2k fix, sessionid */ ;
 
 	logger(Protocol, Debug, "%s()", __func__);
 
@@ -1070,7 +1096,7 @@ rdp_send_confirm_active(void)
 	out_uint16_le(s, caplen);
 
 	out_uint8p(s, RDP_SOURCE, sizeof(RDP_SOURCE));
-	out_uint16_le(s, 16);	/* num_caps */
+	out_uint16_le(s, 17);	/* num_caps */
 	out_uint8s(s, 2);	/* pad */
 
 	rdp_out_ts_general_capabilityset(s);
@@ -1091,6 +1117,7 @@ rdp_send_confirm_active(void)
 	rdp_out_control_caps(s);
 	rdp_out_share_caps(s);
 	rdp_out_brushcache_caps(s);
+	rdp_out_virtchan_caps(s);
 
 	rdp_out_ts_input_capabilityset(s);
 	rdp_out_ts_sound_capabilityset(s);
@@ -1211,6 +1238,12 @@ rdp_process_server_caps(STREAM s, uint16 length)
 
 			case RDP_CAPSET_BITMAP:
 				rdp_process_bitmap_caps(s);
+				break;
+			case RDP_CAPSET_VC:
+				/* Parse only if we got VCChunkSize */
+				if (capset_length > 8) {
+					rdp_process_virtchan_caps(s);
+				}
 				break;
 		}
 

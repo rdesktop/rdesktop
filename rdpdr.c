@@ -358,6 +358,50 @@ rdpdr_send_client_device_list_announce(void)
 }
 
 void
+rdpdr_send_scard_io_completion(uint32 device, uint32 id, uint32 status, uint32 result, uint8 * buffer,
+		      uint32 srv_buf_len)
+{
+	int i;
+	STREAM s;
+
+#ifdef WITH_SCARD
+	scard_lock(SCARD_LOCK_RDPDR);
+#endif
+
+	if (result > srv_buf_len) {
+		/*
+		 * Not enough space has been allocated by server to store the result.
+		 * Send STATUS_BUFFER_TOO_SMALL error as a IoStatus.
+		 */
+		result = 0;
+		status = RD_STATUS_BUFFER_TOO_SMALL;
+	}
+
+	s = channel_init(rdpdr_channel, 20 + result);
+	out_uint16_le(s, RDPDR_CTYP_CORE);
+	out_uint16_le(s, PAKID_CORE_DEVICE_IOCOMPLETION);
+	out_uint32_le(s, device);
+	out_uint32_le(s, id);
+
+	out_uint32_le(s, status);
+	out_uint32_le(s, result);
+
+	if (result)
+		out_uint8p(s, buffer, result);
+
+	s_mark_end(s);
+	/* JIF */
+#ifdef WITH_DEBUG_RDP5
+	printf("--> rdpdr_send_scard_io_completion\n");
+	/* hexdump(s->channel_hdr + 8, s->end - s->channel_hdr - 8); */
+#endif
+	channel_send(s, rdpdr_channel);
+#ifdef WITH_SCARD
+	scard_unlock(SCARD_LOCK_RDPDR);
+#endif
+}
+
+void
 rdpdr_send_completion(uint32 device, uint32 id, uint32 status, uint32 result, uint8 * buffer,
 		      uint32 length)
 {
@@ -730,11 +774,15 @@ rdpdr_process_irp(STREAM s)
 				break;
 			}
 
+			/* DR_CONTROL_REQ (2.2.1.4.5 of MS-RDPEFS) */
+			/* OutputBufferLength */
 			in_uint32_le(s, bytes_out);
 			in_uint8s(s, 4);	/* skip  bytes_in */
 			in_uint32_le(s, request);
+			/* Padding */
 			in_uint8s(s, 0x14);
 
+			/* TODO: Why do we need to increase length by padlen? Or is it hdr len? */
 			buffer = (uint8 *) xrealloc((void *) buffer, bytes_out + 0x14);
 			if (!buffer)
 			{
@@ -743,7 +791,10 @@ rdpdr_process_irp(STREAM s)
 			}
 
 			out.data = out.p = buffer;
-			out.size = sizeof(buffer);
+			/* Guess, just a simple mistype. Check others */
+			//out.size = sizeof(buffer);
+			out.size = bytes_out + 0x14;
+
 
 #ifdef WITH_SCARD
 			scardSetInfo(g_epoch, device, id, bytes_out + 0x14);
