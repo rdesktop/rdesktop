@@ -611,6 +611,7 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 			XSelectInput(g_display, g_wnd, (wa.your_event_mask | PropertyChangeMask));
 		}
 		XFree(data);
+		data = NULL;
 		g_incr_target = event->target;
 		g_waiting_for_INCR = 1;
 		goto end;
