@@ -68,6 +68,7 @@ int g_tcp_port_rdp = TCP_PORT_RDP;
 extern RD_BOOL g_user_quit;
 extern RD_BOOL g_network_error;
 extern RD_BOOL g_reconnect_loop;
+extern RD_BOOL g_tcp_keepalive;
 
 /* wait till socket is ready to write or timeout */
 static RD_BOOL
@@ -513,6 +514,14 @@ tcp_connect(char *server)
 				   option_len);
 		}
 	}
+
+	/* Did we enable TCP Keepalive? */
+	if (g_tcp_keepalive == True)
+	{
+		int tcp_keepalive = 1;
+		setsockopt(g_sock, SOL_SOCKET, SO_KEEPALIVE, &tcp_keepalive, sizeof(tcp_keepalive));
+	}
+
 
 	g_in.size = 4096;
 	g_in.data = (uint8 *) xmalloc(g_in.size);
