@@ -105,6 +105,7 @@ RD_BOOL g_numlock_sync = False;
 RD_BOOL g_lspci_enabled = False;
 RD_BOOL g_owncolmap = False;
 RD_BOOL g_ownbackstore = True;	/* We can't rely on external BackingStore */
+RD_BOOL g_tcp_keepalive = False; /* By default, TCP Keepalive is off */
 RD_BOOL g_seamless_rdp = False;
 RD_BOOL g_use_password_as_pin = False;
 char g_seamless_shell[512];
@@ -189,6 +190,7 @@ usage(char *program)
 #endif
 	fprintf(stderr, "   -f: full-screen mode\n");
 	fprintf(stderr, "   -b: force bitmap updates\n");
+	fprintf(stderr, "   -J: Enable TCP Keepalive (SO_KEEPALIVE)\n");
 #ifdef HAVE_ICONV
 	fprintf(stderr, "   -L: local codepage\n");
 #endif
@@ -572,7 +574,7 @@ main(int argc, char *argv[])
 #define VNCOPT
 #endif
 	while ((c = getopt(argc, argv,
-			   VNCOPT "A:u:L:d:s:c:p:n:k:g:o:fbBeEitmzCDKS:T:NX:a:x:Pr:045h?")) != -1)
+			   VNCOPT "A:u:L:d:s:c:p:n:k:g:o:fbBeEitmzCDKS:T:NX:a:x:Pr:045h?J")) != -1)
 	{
 		switch (c)
 		{
@@ -607,6 +609,10 @@ main(int argc, char *argv[])
 #else
 				error("iconv support not available\n");
 #endif
+				break;
+
+			case 'J':
+				g_tcp_keepalive = True;
 				break;
 
 			case 'd':
