@@ -32,14 +32,10 @@
     http://msdn.microsoft.com/library/en-us/winui/winui/windowsuserinterface/dataexchange/clipboard/clipboardformats.asp
 */
 
-#ifdef HAVE_ICONV
 #ifdef HAVE_LANGINFO_H
-#ifdef HAVE_ICONV_H
 #include <langinfo.h>
 #include <iconv.h>
 #define USE_UNICODE_CLIPBOARD
-#endif
-#endif
 #endif
 
 #ifdef USE_UNICODE_CLIPBOARD
@@ -357,7 +353,7 @@ xclip_send_data_with_convert(uint8 * source, size_t source_size, Atom target)
 		unicode_buffer_remaining = unicode_buffer;
 		data_remaining = (char *) source;
 		data_size_remaining = source_size;
-		iconv(cd, (ICONV_CONST char **) &data_remaining, &data_size_remaining,
+		iconv(cd, (char **) &data_remaining, &data_size_remaining,
 		      &unicode_buffer_remaining, &unicode_buffer_size_remaining);
 		iconv_close(cd);
 
@@ -1005,7 +1001,7 @@ ui_clip_handle_data(uint8 * data, uint32 length)
 				iconv_close(cd);
 				return;
 			}
-			iconv(cd, (ICONV_CONST char **) &data_remaining, &length_remaining,
+			iconv(cd, (char **) &data_remaining, &length_remaining,
 			      &utf8_data_remaining, &utf8_length_remaining);
 			iconv_close(cd);
 			free_data = True;

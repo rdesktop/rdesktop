@@ -3,7 +3,7 @@
    Protocol services - RDP layer
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2003-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
-   Copyright 2011-2014 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2011-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -20,6 +20,8 @@
 */
 
 #include <time.h>
+#include <iconv.h>
+
 #ifndef _WIN32
 #include <errno.h>
 #include <unistd.h>
@@ -27,15 +29,6 @@
 #include "rdesktop.h"
 #include "ssl.h"
 
-#ifdef HAVE_ICONV
-#ifdef HAVE_ICONV_H
-#include <iconv.h>
-#endif
-
-#ifndef ICONV_CONST
-#define ICONV_CONST ""
-#endif
-#endif
 
 extern uint16 g_mcs_userid;
 extern char *g_username;
@@ -88,10 +81,6 @@ extern uint8 g_client_random[SEC_RANDOM_SIZE];
 
 #if WITH_DEBUG
 static uint32 g_packetno;
-#endif
-
-#ifdef HAVE_ICONV
-static RD_BOOL g_iconv_works = True;
 #endif
 
 /* Receive an RDP packet */
@@ -189,74 +178,42 @@ rdp_send_data(STREAM s, uint8 data_pdu_type)
 void
 rdp_out_unistr(STREAM s, char *string, int len)
 {
+	static iconv_t icv_local_to_utf16;
+	size_t ibl, obl;
+	char *pin, *pout;
+
+
 	if (string == NULL || len == 0)
 		return;
 
-#ifdef HAVE_ICONV
-	size_t ibl = strlen(string), obl = len + 2;
-	static iconv_t iconv_h = (iconv_t) - 1;
-	char *pin = string, *pout = (char *) s->p;
+	// if not already open
+	if (!icv_local_to_utf16)
+	{
+		icv_local_to_utf16 = iconv_open(WINDOWS_CODEPAGE, g_codepage);
+		if (icv_local_to_utf16 == (iconv_t) - 1)
+		{
+			error("rdp_out_unistr: iconv_open[%s -> %s] fail %p\n",
+			      g_codepage, WINDOWS_CODEPAGE, icv_local_to_utf16);
+			abort();
+		}
+	}
+
+
+	ibl = strlen(string);
+	obl = len + 2;
+	pin = string;
+	pout = (char *) s->p;
 
 	memset(pout, 0, len + 4);
 
-	if (g_iconv_works)
+
+	if (iconv(icv_local_to_utf16, (char **) &pin, &ibl, &pout, &obl) == (size_t) - 1)
 	{
-		if (iconv_h == (iconv_t) - 1)
-		{
-			size_t i = 1, o = 4;
-			if ((iconv_h = iconv_open(WINDOWS_CODEPAGE, g_codepage)) == (iconv_t) - 1)
-			{
-				warning("rdp_out_unistr: iconv_open[%s -> %s] fail %p\n",
-					g_codepage, WINDOWS_CODEPAGE, iconv_h);
-
-				g_iconv_works = False;
-				rdp_out_unistr(s, string, len);
-				return;
-			}
-			if (iconv(iconv_h, (ICONV_CONST char **) &pin, &i, &pout, &o) ==
-			    (size_t) - 1)
-			{
-				iconv_close(iconv_h);
-				iconv_h = (iconv_t) - 1;
-				warning("rdp_out_unistr: iconv(1) fail, errno %d\n", errno);
-
-				g_iconv_works = False;
-				rdp_out_unistr(s, string, len);
-				return;
-			}
-			pin = string;
-			pout = (char *) s->p;
-		}
-
-		if (iconv(iconv_h, (ICONV_CONST char **) &pin, &ibl, &pout, &obl) == (size_t) - 1)
-		{
-			iconv_close(iconv_h);
-			iconv_h = (iconv_t) - 1;
-			warning("rdp_out_unistr: iconv(2) fail, errno %d\n", errno);
-
-			g_iconv_works = False;
-			rdp_out_unistr(s, string, len);
-			return;
-		}
-
-		s->p += len + 2;
-
+		error("rdp_out_unistr: iconv(2) fail, errno %d\n", errno);
+		abort();
 	}
-	else
-#endif
-	{
-		int i = 0, j = 0;
 
-		len += 2;
-
-		while (i < len)
-		{
-			s->p[i++] = string[j++];
-			s->p[i++] = 0;
-		}
-
-		s->p += len;
-	}
+	s->p += len + 2;
 }
 
 /* Input a string in Unicode
@@ -266,78 +223,59 @@ rdp_out_unistr(STREAM s, char *string, int len)
 void
 rdp_in_unistr(STREAM s, int in_len, char **string, uint32 * str_size)
 {
-	/* Dynamic allocate of destination string if not provided */
-	*string = xmalloc(in_len * 2);
-	*str_size = in_len * 2;
+	static iconv_t icv_utf16_to_local;
+	size_t ibl, obl;
+	char *pin, *pout;
 
-#ifdef HAVE_ICONV
-	size_t ibl = in_len, obl = *str_size - 1;
-	char *pin = (char *) s->p, *pout = *string;
-	static iconv_t iconv_h = (iconv_t) - 1;
-
-	if (g_iconv_works)
+	// if not already open
+	if (!icv_utf16_to_local)
 	{
-		if (iconv_h == (iconv_t) - 1)
+		icv_utf16_to_local = iconv_open(g_codepage, WINDOWS_CODEPAGE);
+		if (icv_utf16_to_local == (iconv_t) - 1)
 		{
-			if ((iconv_h = iconv_open(g_codepage, WINDOWS_CODEPAGE)) == (iconv_t) - 1)
-			{
-				warning("rdp_in_unistr: iconv_open[%s -> %s] fail %p\n",
-					WINDOWS_CODEPAGE, g_codepage, iconv_h);
-
-				g_iconv_works = False;
-				return rdp_in_unistr(s, in_len, string, str_size);
-			}
+			error("rdp_in_unistr: iconv_open[%s -> %s] fail %p\n",
+			      WINDOWS_CODEPAGE, g_codepage, icv_utf16_to_local);
+			abort();
 		}
-
-		if (iconv(iconv_h, (ICONV_CONST char **) &pin, &ibl, &pout, &obl) == (size_t) - 1)
-		{
-			if (errno == E2BIG)
-			{
-				warning("server sent an unexpectedly long string, truncating\n");
-			}
-			else
-			{
-				warning("rdp_in_unistr: iconv fail, errno %d\n", errno);
-
-				free(*string);
-				*string = NULL;
-				*str_size = 0;
-			}
-		}
-
-		/* we must update the location of the current STREAM for future reads of s->p */
-		s->p += in_len;
-
-		*pout = 0;
-
-		if (*string)
-			*str_size = pout - *string;
 	}
-	else
-#endif
-	{
-		int i = 0;
-		int rem = 0;
-		uint32 len = in_len / 2;
-		char *pstr = *string;
 
-		if (len > *str_size - 1)
+	/* Dynamic allocate of destination string if not provided */
+	if (*string == NULL)
+	{
+
+		*string = xmalloc(in_len * 2);
+		*str_size = in_len * 2;
+	}
+
+	ibl = in_len;
+	obl = *str_size - 1;
+	pin = (char *) s->p;
+	pout = *string;
+
+	if (iconv(icv_utf16_to_local, (char **) &pin, &ibl, &pout, &obl) == (size_t) - 1)
+	{
+		if (errno == E2BIG)
 		{
 			warning("server sent an unexpectedly long string, truncating\n");
-			len = *str_size - 1;
-			rem = in_len - 2 * len;
 		}
-
-		while (i < len)
+		else
 		{
-			in_uint8a(s, &pstr[i++], 1);
-			in_uint8s(s, 1);
-		}
+			warning("rdp_in_unistr: iconv fail, errno %d\n", errno);
 
-		in_uint8s(s, rem);
-		pstr[len] = 0;
-		*str_size = len;
+			free(*string);
+			*string = NULL;
+			*str_size = 0;
+		}
+		abort();
 	}
+
+	/* we must update the location of the current STREAM for future reads of s->p */
+	s->p += in_len;
+
+	*pout = 0;
+
+	if (*string)
+		*str_size = pout - *string;
 }
 
 

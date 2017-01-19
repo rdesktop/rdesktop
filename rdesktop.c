@@ -36,10 +36,8 @@
 #ifdef HAVE_LOCALE_H
 #include <locale.h>
 #endif
-#ifdef HAVE_ICONV
 #ifdef HAVE_LANGINFO_H
 #include <langinfo.h>
-#endif
 #endif
 
 #ifdef EGD_SOCKET
@@ -142,9 +140,7 @@ RD_BOOL g_pending_resize = False;
 RD_BOOL g_rdpsnd = False;
 #endif
 
-#ifdef HAVE_ICONV
 char g_codepage[16] = "";
-#endif
 
 char *g_sc_csp_name = NULL;	/* Smartcard CSP name  */
 char *g_sc_reader_name = NULL;
@@ -189,9 +185,7 @@ usage(char *program)
 #endif
 	fprintf(stderr, "   -f: full-screen mode\n");
 	fprintf(stderr, "   -b: force bitmap updates\n");
-#ifdef HAVE_ICONV
 	fprintf(stderr, "   -L: local codepage\n");
-#endif
 	fprintf(stderr, "   -A: path to SeamlessRDP shell, this enables SeamlessRDP mode\n");
 	fprintf(stderr, "   -B: use BackingStore of X-server (if available)\n");
 	fprintf(stderr, "   -e: disable encryption (French TS)\n");
@@ -602,11 +596,7 @@ main(int argc, char *argv[])
 				break;
 
 			case 'L':
-#ifdef HAVE_ICONV
 				STRNCPY(g_codepage, optarg, sizeof(g_codepage));
-#else
-				error("iconv support not available\n");
-#endif
 				break;
 
 			case 'd':
@@ -1033,7 +1023,6 @@ main(int argc, char *argv[])
 		STRNCPY(g_username, pw->pw_name, pwlen);
 	}
 
-#ifdef HAVE_ICONV
 	if (g_codepage[0] == 0)
 	{
 		if (setlocale(LC_CTYPE, ""))
@@ -1045,7 +1034,6 @@ main(int argc, char *argv[])
 			STRNCPY(g_codepage, DEFAULT_CODEPAGE, sizeof(g_codepage));
 		}
 	}
-#endif
 
 	if (g_hostname[0] == 0)
 	{

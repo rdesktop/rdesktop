@@ -39,6 +39,7 @@
 
 extern RD_BOOL g_seamless_rdp;
 extern uint8 g_static_rdesktop_salt_16[];
+extern char g_codepage[16];
 
 static RD_BOOL _ctrl_is_slave;
 static int ctrlsock;
@@ -441,10 +442,6 @@ ctrl_check_fds(fd_set * rfds, fd_set * wfds)
 		it = it->next;
 	}
 }
-
-#if HAVE_ICONV
-extern char g_codepage[16];
-#endif
 
 int
 ctrl_send_command(const char *cmd, const char *arg)

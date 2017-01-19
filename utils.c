@@ -21,18 +21,11 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <errno.h>
-#ifdef HAVE_ICONV_H
 #include <iconv.h>
-#endif
 #include "rdesktop.h"
 
-
-#ifdef HAVE_ICONV
 extern char g_codepage[16];
 static RD_BOOL g_iconv_works = True;
-#endif
-
-
 
 char *
 utils_string_escape(const char *str)
@@ -177,7 +170,6 @@ utils_mkdir_p(const char *path, int mask)
 int
 utils_locale_to_utf8(const char *src, size_t is, char *dest, size_t os)
 {
-#ifdef HAVE_ICONV
 	static iconv_t *iconv_h = (iconv_t) - 1;
 	if (strncmp(g_codepage, "UTF-8", strlen("UTF-8")) == 0)
 		goto pass_trough_as_is;
@@ -199,7 +191,7 @@ utils_locale_to_utf8(const char *src, size_t is, char *dest, size_t os)
 	}
 
 	/* convert string */
-	if (iconv(iconv_h, (ICONV_CONST char **) &src, &is, &dest, &os) == (size_t) - 1)
+	if (iconv(iconv_h, (char **) &src, &is, &dest, &os) == (size_t) - 1)
 	{
 		iconv_close(iconv_h);
 		iconv_h = (iconv_t) - 1;
@@ -213,7 +205,6 @@ utils_locale_to_utf8(const char *src, size_t is, char *dest, size_t os)
 	if (is != 0)
 		return -1;
 
-#endif
       pass_trough_as_is:
 	/* can dest hold strcpy of src */
 	if (os < (strlen(src) + 1))
