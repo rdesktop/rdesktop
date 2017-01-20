@@ -174,6 +174,18 @@ rdp_send_data(STREAM s, uint8 data_pdu_type)
 	sec_send(s, g_encryption ? SEC_ENCRYPT : 0);
 }
 
+/* Output a string in Unicode with mandatory null termination. If
+   string is NULL or len is 0, write an unicode null termination to
+   stream. */
+void
+rdp_out_unistr_mandatory_null(STREAM s, char *string, int len)
+{
+	if (string && len > 0)
+		rdp_out_unistr(s, string, len);
+	else
+		out_uint16_le(s, 0);
+}
+
 /* Output a string in Unicode */
 void
 rdp_out_unistr(STREAM s, char *string, int len)
@@ -318,30 +330,11 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 		out_uint16_le(s, len_program);
 		out_uint16_le(s, len_directory);
 
-		if (0 < len_domain)
-			rdp_out_unistr(s, domain, len_domain);
-		else
-			out_uint16_le(s, 0);
-
-		if (0 < len_user)
-			rdp_out_unistr(s, user, len_user);
-		else
-			out_uint16_le(s, 0);
-
-		if (0 < len_password)
-			rdp_out_unistr(s, password, len_password);
-		else
-			out_uint16_le(s, 0);
-
-		if (0 < len_program)
-			rdp_out_unistr(s, program, len_program);
-		else
-			out_uint16_le(s, 0);
-
-		if (0 < len_directory)
-			rdp_out_unistr(s, directory, len_directory);
-		else
-			out_uint16_le(s, 0);
+		rdp_out_unistr_mandatory_null(s, domain, len_domain);
+		rdp_out_unistr_mandatory_null(s, user, len_user);
+		rdp_out_unistr_mandatory_null(s, password, len_password);
+		rdp_out_unistr_mandatory_null(s, program, len_program);
+		rdp_out_unistr_mandatory_null(s, directory, len_directory);
 	}
 	else
 	{
@@ -401,46 +394,28 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 		out_uint16_le(s, len_program);
 		out_uint16_le(s, len_directory);
 
-		if (0 < len_domain)
-			rdp_out_unistr(s, domain, len_domain);
-		else
-			out_uint16_le(s, 0);	/* mandatory 2 bytes null terminator */
+		rdp_out_unistr_mandatory_null(s, domain, len_domain);
+		rdp_out_unistr_mandatory_null(s, user, len_user);
 
-		if (0 < len_user)
-			rdp_out_unistr(s, user, len_user);
-		else
-			out_uint16_le(s, 0);	/* mandatory 2 bytes null terminator */
-
-		if (0 < len_password)
+		if (g_redirect == True && 0 < g_redirect_cookie_len)
 		{
-			if (g_redirect == True && 0 < g_redirect_cookie_len)
-			{
-				out_uint8p(s, g_redirect_cookie, g_redirect_cookie_len);
-			}
-			else
-			{
-				rdp_out_unistr(s, password, len_password);
-			}
+			out_uint8p(s, g_redirect_cookie, g_redirect_cookie_len);
 		}
 		else
-			out_uint16_le(s, 0);	/* mandatory 2 bytes null terminator */
+		{
+			rdp_out_unistr_mandatory_null(s, password, len_password);
+		}
 
-		if (0 < len_program)
-			rdp_out_unistr(s, program, len_program);
-		else
-			out_uint16_le(s, 0);	/* mandatory 2 bytes null terminator */
 
-		if (0 < len_directory)
-			rdp_out_unistr(s, directory, len_directory);
-		else
-			out_uint16_le(s, 0);	/* mandatory 2 bytes null terminator */
+		rdp_out_unistr_mandatory_null(s, program, len_program);
+		rdp_out_unistr_mandatory_null(s, directory, len_directory);
 
 		/* TS_EXTENDED_INFO_PACKET */
 		out_uint16_le(s, 2);	/* clientAddressFamily = AF_INET */
-		out_uint16_le(s, len_ip);	/* cbClientAddress, Length of client ip */
-		rdp_out_unistr(s, ipaddr, len_ip - 2);	/* clientAddress */
+		out_uint16_le(s, len_ip);	/* cbClientAddress */
+		rdp_out_unistr_mandatory_null(s, ipaddr, len_ip - 2);	/* clientAddress */
 		out_uint16_le(s, len_dll);	/* cbClientDir */
-		rdp_out_unistr(s, "C:\\WINNT\\System32\\mstscax.dll", len_dll - 2);	/* clientDir */
+		rdp_out_unistr_mandatory_null(s, "C:\\WINNT\\System32\\mstscax.dll", len_dll - 2);	/* clientDir */
 
 		/* TS_TIME_ZONE_INFORMATION */
 		tzone = (mktime(gmtime(&t)) - mktime(localtime(&t))) / 60;
