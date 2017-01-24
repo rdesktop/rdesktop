@@ -2402,7 +2402,8 @@ xwin_process_events(void)
 						xevent.xclient.window =
 							RootWindowOfScreen(g_screen);
 						XSendEvent(g_display, xevent.xclient.window, False,
-							   SubstructureRedirectMask | SubstructureNotifyMask, &xevent);
+							   SubstructureRedirectMask |
+							   SubstructureNotifyMask, &xevent);
 						break;
 					}
 				}

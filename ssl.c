@@ -171,8 +171,7 @@ rdssl_cert_to_rkey(RDSSL_CERT * cert, uint32 * key_len)
 	if ((nid == NID_md5WithRSAEncryption) || (nid == NID_shaWithRSAEncryption))
 	{
 		DEBUG_RDP5(("Re-setting algorithm type to RSA in server certificate\n"));
-		X509_PUBKEY_set0_param(key, OBJ_nid2obj(NID_rsaEncryption),
-				       0, NULL, NULL, 0);
+		X509_PUBKEY_set0_param(key, OBJ_nid2obj(NID_rsaEncryption), 0, NULL, NULL, 0);
 	}
 	epk = X509_get_pubkey(cert);
 	if (NULL == epk)
@@ -232,8 +231,7 @@ rdssl_rkey_get_exp_mod(RDSSL_RKEY * rkey, uint8 * exponent, uint32 max_exp_len, 
 	RSA_get0_key(rkey, &e, &n, NULL);
 #endif
 
-	if ((BN_num_bytes(e) > (int) max_exp_len) ||
-	    (BN_num_bytes(n) > (int) max_mod_len))
+	if ((BN_num_bytes(e) > (int) max_exp_len) || (BN_num_bytes(n) > (int) max_mod_len))
 	{
 		return 1;
 	}

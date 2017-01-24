@@ -792,11 +792,14 @@ main(int argc, char *argv[])
 				else if (str_startswith(optarg, "b"))	/* broadband */
 				{
 					g_rdp5_performanceflags =
-						PERF_DISABLE_CURSOR_SHADOW | PERF_DISABLE_WALLPAPER | PERF_ENABLE_FONT_SMOOTHING;
+						PERF_DISABLE_CURSOR_SHADOW | PERF_DISABLE_WALLPAPER
+						| PERF_ENABLE_FONT_SMOOTHING;
 				}
 				else if (str_startswith(optarg, "l"))	/* lan */
 				{
-					g_rdp5_performanceflags = PERF_DISABLE_CURSOR_SHADOW | PERF_ENABLE_FONT_SMOOTHING;
+					g_rdp5_performanceflags =
+						PERF_DISABLE_CURSOR_SHADOW |
+						PERF_ENABLE_FONT_SMOOTHING;
 				}
 				else
 				{
