@@ -60,7 +60,7 @@ parallel_enum_devices(uint32 * id, char *optarg)
 
 		g_rdpdr_device[*id].local_path = xmalloc(strlen(pos2) + 1);
 		strcpy(g_rdpdr_device[*id].local_path, pos2);
-		printf("PARALLEL %s to %s\n", optarg, pos2);
+		logger(Core, Debug, "parallell_enum_devices(), %s to %s", optarg, pos2);
 
 		/* set device type */
 		g_rdpdr_device[*id].device_type = DEVICE_TYPE_PARALLEL;
@@ -83,13 +83,13 @@ parallel_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 dispo
 	parallel_fd = open(g_rdpdr_device[device_id].local_path, O_RDWR);
 	if (parallel_fd == -1)
 	{
-		perror("open");
+		logger(Core, Error, "parallell_create(), open failed: %s", strerror(errno));
 		return RD_STATUS_ACCESS_DENIED;
 	}
 
 	/* all read and writes should be non blocking */
 	if (fcntl(parallel_fd, F_SETFL, O_NONBLOCK) == -1)
-		perror("fcntl");
+		logger(Core, Error, "parallell_create(), fcntl failed: %s", strerror(errno));
 
 #if defined(LPABORT)
 	/* Retry on errors */
@@ -147,8 +147,7 @@ parallel_write(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, u
 #if defined(LPGETSTATUS)
 		if (ioctl(handle, LPGETSTATUS, &status) == 0)
 		{
-			/* coming soon: take care for the printer status */
-			printf("parallel_write: status = %d, errno = %d\n", status, errno);
+			logger(Core, Error, "parellel_write(), ioctl failed: %s", strerror(errno));
 		}
 #endif
 	}
@@ -166,16 +165,15 @@ parallel_device_control(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM ou
 	request >>= 2;
 	request &= 0xfff;
 
-	printf("PARALLEL IOCTL %d: ", request);
+	logger(Protocol, Debug, "parallel_device_control(), ioctl %d", request);
 
 	switch (request)
 	{
 		case IOCTL_PAR_QUERY_RAW_DEVICE_ID:
 
 		default:
-
-			printf("\n");
-			unimpl("UNKNOWN IOCTL %d\n", request);
+			logger(Protocol, Warning, "parallel_device_control(), unhandled ioctl %d",
+			       request);
 	}
 	return RD_STATUS_SUCCESS;
 }

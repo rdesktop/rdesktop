@@ -87,8 +87,8 @@ printer_enum_devices(uint32 * id, char *optarg)
 			strcpy(pprinter_data->driver, pos2);
 		}
 
-		printf("PRINTER %s to %s driver %s\n", g_rdpdr_device[*id].name,
-		       pprinter_data->printer, pprinter_data->driver);
+		logger(Core, Debug, "printer_enum_devices(), %s to %s driver %s",
+		       g_rdpdr_device[*id].name, pprinter_data->printer, pprinter_data->driver);
 		g_rdpdr_device[*id].device_type = DEVICE_TYPE_PRINTER;
 		g_rdpdr_device[*id].pdevice_data = (void *) pprinter_data;
 		count++;

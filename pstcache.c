@@ -70,7 +70,8 @@ pstcache_load_bitmap(uint8 cache_id, uint16 cache_idx)
 	rd_read_file(fd, celldata, cellhdr.length);
 
 	bitmap = ui_create_bitmap(cellhdr.width, cellhdr.height, celldata);
-	DEBUG(("Load bitmap from disk: id=%d, idx=%d, bmp=%p)\n", cache_id, cache_idx, bitmap));
+	logger(Core, Debug, "pstcache_load_bitmap(), load bitmap from disk: id=%d, idx=%d, bmp=%p)",
+	       cache_id, cache_idx, bitmap);
 	cache_put_bitmap(cache_id, cache_idx, bitmap);
 
 	xfree(celldata);
@@ -119,7 +120,7 @@ pstcache_enumerate(uint8 id, HASH_KEY * keylist)
 	if (g_pstcache_enumerated)
 		return 0;
 
-	DEBUG_RDP5(("Persistent bitmap cache enumeration... "));
+	logger(Core, Debug, "pstcache_enumerate(), start enumeration");
 	for (idx = 0; idx < BMPCACHE2_NUM_PSTCELLS; idx++)
 	{
 		fd = g_pstcache_fd[id];
@@ -151,7 +152,7 @@ pstcache_enumerate(uint8 id, HASH_KEY * keylist)
 		}
 	}
 
-	DEBUG_RDP5(("%d cached bitmaps.\n", idx));
+	logger(Core, Debug, "pstcache_enumerate(), %d cached bitmaps", idx);
 
 	cache_rebuild_bmpcache_linked_list(id, mru_idx, idx);
 	g_pstcache_enumerated = True;
@@ -175,13 +176,14 @@ pstcache_init(uint8 cache_id)
 
 	if (!rd_pstcache_mkdir())
 	{
-		DEBUG(("failed to get/make cache directory!\n"));
+		logger(Core, Error,
+		       "pstcache_init(), failed to get/make cache directory, disabling feature");
 		return False;
 	}
 
 	g_pstcache_Bpp = (g_server_depth + 7) / 8;
 	sprintf(filename, "cache/pstcache_%d_%d", cache_id, g_pstcache_Bpp);
-	DEBUG(("persistent bitmap cache file: %s\n", filename));
+	logger(Core, Debug, "pstcache_init(), bitmap cache file %s", filename);
 
 	fd = rd_open_file(filename);
 	if (fd == -1)
@@ -189,7 +191,8 @@ pstcache_init(uint8 cache_id)
 
 	if (!rd_lock_file(fd, 0, 0))
 	{
-		warning("Persistent bitmap caching is disabled. (The file is already in use)\n");
+		logger(Core, Error,
+		       "pstcache_init(), failed to lock persistent cache file, disabling feature");
 		rd_close_file(fd);
 		return False;
 	}

@@ -6,6 +6,7 @@
    Copyright (C) Michael Gernoth <mike@zerfleddert.de> 2003-2008
    Copyright 2007-2008 Pierre Ossman <ossman@cendio.se> for Cendio AB
    Copyright 2008-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
+   Copyright 2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -162,7 +163,7 @@ sun_open(int mode)
 		dsp_fd = open(dsp_dev, dsp_mode | O_NONBLOCK);
 		if (dsp_fd == -1)
 		{
-			perror(dsp_dev);
+			logger(Sound, Error, "sun_open(), open() failed: %s", strerror(errno));
 			return False;
 		}
 	}
@@ -357,7 +358,8 @@ sun_set_format(RD_WAVEFORMATEX * pwfx)
 
 	if (ioctl(dsp_fd, AUDIO_SETINFO, &info) == -1)
 	{
-		perror("AUDIO_SETINFO");
+		logger(Sound, Error, "sun_set_format(), ioctl(AUDIO_SETINFO) failed: %s",
+		       strerror(errno));
 		sun_close();
 		return False;
 	}
@@ -397,7 +399,8 @@ sun_volume(uint16 left, uint16 right)
 
 	if (ioctl(dsp_fd, AUDIO_SETINFO, &info) == -1)
 	{
-		perror("AUDIO_SETINFO");
+		logger(Sound, Error, "sun_set_volume(), ioctl(AUDIO_SETINFO) failed: %s",
+		       strerror(errno));
 		return;
 	}
 }
@@ -424,7 +427,8 @@ sun_play(void)
 		if (errno != EWOULDBLOCK)
 		{
 			if (!dsp_broken)
-				perror("RDPSND: write()");
+				logger(Sound, Error, "sun_play(), write() failed: %s",
+				       strerror(errno));
 			dsp_broken = True;
 			rdpsnd_queue_next(0);
 		}
@@ -463,7 +467,7 @@ sun_record(void)
 	if (len == -1)
 	{
 		if (errno != EWOULDBLOCK)
-			perror("read audio");
+			logger(Sound, Error, "sun_record(), read() failed: %s", strerror(errno));
 		return;
 	}
 

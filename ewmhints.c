@@ -57,7 +57,7 @@ get_property_value(Window wnd, char *propname, long max_length,
 	property = XInternAtom(g_display, propname, True);
 	if (property == None)
 	{
-		fprintf(stderr, "Atom %s does not exist\n", propname);
+		logger(GUI, Error, "get_property_value(), atom '%s' does not exist", propname);
 		return (-1);
 	}
 
@@ -71,26 +71,27 @@ get_property_value(Window wnd, char *propname, long max_length,
 
 	if (result != Success)
 	{
-		fprintf(stderr, "XGetWindowProperty failed\n");
+		logger(GUI, Error, "get_property_value(), XGetWindowProperty failed");
 		return (-1);
 	}
 
 	if (actual_type_return == None || actual_format_return == 0)
 	{
 		if (!nowarn)
-			fprintf(stderr, "Window is missing property %s\n", propname);
+			logger(GUI, Error, "get_property_value(), window is missing atom '%s'",
+			       propname);
 		return (-1);
 	}
 
 	if (bytes_after_return)
 	{
-		fprintf(stderr, "%s is too big for me\n", propname);
+		logger(GUI, Error, "get_property_value(), atom '%s' is too big for me", propname);
 		return (-1);
 	}
 
 	if (actual_format_return != 32)
 	{
-		fprintf(stderr, "%s has bad format\n", propname);
+		logger(GUI, Error, "get_property_value(), atom '%s' has bad format", propname);
 		return (-1);
 	}
 
@@ -115,7 +116,7 @@ get_current_desktop(void)
 
 	if (nitems_return != 1)
 	{
-		fprintf(stderr, "_NET_CURRENT_DESKTOP has bad length\n");
+		logger(GUI, Error, "get_current_desktop(), _NET_CURRENT_DESKTOP has bad length");
 		return (-1);
 	}
 
@@ -149,7 +150,7 @@ get_current_workarea(uint32 * x, uint32 * y, uint32 * width, uint32 * height)
 
 	if (nitems_return % 4)
 	{
-		fprintf(stderr, "_NET_WORKAREA has odd length\n");
+		logger(GUI, Error, "get_current_workare(),_NET_WORKAREA has bad length");
 		return (-1);
 	}
 
@@ -369,7 +370,7 @@ ewmh_get_window_desktop(Window wnd)
 
 	if (nitems_return != 1)
 	{
-		fprintf(stderr, "_NET_WM_DESKTOP has bad length\n");
+		logger(GUI, Error, "ewmh_get_window_desktop(), _NET_WM_DESKTOP has bad length");
 		return (-1);
 	}
 

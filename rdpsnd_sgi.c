@@ -67,45 +67,45 @@ sgi_open(void)
 	static int warned = 0;
 
 #if (defined(IRIX_DEBUG))
-	fprintf(stderr, "sgi_open: begin\n");
+	logger(Sound, Debug, "sgi_open()");
 #endif
 
 	if (!warned && sgi_output_device)
 	{
-		warning("device-options not supported for libao-driver\n");
+		logger(Sound, Warning, "sgi_open(), device-options not supported for libao-driver");
 		warned = 1;
 	}
 
 	if (alGetParamInfo(AL_DEFAULT_OUTPUT, AL_GAIN, &pinfo) < 0)
 	{
-		fprintf(stderr, "sgi_open: alGetParamInfo failed: %s\n",
-			alGetErrorString(oserror()));
+		logger(Sound, Error, "sgi_open(), alGetParamInfo failed: %s",
+		       alGetErrorString(oserror()));
 	}
 	min_volume = alFixedToDouble(pinfo.min.ll);
 	max_volume = alFixedToDouble(pinfo.max.ll);
 	volume_range = (max_volume - min_volume);
-#if (defined(IRIX_DEBUG))
-	fprintf(stderr, "sgi_open: minvol = %lf, maxvol= %lf, range = %lf.\n",
-		min_volume, max_volume, volume_range);
-#endif
+
+	logger(Sound, Debug, "sgi_open(), minvol = %lf, maxvol= %lf, range = %lf",
+	       min_volume, max_volume, volume_range);
+
 
 	audioconfig = alNewConfig();
 	if (audioconfig == (ALconfig) 0)
 	{
-		fprintf(stderr, "sgi_open: alNewConfig failed: %s\n", alGetErrorString(oserror()));
+		logger(Sound, Error, "sgi_open(), alNewConfig failed: %s",
+		       alGetErrorString(oserror()));
 		return False;
 	}
 
 	output_port = alOpenPort("rdpsnd", "w", 0);
 	if (output_port == (ALport) 0)
 	{
-		fprintf(stderr, "sgi_open: alOpenPort failed: %s\n", alGetErrorString(oserror()));
+		logger(Sound, Error, "sgi_open(), alOpenPort failed: %s",
+		       alGetErrorString(oserror()));
 		return False;
 	}
 
-#if (defined(IRIX_DEBUG))
-	fprintf(stderr, "sgi_open: returning\n");
-#endif
+	logger(Sound, Debug, "sgi_open(), done");
 	return True;
 }
 
@@ -113,9 +113,7 @@ void
 sgi_close(void)
 {
 	/* Ack all remaining packets */
-#if (defined(IRIX_DEBUG))
-	fprintf(stderr, "sgi_close: begin\n");
-#endif
+	logger(Sound, Debug, "sgi_close()");
 
 	while (!rdpsnd_queue_empty())
 		rdpsnd_queue_next(0);
@@ -124,9 +122,8 @@ sgi_close(void)
 	alClosePort(output_port);
 	output_port = (ALport) 0;
 	alFreeConfig(audioconfig);
-#if (defined(IRIX_DEBUG))
-	fprintf(stderr, "sgi_close: returning\n");
-#endif
+
+	logger(Sound, Debug, "sgi_close(), done");
 }
 
 RD_BOOL
@@ -149,9 +146,7 @@ sgi_set_format(RD_WAVEFORMATEX * pwfx)
 	int frameSize, channelCount;
 	ALpv params;
 
-#if (defined(IRIX_DEBUG))
-	fprintf(stderr, "sgi_set_format: init...\n");
-#endif
+	logger(Sound, Debug, "sgi_set_format()");
 
 	if (pwfx->wBitsPerSample == 8)
 		width = AL_SAMPLE_8;
@@ -177,8 +172,8 @@ sgi_set_format(RD_WAVEFORMATEX * pwfx)
 
 		if (output_port == (ALport) 0)
 		{
-			fprintf(stderr, "sgi_set_format: alOpenPort failed: %s\n",
-				alGetErrorString(oserror()));
+			logger(Sound, Error, "sgi_set_format(), alOpenPort failed: %s",
+			       alGetErrorString(oserror()));
 			return False;
 		}
 
@@ -191,7 +186,7 @@ sgi_set_format(RD_WAVEFORMATEX * pwfx)
 
 	if (frameSize == 0 || channelCount == 0)
 	{
-		fprintf(stderr, "sgi_set_format: bad frameSize or channelCount\n");
+		logger(Sound, Error, "sgi_set_format(), bad frameSize or channelCount");
 		return False;
 	}
 	combinedFrameSize = frameSize * channelCount;
@@ -201,19 +196,18 @@ sgi_set_format(RD_WAVEFORMATEX * pwfx)
 
 	if (alSetParams(resource, &params, 1) < 0)
 	{
-		fprintf(stderr, "wave_set_format: alSetParams failed: %s\n",
-			alGetErrorString(oserror()));
+		logger(Sound, Error, "sgi_set_format(), alSetParams failed: %s",
+		       alGetErrorString(oserror()));
 		return False;
 	}
 	if (params.sizeOut < 0)
 	{
-		fprintf(stderr, "wave_set_format: invalid rate %d\n", g_snd_rate);
+		logger(Sound, Error, "sgi_set_format(), invalid rate %d", g_snd_rate);
 		return False;
 	}
 
-#if (defined(IRIX_DEBUG))
-	fprintf(stderr, "sgi_set_format: returning...\n");
-#endif
+	logger(Sound, Debug, "sgi_set_format(), done");
+
 	return True;
 }
 
@@ -224,10 +218,8 @@ sgi_volume(uint16 left, uint16 right)
 	ALpv pv[1];
 	ALfixed gain[8];
 
-#if (defined(IRIX_DEBUG))
-	fprintf(stderr, "sgi_volume: begin\n");
-	fprintf(stderr, "left='%d', right='%d'\n", left, right);
-#endif
+
+	logger(Sound, Debug, "sgi_volume(), left=%d, right=%d", left, right);
 
 	gainleft = (double) left / IRIX_MAX_VOL;
 	gainright = (double) right / IRIX_MAX_VOL;
@@ -240,14 +232,12 @@ sgi_volume(uint16 left, uint16 right)
 	pv[0].sizeIn = 8;
 	if (alSetParams(AL_DEFAULT_OUTPUT, pv, 1) < 0)
 	{
-		fprintf(stderr, "sgi_volume: alSetParams failed: %s\n",
-			alGetErrorString(oserror()));
+		logger(Sound, Error, "sgi_volume(), alSetParams failed: %s",
+		       alGetErrorString(oserror()));
 		return;
 	}
 
-#if (defined(IRIX_DEBUG))
-	fprintf(stderr, "sgi_volume: returning\n");
-#endif
+	logger(Sound, Debug, "sgi_volume(), done");
 }
 
 void
@@ -280,9 +270,7 @@ sgi_play(void)
 			}
 			else
 			{
-#if (defined(IRIX_DEBUG))
-/*  				fprintf(stderr,"Busy playing...\n"); */
-#endif
+/*  				logger(Sound,Debug, "sgi_play(), busy playing..."); */
 				usleep(10);
 				return;
 			}

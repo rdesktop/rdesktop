@@ -252,7 +252,7 @@ bitmap_decompress1(uint8 * output, int width, int height, uint8 * input, int siz
 					REPEAT(line[x] = 0)
 					break;
 				default:
-					unimpl("bitmap opcode 0x%x\n", opcode);
+					logger(Core, Warning, "bitmap_decompress(), unhandled bitmap opcode 0x%x", opcode);
 					return False;
 			}
 		}
@@ -451,7 +451,7 @@ bitmap_decompress2(uint8 * output, int width, int height, uint8 * input, int siz
 					REPEAT(line[x] = 0)
 					break;
 				default:
-					unimpl("bitmap opcode 0x%x\n", opcode);
+					logger(Core, Warning, "bitmap_decompress2(), unhandled bitmap opcode 0x%x", opcode);
 					return False;
 			}
 		}
@@ -737,7 +737,7 @@ bitmap_decompress3(uint8 * output, int width, int height, uint8 * input, int siz
 					)
 					break;
 				default:
-					unimpl("bitmap opcode 0x%x\n", opcode);
+					logger(Core, Warning, "bitmap_decompress3(), unhandled bitmap opcode 0x%x", opcode);
 					return False;
 			}
 		}
@@ -900,7 +900,7 @@ bitmap_decompress(uint8 * output, int width, int height, uint8 * input, int size
 			rv = bitmap_decompress4(output, width, height, input, size);
 			break;
 		default:
-			unimpl("Bpp %d\n", Bpp);
+			logger(Core, Debug, "bitmap_decompress(), unhandled BPP %d", Bpp);
 			break;
 	}
 	return rv;

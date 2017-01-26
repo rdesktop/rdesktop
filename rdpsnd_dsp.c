@@ -2,6 +2,7 @@
    rdesktop: A Remote Desktop Protocol client.
    Sound DSP routines
    Copyright (C) Michael Gernoth <mike@zerfleddert.de> 2006-2008
+   Copyright 2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -45,7 +46,7 @@ rdpsnd_dsp_softvol_set(uint16 left, uint16 right)
 {
 	softvol_left = left;
 	softvol_right = right;
-	DEBUG(("rdpsnd_dsp_softvol_set: left: %u, right: %u\n", left, right));
+	logger(Sound, Debug, "rdpsnd_dsp_softvol_set(), left: %u, right: %u\n", left, right);
 }
 
 void
@@ -105,8 +106,9 @@ rdpsnd_dsp_softvol(unsigned char *buffer, unsigned int size, RD_WAVEFORMATEX * f
 		}
 	}
 
-	DEBUG(("using softvol with factors left: %d, right: %d (%d/%d)\n", factor_left,
-	       factor_right, format->wBitsPerSample, format->nChannels));
+	logger(Sound, Debug,
+	       "rdpsnd_dsp_softvol(), using softvol with factors left: %d, right: %d (%d/%d)",
+	       factor_left, factor_right, format->wBitsPerSample, format->nChannels);
 }
 
 void
@@ -119,7 +121,7 @@ rdpsnd_dsp_swapbytes(unsigned char *buffer, unsigned int size, RD_WAVEFORMATEX *
 		return;
 
 	if (size & 0x1)
-		warning("badly aligned sound data");
+		logger(Sound, Warning, "rdpsnd_dsp_swapbytes(), badly aligned sound data");
 
 	for (i = 0; i < (int) size; i += 2)
 	{
@@ -152,7 +154,7 @@ rdpsnd_dsp_resample_set(uint32 device_srate, uint16 device_bitspersample, uint16
 
 	if ((src_converter = src_new(SRC_CONVERTER, device_channels, &err)) == NULL)
 	{
-		warning("src_new failed: %d!\n", err);
+		logger(Sound, Warning, "rdpsnd_dsp_resample_set(), src_new() failed with %d", err);
 		return False;
 	}
 #endif
@@ -255,7 +257,8 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 #ifdef HAVE_LIBSAMPLERATE
 	if (src_converter == NULL)
 	{
-		warning("no samplerate converter available!\n");
+		logger(Sound, Warning,
+		       "rdpsndp_dsp_resample_set(), no samplerate converter available");
 		return 0;
 	}
 
@@ -275,7 +278,8 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 	resample_data.end_of_input = 0;
 
 	if ((err = src_process(src_converter, &resample_data)) != 0)
-		error("src_process: %s", src_strerror(err));
+		logger(Sound, Warning, "rdpsnd_dsp_resample_set(), src_process(): '%s'",
+		       src_strerror(err));
 
 	xfree(infloat);
 
@@ -289,7 +293,8 @@ rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 	/* Michaels simple linear resampler */
 	if (resample_to_srate < format->nSamplesPerSec)
 	{
-		warning("downsampling currently not supported!\n");
+		logger(Sound, Warning,
+		       "rdpsnd_dsp_reasmple_set(), downsampling currently not supported");
 		return 0;
 	}
 

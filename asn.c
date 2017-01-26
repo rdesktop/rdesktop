@@ -1,7 +1,7 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    ASN.1 utility functions
-   Copyright 2012 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2012-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -37,7 +37,7 @@ ber_parse_header(STREAM s, int tagval, int *length)
 
 	if (tag != tagval)
 	{
-		error("expected tag %d, got %d\n", tagval, tag);
+		logger(Core, Error, "ber_parse_header(), expected tag %d, got %d", tagval, tag);
 		return False;
 	}
 

@@ -120,48 +120,6 @@
 #define EXRD_WINDOW_CLOSED 62
 #define EXRD_UNKNOWN 63
 
-#ifdef WITH_DEBUG
-#define DEBUG(args)	printf args;
-#else
-#define DEBUG(args)
-#endif
-
-#ifdef WITH_DEBUG_KBD
-#define DEBUG_KBD(args) printf args;
-#else
-#define DEBUG_KBD(args)
-#endif
-
-#ifdef WITH_DEBUG_RDP5
-#define DEBUG_RDP5(args) printf args;
-#else
-#define DEBUG_RDP5(args)
-#endif
-
-#ifdef WITH_DEBUG_CLIPBOARD
-#define DEBUG_CLIPBOARD(args) printf args;
-#else
-#define DEBUG_CLIPBOARD(args)
-#endif
-
-#ifdef WITH_DEBUG_SOUND
-#define DEBUG_SOUND(args) printf args;
-#else
-#define DEBUG_SOUND(args)
-#endif
-
-#ifdef WITH_DEBUG_CHANNEL
-#define DEBUG_CHANNEL(args) printf args;
-#else
-#define DEBUG_CHANNEL(args)
-#endif
-
-#ifdef WITH_DEBUG_SCARD
-#define DEBUG_SCARD(args) printf args;
-#else
-#define DEBUG_SCARD(args)
-#endif
-
 #define STRNCPY(dst,src,n)	{ strncpy(dst,src,n-1); dst[n-1] = 0; }
 
 #ifndef MIN
@@ -209,6 +167,7 @@
 #endif
 #endif
 
+#include "utils.h"
 #include "parse.h"
 #include "constants.h"
 #include "types.h"

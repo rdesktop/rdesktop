@@ -35,11 +35,6 @@ rdp5_process(STREAM s)
 	struct stream *ns = &(g_mppc_dict.ns);
 	struct stream *ts;
 
-#if 0
-	printf("RDP5 data:\n");
-	hexdump(s->p, s->end - s->p);
-#endif
-
 	ui_begin_update();
 	while (s->p < s->end)
 	{
@@ -60,7 +55,8 @@ rdp5_process(STREAM s)
 		if (ctype & RDP_MPPC_COMPRESSED)
 		{
 			if (mppc_expand(s->p, length, ctype, &roff, &rlen) == -1)
-				error("error while decompressing packet\n");
+				logger(Protocol, Error,
+				       "rdp5_process(), error while decompressing packet");
 
 			/* allocate memory and copy the uncompressed data into the temporary stream */
 			ns->data = (uint8 *) xrealloc(ns->data, rlen);
@@ -114,7 +110,8 @@ rdp5_process(STREAM s)
 				process_new_pointer_pdu(ts);
 				break;
 			default:
-				unimpl("RDP5 opcode %d\n", type);
+				logger(Protocol, Warning, "rdp5_process(), unhandled opcode %d",
+				       type);
 		}
 
 		s->p = next;

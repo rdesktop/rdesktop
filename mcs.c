@@ -100,7 +100,7 @@ mcs_recv_connect_response(STREAM mcs_data)
 	in_uint8(s, result);
 	if (result != 0)
 	{
-		error("MCS connect: %d\n", result);
+		logger(Protocol, Error, "mcs_recv_connect_response(), result=%d", result);
 		return False;
 	}
 
@@ -114,8 +114,7 @@ mcs_recv_connect_response(STREAM mcs_data)
 	/*
 	   if (length > mcs_data->size)
 	   {
-	   error("MCS data length %d, expected %d\n", length,
-	   mcs_data->size);
+	   logger(Protocol, Error, "mcs_recv_connect_response(), expected length=%d, got %d",length, mcs_data->size);
 	   length = mcs_data->size;
 	   }
 
@@ -170,14 +169,14 @@ mcs_recv_aucf(uint16 * mcs_userid)
 	in_uint8(s, opcode);
 	if ((opcode >> 2) != MCS_AUCF)
 	{
-		error("expected AUcf, got %d\n", opcode);
+		logger(Protocol, Error, "mcs_recv_aucf(), expected opcode AUcf, got %d", opcode);
 		return False;
 	}
 
 	in_uint8(s, result);
 	if (result != 0)
 	{
-		error("AUrq: %d\n", result);
+		logger(Protocol, Error, "mcs_recv_aucf(), expected result 0, got %d", result);
 		return False;
 	}
 
@@ -193,7 +192,7 @@ mcs_send_cjrq(uint16 chanid)
 {
 	STREAM s;
 
-	DEBUG_RDP5(("Sending CJRQ for channel #%d\n", chanid));
+	logger(Protocol, Debug, "mcs_send_cjrq(), chanid=%d", chanid);
 
 	s = iso_init(5);
 
@@ -219,14 +218,14 @@ mcs_recv_cjcf(void)
 	in_uint8(s, opcode);
 	if ((opcode >> 2) != MCS_CJCF)
 	{
-		error("expected CJcf, got %d\n", opcode);
+		logger(Protocol, Error, "mcs_recv_cjcf(), expected opcode CJcf, got %d", opcode);
 		return False;
 	}
 
 	in_uint8(s, result);
 	if (result != 0)
 	{
-		error("CJrq: %d\n", result);
+		logger(Protocol, Error, "mcs_recv_cjcf(), expected result 0, got %d", result);
 		return False;
 	}
 
@@ -294,7 +293,7 @@ mcs_recv(uint16 * channel, uint8 * rdpver)
 	{
 		if (appid != MCS_DPUM)
 		{
-			error("expected data, got %d\n", opcode);
+			logger(Protocol, Error, "mcs_recv(), expected data, got %d", opcode);
 		}
 		return NULL;
 	}
