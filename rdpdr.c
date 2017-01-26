@@ -274,7 +274,7 @@ static void
 rdpdr_send_client_device_list_announce(void)
 {
 	/* DR_CORE_CLIENT_ANNOUNCE_RSP */
-	uint32 driverlen, printerlen, bloblen, disklen;
+	uint32 driverlen, printerlen, bloblen, disklen, flags;
 	int i;
 	STREAM s;
 	PRINTER *printerinfo;
@@ -313,16 +313,21 @@ rdpdr_send_client_device_list_announce(void)
 				driverlen = 2 * strlen(printerinfo->driver) + 2;
 				printerlen = 2 * strlen(printerinfo->printer) + 2;
 				bloblen = printerinfo->bloblen;
+				flags = 0;
+				if (printerinfo->default_printer)
+					flags |= RDPDR_PRINTER_ANNOUNCE_FLAG_DEFAULTPRINTER;
 
-				out_uint32_le(s, 24 + driverlen + printerlen + bloblen);	/* length of extra info */
-				out_uint32_le(s, printerinfo->default_printer ? 2 : 0);
-				out_uint8s(s, 8);	/* unknown */
-				out_uint32_le(s, driverlen);
-				out_uint32_le(s, printerlen);
-				out_uint32_le(s, bloblen);
-				rdp_out_unistr(s, printerinfo->driver, driverlen - 2);
-				rdp_out_unistr(s, printerinfo->printer, printerlen - 2);
-				out_uint8a(s, printerinfo->blob, bloblen);
+				out_uint32_le(s, 24 + driverlen + printerlen + bloblen);	/* DeviceDataLength */
+				out_uint32_le(s, flags);	/* Flags */
+				out_uint32_le(s, 0);	/* Codepage */
+				out_uint32_le(s, 0);	/* PnPNameLen */
+				out_uint32_le(s, driverlen);	/* DriverNameLen */
+				out_uint32_le(s, printerlen);	/* PrinterNameLen */
+				out_uint32_le(s, bloblen);	/* CachedFieldsLen */
+				rdp_out_unistr(s, NULL, 0);	/* PnPName */
+				rdp_out_unistr(s, printerinfo->driver, driverlen - 2);	/* DriverName */
+				rdp_out_unistr(s, printerinfo->printer, printerlen - 2);	/* PrinterName */
+				out_uint8a(s, printerinfo->blob, bloblen);	/* CachedPrinterConfigData */
 
 				if (printerinfo->blob)
 					xfree(printerinfo->blob);	/* Blob is sent twice if reconnecting */
