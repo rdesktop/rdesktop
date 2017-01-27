@@ -123,6 +123,12 @@ but everything after this is unencrypted (including interactive logins).
 Do not send mouse motion events.  This saves bandwidth, although some Windows
 applications may rely on receiving mouse motion.
 .TP
+.TP
+.BR "-M <interval>"
+Send keepalive mouse motion events every <interval> seconds.  This prevents
+the server from timing out the session due to inactivity, and in the process
+terminating potentially important non-interactive programs.
+.TP
 .BR "-C"
 Use private colourmap.  This will improve colour accuracy on an 8-bit display,
 but rdesktop will appear in false colour when not focused.
