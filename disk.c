@@ -4,6 +4,7 @@
    Copyright (C) Jeroen Meijer <jeroen@oldambt7.com> 2003-2008
    Copyright 2003-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
    Copyright 2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2017 Karl Mikaelsson <derfian@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -316,6 +317,7 @@ disk_enum_devices(uint32 * id, char *optarg)
 	char *pos = optarg;
 	char *pos2;
 	int count = 0;
+	DISK_DEVICE *pdisk_data;
 
 	/* skip the first colon */
 	optarg++;
@@ -323,14 +325,16 @@ disk_enum_devices(uint32 * id, char *optarg)
 	{
 		pos2 = next_arg(optarg, '=');
 
+		pdisk_data = (DISK_DEVICE *) xmalloc(sizeof(DISK_DEVICE));
+		memset(pdisk_data, 0, sizeof(DISK_DEVICE));
+		strncpy(pdisk_data->name, optarg, sizeof(pdisk_data->name) - 1);
 		strncpy(g_rdpdr_device[*id].name, optarg, sizeof(g_rdpdr_device[*id].name) - 1);
-		if (strlen(optarg) > (sizeof(g_rdpdr_device[*id].name) - 1))
-			logger(Core, Warning, "disk_enum_devices(), share name %s truncated to %s",
-			       optarg, g_rdpdr_device[*id].name);
 
 		g_rdpdr_device[*id].local_path = (char *) xmalloc(strlen(pos2) + 1);
 		strcpy(g_rdpdr_device[*id].local_path, pos2);
 		g_rdpdr_device[*id].device_type = DEVICE_TYPE_DISK;
+		g_rdpdr_device[*id].pdevice_data = (void *) pdisk_data;
+
 		count++;
 		(*id)++;
 
