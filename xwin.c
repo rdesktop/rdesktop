@@ -42,6 +42,7 @@ extern int g_xpos;
 extern int g_ypos;
 extern int g_pos;
 extern RD_BOOL g_sendmotion;
+extern RD_BOOL g_send_physical_buttons;
 extern RD_BOOL g_fullscreen;
 extern RD_BOOL g_grab_keyboard;
 extern RD_BOOL g_hide_decorations;
@@ -2254,7 +2255,9 @@ handle_button_event(XEvent xevent, RD_BOOL down)
 	   receive physical buttons (true in mstsc as well) and
 	   logical button behavior depends on the remote desktop's own
 	   mouse settings */
-	xevent.xbutton.button = g_pointer_log_to_phys_map[xevent.xbutton.button - 1];
+	// xevent.xbutton.button = g_pointer_log_to_phys_map[xevent.xbutton.button - 1];
+	if (g_send_physical_buttons)
+            xevent.xbutton.button = g_pointer_log_to_phys_map[xevent.xbutton.button - 1];
 	button = xkeymap_translate_button(xevent.xbutton.button);
 	if (button == 0)
 		return;
