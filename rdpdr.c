@@ -235,22 +235,35 @@ announcedata_size()
 {
 	int size, i;
 	PRINTER *printerinfo;
+	DISK_DEVICE *diskinfo;
 
-	size = 8;		/* static announce size */
-	size += g_num_devices * 0x14;
+	size = 8;		/* Header + DeviceCount */
 
 	for (i = 0; i < g_num_devices; i++)
 	{
-		if (g_rdpdr_device[i].device_type == DEVICE_TYPE_PRINTER)
-		{
-			printerinfo = (PRINTER *) g_rdpdr_device[i].pdevice_data;
-			printerinfo->bloblen =
-				printercache_load_blob(printerinfo->printer, &(printerinfo->blob));
+		size += 4;  /* DeviceType */
+		size += 4;  /* DeviceId */
+		size += 8;  /* PreferredDosName */
+		size += 4;  /* DeviceDataLength */
 
-			size += 0x18;
-			size += 2 * strlen(printerinfo->driver) + 2;
-			size += 2 * strlen(printerinfo->printer) + 2;
-			size += printerinfo->bloblen;
+		switch (g_rdpdr_device[i].device_type)
+		{
+			case DEVICE_TYPE_DISK:
+				diskinfo = (DISK_DEVICE *) g_rdpdr_device[i].pdevice_data;
+				size += 2 * strlen(diskinfo->name) + 2;
+				break;
+			case DEVICE_TYPE_PRINTER:
+				printerinfo = (PRINTER *) g_rdpdr_device[i].pdevice_data;
+				printerinfo->bloblen =
+					printercache_load_blob(printerinfo->printer, &(printerinfo->blob));
+
+				size += 0x18;
+				size += 2 * strlen(printerinfo->driver) + 2;
+				size += 2 * strlen(printerinfo->printer) + 2;
+				size += printerinfo->bloblen;
+				break;
+			default:
+				break;
 		}
 	}
 
@@ -261,10 +274,11 @@ static void
 rdpdr_send_client_device_list_announce(void)
 {
 	/* DR_CORE_CLIENT_ANNOUNCE_RSP */
-	uint32 driverlen, printerlen, bloblen;
+	uint32 driverlen, printerlen, bloblen, disklen;
 	int i;
 	STREAM s;
 	PRINTER *printerinfo;
+	DISK_DEVICE *diskinfo;
 
 	s = channel_init(rdpdr_channel, announcedata_size());
 	out_uint16_le(s, RDPDR_CTYP_CORE);
@@ -272,16 +286,27 @@ rdpdr_send_client_device_list_announce(void)
 
 	out_uint32_le(s, g_num_devices);
 
-	for (i = 0; i < g_num_devices; i++)
+	for (i = 0; i < g_num_devices; i++) /* DEVICE_ANNOUNCE */
 	{
 		out_uint32_le(s, g_rdpdr_device[i].device_type);
 		out_uint32_le(s, i);	/* RDP Device ID */
-		/* Is it possible to use share names longer than 8 chars?
-		   /astrand */
-		out_uint8p(s, g_rdpdr_device[i].name, 8);
-
+		out_uint8p(s, g_rdpdr_device[i].name, 8); /* preferredDosName, limited to 8 characters */
 		switch (g_rdpdr_device[i].device_type)
 		{
+			case DEVICE_TYPE_DISK:
+				diskinfo = (DISK_DEVICE *) g_rdpdr_device[i].pdevice_data;
+
+				/* The RDP specification says that the DeviceData is supposed to be
+				   a null-terminated Unicode string, but that does not work. In
+				   practice the string is expected to be an ASCII string, like a
+				   variable-length preferredDosName. */
+
+				disklen = strlen(diskinfo->name) + 1;
+
+				out_uint32_le(s, disklen); /* DeviceDataLength */
+				out_uint8p(s, diskinfo->name, disklen); /* DeviceData */
+				break;
+
 			case DEVICE_TYPE_PRINTER:
 				printerinfo = (PRINTER *) g_rdpdr_device[i].pdevice_data;
 
@@ -786,7 +811,7 @@ rdpdr_send_client_capability_response(void)
 
 	out_uint16_le(s, CAP_DRIVE_TYPE);	/* CapabilityType */
 	out_uint16_le(s, 8);	/* CapabilityLength */
-	out_uint32_le(s, DRIVE_CAPABILITY_VERSION_01);	/* Version */
+	out_uint32_le(s, DRIVE_CAPABILITY_VERSION_02);	/* Version */
 
 	out_uint16_le(s, CAP_SMARTCARD_TYPE);	/* CapabilityType */
 	out_uint16_le(s, 8);	/* CapabilityLength */
