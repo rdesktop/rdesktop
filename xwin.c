@@ -4,7 +4,7 @@
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2007-2008 Pierre Ossman <ossman@cendio.se> for Cendio AB
    Copyright 2002-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
-   Copyright 2012-2013 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2012-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -533,7 +533,8 @@ mwm_hide_decorations(Window wnd)
 	hintsatom = XInternAtom(g_display, "_MOTIF_WM_HINTS", False);
 	if (!hintsatom)
 	{
-		warning("Failed to get atom _MOTIF_WM_HINTS: probably your window manager does not support MWM hints\n");
+		logger(GUI, Warning,
+		       "Failed to get atom _MOTIF_WM_HINTS: probably your window manager does not support MWM hints\n");
 		return;
 	}
 
@@ -602,7 +603,8 @@ sw_wait_configurenotify(Window wnd, unsigned long serial)
 
 	if (!got)
 	{
-		warning("Broken Window Manager: Timeout while waiting for ConfigureNotify\n");
+		logger(GUI, Warning,
+		       "Broken Window Manager: Timeout while waiting for ConfigureNotify\n");
 	}
 }
 
@@ -623,7 +625,7 @@ sw_get_toplevel(Window wnd)
 		}
 		else if (!parent)
 		{
-			warning("Internal error: sw_get_toplevel called with root window\n");
+			logger(GUI, Error, "sw_get_toplevel called with root window\n");
 		}
 
 		wnd = parent;
@@ -668,12 +670,12 @@ sw_window_is_behind(Window wnd, Window behind)
 
 	if (!found_wnd)
 	{
-		warning("sw_window_is_behind: Unable to find window 0x%lx\n", wnd);
+		logger(GUI, Warning, "sw_window_is_behind: Unable to find window 0x%lx", wnd);
 
 		if (!found_behind)
 		{
-			warning("sw_window_is_behind: Unable to find behind window 0x%lx\n",
-				behind);
+			logger(GUI, Warning,
+			       "sw_window_is_behind: Unable to find behind window 0x%lx", behind);
 		}
 	}
 
@@ -749,7 +751,7 @@ seamless_restack_test()
 	if (!sw_window_is_behind(wnds[0], wnds[1]) || !sw_window_is_behind(wnds[2], wnds[1]))
 	{
 		/* Ok, technically a WM is allowed to stack windows arbitrarily, but... */
-		warning("Broken Window Manager: Unable to test window restacking\n");
+		logger(GUI, Warning, "Broken Window Manager: Unable to test window restacking");
 		g_seamless_broken_restack = True;
 		for (i = 0; i < 3; i++)
 			XDestroyWindow(g_display, wnds[i]);
@@ -769,12 +771,14 @@ seamless_restack_test()
 	   bottom */
 	if (!sw_window_is_behind(wnds[1], wnds[0]))
 	{
-		warning("Broken Window Manager: doesn't handle restack (restack request was ignored)\n");
+		logger(GUI, Warning,
+		       "Broken Window Manager: doesn't handle restack (restack request was ignored)");
 		g_seamless_broken_restack = True;
 	}
 	else if (sw_window_is_behind(wnds[1], wnds[2]))
 	{
-		warning("Broken Window Manager: doesn't handle restack (window was moved to bottom)\n");
+		logger(GUI, Warning,
+		       "Broken Window Manager: doesn't handle restack (window was moved to bottom)");
 		g_seamless_broken_restack = True;
 	}
 
@@ -1627,7 +1631,7 @@ select_visual(int screen_num)
 	pfm = XListPixmapFormats(g_display, &pixmap_formats_count);
 	if (pfm == NULL)
 	{
-		error("Unable to get list of pixmap formats from display.\n");
+		logger(GUI, Error, "Unable to get list of pixmap formats from display");
 		XCloseDisplay(g_display);
 		return False;
 	}
@@ -1749,7 +1753,8 @@ select_visual(int screen_num)
 				       &template, &visuals_count);
 		if (vmatches == NULL)
 		{
-			error("No usable TrueColor or PseudoColor visuals on this display.\n");
+			logger(GUI, Error,
+			       "No usable TrueColor or PseudoColor visuals on this display");
 			XCloseDisplay(g_display);
 			XFree(pfm);
 			return False;
@@ -1864,7 +1869,7 @@ ui_init(void)
 	g_display = XOpenDisplay(NULL);
 	if (g_display == NULL)
 	{
-		error("Failed to open display: %s\n", XDisplayName(NULL));
+		logger(GUI, Error, "ui_init(), failed to open X11 display: %s", XDisplayName(NULL));
 		return False;
 	}
 
@@ -1885,17 +1890,20 @@ ui_init(void)
 
 	if (g_no_translate_image)
 	{
-		DEBUG(("Performance optimization possible: avoiding image translation (colour depth conversion).\n"));
+		logger(GUI, Debug,
+		       "Performance optimization possible: avoiding image translation (colour depth conversion)");
 	}
 
 	if (g_server_depth > g_bpp)
 	{
-		warning("Remote desktop colour depth %d higher than display colour depth %d.\n",
-			g_server_depth, g_bpp);
+		logger(GUI, Warning,
+		       "Remote desktop colour depth %d higher than display colour depth %d",
+		       g_server_depth, g_bpp);
 	}
 
-	DEBUG(("RDP depth: %d, display depth: %d, display bpp: %d, X server BE: %d, host BE: %d\n",
-	       g_server_depth, g_depth, g_bpp, g_xserver_be, g_host_be));
+	logger(GUI, Debug,
+	       "RDP depth: %d, display depth: %d, display bpp: %d, X server BE: %d, host BE: %d\n",
+	       g_server_depth, g_depth, g_bpp, g_xserver_be, g_host_be);
 
 	if (!g_owncolmap)
 	{
@@ -1903,12 +1911,14 @@ ui_init(void)
 			XCreateColormap(g_display, RootWindowOfScreen(g_screen), g_visual,
 					AllocNone);
 		if (g_depth <= 8)
-			warning("Display colour depth is %d bit: you may want to use -C for a private colourmap.\n", g_depth);
+			logger(GUI, Warning,
+			       "Display colour depth is %d bit: you may want to use -C for a private colourmap",
+			       g_depth);
 	}
 
 	if ((!g_ownbackstore) && (DoesBackingStore(g_screen) != Always))
 	{
-		warning("External BackingStore not available. Using internal.\n");
+		logger(GUI, Warning, "External BackingStore not available. Using internal");
 		g_ownbackstore = True;
 	}
 
@@ -1926,8 +1936,6 @@ ui_init(void)
 	{
 		seamless_init();
 	}
-
-	DEBUG_RDP5(("server bpp %d client bpp %d depth %d\n", g_server_depth, g_bpp, g_depth));
 
 	return True;
 }
@@ -1968,7 +1976,8 @@ ui_init_connection(void)
 		}
 		else
 		{
-			warning("Failed to get workarea: probably your window manager does not support extended hints\n");
+			logger(GUI, Warning,
+			       "Failed to get workarea: probably your window manager does not support extended hints\n");
 			g_width = WidthOfScreen(g_screen);
 			g_height = HeightOfScreen(g_screen);
 		}
@@ -2368,7 +2377,7 @@ xwin_process_events(void)
 
 		if ((g_IC != NULL) && (XFilterEvent(&xevent, None) == True))
 		{
-			DEBUG_KBD(("Filtering event\n"));
+			logger(GUI, Debug, "xwin_process_events(), filtering event");
 			continue;
 		}
 
@@ -2419,21 +2428,23 @@ xwin_process_events(void)
 							&status);
 					if (!((status == XLookupKeySym) || (status == XLookupBoth)))
 					{
-						error("XmbLookupString failed with status 0x%x\n",
-						      status);
+						logger(GUI, Error,
+						       "XmbLookupString failed with status 0x%x\n",
+						       status);
 						break;
 					}
 				}
 				else
 				{
 					/* Plain old XLookupString */
-					DEBUG_KBD(("\nNo input context, using XLookupString\n"));
-					XLookupString((XKeyEvent *) & xevent,
-						      str, sizeof(str), &keysym, NULL);
+					logger(Keyboard, Debug,
+					       "No input context, using fallback XLookupString");
+					XLookupString((XKeyEvent *) & xevent, str, sizeof(str),
+						      &keysym, NULL);
 				}
 
-				DEBUG_KBD(("KeyPress for keysym (0x%lx, %s)\n", keysym,
-					   get_ksname(keysym)));
+				logger(Keyboard, Debug, "KeyPress for keysym (0x%lx, %s)", keysym,
+				       get_ksname(keysym));
 
 				set_keypress_keysym(xevent.xkey.keycode, keysym);
 				ev_time = time(NULL);
@@ -2449,8 +2460,8 @@ xwin_process_events(void)
 				XLookupString((XKeyEvent *) & xevent, str,
 					      sizeof(str), &keysym, NULL);
 
-				DEBUG_KBD(("\nKeyRelease for keysym (0x%lx, %s)\n", keysym,
-					   get_ksname(keysym)));
+				logger(Keyboard, Debug, "KeyRelease for keysym (0x%lx, %s)", keysym,
+				       get_ksname(keysym));
 
 				keysym = reset_keypress_keysym(xevent.xkey.keycode, keysym);
 				ev_time = time(NULL);
@@ -2741,7 +2752,8 @@ ui_select(int rdp_socket)
 		switch (select(n, &rfds, &wfds, NULL, &tv))
 		{
 			case -1:
-				error("select: %s\n", strerror(errno));
+				logger(GUI, Error, "ui_select(), select failed: %s",
+				       strerror(errno));
 
 			case 0:
 #ifdef WITH_RDPSND
@@ -2935,7 +2947,7 @@ get_next_xor_pixel(uint8 * xormask, int bpp, int *k)
 			(*k) += 4;
 			break;
 		default:
-			error("unknown bpp in get_next_xor_pixel %d\n", bpp);
+			logger(GUI, Warning, "get_next_xor_pixel(), unhandled bpp=%d", bpp);
 			break;
 	}
 	return rv;
@@ -3291,7 +3303,8 @@ ui_patblt(uint8 opcode,
 			break;
 
 		default:
-			unimpl("brush %d\n", brush->style);
+			logger(GUI, Warning, "Unimplemented support for brush type %d",
+			       brush->style);
 	}
 
 	RESET_FUNCTION(opcode);
@@ -3370,7 +3383,7 @@ ui_triblt(uint8 opcode,
 			break;
 
 		default:
-			unimpl("triblt 0x%x\n", opcode);
+			logger(GUI, Warning, "Unimplemented triblit opcode 0x%x", opcode);
 			ui_memblt(ROP2_COPY, x, y, cx, cy, src, srcx, srcy);
 	}
 }
@@ -3420,7 +3433,7 @@ ui_polygon(uint8 opcode,
 			XSetFillRule(g_display, g_gc, WindingRule);
 			break;
 		default:
-			unimpl("fill mode %d\n", fillmode);
+			logger(GUI, Warning, "Unimplemented fill mode %d", fillmode);
 	}
 
 	if (brush)
@@ -3492,7 +3505,7 @@ ui_polygon(uint8 opcode,
 			break;
 
 		default:
-			unimpl("brush %d\n", brush->style);
+			logger(GUI, Warning, "Unimplemented brush style %d", brush->style);
 	}
 
 	RESET_FUNCTION(opcode);
@@ -3597,7 +3610,7 @@ ui_ellipse(uint8 opcode,
 			break;
 
 		default:
-			unimpl("brush %d\n", brush->style);
+			logger(GUI, Warning, "Unimplemented brush styke %d", brush->style);
 	}
 
 	RESET_FUNCTION(opcode);
@@ -3699,10 +3712,8 @@ ui_draw_text(uint8 font, uint8 flags, uint8 opcode, int mixmode, int x, int y,
 				/* At least two bytes needs to follow */
 				if (i + 3 > length)
 				{
-					warning("Skipping short 0xff command:");
-					for (j = 0; j < length; j++)
-						fprintf(stderr, "%02x ", text[j]);
-					fprintf(stderr, "\n");
+					logger(GUI, Warning,
+					       "ui_draw_text(), skipping short 0xff command");
 					i = length = 0;
 					break;
 				}
@@ -3718,10 +3729,8 @@ ui_draw_text(uint8 font, uint8 flags, uint8 opcode, int mixmode, int x, int y,
 				/* At least one byte needs to follow */
 				if (i + 2 > length)
 				{
-					warning("Skipping short 0xfe command:");
-					for (j = 0; j < length; j++)
-						fprintf(stderr, "%02x ", text[j]);
-					fprintf(stderr, "\n");
+					logger(GUI, Warning,
+					       "ui_draw_text(), skipping short 0xfe command");
 					i = length = 0;
 					break;
 				}
@@ -4025,7 +4034,8 @@ ui_seamless_create_window(unsigned long id, unsigned long group, unsigned long p
 		if (sw_parent)
 			XSetTransientForHint(g_display, wnd, sw_parent->wnd);
 		else
-			warning("ui_seamless_create_window: No parent window 0x%lx\n", parent);
+			logger(GUI, Warning, "ui_seamles_create_window(): no parent window 0x%lx\n",
+			       parent);
 	}
 
 	if (flags & SEAMLESSRDP_CREATE_MODAL)
@@ -4102,7 +4112,8 @@ ui_seamless_destroy_window(unsigned long id, unsigned long flags)
 	sw = sw_get_window_by_id(id);
 	if (!sw)
 	{
-		warning("ui_seamless_destroy_window: No information for window 0x%lx\n", id);
+		logger(GUI, Warning,
+		       "ui_seamless_destroy_window(), no information for window 0x%lx", id);
 		return;
 	}
 
@@ -4144,25 +4155,28 @@ ui_seamless_seticon(unsigned long id, const char *format, int width, int height,
 	sw = sw_get_window_by_id(id);
 	if (!sw)
 	{
-		warning("ui_seamless_seticon: No information for window 0x%lx\n", id);
+		logger(GUI, Warning, "ui_seamless_seticon(): No information for window 0x%lx", id);
 		return;
 	}
 
 	if (chunk == 0)
 	{
 		if (sw->icon_size)
-			warning("ui_seamless_seticon: New icon started before previous completed\n");
+			logger(GUI, Warning,
+			       "ui_seamless_seticon(), new icon started before previous completed");
 
 		if (strcmp(format, "RGBA") != 0)
 		{
-			warning("ui_seamless_seticon: Uknown icon format \"%s\"\n", format);
+			logger(GUI, Warning, "ui_seamless_seticon(), unknown icon format \"%s\"",
+			       format);
 			return;
 		}
 
 		sw->icon_size = width * height * 4;
 		if (sw->icon_size > 32 * 32 * 4)
 		{
-			warning("ui_seamless_seticon: Icon too large (%d bytes)\n", sw->icon_size);
+			logger(GUI, Warning, "ui_seamless_seticon(), icon too large (%d bytes)",
+			       sw->icon_size);
 			sw->icon_size = 0;
 			return;
 		}
@@ -4177,8 +4191,9 @@ ui_seamless_seticon(unsigned long id, const char *format, int width, int height,
 
 	if (chunk_len > (sw->icon_size - sw->icon_offset))
 	{
-		warning("ui_seamless_seticon: Too large chunk received (%d bytes > %d bytes)\n",
-			chunk_len, sw->icon_size - sw->icon_offset);
+		logger(GUI, Warning,
+		       "ui_seamless_seticon(),  too large chunk received (%d bytes > %d bytes)",
+		       chunk_len, sw->icon_size - sw->icon_offset);
 		sw->icon_size = 0;
 		return;
 	}
@@ -4205,13 +4220,13 @@ ui_seamless_delicon(unsigned long id, const char *format, int width, int height)
 	sw = sw_get_window_by_id(id);
 	if (!sw)
 	{
-		warning("ui_seamless_seticon: No information for window 0x%lx\n", id);
+		logger(GUI, Warning, "ui_seamless_seticon(), no information for window 0x%lx", id);
 		return;
 	}
 
 	if (strcmp(format, "RGBA") != 0)
 	{
-		warning("ui_seamless_seticon: Uknown icon format \"%s\"\n", format);
+		logger(GUI, Warning, "ui_seamless_seticon(), unknown icon format \"%s\"", format);
 		return;
 	}
 
@@ -4230,7 +4245,8 @@ ui_seamless_move_window(unsigned long id, int x, int y, int width, int height, u
 	sw = sw_get_window_by_id(id);
 	if (!sw)
 	{
-		warning("ui_seamless_move_window: No information for window 0x%lx\n", id);
+		logger(GUI, Warning, "ui_seamless_move_window(), no information for window 0x%lx",
+		       id);
 		return;
 	}
 
@@ -4276,7 +4292,8 @@ ui_seamless_restack_window(unsigned long id, unsigned long behind, unsigned long
 	sw = sw_get_window_by_id(id);
 	if (!sw)
 	{
-		warning("ui_seamless_restack_window: No information for window 0x%lx\n", id);
+		logger(GUI, Warning,
+		       "ui_seamless_restack_window(), no information for window 0x%lx", id);
 		return;
 	}
 
@@ -4287,7 +4304,9 @@ ui_seamless_restack_window(unsigned long id, unsigned long behind, unsigned long
 		sw_behind = sw_get_window_by_id(behind);
 		if (!sw_behind)
 		{
-			warning("ui_seamless_restack_window: No information for behind window 0x%lx\n", behind);
+			logger(GUI, Warning,
+			       "ui_seamless_restack_window(), no information for behind window 0x%lx",
+			       behind);
 			return;
 		}
 
@@ -4349,7 +4368,7 @@ ui_seamless_settitle(unsigned long id, const char *title, unsigned long flags)
 	sw = sw_get_window_by_id(id);
 	if (!sw)
 	{
-		warning("ui_seamless_settitle: No information for window 0x%lx\n", id);
+		logger(GUI, Warning, "ui_seamless_settitle(), no information for window 0x%lx", id);
 		return;
 	}
 
@@ -4370,7 +4389,7 @@ ui_seamless_setstate(unsigned long id, unsigned int state, unsigned long flags)
 	sw = sw_get_window_by_id(id);
 	if (!sw)
 	{
-		warning("ui_seamless_setstate: No information for window 0x%lx\n", id);
+		logger(GUI, Warning, "ui_seamless_setstate(), no information for window 0x%lx", id);
 		return;
 	}
 
@@ -4404,7 +4423,7 @@ ui_seamless_setstate(unsigned long id, unsigned int state, unsigned long flags)
 				XIconifyWindow(g_display, sw->wnd, DefaultScreen(g_display));
 			break;
 		default:
-			warning("SeamlessRDP: Invalid state %d\n", state);
+			logger(GUI, Warning, "ui_seamless_setstate(), invalid state %d", state);
 			break;
 	}
 

@@ -3,7 +3,7 @@
    Protocol services - TCP layer
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2005-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
-   Copyright 2012-2013 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2012-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -149,8 +149,9 @@ tcp_send(STREAM s)
 #ifdef WITH_SCARD
 					scard_unlock(SCARD_LOCK_TCP);
 #endif
-
-					error("SSL_write: %d (%s)\n", ssl_err, TCP_STRERROR);
+					logger(Core, Error,
+					       "tcp_send(), SSL_write() failed with %d: %s",
+					       ssl_err, TCP_STRERROR);
 					g_network_error = True;
 					return;
 				}
@@ -171,8 +172,8 @@ tcp_send(STREAM s)
 #ifdef WITH_SCARD
 					scard_unlock(SCARD_LOCK_TCP);
 #endif
-
-					error("send: %s\n", TCP_STRERROR);
+					logger(Core, Error, "tcp_send(), send() failed: %s",
+					       TCP_STRERROR);
 					g_network_error = True;
 					return;
 				}
@@ -242,7 +243,8 @@ tcp_recv(STREAM s, uint32 length)
 			{
 				if (SSL_get_shutdown(g_ssl) & SSL_RECEIVED_SHUTDOWN)
 				{
-					error("Remote peer initiated ssl shutdown.\n");
+					logger(Core, Error,
+					       "tcp_recv(), remote peer initiated ssl shutdown");
 					return NULL;
 				}
 
@@ -257,7 +259,8 @@ tcp_recv(STREAM s, uint32 length)
 			}
 			else if (ssl_err != SSL_ERROR_NONE)
 			{
-				error("SSL_read: %d (%s)\n", ssl_err, TCP_STRERROR);
+				logger(Core, Error, "tcp_recv(), SSL_read() failed with %d: %s",
+				       ssl_err, TCP_STRERROR);
 				g_network_error = True;
 				return NULL;
 			}
@@ -274,14 +277,15 @@ tcp_recv(STREAM s, uint32 length)
 				}
 				else
 				{
-					error("recv: %s\n", TCP_STRERROR);
+					logger(Core, Error, "tcp_recv(), recv() failed: %s",
+					       TCP_STRERROR);
 					g_network_error = True;
 					return NULL;
 				}
 			}
 			else if (rcvd == 0)
 			{
-				error("Connection closed\n");
+				logger(Core, Error, "rcp_recv(), connection closed by peer");
 				return NULL;
 			}
 		}
@@ -313,7 +317,8 @@ tcp_tls_connect(void)
 		g_ssl_ctx = SSL_CTX_new(TLSv1_client_method());
 		if (g_ssl_ctx == NULL)
 		{
-			error("tcp_tls_connect: SSL_CTX_new() failed to create TLS v1.0 context\n");
+			logger(Core, Error,
+			       "tcp_tls_connect(), SSL_CTX_new() failed to create TLS v1.0 context\n");
 			goto fail;
 		}
 
@@ -333,13 +338,13 @@ tcp_tls_connect(void)
 	g_ssl = SSL_new(g_ssl_ctx);
 	if (g_ssl == NULL)
 	{
-		error("tcp_tls_connect: SSL_new() failed\n");
+		logger(Core, Error, "tcp_tls_connect(), SSL_new() failed");
 		goto fail;
 	}
 
 	if (SSL_set_fd(g_ssl, g_sock) < 1)
 	{
-		error("tcp_tls_connect: SSL_set_fd() failed\n");
+		logger(Core, Error, "tcp_tls_connect(), SSL_set_fd() failed");
 		goto fail;
 	}
 
@@ -384,21 +389,22 @@ tcp_tls_get_server_pubkey(STREAM s)
 	cert = SSL_get_peer_certificate(g_ssl);
 	if (cert == NULL)
 	{
-		error("tcp_tls_get_server_pubkey: SSL_get_peer_certificate() failed\n");
+		logger(Core, Error,
+		       "tcp_tls_get_server_pubkey(), SSL_get_peer_certificate() failed");
 		goto out;
 	}
 
 	pkey = X509_get_pubkey(cert);
 	if (pkey == NULL)
 	{
-		error("tcp_tls_get_server_pubkey: X509_get_pubkey() failed\n");
+		logger(Core, Error, "tcp_tls_get_server_pubkey(), X509_get_pubkey() failed");
 		goto out;
 	}
 
 	s->size = i2d_PublicKey(pkey, NULL);
 	if (s->size < 1)
 	{
-		error("tcp_tls_get_server_pubkey: i2d_PublicKey() failed\n");
+		logger(Core, Error, "tcp_tls_get_server_pubkey(), i2d_PublicKey() failed");
 		goto out;
 	}
 
@@ -437,7 +443,7 @@ tcp_connect(char *server)
 
 	if ((n = getaddrinfo(server, tcp_port_rdp_s, &hints, &res)))
 	{
-		error("getaddrinfo: %s\n", gai_strerror(n));
+		logger(Core, Error, "tcp_connect(), getaddrinfo() failed: %s", gai_strerror(n));
 		return False;
 	}
 
@@ -459,7 +465,7 @@ tcp_connect(char *server)
 
 	if (g_sock == -1)
 	{
-		error("%s: unable to connect\n", server);
+		logger(Core, Error, "tcp_connect(), unable to connect to %s", server);
 		return False;
 	}
 
@@ -474,13 +480,13 @@ tcp_connect(char *server)
 	}
 	else if ((servaddr.sin_addr.s_addr = inet_addr(server)) == INADDR_NONE)
 	{
-		error("%s: unable to resolve host\n", server);
+		logger(Core, Error, "tcp_connect(), unable to resolve host '%s'", server);
 		return False;
 	}
 
 	if ((g_sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 	{
-		error("socket: %s\n", TCP_STRERROR);
+		logger(Core, Error, "tcp_connect(), socket() failed: %s", TCP_STRERROR);
 		return False;
 	}
 
@@ -490,7 +496,7 @@ tcp_connect(char *server)
 	if (connect(g_sock, (struct sockaddr *) &servaddr, sizeof(struct sockaddr)) < 0)
 	{
 		if (!g_reconnect_loop)
-			error("connect: %s\n", TCP_STRERROR);
+			logger(Core, Error, "tcp_connect(), connect() failed: %s", TCP_STRERROR);
 
 		TCP_CLOSE(g_sock);
 		g_sock = -1;

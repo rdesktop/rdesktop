@@ -184,9 +184,11 @@ libao_play(void)
 
 		if (abs((next_tick - packet->tick) - duration) > 20)
 		{
-			DEBUG(("duration: %d, calc: %d, ", duration, next_tick - packet->tick));
-			DEBUG(("last: %d, is: %d, should: %d\n", packet->tick,
-			       (packet->tick + duration) % 65536, next_tick % 65536));
+			logger(Sound, Debug,
+			       "libao_play(), duration: %d, calc: %d, last: %d, is: %d, should: %d",
+			       duration, next_tick - packet->tick,
+			       (packet->tick + duration) % 65536, next_tick % 65536);
+
 		}
 
 		delay_us = ((out->size / 4) * (1000000 / 44100));

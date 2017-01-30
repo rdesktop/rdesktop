@@ -171,18 +171,20 @@ licence_process_request(STREAM s)
 		rdssl_rc4_set_key(&crypt_key, g_licence_key, 16);
 		rdssl_rc4_crypt(&crypt_key, hwid, hwid, sizeof(hwid));
 
-#if WITH_DEBUG
-		DEBUG(("Sending licensing PDU (message type 0x%02x)\n", LICENCE_TAG_LICENCE_INFO));
-#endif
+		logger(Protocol, Debug,
+		       "license_process_request(), sending licensing PDU (message type 0x%02x)",
+		       LICENCE_TAG_LICENCE_INFO);
+
 		licence_info(null_data, null_data, licence_data, licence_size, hwid, signature);
 
 		xfree(licence_data);
 		return;
 	}
 
-#if WITH_DEBUG
-	DEBUG(("Sending licensing PDU (message type 0x%02x)\n", LICENCE_TAG_NEW_LICENCE_REQUEST));
-#endif
+	logger(Protocol, Debug,
+	       "license_process_request(), sending licensing PDU (message type 0x%02x)",
+	       LICENCE_TAG_NEW_LICENCE_REQUEST);
+
 	licence_send_new_licence_request(null_data, null_data, g_username, g_hostname);
 }
 
@@ -225,7 +227,8 @@ licence_parse_platform_challange(STREAM s, uint8 ** token, uint8 ** signature)
 	in_uint16_le(s, tokenlen);
 	if (tokenlen != LICENCE_TOKEN_SIZE)
 	{
-		error("token len %d\n", tokenlen);
+		logger(Protocol, Error,
+		       "license_parse_platform_challenge(), tokenlen != LICENSE_TOKEN_SIZE");
 		return False;
 	}
 
@@ -328,19 +331,20 @@ licence_process_error_alert(STREAM s)
 	switch (error_code)
 	{
 		case 0x6:	// ERR_NO_LICENSE_SERVER
-			warning("License error alert from server: No license server\n");
+			logger(Core, Notice, "License error alert from server: No license server");
 			break;
 
 		case 0x8:	// ERR_INVALID_CLIENT
-			warning("License error alert from server: Invalid client\n");
+			logger(Core, Notice, "License error alert from server: Invalid client");
 			break;
 
 		case 0x4:	// ERR_INVALID_SCOPE
 		case 0xb:	// ERR_INVALID_PRODUCTID
 		case 0xc:	// ERR_INVALID_MESSAGE_LENGTH
 		default:
-			warning("License error alert from server: code %u, state transition %u\n",
-				error_code, state_transition);
+			logger(Core, Notice,
+			       "License error alert from server: code %u, state transition %u",
+			       error_code, state_transition);
 			break;
 	}
 
@@ -357,9 +361,8 @@ licence_process(STREAM s)
 	in_uint8(s, tag);
 	in_uint8s(s, 3);	/* version, length */
 
-#if WITH_DEBUG
-	DEBUG(("Received licensing PDU (message type 0x%02x)\n", tag));
-#endif
+	logger(Protocol, Debug, "license_process(), processing licensing PDU (message type 0x%02x)",
+	       tag);
 
 	switch (tag)
 	{
@@ -382,6 +385,7 @@ licence_process(STREAM s)
 			break;
 
 		default:
-			unimpl("licence tag 0x%02x\n", tag);
+			logger(Protocol, Warning,
+			       "license_process(), unhandled license PDU tag 0x%02", tag);
 	}
 }

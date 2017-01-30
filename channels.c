@@ -52,7 +52,8 @@ channel_register(char *name, uint32 flags, void (*callback) (STREAM))
 
 	if (g_num_channels >= MAX_CHANNELS)
 	{
-		error("Channel table full, increase MAX_CHANNELS\n");
+		logger(Core, Error,
+		       "channel_register(), channel table full, increase MAX_CHANNELS");
 		return NULL;
 	}
 
@@ -90,7 +91,7 @@ channel_send(STREAM s, VCHANNEL * channel)
 	s_pop_layer(s, channel_hdr);
 	length = s->end - s->p - 8;
 
-	DEBUG_CHANNEL(("channel_send, length = %d\n", length));
+	logger(Protocol, Debug, "channel_send(), length = %d", length);
 
 	thislength = MIN(length, CHANNEL_CHUNK_LENGTH);
 /* Note: In the original clipboard implementation, this number was
@@ -105,7 +106,7 @@ channel_send(STREAM s, VCHANNEL * channel)
 	out_uint32_le(s, length);
 	out_uint32_le(s, flags);
 	data = s->end = s->p + thislength;
-	DEBUG_CHANNEL(("Sending %d bytes with FLAG_FIRST\n", thislength));
+	logger(Protocol, Debug, "channel_send(), sending %d bytes with FLAG_FIRST set", thislength);
 	sec_send_to_channel(s, g_encryption ? SEC_ENCRYPT : 0, channel->mcs_id);
 
 	/* subsequent segments copied (otherwise would have to generate headers backwards) */
@@ -117,7 +118,8 @@ channel_send(STREAM s, VCHANNEL * channel)
 		if (channel->flags & CHANNEL_OPTION_SHOW_PROTOCOL)
 			flags |= CHANNEL_FLAG_SHOW_PROTOCOL;
 
-		DEBUG_CHANNEL(("Sending %d bytes with flags %d\n", thislength, flags));
+		logger(Protocol, Debug, "channel_send(), sending %d bytes with flags 0x%x",
+		       thislength, flags);
 
 		s = sec_init(g_encryption ? SEC_ENCRYPT : 0, thislength + 8);
 		out_uint32_le(s, length);

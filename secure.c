@@ -3,6 +3,7 @@
    Protocol services - RDP encryption and licensing
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2005-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
+   Copyright 2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -172,7 +173,7 @@ sec_generate_keys(uint8 * client_random, uint8 * server_random, int rc4_key_size
 
 	if (rc4_key_size == 1)
 	{
-		DEBUG(("40-bit encryption enabled\n"));
+		logger(Protocol, Debug, "sec_generate_keys(), 40-bit encryption enabled");
 		sec_make_40bit(g_sec_sign_key);
 		sec_make_40bit(g_sec_decrypt_key);
 		sec_make_40bit(g_sec_encrypt_key);
@@ -180,7 +181,9 @@ sec_generate_keys(uint8 * client_random, uint8 * server_random, int rc4_key_size
 	}
 	else
 	{
-		DEBUG(("rc_4_key_size == %d, 128-bit encryption enabled\n", rc4_key_size));
+		logger(Protocol, Debug,
+		       "sec_generate_key(), rc_4_key_size == %d, 128-bit encryption enabled",
+		       rc4_key_size);
 		g_rc4_key_len = 16;
 	}
 
@@ -346,12 +349,6 @@ sec_send_to_channel(STREAM s, uint32 flags, uint16 channel)
 	{
 		flags &= ~SEC_ENCRYPT;
 		datalen = s->end - s->p - 8;
-
-#if WITH_DEBUG
-		DEBUG(("Sending encrypted packet:\n"));
-		hexdump(s->p + 8, datalen);
-#endif
-
 		sec_sign(s->p, 8, g_sec_sign_key, g_rc4_key_len, s->p + 8, datalen);
 		sec_encrypt(s->p + 8, datalen);
 	}
@@ -474,7 +471,7 @@ sec_out_mcs_data(STREAM s, uint32 selected_protocol)
 	out_uint32_le(s, g_encryption ? 0x3 : 0);	/* encryption supported, 128-bit supported */
 	out_uint32(s, 0);	/* Unknown */
 
-	DEBUG_RDP5(("g_num_channels is %d\n", g_num_channels));
+	logger(Protocol, Debug, "sec_out_mcs_data(), g_num_channels is %d", g_num_channels);
 	if (g_num_channels > 0)
 	{
 		out_uint16_le(s, SEC_TAG_CLI_CHANNELS);
@@ -482,7 +479,8 @@ sec_out_mcs_data(STREAM s, uint32 selected_protocol)
 		out_uint32_le(s, g_num_channels);	/* number of virtual channels */
 		for (i = 0; i < g_num_channels; i++)
 		{
-			DEBUG_RDP5(("Requesting channel %s\n", g_channels[i].name));
+			logger(Protocol, Debug, "sec_out_mcs_data(), requesting channel %s",
+			       g_channels[i].name);
 			out_uint8a(s, g_channels[i].name, 8);
 			out_uint32_be(s, g_channels[i].flags);
 		}
@@ -500,7 +498,8 @@ sec_parse_public_key(STREAM s, uint8 * modulus, uint8 * exponent)
 	in_uint32_le(s, magic);
 	if (magic != SEC_RSA_MAGIC)
 	{
-		error("RSA magic 0x%x\n", magic);
+		logger(Protocol, Error, "sec_parse_public_key(), magic (0x%x) != SEC_RSA_MAGIC",
+		       magic);
 		return False;
 	}
 
@@ -508,7 +507,9 @@ sec_parse_public_key(STREAM s, uint8 * modulus, uint8 * exponent)
 	modulus_len -= SEC_PADDING_SIZE;
 	if ((modulus_len < SEC_MODULUS_SIZE) || (modulus_len > SEC_MAX_MODULUS_SIZE))
 	{
-		error("Bad server public key size (%u bits)\n", modulus_len * 8);
+		logger(Protocol, Error,
+		       "sec_parse_public_key(), invalid public key size (%u bits) from server",
+		       modulus_len * 8);
 		return False;
 	}
 
@@ -564,7 +565,8 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 
 	if (random_len != SEC_RANDOM_SIZE)
 	{
-		error("random len %d, expected %d\n", random_len, SEC_RANDOM_SIZE);
+		logger(Protocol, Error, "sec_parse_crypt_info(), got random len %d, expected %d",
+		       random_len, SEC_RANDOM_SIZE);
 		return False;
 	}
 
@@ -578,7 +580,8 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 	in_uint32_le(s, flags);	/* 1 = RDP4-style, 0x80000002 = X.509 */
 	if (flags & 1)
 	{
-		DEBUG_RDP5(("We're going for the RDP4-style encryption\n"));
+		logger(Protocol, Debug,
+		       "sec_parse_crypt_info(), We're going for the RDP4-style encryption");
 		in_uint8s(s, 8);	/* unknown */
 
 		while (s->p < end)
@@ -593,7 +596,8 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 				case SEC_TAG_PUBKEY:
 					if (!sec_parse_public_key(s, modulus, exponent))
 						return False;
-					DEBUG_RDP5(("Got Public key, RDP4-style\n"));
+					logger(Protocol, Debug,
+					       "sec_parse_crypt_info(), got public key");
 
 					break;
 
@@ -603,7 +607,9 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 					break;
 
 				default:
-					unimpl("crypt tag 0x%x\n", tag);
+					logger(Protocol, Warning,
+					       "sec_parse_crypt_info(), unhandled crypt tag 0x%x",
+					       tag);
 			}
 
 			s->p = next_tag;
@@ -613,11 +619,13 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 	{
 		uint32 certcount;
 
-		DEBUG_RDP5(("We're going for the RDP5-style encryption\n"));
+		logger(Protocol, Debug,
+		       "sec_parse_crypt_info(), We're going for the RDP5-style encryption");
 		in_uint32_le(s, certcount);	/* Number of certificates */
 		if (certcount < 2)
 		{
-			error("Server didn't send enough X509 certificates\n");
+			logger(Protocol, Error,
+			       "sec_parse_crypt_info(), server didn't send enough x509 certificates");
 			return False;
 		}
 		for (; certcount > 2; certcount--)
@@ -625,20 +633,14 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 			uint32 ignorelen;
 			RDSSL_CERT *ignorecert;
 
-			DEBUG_RDP5(("Ignored certs left: %d\n", certcount));
 			in_uint32_le(s, ignorelen);
-			DEBUG_RDP5(("Ignored Certificate length is %d\n", ignorelen));
 			ignorecert = rdssl_cert_read(s->p, ignorelen);
 			in_uint8s(s, ignorelen);
 			if (ignorecert == NULL)
 			{	/* XXX: error out? */
-				DEBUG_RDP5(("got a bad cert: this will probably screw up the rest of the communication\n"));
+				logger(Protocol, Error,
+				       "sec_parse_crypt_info(), got a bad cert: this will probably screw up the rest of the communication");
 			}
-
-#ifdef WITH_DEBUG_RDP5
-			DEBUG_RDP5(("cert #%d (ignored):\n", certcount));
-			rdssl_cert_print_fp(stdout, ignorecert);
-#endif
 		}
 		/* Do da funky X.509 stuffy
 
@@ -649,29 +651,34 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 		   http://www.cs.auckland.ac.nz/~pgut001/pubs/x509guide.txt
 		 */
 		in_uint32_le(s, cacert_len);
-		DEBUG_RDP5(("CA Certificate length is %d\n", cacert_len));
+		logger(Protocol, Debug,
+		       "sec_parse_crypt_info(), server CA Certificate length is %d", cacert_len);
 		cacert = rdssl_cert_read(s->p, cacert_len);
 		in_uint8s(s, cacert_len);
 		if (NULL == cacert)
 		{
-			error("Couldn't load CA Certificate from server\n");
+			logger(Protocol, Error,
+			       "sec_parse_crypt_info(), couldn't load CA Certificate from server");
 			return False;
 		}
 		in_uint32_le(s, cert_len);
-		DEBUG_RDP5(("Certificate length is %d\n", cert_len));
+		logger(Protocol, Debug, "sec_parse_crypt_info(), certificate length is %d",
+		       cert_len);
 		server_cert = rdssl_cert_read(s->p, cert_len);
 		in_uint8s(s, cert_len);
 		if (NULL == server_cert)
 		{
 			rdssl_cert_free(cacert);
-			error("Couldn't load Certificate from server\n");
+			logger(Protocol, Error,
+			       "sec_parse_crypt_info(), couldn't load Certificate from server");
 			return False;
 		}
 		if (!rdssl_certs_ok(server_cert, cacert))
 		{
 			rdssl_cert_free(server_cert);
 			rdssl_cert_free(cacert);
-			error("Security error CA Certificate invalid\n");
+			logger(Protocol, Error,
+			       "sec_parse_crypt_info(), security error, CA Certificate invalid");
 			return False;
 		}
 		rdssl_cert_free(cacert);
@@ -679,7 +686,8 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 		server_public_key = rdssl_cert_to_rkey(server_cert, &g_server_public_key_len);
 		if (NULL == server_public_key)
 		{
-			DEBUG_RDP5(("Didn't parse X509 correctly\n"));
+			logger(Protocol, Debug,
+			       "sec_parse_crypt_info(). failed to parse X509 correctly");
 			rdssl_cert_free(server_cert);
 			return False;
 		}
@@ -687,15 +695,17 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 		if ((g_server_public_key_len < SEC_MODULUS_SIZE) ||
 		    (g_server_public_key_len > SEC_MAX_MODULUS_SIZE))
 		{
-			error("Bad server public key size (%u bits)\n",
-			      g_server_public_key_len * 8);
+			logger(Protocol, Error,
+			       "sec_parse_crypt_info(), bad server public key size (%u bits)",
+			       g_server_public_key_len * 8);
 			rdssl_rkey_free(server_public_key);
 			return False;
 		}
 		if (rdssl_rkey_get_exp_mod(server_public_key, exponent, SEC_EXPONENT_SIZE,
 					   modulus, SEC_MAX_MODULUS_SIZE) != 0)
 		{
-			error("Problem extracting RSA exponent, modulus");
+			logger(Protocol, Error,
+			       "sec_parse_crypt_info(), problem extracting RSA exponent, modulus");
 			rdssl_rkey_free(server_public_key);
 			return False;
 		}
@@ -718,10 +728,11 @@ sec_process_crypt_info(STREAM s)
 	memset(exponent, 0, sizeof(exponent));
 	if (!sec_parse_crypt_info(s, &rc4_key_size, &server_random, modulus, exponent))
 	{
-		DEBUG(("Failed to parse crypt info\n"));
+		logger(Protocol, Error, "sec_process_crypt_info(), failed to parse crypt info");
 		return;
 	}
-	DEBUG(("Generating client random\n"));
+
+	logger(Protocol, Debug, "sec_parse_crypt_info(), generating client random");
 	generate_random(g_client_random);
 	sec_rsa_encrypt(g_sec_crypted_random, g_client_random, SEC_RANDOM_SIZE,
 			g_server_public_key_len, modulus, exponent);
@@ -734,7 +745,8 @@ static void
 sec_process_srv_info(STREAM s)
 {
 	in_uint16_le(s, g_server_rdp_version);
-	DEBUG_RDP5(("Server RDP version is %d\n", g_server_rdp_version));
+	logger(Protocol, Debug, "sec_process_srv_info(), server RDP version is %d",
+	       g_server_rdp_version);
 	if (1 == g_server_rdp_version)
 	{
 		g_rdp_version = RDP_V4;
@@ -783,7 +795,7 @@ sec_process_mcs_data(STREAM s)
 				break;
 
 			default:
-				unimpl("response tag 0x%x\n", tag);
+				logger(Protocol, Warning, "Unhandled response tag 0x%x", tag);
 		}
 
 		s->p = next_tag;
@@ -858,10 +870,6 @@ sec_recv(uint8 * rdpver)
 						s->p[2] = s->p[3];
 						s->p[3] = swapbyte;
 					}
-#ifdef WITH_DEBUG
-					/* warning!  this debug statement will show passwords in the clear! */
-					hexdump(s->p, s->end - s->p);
-#endif
 				}
 			}
 			else

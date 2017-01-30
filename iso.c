@@ -126,7 +126,7 @@ iso_recv_msg(uint8 * code, uint8 * rdpver)
 	}
 	if (length < 4)
 	{
-		error("Bad packet header\n");
+		logger(Protocol, Error, "iso_recv_msg(), bad packet header, length < 4");
 		return NULL;
 	}
 	s = tcp_recv(s, length - 4);
@@ -192,7 +192,7 @@ iso_recv(uint8 * rdpver)
 			return s;
 	if (code != ISO_PDU_DT)
 	{
-		error("expected DT, got 0x%x\n", code);
+		logger(Protocol, Error, "iso_recv(), expected ISO_PDU_DT, got 0x%x", code);
 		return NULL;
 	}
 	return s;
@@ -217,8 +217,13 @@ iso_connect(char *server, char *username, char *domain, char *password,
 	else if (g_sc_csp_name || g_sc_reader_name || g_sc_card_name || g_sc_container_name)
 		neg_proto |= PROTOCOL_HYBRID;
 	else
-		warning("Disables CredSSP due to missing smartcard information for SSO.\n");
+		logger(Core, Warning,
+		       "iso_connect(), missing smartcard information for SSO, disabling CredSSP");
 #endif
+	if (neg_proto & PROTOCOL_HYBRID)
+		logger(Core, Verbose, "Connecting to server using NLA...");
+	else
+		logger(Core, Verbose, "Connecting to server using SSL...");
 
       retry:
 	*selected_protocol = PROTOCOL_RDP;
@@ -235,7 +240,7 @@ iso_connect(char *server, char *username, char *domain, char *password,
 
 	if (code != ISO_PDU_CC)
 	{
-		error("expected CC, got 0x%x\n", code);
+		logger(Protocol, Error, "iso_connect(), expected ISO_PDU_CC, got 0x%x", code);
 		tcp_disconnect();
 		return False;
 	}
@@ -288,20 +293,21 @@ iso_connect(char *server, char *username, char *domain, char *password,
 
 			if (retry_without_neg)
 			{
-				fprintf(stderr,
-					"Failed to negotiate protocol, retrying with plain RDP.\n");
+				logger(Core, Notice,
+				       "Failed to negotiate protocol, retrying with plain RDP.");
 				g_negotiate_rdp_protocol = False;
 				goto retry;
 			}
 
-			fprintf(stderr, "Failed to connect, %s.\n", reason);
+			logger(Core, Notice, "Failed to connect, %s.\n", reason);
 			return False;
 		}
 
 		if (type != RDP_NEG_RSP)
 		{
 			tcp_disconnect();
-			error("Expected RDP_NEG_RSP, got type = 0x%x\n", type);
+			logger(Protocol, Error, "iso_connect(), expected RDP_NEG_RSP, got 0x%x",
+			       type);
 			return False;
 		}
 
@@ -311,13 +317,15 @@ iso_connect(char *server, char *username, char *domain, char *password,
 			if (!tcp_tls_connect())
 			{
 				/* failed to connect using cssp, let retry with plain TLS */
+				logger(Core, Verbose,
+				       "Failed to connect using SSL, trying with plain RDP.");
 				tcp_disconnect();
 				neg_proto = PROTOCOL_RDP;
 				goto retry;
 			}
 			/* do not use encryption when using TLS */
 			g_encryption = False;
-			fprintf(stderr, "Connection established using SSL.\n");
+			logger(Core, Notice, "Connection established using SSL.");
 		}
 #ifdef WITH_CREDSSP
 		else if (data == PROTOCOL_HYBRID)
@@ -325,25 +333,28 @@ iso_connect(char *server, char *username, char *domain, char *password,
 			if (!cssp_connect(server, username, domain, password, s))
 			{
 				/* failed to connect using cssp, let retry with plain TLS */
+				logger(Core, Verbose,
+				       "Failed to connect using NLA, trying with SSL");
 				tcp_disconnect();
 				neg_proto = PROTOCOL_SSL;
 				goto retry;
 			}
 
 			/* do not use encryption when using TLS */
-			fprintf(stderr, "Connection established using CredSSP.\n");
+			logger(Core, Notice, "Connection established using CredSSP.");
 			g_encryption = False;
 		}
 #endif
 		else if (data == PROTOCOL_RDP)
 		{
-			fprintf(stderr, "Connection established using plain RDP.\n");
+			logger(Core, Notice, "Connection established using plain RDP.");
 		}
 		else if (data != PROTOCOL_RDP)
 		{
 			tcp_disconnect();
-			error("Unexpected protocol in negotiation response, got data = 0x%x.\n",
-			      data);
+			logger(Protocol, Error,
+			       "iso_connect(), unexpected protocol in negotiation response, got 0x%x",
+			       data);
 			return False;
 		}
 

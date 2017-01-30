@@ -4,7 +4,7 @@
 
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2003-2008 Peter Astrand <astrand@cendio.se> for Cendio AB
-   Copyright 2014 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2014-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -165,12 +165,13 @@ add_to_keymap(char *keyname, uint8 scancode, uint16 modifiers, char *mapname)
 	keysym = XStringToKeysym(keyname);
 	if (keysym == NoSymbol)
 	{
-		DEBUG_KBD(("Bad keysym \"%s\" in keymap %s (ignoring)\n", keyname, mapname));
+		logger(Keyboard, Error, "add_to_keymap(), ignoring bad keysym '%s' in keymap %s",
+		       keyname, mapname);
 		return;
 	}
 
-	DEBUG_KBD(("Adding translation, keysym=0x%x, scancode=0x%x, "
-		   "modifiers=0x%x\n", (unsigned int) keysym, scancode, modifiers));
+	logger(Keyboard, Debug, "add_to_keymap(), adding translation, keysym=0x%x, scancode=0x%x, "
+	       "modifiers=0x%x", (unsigned int) keysym, scancode, modifiers);
 
 	/* Make a new entry in the table */
 	entry = new_key_translation_entry(keysym);
@@ -206,11 +207,13 @@ add_sequence(char *rest, char *mapname)
 	keysym = XStringToKeysym(keyname);
 	if (keysym == NoSymbol)
 	{
-		DEBUG_KBD(("Bad keysym \"%s\" in keymap %s (ignoring line)\n", keyname, mapname));
+		logger(Keyboard, Error, "add_sequence(), ignoring bad keysym '%s' in keymap %s",
+		       keyname, mapname);
 		return;
 	}
 
-	DEBUG_KBD(("Adding sequence for keysym (0x%lx, %s) -> ", keysym, keyname));
+	logger(Keyboard, Debug, "add_sequence(), adding squence for keysym '%s' (0x%lx)", keyname,
+	       keysym);
 
 	entry = new_key_translation_entry(keysym);
 	prev_next = &(entry->tr);
@@ -233,8 +236,9 @@ add_sequence(char *rest, char *mapname)
 		seq_keysym = XStringToKeysym(keyname);
 		if (seq_keysym == NoSymbol)
 		{
-			DEBUG_KBD(("Bad keysym \"%s\" in keymap %s (ignoring line)\n", keyname,
-				   mapname));
+			logger(Keyboard, Error,
+			       "add_sequence(), ignoring line with bad keysym '%s' in keymap %s",
+			       keyname, mapname);
 			delete_key_translation_entry(keysym);
 			return;
 		}
@@ -250,10 +254,7 @@ add_sequence(char *rest, char *mapname)
 		*prev_next = tr;
 		prev_next = &tr->next;
 		tr->seq_keysym = seq_keysym;
-
-		DEBUG_KBD(("0x%x, ", (unsigned int) seq_keysym));
 	}
-	DEBUG_KBD(("\n"));
 }
 
 RD_BOOL
@@ -387,7 +388,7 @@ xkeymap_read(char *mapname)
 	fp = xkeymap_open(mapname);
 	if (fp == NULL)
 	{
-		error("Failed to open keymap %s\n", mapname);
+		logger(Keyboard, Error, "xkeymap_read(), failed to open keymap %s", mapname);
 		return False;
 	}
 
@@ -421,14 +422,14 @@ xkeymap_read(char *mapname)
 		if (str_startswith(line, "map "))
 		{
 			g_keylayout = strtoul(line + sizeof("map ") - 1, NULL, 16);
-			DEBUG_KBD(("Keylayout 0x%x\n", g_keylayout));
+			logger(Keyboard, Debug, "xkeymap_read(), Keylayout 0x%x", g_keylayout);
 			continue;
 		}
 
 		/* compose */
 		if (str_startswith(line, "enable_compose"))
 		{
-			DEBUG_KBD(("Enabling compose handling\n"));
+			logger(Keyboard, Debug, "xkeymap_read(), enabling compose handling");
 			g_enable_compose = True;
 			continue;
 		}
@@ -444,7 +445,8 @@ xkeymap_read(char *mapname)
 		if (str_startswith(line, "keyboard_type "))
 		{
 			g_keyboard_type = strtol(line + sizeof("keyboard_type ") - 1, NULL, 16);
-			DEBUG_KBD(("keyboard_type 0x%x\n", g_keyboard_type));
+			logger(Keyboard, Debug, "xkeymap_read(), keyboard_type 0x%x",
+			       g_keyboard_type);
 			continue;
 		}
 
@@ -453,7 +455,8 @@ xkeymap_read(char *mapname)
 		{
 			g_keyboard_subtype =
 				strtol(line + sizeof("keyboard_subtype ") - 1, NULL, 16);
-			DEBUG_KBD(("keyboard_subtype 0x%x\n", g_keyboard_subtype));
+			logger(Keyboard, Debug, "xkeymap_read(), keyboard_subtype 0x%x",
+			       g_keyboard_subtype);
 			continue;
 		}
 
@@ -462,7 +465,8 @@ xkeymap_read(char *mapname)
 		{
 			g_keyboard_functionkeys =
 				strtol(line + sizeof("keyboard_functionkeys ") - 1, NULL, 16);
-			DEBUG_KBD(("keyboard_functionkeys 0x%x\n", g_keyboard_functionkeys));
+			logger(Keyboard, Debug, "xkeymap_read(), keyboard_functionkeys 0x%x",
+			       g_keyboard_functionkeys);
 			continue;
 		}
 
@@ -477,7 +481,8 @@ xkeymap_read(char *mapname)
 		p = strchr(line, ' ');
 		if (p == NULL)
 		{
-			error("Bad line %d in keymap %s\n", line_num, mapname);
+			logger(Keyboard, Error, "xkeymap_read(), bad line %d in keymap %s",
+			       line_num, mapname);
 			continue;
 		}
 		else
@@ -746,7 +751,7 @@ xkeymap_translate_key(uint32 keysym, unsigned int keycode, unsigned int state)
 		{
 			if (MASK_HAS_BITS(tr.modifiers, MapInhibitMask))
 			{
-				DEBUG_KBD(("Inhibiting key\n"));
+				logger(Keyboard, Debug, "xkeymap_translate_key(), inhibiting key");
 				tr.scancode = 0;
 				return tr;
 			}
@@ -771,19 +776,21 @@ xkeymap_translate_key(uint32 keysym, unsigned int keycode, unsigned int state)
 			    && MASK_HAS_BITS(remote_modifier_state, MapCtrlMask)
 			    && !MASK_HAS_BITS(state, ShiftMask))
 			{
-				DEBUG_KBD(("Non-physical Shift + Ctrl pressed, releasing Shift\n"));
+				logger(Keyboard, Debug,
+				       "xkeymap_translate_key(), non-physical Shift + Ctrl pressed, releasing Shift");
 				MASK_REMOVE_BITS(tr.modifiers, MapShiftMask);
 			}
 
-			DEBUG_KBD(("Found scancode translation, scancode=0x%x, modifiers=0x%x\n",
-				   tr.scancode, tr.modifiers));
+			logger(Keyboard, Debug,
+			       "xkeymap_translate_key(), found scancode translation, scancode=0x%x, modifiers=0x%x",
+			       tr.scancode, tr.modifiers);
 		}
 	}
 	else
 	{
 		if (keymap_loaded)
-			warning("No translation for (keysym 0x%lx, %s)\n", keysym,
-				get_ksname(keysym));
+			logger(Keyboard, Warning, "No translation for (keysym 0x%lx, %s)", keysym,
+			       get_ksname(keysym));
 
 		/* not in keymap, try to interpret the raw scancode */
 		if (((int) keycode >= min_keycode) && (keycode <= 0x60))
@@ -798,11 +805,11 @@ xkeymap_translate_key(uint32 keysym, unsigned int keycode, unsigned int state)
 				tr.modifiers = MapLeftShiftMask;
 			}
 
-			DEBUG_KBD(("Sending guessed scancode 0x%x\n", tr.scancode));
+			logger(Keyboard, Debug, "Sending guessed scancode 0x%x", tr.scancode);
 		}
 		else
 		{
-			DEBUG_KBD(("No good guess for keycode 0x%x found\n", keycode));
+			logger(Keyboard, Debug, "No good guess for keycode 0x%x found", keycode);
 		}
 	}
 
@@ -857,12 +864,13 @@ xkeymap_send_keys(uint32 keysym, unsigned int keycode, unsigned int state, uint3
 		ptr = &tr;
 		do
 		{
-			DEBUG_KBD(("Handling sequence element, keysym=0x%x\n",
-				   (unsigned int) ptr->seq_keysym));
+			logger(Keyboard, Debug,
+			       "xkeymap_send_keys(), handling sequence element, keysym=0x%x",
+			       (unsigned int) ptr->seq_keysym);
 
 			if (nesting++ > 32)
 			{
-				error("Sequence nesting too deep\n");
+				logger(Keyboard, Error, "Sequence nesting too deep");
 				return;
 			}
 
@@ -947,13 +955,15 @@ ensure_remote_modifiers(uint32 ev_time, key_translation tr)
 
 			if (MASK_HAS_BITS(tr.modifiers, MapNumLockMask))
 			{
-				DEBUG_KBD(("Remote NumLock state is incorrect, activating NumLock.\n"));
+				logger(Keyboard, Debug,
+				       "ensure_remote_modifiers(), remote NumLock state is incorrect, activating NumLock");
 				new_remote_state = KBD_FLAG_NUMLOCK;
 				remote_modifier_state = MapNumLockMask;
 			}
 			else
 			{
-				DEBUG_KBD(("Remote NumLock state is incorrect, deactivating NumLock.\n"));
+				logger(Keyboard, Debug,
+				       "ensure_remote_modifiers(), remote NumLock state is incorrect, deactivating NumLock.");
 				new_remote_state = 0;
 				remote_modifier_state = 0;
 			}
@@ -1082,11 +1092,9 @@ reset_modifier_keys()
 static void
 update_modifier_state(uint8 scancode, RD_BOOL pressed)
 {
-#ifdef WITH_DEBUG_KBD
 	uint16 old_modifier_state;
 
 	old_modifier_state = remote_modifier_state;
-#endif
 
 	switch (scancode)
 	{
@@ -1128,15 +1136,14 @@ update_modifier_state(uint8 scancode, RD_BOOL pressed)
 			}
 	}
 
-#ifdef WITH_DEBUG_KBD
 	if (old_modifier_state != remote_modifier_state)
 	{
-		DEBUG_KBD(("Before updating modifier_state:0x%x, pressed=0x%x\n",
-			   old_modifier_state, pressed));
-		DEBUG_KBD(("After updating modifier_state:0x%x\n", remote_modifier_state));
+		logger(Keyboard, Debug,
+		       "update_modifier_state(), before modifier_state:0x%x, pressed=0x%x",
+		       old_modifier_state, pressed);
+		logger(Keyboard, Debug, "update_modifier_state(), after modifier_state:0x%x",
+		       remote_modifier_state);
 	}
-#endif
-
 }
 
 /* Send keyboard input */
@@ -1147,14 +1154,16 @@ rdp_send_scancode(uint32 time, uint16 flags, uint8 scancode)
 
 	if (scancode & SCANCODE_EXTENDED)
 	{
-		DEBUG_KBD(("Sending extended scancode=0x%x, flags=0x%x\n",
-			   scancode & ~SCANCODE_EXTENDED, flags));
+		logger(Keyboard, Debug,
+		       "rdp_send_scancode(), sending extended scancode=0x%x, flags=0x%x",
+		       scancode & ~SCANCODE_EXTENDED, flags);
 		rdp_send_input(time, RDP_INPUT_SCANCODE, flags | KBD_FLAG_EXT,
 			       scancode & ~SCANCODE_EXTENDED, 0);
 	}
 	else
 	{
-		DEBUG_KBD(("Sending scancode=0x%x, flags=0x%x\n", scancode, flags));
+		logger(Keyboard, Debug, "rdp_send_scancode(), sending scancode=0x%x, flags=0x%x",
+		       scancode, flags);
 		rdp_send_input(time, RDP_INPUT_SCANCODE, flags, scancode, 0);
 	}
 }

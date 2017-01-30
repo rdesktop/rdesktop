@@ -3,6 +3,7 @@
    Protocol services - Clipboard functions
    Copyright 2003 Erik Forsberg <forsberg@cendio.se> for Cendio AB
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 2003-2008
+   Copyright 2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -40,7 +41,8 @@ cliprdr_send_packet(uint16 type, uint16 status, uint8 * data, uint32 length)
 {
 	STREAM s;
 
-	DEBUG_CLIPBOARD(("CLIPRDR send: type=%d, status=%d, length=%d\n", type, status, length));
+	logger(Clipboard, Debug, "cliprdr_send_packet(), type=%d, status=%d, length=%d", type,
+	       status, length);
 
 	s = channel_init(cliprdr_channel, length + 12);
 	out_uint16_le(s, type);
@@ -62,7 +64,8 @@ cliprdr_send_simple_native_format_announce(uint32 format)
 {
 	uint8 buffer[36];
 
-	DEBUG_CLIPBOARD(("cliprdr_send_simple_native_format_announce\n"));
+	logger(Clipboard, Debug, "cliprdr_send_simple_native_format_announce() format 0x%x",
+	       format);
 
 	buf_out_uint32(buffer, format);
 	memset(buffer + 4, 0, sizeof(buffer) - 4);	/* description */
@@ -76,7 +79,7 @@ cliprdr_send_simple_native_format_announce(uint32 format)
 void
 cliprdr_send_native_format_announce(uint8 * formats_data, uint32 formats_data_length)
 {
-	DEBUG_CLIPBOARD(("cliprdr_send_native_format_announce\n"));
+	logger(Clipboard, Debug, "cliprdr_send_native_format_announce()");
 
 	cliprdr_send_packet(CLIPRDR_FORMAT_ANNOUNCE, CLIPRDR_REQUEST, formats_data,
 			    formats_data_length);
@@ -97,7 +100,7 @@ cliprdr_send_data_request(uint32 format)
 {
 	uint8 buffer[4];
 
-	DEBUG_CLIPBOARD(("cliprdr_send_data_request\n"));
+	logger(Clipboard, Debug, "cliprdr_send_data_request(), format 0x%x", format);
 	buf_out_uint32(buffer, format);
 	cliprdr_send_packet(CLIPRDR_DATA_REQUEST, CLIPRDR_REQUEST, buffer, sizeof(buffer));
 }
@@ -105,7 +108,7 @@ cliprdr_send_data_request(uint32 format)
 void
 cliprdr_send_data(uint8 * data, uint32 length)
 {
-	DEBUG_CLIPBOARD(("cliprdr_send_data\n"));
+	logger(Clipboard, Debug, "cliprdr_send_data(), length %d bytes", length);
 	cliprdr_send_packet(CLIPRDR_DATA_RESPONSE, CLIPRDR_RESPONSE, data, length);
 }
 
@@ -121,7 +124,8 @@ cliprdr_process(STREAM s)
 	in_uint32_le(s, length);
 	data = s->p;
 
-	DEBUG_CLIPBOARD(("CLIPRDR recv: type=%d, status=%d, length=%d\n", type, status, length));
+	logger(Clipboard, Debug, "cliprdr_process(), type=%d, status=%d, length=%d", type, status,
+	       length);
 
 	if (status == CLIPRDR_ERROR)
 	{
@@ -137,7 +141,8 @@ cliprdr_process(STREAM s)
 				ui_clip_request_failed();
 				break;
 			default:
-				DEBUG_CLIPBOARD(("CLIPRDR error (type=%d)\n", type));
+				logger(Clipboard, Warning,
+				       "cliprdr_process(), unhandled error (type=%d)", type);
 		}
 
 		return;
@@ -164,7 +169,8 @@ cliprdr_process(STREAM s)
 		case 7:	/* TODO: W2K3 SP1 sends this on connect with a value of 1 */
 			break;
 		default:
-			unimpl("CLIPRDR packet type %d\n", type);
+			logger(Clipboard, Warning, "cliprdr_process(), unhandled packet type %d",
+			       type);
 	}
 }
 

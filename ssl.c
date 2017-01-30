@@ -3,7 +3,7 @@
    Secure sockets abstraction layer
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright (C) Jay Sorg <j@american-data.com> 2006-2008
-   Copyright (C) Henrik Andersson <hean01@cendio.com> 2016
+   Copyright 2016-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -155,14 +155,16 @@ rdssl_cert_to_rkey(RDSSL_CERT * cert, uint32 * key_len)
 	key = X509_get_X509_PUBKEY(cert);
 	if (key == NULL)
 	{
-		error("Failed to get public key from certificate.\n");
+		logger(Protocol, Error,
+		       "rdssl_cert_to_key(), failed to get public key from certificate");
 		return NULL;
 	}
 
 	ret = X509_PUBKEY_get0_param(NULL, NULL, 0, &algor, key);
 	if (ret != 1)
 	{
-		error("Faild to get algorithm used for public key.\n");
+		logger(Protocol, Error,
+		       "rdssl_cert_to_key(), failed to get algorithm used for public key");
 		return NULL;
 	}
 
@@ -170,13 +172,15 @@ rdssl_cert_to_rkey(RDSSL_CERT * cert, uint32 * key_len)
 
 	if ((nid == NID_md5WithRSAEncryption) || (nid == NID_shaWithRSAEncryption))
 	{
-		DEBUG_RDP5(("Re-setting algorithm type to RSA in server certificate\n"));
+		logger(Protocol, Debug,
+		       "rdssl_cert_to_key(), re-setting algorithm type to RSA in server certificate");
 		X509_PUBKEY_set0_param(key, OBJ_nid2obj(NID_rsaEncryption), 0, NULL, NULL, 0);
 	}
 	epk = X509_get_pubkey(cert);
 	if (NULL == epk)
 	{
-		error("Failed to extract public key from certificate\n");
+		logger(Protocol, Error,
+		       "rdssl_cert_to_rkey(), failed to extract public key from certificate");
 		return NULL;
 	}
 

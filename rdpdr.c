@@ -2,7 +2,7 @@
    rdesktop: A Remote Desktop Protocol client.
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2004-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
-   Copyright 2010-2014 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2010-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
    Copyright 2017 Karl Mikaelsson <derfian@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
@@ -354,11 +354,10 @@ rdpdr_send_completion(uint32 device, uint32 id, uint32 status, uint32 result, ui
 	out_uint32_le(s, result);
 	out_uint8p(s, buffer, length);
 	s_mark_end(s);
-	/* JIF */
-#ifdef WITH_DEBUG_RDP5
-	printf("--> rdpdr_send_completion\n");
+
+	logger(Protocol, Debug, "rdpdr_send_completion()");
 	/* hexdump(s->channel_hdr + 8, s->end - s->channel_hdr - 8); */
-#endif
+
 	channel_send(s, rdpdr_channel);
 #ifdef WITH_SCARD
 	scard_unlock(SCARD_LOCK_RDPDR);
@@ -408,8 +407,9 @@ rdpdr_process_irp(STREAM s)
 
 	if (device >= RDPDR_MAX_DEVICES)
 	{
-		error("invalid irp device 0x%lx file 0x%lx id 0x%lx major 0x%lx minor 0x%lx\n",
-		      device, file, id, major, minor);
+		logger(Protocol, Error,
+		       "rdpdr_process_irp(), invalid irp device=0x%lx, file=0x%lx, id=0x%lx, major=0x%lx, minor=0x%lx",
+		       device, file, id, major, minor);
 		xfree(buffer);
 		return;
 	}
@@ -446,8 +446,9 @@ rdpdr_process_irp(STREAM s)
 			break;
 #endif
 		default:
-
-			error("IRP for bad device %ld\n", device);
+			logger(Protocol, Error,
+			       "rdpdr_process_irp(), received IRP for unknown device type %ld",
+			       device);
 			xfree(buffer);
 			return;
 	}
@@ -505,9 +506,11 @@ rdpdr_process_irp(STREAM s)
 
 			in_uint32_le(s, length);
 			in_uint32_le(s, offset);
-#if WITH_DEBUG_RDP5
-			DEBUG(("RDPDR IRP Read (length: %d, offset: %d)\n", length, offset));
-#endif
+
+			logger(Protocol, Debug,
+			       "rdpdr_process_irp(), IRP Read length=%d, offset=%d", length,
+			       offset);
+
 			if (!rdpdr_handle_ok(device, file))
 			{
 				status = RD_STATUS_INVALID_HANDLE;
@@ -558,9 +561,9 @@ rdpdr_process_irp(STREAM s)
 			in_uint32_le(s, length);
 			in_uint32_le(s, offset);
 			in_uint8s(s, 0x18);
-#if WITH_DEBUG_RDP5
-			DEBUG(("RDPDR IRP Write (length: %d)\n", result));
-#endif
+
+			logger(Protocol, Debug, "rdpdr_process_irp(), IRP Write length=%d", result);
+
 			if (!rdpdr_handle_ok(device, file))
 			{
 				status = RD_STATUS_INVALID_HANDLE;
@@ -694,7 +697,9 @@ rdpdr_process_irp(STREAM s)
 
 					status = RD_STATUS_INVALID_PARAMETER;
 					/* JIF */
-					unimpl("IRP major=0x%x minor=0x%x\n", major, minor);
+					logger(Protocol, Warning,
+					       "rdpdr_process_irp(), unhandled minor opcode, major=0x%x, minor=0x%x",
+					       major, minor);
 			}
 			break;
 
@@ -763,7 +768,9 @@ rdpdr_process_irp(STREAM s)
 			break;
 
 		default:
-			unimpl("IRP major=0x%x minor=0x%x\n", major, minor);
+			logger(Protocol, Warning,
+			       "rdpdr_process_irp(), unhandled major opcode, major=0x%x, minor=0x%x",
+			       major, minor);
 			break;
 	}
 
@@ -829,10 +836,8 @@ rdpdr_process(STREAM s)
 	uint16 component;
 	uint16 pakid;
 
-#if WITH_DEBUG_RDP5
-	printf("--- rdpdr_process ---\n");
-	hexdump(s->p, s->end - s->p);
-#endif
+	logger(Protocol, Debug, "rdpdr_process()");
+	/* hexdump(s->p, s->end - s->p); */
 
 	in_uint16(s, component);
 	in_uint16(s, pakid);
@@ -867,9 +872,8 @@ rdpdr_process(STREAM s)
 
 			case PAKID_CORE_DEVICE_REPLY:
 				in_uint32(s, handle);
-#if WITH_DEBUG_RDP5
-				DEBUG(("RDPDR: Server connected to resource %d\n", handle));
-#endif
+				logger(Protocol, Debug,
+				       "rdpdr_process(), server connected to resource %d", handle);
 				break;
 
 			case PAKID_CORE_SERVER_CAPABILITY:
@@ -877,7 +881,9 @@ rdpdr_process(STREAM s)
 				break;
 
 			default:
-				unimpl("RDPDR pakid 0x%x of component 0x%x\n", pakid, component);
+				logger(Protocol, Debug,
+				       "rdpdr_process(), pakid 0x%x of component 0x%x", pakid,
+				       component);
 				break;
 
 		}
@@ -888,7 +894,7 @@ rdpdr_process(STREAM s)
 			printercache_process(s);
 	}
 	else
-		unimpl("RDPDR component 0x%x\n", component);
+		logger(Protocol, Warning, "rdpdr_process(), unhandled component 0x%x", component);
 }
 
 RD_BOOL
@@ -1088,17 +1094,19 @@ _rdpdr_check_fds(fd_set * rfds, fd_set * wfds, RD_BOOL timed_out)
 							iorq->partial_len += result;
 							iorq->offset += result;
 						}
-#if WITH_DEBUG_RDP5
-						DEBUG(("RDPDR: %d bytes of data read\n", result));
-#endif
+
+						logger(Protocol, Debug,
+						       "_rdpdr_check_fds(), %d bytes of data read",
+						       result);
+
 						/* only delete link if all data has been transfered */
 						/* or if result was 0 and status success - EOF      */
 						if ((iorq->partial_len == iorq->length) ||
 						    (result == 0))
 						{
-#if WITH_DEBUG_RDP5
-							DEBUG(("RDPDR: AIO total %u bytes read of %u\n", iorq->partial_len, iorq->length));
-#endif
+							logger(Protocol, Debug,
+							       "_rdpdr_check_fds(), AIO total %u bytes read of %u",
+							       iorq->partial_len, iorq->length);
 							rdpdr_send_completion(iorq->device,
 									      iorq->id, status,
 									      iorq->partial_len,
@@ -1131,18 +1139,18 @@ _rdpdr_check_fds(fd_set * rfds, fd_set * wfds, RD_BOOL timed_out)
 							iorq->offset += result;
 						}
 
-#if WITH_DEBUG_RDP5
-						DEBUG(("RDPDR: %d bytes of data written\n",
-						       result));
-#endif
+						logger(Protocol, Debug,
+						       "_rdpdr_check_fds(), %d bytes of data written",
+						       result);
+
 						/* only delete link if all data has been transfered */
 						/* or we couldn't write */
 						if ((iorq->partial_len == iorq->length)
 						    || (result == 0))
 						{
-#if WITH_DEBUG_RDP5
-							DEBUG(("RDPDR: AIO total %u bytes written of %u\n", iorq->partial_len, iorq->length));
-#endif
+							logger(Protocol, Debug,
+							       "_rdpdr_check_fds(), AIO total %u bytes written of %u",
+							       iorq->partial_len, iorq->length);
 							rdpdr_send_completion(iorq->device,
 									      iorq->id, status,
 									      iorq->partial_len,

@@ -98,7 +98,7 @@ handle_child_line(const char *line, void *data)
 	}
 	else
 	{
-		warning("lspci: Unrecoqnized line '%s'\n", line);
+		logger(Core, Warning, "handle_child_line(), Unrecognized lspci line '%s'", line);
 	}
 	return True;
 }
@@ -119,7 +119,7 @@ lspci_process_line(const char *line, void *data)
 	}
 	else
 	{
-		error("lspci protocol error: Invalid line '%s'\n", line);
+		logger(Core, Error, "lspci_process_line(), invlid line '%s'", line);
 	}
 	return True;
 }
@@ -137,11 +137,6 @@ lspci_process(STREAM s)
 	/* str_handle_lines requires null terminated strings */
 	buf = xmalloc(pkglen + 1);
 	STRNCPY(buf, (char *) s->p, pkglen + 1);
-#if 0
-	printf("lspci recv:\n");
-	hexdump(s->p, pkglen);
-#endif
-
 	str_handle_lines(buf, &rest, lspci_process_line, NULL);
 	xfree(buf);
 }
@@ -166,11 +161,5 @@ lspci_send(const char *output)
 	len = strlen(output);
 	s = channel_init(lspci_channel, len);
 	out_uint8p(s, output, len) s_mark_end(s);
-
-#if 0
-	printf("lspci send:\n");
-	hexdump(s->channel_hdr + 8, s->end - s->channel_hdr - 8);
-#endif
-
 	channel_send(s, lspci_channel);
 }

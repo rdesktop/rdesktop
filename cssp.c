@@ -1,7 +1,7 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    CredSSP layer and kerberos support.
-   Copyright 2012-2013 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2012-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -84,10 +84,10 @@ cssp_gss_report_error(OM_uint32 code, char *str, OM_uint32 major_status, OM_uint
 	OM_uint32 msgctx = 0, ms;
 	gss_buffer_desc status_string;
 
-	error("GSS error [%d:%d:%d]: %s\n", (major_status & 0xff000000) >> 24,	// Calling error
-	      (major_status & 0xff0000) >> 16,	// Routine error
-	      major_status & 0xffff,	// Supplementary info bits
-	      str);
+	logger(Core, Debug, "GSS error [%d:%d:%d]: %s", (major_status & 0xff000000) >> 24,	// Calling error
+	       (major_status & 0xff0000) >> 16,	// Routine error
+	       major_status & 0xffff,	// Supplementary info bits
+	       str);
 
 	do
 	{
@@ -96,7 +96,7 @@ cssp_gss_report_error(OM_uint32 code, char *str, OM_uint32 major_status, OM_uint
 		if (ms != GSS_S_COMPLETE)
 			continue;
 
-		error(" - %s\n", status_string.value);
+		logger(Core, Debug, " - %s", status_string.value);
 
 	}
 	while (ms == GSS_S_COMPLETE && msgctx);
@@ -195,7 +195,8 @@ cssp_gss_wrap(gss_ctx_id_t * ctx, STREAM in, STREAM out)
 
 	if (!conf_state)
 	{
-		error("GSS Confidentiality failed, no encryption of message performed.");
+		logger(Core, Error,
+		       "cssp_gss_wrap(), GSS Confidentiality failed, no encryption of message performed.");
 		return False;
 	}
 
@@ -241,15 +242,6 @@ cssp_gss_unwrap(gss_ctx_id_t * ctx, STREAM in, STREAM out)
 	return True;
 }
 
-#ifdef WITH_DEBUG_CREDSSP
-void
-streamsave(STREAM s, char *fn)
-{
-	FILE *f = fopen(fn, "wb");
-	fwrite(s->data, s_length(s), 1, f);
-	fclose(f);
-}
-#endif
 
 static STREAM
 cssp_encode_tspasswordcreds(char *username, char *password, char *domain)
@@ -535,12 +527,6 @@ cssp_encode_tscredentials(char *username, char *password, char *domain)
 	// Construct ASN.1 message
 	out = ber_wrap_hdr_data(BER_TAG_SEQUENCE | BER_TAG_CONSTRUCTED, &message);
 
-#if WITH_DEBUG_CREDSSP
-	streamsave(out, "tscredentials.raw");
-	printf("Out TSCredentials %ld bytes\n", s_length(out));
-	hexdump(out->data, s_length(out));
-#endif
-
 	// cleanup
 	xfree(message.data);
 	xfree(tmp.data);
@@ -626,12 +612,6 @@ cssp_send_tsrequest(STREAM token, STREAM auth, STREAM pubkey)
 	s_mark_end(s);
 	s_free(h1);
 
-#if WITH_DEBUG_CREDSSP
-	streamsave(s, "tsrequest_out.raw");
-	printf("Out TSRequest %ld bytes\n", s_length(s));
-	hexdump(s->data, s_length(s));
-#endif
-
 	tcp_send(s);
 
 	// cleanup
@@ -657,7 +637,9 @@ cssp_read_tsrequest(STREAM token, STREAM pubkey)
 	// verify ASN.1 header
 	if (s->p[0] != (BER_TAG_SEQUENCE | BER_TAG_CONSTRUCTED))
 	{
-		error("Expected BER_TAG_SEQUENCE|BER_TAG_CONSTRUCTED, got %x", s->p[0]);
+		logger(Protocol, Error,
+		       "cssp_read_tsrequest(), expected BER_TAG_SEQUENCE|BER_TAG_CONSTRUCTED, got %x",
+		       s->p[0]);
 		return False;
 	}
 
@@ -673,12 +655,6 @@ cssp_read_tsrequest(STREAM token, STREAM pubkey)
 
 	// receive the remainings of message
 	s = tcp_recv(s, length);
-
-#if WITH_DEBUG_CREDSSP
-	streamsave(s, "tsrequest_in.raw");
-	printf("In TSRequest token %ld bytes\n", s_length(s));
-	hexdump(s->data, s_length(s));
-#endif
 
 	// parse the response and into nego token
 	if (!ber_in_header(s, &tagval, &length) ||
@@ -754,29 +730,26 @@ cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 	// Verify that system gss support spnego
 	if (!cssp_gss_mech_available(desired_mech))
 	{
-		warning("CredSSP: System doesn't have support for desired authentication mechanism.\n");
+		logger(Core, Debug,
+		       "cssp_connect(), system doesn't have support for desired authentication mechanism");
 		return False;
 	}
 
 	// Get service name
 	if (!cssp_gss_get_service_name(server, &target_name))
 	{
-		warning("CredSSP: Failed to get target service name.\n");
+		logger(Core, Debug, "cssp_connect(), failed to get target service name");
 		return False;
 	}
 
 	// Establish tls connection to server
 	if (!tcp_tls_connect())
 	{
-		warning("CredSSP: Failed to establish TLS connection.\n");
+		logger(Core, Debug, "cssp_connect(), failed to establish TLS connection");
 		return False;
 	}
 
 	tcp_tls_get_server_pubkey(&pubkey);
-
-#ifdef WITH_DEBUG_CREDSSP
-	streamsave(&pubkey, "PubKey.raw");
-#endif
 
 	// Enter the spnego loop
 	OM_uint32 actual_services;
@@ -809,21 +782,21 @@ cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 		if (GSS_ERROR(major_status))
 		{
 			if (i == 0)
-				error("CredSSP: Initialize failed, do you have correct kerberos tgt initialized ?\n");
+				logger(Core, Notice,
+				       "Failed to intialize NLA, do you have correct kerberos tgt initialized ?");
 			else
-				error("CredSSP: Negotiation failed.\n");
+				logger(Core, Error, "cssp_connect(), negotiation failed");
 
-#ifdef WITH_DEBUG_CREDSSP
-			cssp_gss_report_error(GSS_C_GSS_CODE, "CredSSP: SPNEGO negotiation failed.",
+			cssp_gss_report_error(GSS_C_GSS_CODE, "cssp_connect(), negotiation failed.",
 					      major_status, minor_status);
-#endif
 			goto bail_out;
 		}
 
 		// validate required services
 		if (!(actual_services & GSS_C_CONF_FLAG))
 		{
-			error("CredSSP: Confidiality service required but is not available.\n");
+			logger(Core, Error,
+			       "cssp_connect(), confidiality service required but is not available");
 			goto bail_out;
 		}
 
@@ -885,8 +858,8 @@ cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 	// validate public key
 	if (memcmp(pubkey.data, pubkey_cmp.data, s_length(&pubkey)) != 0)
 	{
-		error("CredSSP: Cannot guarantee integrity of server connection, MITM ? "
-		      "(public key data mismatch)\n");
+		logger(Core, Error,
+		       "cssp_connect(), public key mismatch, cannot guarantee integrity of server connection");
 		goto bail_out;
 	}
 

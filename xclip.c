@@ -4,6 +4,7 @@
    Copyright 2003-2008 Erik Forsberg <forsberg@cendio.se> for Cendio AB
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 2003-2008
    Copyright 2006-2011 Pierre Ossman <ossman@cendio.se> for Cendio AB
+   Copyright 2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -219,7 +220,10 @@ xclip_provide_selection(XSelectionRequestEvent * req, Atom type, unsigned int fo
 {
 	XEvent xev;
 
-	DEBUG_CLIPBOARD(("xclip_provide_selection: requestor=0x%08x, target=%s, property=%s, length=%u\n", (unsigned) req->requestor, XGetAtomName(g_display, req->target), XGetAtomName(g_display, req->property), (unsigned) length));
+	logger(Clipboard, Debug,
+	       "xclip_provide_selection(), requestor=0x%08x, target=%s, property=%s, length=%u",
+	       (unsigned) req->requestor, XGetAtomName(g_display, req->target),
+	       XGetAtomName(g_display, req->property), (unsigned) length);
 
 	XChangeProperty(g_display, req->requestor, req->property,
 			type, format, PropModeReplace, data, length);
@@ -243,9 +247,10 @@ xclip_refuse_selection(XSelectionRequestEvent * req)
 {
 	XEvent xev;
 
-	DEBUG_CLIPBOARD(("xclip_refuse_selection: requestor=0x%08x, target=%s, property=%s\n",
-			 (unsigned) req->requestor, XGetAtomName(g_display, req->target),
-			 XGetAtomName(g_display, req->property)));
+	logger(Clipboard, Debug,
+	       "xclip_refuse_selection(), requestor=0x%08x, target=%s, property=%s",
+	       (unsigned) req->requestor, XGetAtomName(g_display, req->target),
+	       XGetAtomName(g_display, req->property));
 
 	xev.xselection.type = SelectionNotify;
 	xev.xselection.serial = 0;
@@ -286,8 +291,8 @@ helper_cliprdr_send_empty_response()
 static RD_BOOL
 xclip_send_data_with_convert(uint8 * source, size_t source_size, Atom target)
 {
-	DEBUG_CLIPBOARD(("xclip_send_data_with_convert: target=%s, size=%u\n",
-			 XGetAtomName(g_display, target), (unsigned) source_size));
+	logger(Clipboard, Debug, "xclip_send_data_with_convert(), target=%s, size=%u",
+	       XGetAtomName(g_display, target), (unsigned) source_size);
 
 #ifdef USE_UNICODE_CLIPBOARD
 	if (target == format_string_atom ||
@@ -317,7 +322,9 @@ xclip_send_data_with_convert(uint8 * source, size_t source_size, Atom target)
 			cd = iconv_open(WINDOWS_CODEPAGE, locale_charset);
 			if (cd == (iconv_t) - 1)
 			{
-				DEBUG_CLIPBOARD(("Locale charset %s not found in iconv. Unable to convert clipboard text.\n", locale_charset));
+				logger(Clipboard, Error,
+				       "xclip_send_data_with_convert(), convert failed, locale charset %s not found",
+				       locale_charset);
 				return False;
 			}
 			unicode_buffer_size = source_size * 4;
@@ -362,8 +369,9 @@ xclip_send_data_with_convert(uint8 * source, size_t source_size, Atom target)
 		translated_data = utf16_lf2crlf((uint8 *) unicode_buffer, &translated_data_size);
 		if (translated_data != NULL)
 		{
-			DEBUG_CLIPBOARD(("Sending Unicode string of %d bytes\n",
-					 translated_data_size));
+			logger(Clipboard, Debug,
+			       "xclip_send_data_with_convert(), sending unicode string of %d bytes",
+			       translated_data_size);
 			helper_cliprdr_send_response(translated_data, translated_data_size);
 			xfree(translated_data);	/* Not the same thing as XFree! */
 		}
@@ -381,7 +389,8 @@ xclip_send_data_with_convert(uint8 * source, size_t source_size, Atom target)
 		if (rdp_clipboard_request_format != RDP_CF_TEXT)
 			return False;
 
-		DEBUG_CLIPBOARD(("Translating linebreaks before sending data\n"));
+		logger(Clipboard, Debug,
+		       "xclip_send_data_with_convert(), translating linebreaks before sending data");
 		translated_data = lf2crlf(source, &length);
 		if (translated_data != NULL)
 		{
@@ -426,12 +435,13 @@ xclip_probe_selections()
 
 	if (probing_selections)
 	{
-		DEBUG_CLIPBOARD(("Already probing selections. Scheduling reprobe.\n"));
+		logger(Clipboard, Debug,
+		       "xclip_probe_selection(), already probing selections, scheduling reprobe");
 		reprobe_selections = True;
 		return;
 	}
 
-	DEBUG_CLIPBOARD(("Probing selections.\n"));
+	logger(Clipboard, Debug, "xclip_probe_selection(), probing selections");
 
 	probing_selections = True;
 	reprobe_selections = False;
@@ -477,7 +487,7 @@ xclip_probe_selections()
 		return;
 	}
 
-	DEBUG_CLIPBOARD(("No owner of any selection.\n"));
+	logger(Clipboard, Debug, "xclip_probe_selection(), no owner of any selection");
 
 	/* FIXME:
 	   Without XFIXES, we cannot reliably know the formats offered by an
@@ -507,10 +517,10 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 	if (event->property == None)
 		goto fail;
 
-	DEBUG_CLIPBOARD(("xclip_handle_SelectionNotify: selection=%s, target=%s, property=%s\n",
-			 XGetAtomName(g_display, event->selection),
-			 XGetAtomName(g_display, event->target),
-			 XGetAtomName(g_display, event->property)));
+	logger(Clipboard, Debug,
+	       "xclip_handle_SelectionNotify(), selection=%s, target=%s, property=%s",
+	       XGetAtomName(g_display, event->selection), XGetAtomName(g_display, event->target),
+	       XGetAtomName(g_display, event->property));
 
 	if (event->target == timestamp_atom)
 	{
@@ -532,7 +542,8 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 
 		if ((res != Success) || (nitems != 1) || (format != 32))
 		{
-			DEBUG_CLIPBOARD(("XGetWindowProperty failed!\n"));
+			logger(Clipboard, Error,
+			       "xclip_handle_SelectionNotify(), XGetWindowProperty failed");
 			goto fail;
 		}
 
@@ -542,8 +553,9 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 			if (primary_timestamp == 0)
 				primary_timestamp++;
 			XDeleteProperty(g_display, g_wnd, rdesktop_primary_timestamp_target_atom);
-			DEBUG_CLIPBOARD(("Got PRIMARY timestamp: %u\n",
-					 (unsigned) primary_timestamp));
+			logger(Clipboard, Debug,
+			       "xclip_handle_SelectionNotify(), got PRIMARY timestamp: %u",
+			       (unsigned) primary_timestamp);
 		}
 		else
 		{
@@ -551,8 +563,9 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 			if (clipboard_timestamp == 0)
 				clipboard_timestamp++;
 			XDeleteProperty(g_display, g_wnd, rdesktop_clipboard_timestamp_target_atom);
-			DEBUG_CLIPBOARD(("Got CLIPBOARD timestamp: %u\n",
-					 (unsigned) clipboard_timestamp));
+			logger(Clipboard, Debug,
+			       "xclip_handle_SelectionNotify(), got CLIPBOARD timestamp: %u",
+			       (unsigned) clipboard_timestamp);
 		}
 
 		XFree(data);
@@ -561,14 +574,16 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 		{
 			if (primary_timestamp > clipboard_timestamp)
 			{
-				DEBUG_CLIPBOARD(("PRIMARY is most recent selection.\n"));
+				logger(Clipboard, Debug,
+				       "xclip_handle_SelectionNotify(), PRIMARY is most recent selection");
 				XConvertSelection(g_display, primary_atom, targets_atom,
 						  rdesktop_clipboard_target_atom, g_wnd,
 						  event->time);
 			}
 			else
 			{
-				DEBUG_CLIPBOARD(("CLIPBOARD is most recent selection.\n"));
+				logger(Clipboard, Debug,
+				       "xclip_handle_SelectionNotify(), CLIPBOARD is most recent selection");
 				XConvertSelection(g_display, clipboard_atom, targets_atom,
 						  rdesktop_clipboard_target_atom, g_wnd,
 						  event->time);
@@ -593,13 +608,14 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 
 	if (res != Success)
 	{
-		DEBUG_CLIPBOARD(("XGetWindowProperty failed!\n"));
+		logger(Clipboard, Error,
+		       "xclip_handle_SelectionNotify(), XGetWindowProperty() failed");
 		goto fail;
 	}
 
 	if (type == incr_atom)
 	{
-		DEBUG_CLIPBOARD(("Received INCR.\n"));
+		logger(Clipboard, Debug, "xclip_handle_SelectionNotify(), received INCR");
 
 		XGetWindowAttributes(g_display, g_wnd, &wa);
 		if ((wa.your_event_mask | PropertyChangeMask) != wa.your_event_mask)
@@ -627,13 +643,15 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 			supported_targets = (Atom *) data;
 			for (i = 0; i < nitems; i++)
 			{
-				DEBUG_CLIPBOARD(("Target %d: %s\n", i,
-						 XGetAtomName(g_display, supported_targets[i])));
+				logger(Clipboard, Debug,
+				       "xclip_handle_SelectionNotify(), target %d: %s", i,
+				       XGetAtomName(g_display, supported_targets[i]));
 				if (supported_targets[i] == format_string_atom)
 				{
 					if (text_target_satisfaction < 1)
 					{
-						DEBUG_CLIPBOARD(("Other party supports STRING, choosing that as best_target\n"));
+						logger(Clipboard, Debug,
+						       "xclip_handle_SelectionNotify(), other party supports STRING, choosing that as best_target");
 						best_text_target = supported_targets[i];
 						text_target_satisfaction = 1;
 					}
@@ -643,7 +661,8 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 				{
 					if (text_target_satisfaction < 2)
 					{
-						DEBUG_CLIPBOARD(("Other party supports text/unicode, choosing that as best_target\n"));
+						logger(Clipboard, Debug,
+						       "xclip_handle_SelectionNotify(), other party supports text/unicode, choosing that as best_target");
 						best_text_target = supported_targets[i];
 						text_target_satisfaction = 2;
 					}
@@ -652,7 +671,8 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 				{
 					if (text_target_satisfaction < 3)
 					{
-						DEBUG_CLIPBOARD(("Other party supports UTF8_STRING, choosing that as best_target\n"));
+						logger(Clipboard, Debug,
+						       "xclip_handle_SelectionNotify(), other party supports UTF8_STRING, choosing that as best_target");
 						best_text_target = supported_targets[i];
 						text_target_satisfaction = 3;
 					}
@@ -662,7 +682,8 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 				{
 					if (probing_selections && (text_target_satisfaction < 4))
 					{
-						DEBUG_CLIPBOARD(("Other party supports native formats, choosing that as best_target\n"));
+						logger(Clipboard, Debug,
+						       "xclip_handle_SelectionNotify(), other party supports native formats, choosing that as best_target");
 						best_text_target = supported_targets[i];
 						text_target_satisfaction = 4;
 					}
@@ -683,7 +704,8 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 		}
 		else
 		{
-			DEBUG_CLIPBOARD(("Unable to find a textual target to satisfy RDP clipboard text request\n"));
+			logger(Clipboard, Error,
+			       "xclip_handle_SelectionNotify(), unable to find a textual target to satisfy RDP clipboard text request");
 			goto fail;
 		}
 	}
@@ -709,7 +731,8 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 			if (primary_owner != clipboard_owner)
 				goto fail;
 
-			DEBUG_CLIPBOARD(("Got fellow rdesktop formats\n"));
+			logger(Clipboard, Debug,
+			       "xclip_handle_SelectionNotify(), got fellow rdesktop formats");
 			probing_selections = False;
 			rdesktop_is_selection_owner = True;
 			cliprdr_send_native_format_announce(data, nitems);
@@ -730,7 +753,8 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 	xclip_clear_target_props();
 	if (probing_selections)
 	{
-		DEBUG_CLIPBOARD(("Unable to find suitable target. Using default text format.\n"));
+		logger(Clipboard, Debug,
+		       "xclip_handle_SelectionNotify(), unable to find suitable target, using default text format");
 		probing_selections = False;
 		rdesktop_is_selection_owner = False;
 
@@ -759,10 +783,10 @@ xclip_handle_SelectionRequest(XSelectionRequestEvent * event)
 	int format, res;
 	Atom type;
 
-	DEBUG_CLIPBOARD(("xclip_handle_SelectionRequest: selection=%s, target=%s, property=%s\n",
-			 XGetAtomName(g_display, event->selection),
-			 XGetAtomName(g_display, event->target),
-			 XGetAtomName(g_display, event->property)));
+	logger(Clipboard, Debug,
+	       "xclip_handle_SelectionRequest(), selection=%s, target=%s, property=%s",
+	       XGetAtomName(g_display, event->selection), XGetAtomName(g_display, event->target),
+	       XGetAtomName(g_display, event->property));
 
 	if (event->target == targets_atom)
 	{
@@ -785,7 +809,8 @@ xclip_handle_SelectionRequest(XSelectionRequestEvent * event)
 		   handle one such request at a time. */
 		if (has_selection_request)
 		{
-			DEBUG_CLIPBOARD(("Error: Another clipboard request was already sent to the RDP server and not yet responded. Refusing this request.\n"));
+			logger(Clipboard, Warning,
+			       "xclip_handle_SelectionRequest(), overlapping clipboard request, skipping.");
 			xclip_refuse_selection(event);
 			return;
 		}
@@ -799,7 +824,8 @@ xclip_handle_SelectionRequest(XSelectionRequestEvent * event)
 						 &prop_return);
 			if (res != Success || (!prop_return))
 			{
-				DEBUG_CLIPBOARD(("Requested native format but didn't specifiy which.\n"));
+				logger(Clipboard, Error,
+				       "xclip_handle_SelectionRequest(), requested native format without specify which");
 				xclip_refuse_selection(event);
 				return;
 			}
@@ -817,7 +843,8 @@ xclip_handle_SelectionRequest(XSelectionRequestEvent * event)
 #ifdef USE_UNICODE_CLIPBOARD
 			format = CF_UNICODETEXT;
 #else
-			DEBUG_CLIPBOARD(("Requested target unavailable due to lack of Unicode support. (It was not in TARGETS, so why did you ask for it?!)\n"));
+			logger(Clipboard, Warning,
+			       "xclip_handle_SelectionRequest(), target unavailable due to lack of unicode support");
 			xclip_refuse_selection(event);
 			return;
 #endif
@@ -829,7 +856,9 @@ xclip_handle_SelectionRequest(XSelectionRequestEvent * event)
 		}
 		else
 		{
-			DEBUG_CLIPBOARD(("Requested target unavailable. (It was not in TARGETS, so why did you ask for it?!)\n"));
+			logger(Clipboard, Warning,
+			       "xclip_handle_SelectionRequest(), unsupported target format, target='%s'",
+			       XGetAtomName(g_display, event->target));
 			xclip_refuse_selection(event);
 			return;
 		}
@@ -851,7 +880,7 @@ xclip_handle_SelectionRequest(XSelectionRequestEvent * event)
 void
 xclip_handle_SelectionClear(void)
 {
-	DEBUG_CLIPBOARD(("xclip_handle_SelectionClear\n"));
+	logger(Clipboard, Debug, "xclip_handle_SelectionClear()");
 	xclip_notify_change();
 	xclip_probe_selections();
 }
@@ -870,7 +899,7 @@ xclip_handle_PropertyNotify(XPropertyEvent * event)
 
 	if (event->state == PropertyNewValue && g_waiting_for_INCR)
 	{
-		DEBUG_CLIPBOARD(("x_clip_handle_PropertyNotify: g_waiting_for_INCR != 0\n"));
+		logger(Clipboard, Debug, "xclip_handle_PropertyNotify(), g_waiting_for_INCR != 0");
 
 		while (bytes_left > 0)
 		{
@@ -940,11 +969,11 @@ ui_clip_format_announce(uint8 * data, uint32 length)
 
 	XSetSelectionOwner(g_display, primary_atom, g_wnd, acquire_time);
 	if (XGetSelectionOwner(g_display, primary_atom) != g_wnd)
-		warning("Failed to aquire ownership of PRIMARY clipboard\n");
+		logger(Clipboard, Warning, "failed to aquire ownership of PRIMARY clipboard");
 
 	XSetSelectionOwner(g_display, clipboard_atom, g_wnd, acquire_time);
 	if (XGetSelectionOwner(g_display, clipboard_atom) != g_wnd)
-		warning("Failed to aquire ownership of CLIPBOARD clipboard\n");
+		logger(Clipboard, Warning, "failed to aquire ownership of CLIPBOARD clipboard");
 
 	if (formats_data)
 		xfree(formats_data);
@@ -1024,7 +1053,9 @@ ui_clip_handle_data(uint8 * data, uint32 length)
 	}
 	else
 	{
-		DEBUG_CLIPBOARD(("ui_clip_handle_data: BUG! I don't know how to convert selection target %s!\n", XGetAtomName(g_display, selection_request.target)));
+		logger(Clipboard, Debug,
+		       "ui_clip_handle_data(), no handler for selection target '%s'",
+		       XGetAtomName(g_display, selection_request.target));
 		xclip_refuse_selection(&selection_request);
 		has_selection_request = False;
 		return;
@@ -1049,12 +1080,13 @@ ui_clip_request_data(uint32 format)
 {
 	Window primary_owner, clipboard_owner;
 
-	DEBUG_CLIPBOARD(("Request from server for format %d\n", format));
+	logger(Clipboard, Debug, "request from server for format %d", format);
 	rdp_clipboard_request_format = format;
 
 	if (probing_selections)
 	{
-		DEBUG_CLIPBOARD(("ui_clip_request_data: Selection probe in progress. Cannot handle request.\n"));
+		logger(Clipboard, Debug,
+		       "ui_clip_request_data(), selection probe in progress, cannot handle request");
 		helper_cliprdr_send_empty_response();
 		return;
 	}
@@ -1127,7 +1159,7 @@ ui_clip_set_mode(const char *optarg)
 		auto_mode = False;
 	else
 	{
-		warning("Invalid clipboard mode '%s'.\n", optarg);
+		logger(Clipboard, Warning, "invalid clipboard mode '%s'", optarg);
 		g_rdpclip = False;
 	}
 }
