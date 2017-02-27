@@ -15,12 +15,12 @@ to install rdesktop is the following::
 	% make
 	% make install
 
-The default is to install under /usr/local.  This can be changed by adding
---prefix=directory to the configure line.
+The default is to install under `/usr/local`.  This can be changed by adding
+`--prefix=directory` to the configure line.
 
 The smart-card support module uses PCSC-lite. You should use PCSC-lite 1.2.9 or
-later. To enable smart-card support in the rdesktop just run `./configure` with the
-`--enable-smartcard` option.
+later. To enable smart-card support in the rdesktop add `--enable-smartcard` to
+the configure line.
 
 
 ## Note for users building from source
