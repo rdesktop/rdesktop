@@ -293,8 +293,14 @@ iso_connect(char *server, char *username, char *domain, char *password,
 
 			if (retry_without_neg)
 			{
-				logger(Core, Notice,
-				       "Failed to negotiate protocol, retrying with plain RDP.");
+				if (reason != NULL)
+				{
+					logger(Protocol, Warning,
+					       "Protocol negotation failed with reason: %s",
+					       reason);
+				}
+
+				logger(Core, Notice, "Retrying with plain RDP.");
 				g_negotiate_rdp_protocol = False;
 				goto retry;
 			}
