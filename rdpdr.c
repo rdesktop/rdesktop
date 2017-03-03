@@ -241,10 +241,10 @@ announcedata_size()
 
 	for (i = 0; i < g_num_devices; i++)
 	{
-		size += 4;  /* DeviceType */
-		size += 4;  /* DeviceId */
-		size += 8;  /* PreferredDosName */
-		size += 4;  /* DeviceDataLength */
+		size += 4;	/* DeviceType */
+		size += 4;	/* DeviceId */
+		size += 8;	/* PreferredDosName */
+		size += 4;	/* DeviceDataLength */
 
 		switch (g_rdpdr_device[i].device_type)
 		{
@@ -255,7 +255,8 @@ announcedata_size()
 			case DEVICE_TYPE_PRINTER:
 				printerinfo = (PRINTER *) g_rdpdr_device[i].pdevice_data;
 				printerinfo->bloblen =
-					printercache_load_blob(printerinfo->printer, &(printerinfo->blob));
+					printercache_load_blob(printerinfo->printer,
+							       &(printerinfo->blob));
 
 				size += 0x18;
 				size += 2 * strlen(printerinfo->driver) + 2;
@@ -286,11 +287,11 @@ rdpdr_send_client_device_list_announce(void)
 
 	out_uint32_le(s, g_num_devices);
 
-	for (i = 0; i < g_num_devices; i++) /* DEVICE_ANNOUNCE */
+	for (i = 0; i < g_num_devices; i++)	/* DEVICE_ANNOUNCE */
 	{
 		out_uint32_le(s, g_rdpdr_device[i].device_type);
 		out_uint32_le(s, i);	/* RDP Device ID */
-		out_uint8p(s, g_rdpdr_device[i].name, 8); /* preferredDosName, limited to 8 characters */
+		out_uint8p(s, g_rdpdr_device[i].name, 8);	/* preferredDosName, limited to 8 characters */
 		switch (g_rdpdr_device[i].device_type)
 		{
 			case DEVICE_TYPE_DISK:
@@ -303,8 +304,8 @@ rdpdr_send_client_device_list_announce(void)
 
 				disklen = strlen(diskinfo->name) + 1;
 
-				out_uint32_le(s, disklen); /* DeviceDataLength */
-				out_uint8p(s, diskinfo->name, disklen); /* DeviceData */
+				out_uint32_le(s, disklen);	/* DeviceDataLength */
+				out_uint8p(s, diskinfo->name, disklen);	/* DeviceData */
 				break;
 
 			case DEVICE_TYPE_PRINTER:

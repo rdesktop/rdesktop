@@ -242,7 +242,8 @@ ftruncate_growable(int fd, off_t length)
 	/* Truncate. This shouldn't fail. */
 	if (ftruncate(fd, length) == -1)
 	{
-		logger(Core, Error, "ftruncate_growable(), ftruncate() failed: %s", strerror(errno));
+		logger(Core, Error, "ftruncate_growable(), ftruncate() failed: %s",
+		       strerror(errno));
 		return -1;
 	}
 
