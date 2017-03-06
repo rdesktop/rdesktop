@@ -9,7 +9,7 @@ and 5 protocols.
 ## Installation
 
 rdesktop uses a GNU-style build procedure.  Typically all that is necessary
-to install rdesktop is the following::
+to install rdesktop is the following:
 
 	% ./configure
 	% make
