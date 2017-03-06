@@ -32,7 +32,7 @@ This is not necessary for release versions of rdesktop.
 
 ## Usage
 
-Connect to an RDP server like:
+Connect to an RDP server with:
 
 	% rdesktop server
 
