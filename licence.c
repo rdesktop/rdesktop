@@ -63,7 +63,7 @@ static void
 licence_info(uint8 * client_random, uint8 * rsa_data,
 	     uint8 * licence_data, int licence_size, uint8 * hwid, uint8 * signature)
 {
-	uint32 sec_flags = SEC_LICENCE_NEG;
+	uint32 sec_flags = SEC_LICENSE_PKT;
 	uint16 length =
 		24 + SEC_RANDOM_SIZE + SEC_MODULUS_SIZE + SEC_PADDING_SIZE +
 		licence_size + LICENCE_HWID_SIZE + LICENCE_SIGNATURE_SIZE;
@@ -103,7 +103,7 @@ licence_info(uint8 * client_random, uint8 * rsa_data,
 static void
 licence_send_new_licence_request(uint8 * client_random, uint8 * rsa_data, char *user, char *host)
 {
-	uint32 sec_flags = SEC_LICENCE_NEG;
+	uint32 sec_flags = SEC_LICENSE_PKT;
 	uint16 userlen = strlen(user) + 1;
 	uint16 hostlen = strlen(host) + 1;
 	uint16 length =
@@ -192,7 +192,7 @@ licence_process_request(STREAM s)
 static void
 licence_send_platform_challange_response(uint8 * token, uint8 * crypt_hwid, uint8 * signature)
 {
-	uint32 sec_flags = SEC_LICENCE_NEG;
+	uint32 sec_flags = SEC_LICENSE_PKT;
 	uint16 length = 58;
 	STREAM s;
 
