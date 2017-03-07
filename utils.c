@@ -1,7 +1,7 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    Generic utility functions
-   Copyright 2013 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2013-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -21,18 +21,14 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <errno.h>
-#ifdef HAVE_ICONV_H
 #include <iconv.h>
-#endif
+
 #include "rdesktop.h"
 
+#include "utils.h"
 
-#ifdef HAVE_ICONV
 extern char g_codepage[16];
 static RD_BOOL g_iconv_works = True;
-#endif
-
-
 
 char *
 utils_string_escape(const char *str)
@@ -177,7 +173,6 @@ utils_mkdir_p(const char *path, int mask)
 int
 utils_locale_to_utf8(const char *src, size_t is, char *dest, size_t os)
 {
-#ifdef HAVE_ICONV
 	static iconv_t *iconv_h = (iconv_t) - 1;
 	if (strncmp(g_codepage, "UTF-8", strlen("UTF-8")) == 0)
 		goto pass_trough_as_is;
@@ -190,8 +185,9 @@ utils_locale_to_utf8(const char *src, size_t is, char *dest, size_t os)
 	{
 		if ((iconv_h = iconv_open("UTF-8", g_codepage)) == (iconv_t) - 1)
 		{
-			warning("utils_string_to_utf8: iconv_open[%s -> %s] fail %p\n",
-				g_codepage, "UTF-8", iconv_h);
+			logger(Core, Warning,
+			       "utils_string_to_utf8(), iconv_open[%s -> %s] fail %p", g_codepage,
+			       "UTF-8", iconv_h);
 
 			g_iconv_works = False;
 			goto pass_trough_as_is;
@@ -199,11 +195,11 @@ utils_locale_to_utf8(const char *src, size_t is, char *dest, size_t os)
 	}
 
 	/* convert string */
-	if (iconv(iconv_h, (ICONV_CONST char **) &src, &is, &dest, &os) == (size_t) - 1)
+	if (iconv(iconv_h, (char **) &src, &is, &dest, &os) == (size_t) - 1)
 	{
 		iconv_close(iconv_h);
 		iconv_h = (iconv_t) - 1;
-		warning("utils_string_to_utf8: iconv(1) fail, errno %d\n", errno);
+		logger(Core, Warning, "utils_string_to_utf8, iconv(1) fail, errno %d", errno);
 
 		g_iconv_works = False;
 		goto pass_trough_as_is;
@@ -213,7 +209,6 @@ utils_locale_to_utf8(const char *src, size_t is, char *dest, size_t os)
 	if (is != 0)
 		return -1;
 
-#endif
       pass_trough_as_is:
 	/* can dest hold strcpy of src */
 	if (os < (strlen(src) + 1))
@@ -221,4 +216,154 @@ utils_locale_to_utf8(const char *src, size_t is, char *dest, size_t os)
 
 	memcpy(dest, src, strlen(src) + 1);
 	return 0;
+}
+
+
+/*
+ * component logging
+ *
+ */
+#include <stdarg.h>
+
+static char *level[] = {
+	"debug",
+	"verbose",		/* Verbose mesasge for end user, no prefixed lines */
+	"warning",
+	"error",
+	"notice"		/* Normal messages for end user, no prefixed lines */
+};
+
+static char *subject[] = {
+	"UI",
+	"Keyboard",
+	"Clipboard",
+	"Sound",
+	"Protocol",
+	"Graphics",
+	"Core",
+	"SmartCard"
+};
+
+static log_level_t _logger_level = Warning;
+
+#define DEFAULT_LOGGER_SUBJECTS (1 << Core);
+
+#define ALL_LOGGER_SUBJECTS			\
+	  (1 << GUI)				\
+	| (1 << Keyboard)			\
+	| (1 << Clipboard)			\
+	| (1 << Sound)				\
+	| (1 << Protocol)			\
+	| (1 << Graphics)			\
+	| (1 << Core)				\
+	| (1 << SmartCard)
+
+
+static int _logger_subjects = DEFAULT_LOGGER_SUBJECTS;
+
+void
+logger(log_subject_t s, log_level_t lvl, char *format, ...)
+{
+	va_list ap;
+	char buf[1024];
+
+	// Do not log if message is below global log level
+	if (_logger_level > lvl)
+		return;
+
+	// Skip debug logging for non specified subjects
+	if (lvl < Verbose && !(_logger_subjects & (1 << s)))
+		return;
+
+	va_start(ap, format);
+	vsnprintf(buf, sizeof(buf), format, ap);
+
+	// Notice and Verbose messages goes without prefix
+	if (lvl == Notice || lvl == Verbose)
+		fprintf(stdout, "%s\n", buf);
+	else
+		fprintf(stderr, "%s(%s): %s\n", subject[s], level[lvl], buf);
+
+	va_end(ap);
+}
+
+void
+logger_set_verbose(int verbose)
+{
+	if (_logger_level < Verbose)
+		return;
+
+	if (verbose)
+		_logger_level = Verbose;
+	else
+		_logger_level = Warning;
+}
+
+void
+logger_set_subjects(char *subjects)
+{
+	int clear;
+	int bit;
+	char *pcs;
+	char *token;
+
+	if (!subjects || !strlen(subjects))
+		return;
+
+	pcs = strdup(subjects);
+
+	token = strtok(pcs, ",");
+	if (token == NULL)
+	{
+		free(pcs);
+		return;
+	}
+
+	_logger_subjects = 0;
+
+	do
+	{
+
+		if (token == NULL)
+			break;
+
+		bit = 0;
+		clear = (token[0] == '-') ? 1 : 0;
+
+		if (clear == 1)
+			token++;
+
+		if (strcmp(token, "All") == 0)
+			_logger_subjects |= ALL_LOGGER_SUBJECTS;
+		else if (strcmp(token, "UI") == 0)
+			bit = (1 << GUI);
+		else if (strcmp(token, "Keyboard") == 0)
+			bit = (1 << Keyboard);
+		else if (strcmp(token, "Clipboard") == 0)
+			bit = (1 << Clipboard);
+		else if (strcmp(token, "Sound") == 0)
+			bit = (1 << Sound);
+		else if (strcmp(token, "Protocol") == 0)
+			bit = (1 << Protocol);
+		else if (strcmp(token, "Graphics") == 0)
+			bit = (1 << Graphics);
+		else if (strcmp(token, "Core") == 0)
+			bit = (1 << Core);
+		else if (strcmp(token, "SmartCard") == 0)
+			bit = (1 << SmartCard);
+		else
+			continue;
+
+		// set or clear logger subject bit
+		if (clear)
+			_logger_subjects &= ~bit;
+		else
+			_logger_subjects |= bit;
+
+	}
+	while ((token = strtok(NULL, ",")) != NULL);
+
+	_logger_level = Debug;
+
+	free(pcs);
 }

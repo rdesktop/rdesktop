@@ -2,7 +2,8 @@
    rdesktop: A Remote Desktop Protocol client.
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2004-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
-   Copyright 2010-2014 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2010-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2017 Karl Mikaelsson <derfian@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -234,22 +235,36 @@ announcedata_size()
 {
 	int size, i;
 	PRINTER *printerinfo;
+	DISK_DEVICE *diskinfo;
 
-	size = 8;		/* static announce size */
-	size += g_num_devices * 0x14;
+	size = 8;		/* Header + DeviceCount */
 
 	for (i = 0; i < g_num_devices; i++)
 	{
-		if (g_rdpdr_device[i].device_type == DEVICE_TYPE_PRINTER)
-		{
-			printerinfo = (PRINTER *) g_rdpdr_device[i].pdevice_data;
-			printerinfo->bloblen =
-				printercache_load_blob(printerinfo->printer, &(printerinfo->blob));
+		size += 4;	/* DeviceType */
+		size += 4;	/* DeviceId */
+		size += 8;	/* PreferredDosName */
+		size += 4;	/* DeviceDataLength */
 
-			size += 0x18;
-			size += 2 * strlen(printerinfo->driver) + 2;
-			size += 2 * strlen(printerinfo->printer) + 2;
-			size += printerinfo->bloblen;
+		switch (g_rdpdr_device[i].device_type)
+		{
+			case DEVICE_TYPE_DISK:
+				diskinfo = (DISK_DEVICE *) g_rdpdr_device[i].pdevice_data;
+				size += 2 * strlen(diskinfo->name) + 2;
+				break;
+			case DEVICE_TYPE_PRINTER:
+				printerinfo = (PRINTER *) g_rdpdr_device[i].pdevice_data;
+				printerinfo->bloblen =
+					printercache_load_blob(printerinfo->printer,
+							       &(printerinfo->blob));
+
+				size += 0x18;
+				size += 2 * strlen(printerinfo->driver) + 2;
+				size += 2 * strlen(printerinfo->printer) + 2;
+				size += printerinfo->bloblen;
+				break;
+			default:
+				break;
 		}
 	}
 
@@ -260,10 +275,11 @@ static void
 rdpdr_send_client_device_list_announce(void)
 {
 	/* DR_CORE_CLIENT_ANNOUNCE_RSP */
-	uint32 driverlen, printerlen, bloblen;
+	uint32 driverlen, printerlen, bloblen, disklen, flags;
 	int i;
 	STREAM s;
 	PRINTER *printerinfo;
+	DISK_DEVICE *diskinfo;
 
 	s = channel_init(rdpdr_channel, announcedata_size());
 	out_uint16_le(s, RDPDR_CTYP_CORE);
@@ -271,32 +287,48 @@ rdpdr_send_client_device_list_announce(void)
 
 	out_uint32_le(s, g_num_devices);
 
-	for (i = 0; i < g_num_devices; i++)
+	for (i = 0; i < g_num_devices; i++)	/* DEVICE_ANNOUNCE */
 	{
 		out_uint32_le(s, g_rdpdr_device[i].device_type);
 		out_uint32_le(s, i);	/* RDP Device ID */
-		/* Is it possible to use share names longer than 8 chars?
-		   /astrand */
-		out_uint8p(s, g_rdpdr_device[i].name, 8);
-
+		out_uint8p(s, g_rdpdr_device[i].name, 8);	/* preferredDosName, limited to 8 characters */
 		switch (g_rdpdr_device[i].device_type)
 		{
+			case DEVICE_TYPE_DISK:
+				diskinfo = (DISK_DEVICE *) g_rdpdr_device[i].pdevice_data;
+
+				/* The RDP specification says that the DeviceData is supposed to be
+				   a null-terminated Unicode string, but that does not work. In
+				   practice the string is expected to be an ASCII string, like a
+				   variable-length preferredDosName. */
+
+				disklen = strlen(diskinfo->name) + 1;
+
+				out_uint32_le(s, disklen);	/* DeviceDataLength */
+				out_uint8p(s, diskinfo->name, disklen);	/* DeviceData */
+				break;
+
 			case DEVICE_TYPE_PRINTER:
 				printerinfo = (PRINTER *) g_rdpdr_device[i].pdevice_data;
 
 				driverlen = 2 * strlen(printerinfo->driver) + 2;
 				printerlen = 2 * strlen(printerinfo->printer) + 2;
 				bloblen = printerinfo->bloblen;
+				flags = 0;
+				if (printerinfo->default_printer)
+					flags |= RDPDR_PRINTER_ANNOUNCE_FLAG_DEFAULTPRINTER;
 
-				out_uint32_le(s, 24 + driverlen + printerlen + bloblen);	/* length of extra info */
-				out_uint32_le(s, printerinfo->default_printer ? 2 : 0);
-				out_uint8s(s, 8);	/* unknown */
-				out_uint32_le(s, driverlen);
-				out_uint32_le(s, printerlen);
-				out_uint32_le(s, bloblen);
-				rdp_out_unistr(s, printerinfo->driver, driverlen - 2);
-				rdp_out_unistr(s, printerinfo->printer, printerlen - 2);
-				out_uint8a(s, printerinfo->blob, bloblen);
+				out_uint32_le(s, 24 + driverlen + printerlen + bloblen);	/* DeviceDataLength */
+				out_uint32_le(s, flags);	/* Flags */
+				out_uint32_le(s, 0);	/* Codepage */
+				out_uint32_le(s, 0);	/* PnPNameLen */
+				out_uint32_le(s, driverlen);	/* DriverNameLen */
+				out_uint32_le(s, printerlen);	/* PrinterNameLen */
+				out_uint32_le(s, bloblen);	/* CachedFieldsLen */
+				rdp_out_unistr(s, NULL, 0);	/* PnPName */
+				rdp_out_unistr(s, printerinfo->driver, driverlen - 2);	/* DriverName */
+				rdp_out_unistr(s, printerinfo->printer, printerlen - 2);	/* PrinterName */
+				out_uint8a(s, printerinfo->blob, bloblen);	/* CachedPrinterConfigData */
 
 				if (printerinfo->blob)
 					xfree(printerinfo->blob);	/* Blob is sent twice if reconnecting */
@@ -328,11 +360,10 @@ rdpdr_send_completion(uint32 device, uint32 id, uint32 status, uint32 result, ui
 	out_uint32_le(s, result);
 	out_uint8p(s, buffer, length);
 	s_mark_end(s);
-	/* JIF */
-#ifdef WITH_DEBUG_RDP5
-	printf("--> rdpdr_send_completion\n");
+
+	logger(Protocol, Debug, "rdpdr_send_completion()");
 	/* hexdump(s->channel_hdr + 8, s->end - s->channel_hdr - 8); */
-#endif
+
 	channel_send(s, rdpdr_channel);
 #ifdef WITH_SCARD
 	scard_unlock(SCARD_LOCK_RDPDR);
@@ -382,8 +413,9 @@ rdpdr_process_irp(STREAM s)
 
 	if (device >= RDPDR_MAX_DEVICES)
 	{
-		error("invalid irp device 0x%lx file 0x%lx id 0x%lx major 0x%lx minor 0x%lx\n",
-		      device, file, id, major, minor);
+		logger(Protocol, Error,
+		       "rdpdr_process_irp(), invalid irp device=0x%lx, file=0x%lx, id=0x%lx, major=0x%lx, minor=0x%lx",
+		       device, file, id, major, minor);
 		xfree(buffer);
 		return;
 	}
@@ -420,8 +452,9 @@ rdpdr_process_irp(STREAM s)
 			break;
 #endif
 		default:
-
-			error("IRP for bad device %ld\n", device);
+			logger(Protocol, Error,
+			       "rdpdr_process_irp(), received IRP for unknown device type %ld",
+			       device);
 			xfree(buffer);
 			return;
 	}
@@ -479,9 +512,11 @@ rdpdr_process_irp(STREAM s)
 
 			in_uint32_le(s, length);
 			in_uint32_le(s, offset);
-#if WITH_DEBUG_RDP5
-			DEBUG(("RDPDR IRP Read (length: %d, offset: %d)\n", length, offset));
-#endif
+
+			logger(Protocol, Debug,
+			       "rdpdr_process_irp(), IRP Read length=%d, offset=%d", length,
+			       offset);
+
 			if (!rdpdr_handle_ok(device, file))
 			{
 				status = RD_STATUS_INVALID_HANDLE;
@@ -532,9 +567,9 @@ rdpdr_process_irp(STREAM s)
 			in_uint32_le(s, length);
 			in_uint32_le(s, offset);
 			in_uint8s(s, 0x18);
-#if WITH_DEBUG_RDP5
-			DEBUG(("RDPDR IRP Write (length: %d)\n", result));
-#endif
+
+			logger(Protocol, Debug, "rdpdr_process_irp(), IRP Write length=%d", result);
+
 			if (!rdpdr_handle_ok(device, file))
 			{
 				status = RD_STATUS_INVALID_HANDLE;
@@ -668,7 +703,9 @@ rdpdr_process_irp(STREAM s)
 
 					status = RD_STATUS_INVALID_PARAMETER;
 					/* JIF */
-					unimpl("IRP major=0x%x minor=0x%x\n", major, minor);
+					logger(Protocol, Warning,
+					       "rdpdr_process_irp(), unhandled minor opcode, major=0x%x, minor=0x%x",
+					       major, minor);
 			}
 			break;
 
@@ -737,7 +774,9 @@ rdpdr_process_irp(STREAM s)
 			break;
 
 		default:
-			unimpl("IRP major=0x%x minor=0x%x\n", major, minor);
+			logger(Protocol, Warning,
+			       "rdpdr_process_irp(), unhandled major opcode, major=0x%x, minor=0x%x",
+			       major, minor);
 			break;
 	}
 
@@ -756,35 +795,40 @@ rdpdr_send_client_capability_response(void)
 	/* DR_CORE_CAPABILITY_RSP */
 	STREAM s;
 	s = channel_init(rdpdr_channel, 0x50);
-	out_uint16_le(s, RDPDR_CTYP_CORE);
-	out_uint16_le(s, PAKID_CORE_CLIENT_CAPABILITY);
-	out_uint32_le(s, 5);	/* count */
-	out_uint16_le(s, 1);	/* first */
-	out_uint16_le(s, 0x28);	/* length */
-	out_uint32_le(s, 1);
-	out_uint32_le(s, 2);
-	out_uint16_le(s, 2);
-	out_uint16_le(s, 5);
-	out_uint16_le(s, 1);
-	out_uint16_le(s, 5);
-	out_uint16_le(s, 0xFFFF);
-	out_uint16_le(s, 0);
-	out_uint32_le(s, 0);
-	out_uint32_le(s, 3);
-	out_uint32_le(s, 0);
-	out_uint32_le(s, 0);
-	out_uint16_le(s, 2);	/* second */
-	out_uint16_le(s, 8);	/* length */
-	out_uint32_le(s, 1);
-	out_uint16_le(s, 3);	/* third */
-	out_uint16_le(s, 8);	/* length */
-	out_uint32_le(s, 1);
-	out_uint16_le(s, 4);	/* fourth */
-	out_uint16_le(s, 8);	/* length */
-	out_uint32_le(s, 1);
-	out_uint16_le(s, 5);	/* fifth */
-	out_uint16_le(s, 8);	/* length */
-	out_uint32_le(s, 1);
+
+	out_uint16_le(s, RDPDR_CTYP_CORE);	/* Header */
+	out_uint16_le(s, PAKID_CORE_CLIENT_CAPABILITY);	/* Header */
+	out_uint16_le(s, 5);	/* numCapabilities */
+	out_uint16_le(s, 0);	/* Padding */
+
+	out_uint16_le(s, CAP_GENERAL_TYPE);	/* CapabilityType */
+	out_uint16_le(s, 0x28);	/* CapabilityLength */
+	out_uint32_le(s, GENERAL_CAPABILITY_VERSION_01);	/* Version */
+	out_uint32_le(s, 0);	/* osType */
+	out_uint32_le(s, 0);	/* osVersion */
+	out_uint16_le(s, 1);	/* protocolMajorVersion */
+	out_uint16_le(s, 5);	/* protocolMinorVersion */
+	out_uint32_le(s, ALL_RDPDR_IRP_MJ);	/* ioCode1 */
+	out_uint32_le(s, 0);	/* ioCode2 */
+	out_uint32_le(s, RDPDR_DEVICE_REMOVE_PDUS | RDPDR_CLIENT_DISPLAY_NAME_PDU);	/* extendedPDU */
+	out_uint32_le(s, 0);	/* extraFlags1 */
+	out_uint32_le(s, 0);	/* extraFlags2 */
+
+	out_uint16_le(s, CAP_PRINTER_TYPE);	/* CapabilityType */
+	out_uint16_le(s, 8);	/* CapabilityLength */
+	out_uint32_le(s, PRINT_CAPABILITY_VERSION_01);	/* Version */
+
+	out_uint16_le(s, CAP_PORT_TYPE);	/* CapabilityType */
+	out_uint16_le(s, 8);	/* CapabilityLength */
+	out_uint32_le(s, PORT_CAPABILITY_VERSION_01);	/* Version */
+
+	out_uint16_le(s, CAP_DRIVE_TYPE);	/* CapabilityType */
+	out_uint16_le(s, 8);	/* CapabilityLength */
+	out_uint32_le(s, DRIVE_CAPABILITY_VERSION_02);	/* Version */
+
+	out_uint16_le(s, CAP_SMARTCARD_TYPE);	/* CapabilityType */
+	out_uint16_le(s, 8);	/* CapabilityLength */
+	out_uint32_le(s, SMARTCARD_CAPABILITY_VERSION_01);	/* Version */
 
 	s_mark_end(s);
 	channel_send(s, rdpdr_channel);
@@ -798,10 +842,8 @@ rdpdr_process(STREAM s)
 	uint16 component;
 	uint16 pakid;
 
-#if WITH_DEBUG_RDP5
-	printf("--- rdpdr_process ---\n");
-	hexdump(s->p, s->end - s->p);
-#endif
+	logger(Protocol, Debug, "rdpdr_process()");
+	/* hexdump(s->p, s->end - s->p); */
 
 	in_uint16(s, component);
 	in_uint16(s, pakid);
@@ -836,9 +878,8 @@ rdpdr_process(STREAM s)
 
 			case PAKID_CORE_DEVICE_REPLY:
 				in_uint32(s, handle);
-#if WITH_DEBUG_RDP5
-				DEBUG(("RDPDR: Server connected to resource %d\n", handle));
-#endif
+				logger(Protocol, Debug,
+				       "rdpdr_process(), server connected to resource %d", handle);
 				break;
 
 			case PAKID_CORE_SERVER_CAPABILITY:
@@ -846,7 +887,9 @@ rdpdr_process(STREAM s)
 				break;
 
 			default:
-				unimpl("RDPDR pakid 0x%x of component 0x%x\n", pakid, component);
+				logger(Protocol, Debug,
+				       "rdpdr_process(), pakid 0x%x of component 0x%x", pakid,
+				       component);
 				break;
 
 		}
@@ -857,7 +900,7 @@ rdpdr_process(STREAM s)
 			printercache_process(s);
 	}
 	else
-		unimpl("RDPDR component 0x%x\n", component);
+		logger(Protocol, Warning, "rdpdr_process(), unhandled component 0x%x", component);
 }
 
 RD_BOOL
@@ -1057,17 +1100,19 @@ _rdpdr_check_fds(fd_set * rfds, fd_set * wfds, RD_BOOL timed_out)
 							iorq->partial_len += result;
 							iorq->offset += result;
 						}
-#if WITH_DEBUG_RDP5
-						DEBUG(("RDPDR: %d bytes of data read\n", result));
-#endif
+
+						logger(Protocol, Debug,
+						       "_rdpdr_check_fds(), %d bytes of data read",
+						       result);
+
 						/* only delete link if all data has been transfered */
 						/* or if result was 0 and status success - EOF      */
 						if ((iorq->partial_len == iorq->length) ||
 						    (result == 0))
 						{
-#if WITH_DEBUG_RDP5
-							DEBUG(("RDPDR: AIO total %u bytes read of %u\n", iorq->partial_len, iorq->length));
-#endif
+							logger(Protocol, Debug,
+							       "_rdpdr_check_fds(), AIO total %u bytes read of %u",
+							       iorq->partial_len, iorq->length);
 							rdpdr_send_completion(iorq->device,
 									      iorq->id, status,
 									      iorq->partial_len,
@@ -1100,18 +1145,18 @@ _rdpdr_check_fds(fd_set * rfds, fd_set * wfds, RD_BOOL timed_out)
 							iorq->offset += result;
 						}
 
-#if WITH_DEBUG_RDP5
-						DEBUG(("RDPDR: %d bytes of data written\n",
-						       result));
-#endif
+						logger(Protocol, Debug,
+						       "_rdpdr_check_fds(), %d bytes of data written",
+						       result);
+
 						/* only delete link if all data has been transfered */
 						/* or we couldn't write */
 						if ((iorq->partial_len == iorq->length)
 						    || (result == 0))
 						{
-#if WITH_DEBUG_RDP5
-							DEBUG(("RDPDR: AIO total %u bytes written of %u\n", iorq->partial_len, iorq->length));
-#endif
+							logger(Protocol, Debug,
+							       "_rdpdr_check_fds(), AIO total %u bytes written of %u",
+							       iorq->partial_len, iorq->length);
 							rdpdr_send_completion(iorq->device,
 									      iorq->id, status,
 									      iorq->partial_len,

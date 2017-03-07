@@ -3,7 +3,7 @@
    Seamless Windows support
    Copyright 2005-2008 Peter Astrand <astrand@cendio.se> for Cendio AB
    Copyright 2007-2008 Pierre Ossman <ossman@cendio.se> for Cendio AB
-   Copyright 2013-2014 Henrik Andersson  <hean01@cendio.se> for Cendio AB   
+   Copyright 2013-2017 Henrik Andersson  <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -22,12 +22,6 @@
 #include "rdesktop.h"
 #include <stdarg.h>
 #include <assert.h>
-
-#ifdef WITH_DEBUG_SEAMLESS
-#define DEBUG_SEAMLESS(args) printf args;
-#else
-#define DEBUG_SEAMLESS(args)
-#endif
 
 extern RD_BOOL g_seamless_rdp;
 static VCHANNEL *seamless_channel;
@@ -70,7 +64,7 @@ seamless_process_line(const char *line, void *data)
 	l = xstrdup(line);
 	p = l;
 
-	DEBUG_SEAMLESS(("seamlessrdp got:%s\n", p));
+	logger(Core, Debug, "seamless_process_line(), got '%s'", p);
 
 	tok1 = seamless_get_token(&p);
 	tok2 = seamless_get_token(&p);
@@ -285,7 +279,7 @@ seamless_process_line(const char *line, void *data)
 	}
 	else if (!strcmp("DEBUG", tok1))
 	{
-		DEBUG_SEAMLESS(("SeamlessRDP:%s\n", line));
+		logger(Core, Debug, "seamless_process_line(), %s", line);
 	}
 	else if (!strcmp("SYNCBEGIN", tok1))
 	{
@@ -364,7 +358,7 @@ seamless_line_handler(const char *line, void *data)
 {
 	if (!seamless_process_line(line, data))
 	{
-		warning("SeamlessRDP: Invalid request:%s\n", line);
+		logger(Core, Warning, "seamless_line_handler(), invlid request '%s'", line);
 	}
 	return True;
 }
@@ -380,11 +374,6 @@ seamless_process(STREAM s)
 	/* str_handle_lines requires null terminated strings */
 	buf = xmalloc(pkglen + 1);
 	STRNCPY(buf, (char *) s->p, pkglen + 1);
-#if 0
-	printf("seamless recv:\n");
-	hexdump(s->p, pkglen);
-#endif
-
 	str_handle_lines(buf, &seamless_rest, seamless_line_handler, NULL);
 
 	xfree(buf);
@@ -446,12 +435,7 @@ seamless_send(const char *command, const char *format, ...)
 	s = channel_init(seamless_channel, len);
 	out_uint8p(s, buf, len) s_mark_end(s);
 
-	DEBUG_SEAMLESS(("seamlessrdp sending:%s", buf));
-
-#if 0
-	printf("seamless send:\n");
-	hexdump(s->channel_hdr + 8, s->end - s->channel_hdr - 8);
-#endif
+	logger(Core, Debug, "seamless_send(), sending '%s'", buf);
 
 	channel_send(s, seamless_channel);
 
@@ -549,7 +533,9 @@ seamless_send_persistent(RD_BOOL enable)
 	unsigned int res;
 	if (!g_seamless_rdp)
 		return (unsigned int) -1;
-	printf("%s persistent seamless mode.\n", enable ? "Enable" : "Disable");
+
+	logger(Core, Debug, "seamless_send_persistent(), %s persistent seamless mode",
+	       enable ? "enable" : "disable");
 	res = seamless_send("PERSISTENT", "%d", enable);
 
 	return res;

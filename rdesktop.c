@@ -3,7 +3,7 @@
    Entrypoint and utility functions
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2002-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
-   Copyright 2010-2016 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2010-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -31,15 +31,14 @@
 #include <limits.h>
 #include <errno.h>
 #include <signal.h>
+
 #include "rdesktop.h"
 
 #ifdef HAVE_LOCALE_H
 #include <locale.h>
 #endif
-#ifdef HAVE_ICONV
 #ifdef HAVE_LANGINFO_H
 #include <langinfo.h>
-#endif
 #endif
 
 #ifdef EGD_SOCKET
@@ -144,9 +143,7 @@ RD_BOOL g_pending_resize = False;
 RD_BOOL g_rdpsnd = False;
 #endif
 
-#ifdef HAVE_ICONV
 char g_codepage[16] = "";
-#endif
 
 char *g_sc_csp_name = NULL;	/* Smartcard CSP name  */
 char *g_sc_reader_name = NULL;
@@ -191,9 +188,7 @@ usage(char *program)
 #endif
 	fprintf(stderr, "   -f: full-screen mode\n");
 	fprintf(stderr, "   -b: force bitmap updates\n");
-#ifdef HAVE_ICONV
 	fprintf(stderr, "   -L: local codepage\n");
-#endif
 	fprintf(stderr, "   -A: path to SeamlessRDP shell, this enables SeamlessRDP mode\n");
 	fprintf(stderr, "   -B: use BackingStore of X-server (if available)\n");
 	fprintf(stderr, "   -e: disable encryption (French TS)\n");
@@ -271,6 +266,7 @@ usage(char *program)
 	fprintf(stderr,
 		"           sc-card-name       Specifies the card name of the smartcard to use\n");
 #endif
+	fprintf(stderr, "   -v: enable verbose logging\n");
 
 	fprintf(stderr, "\n");
 
@@ -541,6 +537,9 @@ main(int argc, char *argv[])
 	char *rdpsnd_optarg = NULL;
 #endif
 
+	/* setup debug logging from environment */
+	logger_set_subjects(getenv("RDESKTOP_DEBUG"));
+
 #ifdef HAVE_LOCALE_H
 	/* Set locale according to environment */
 	locale = setlocale(LC_ALL, "");
@@ -575,7 +574,7 @@ main(int argc, char *argv[])
 #define VNCOPT
 #endif
 	while ((c = getopt(argc, argv,
-			   VNCOPT "A:u:L:d:s:c:p:n:k:g:o:fbBeEitmMzCDKS:T:NX:a:x:Pr:045h?")) != -1)
+			   VNCOPT "A:u:L:d:s:c:p:n:k:g:o:fbBeEitmMzCDKS:T:NX:a:x:Pr:045vh?")) != -1)
 	{
 		switch (c)
 		{
@@ -605,11 +604,7 @@ main(int argc, char *argv[])
 				break;
 
 			case 'L':
-#ifdef HAVE_ICONV
 				STRNCPY(g_codepage, optarg, sizeof(g_codepage));
-#else
-				error("iconv support not available\n");
-#endif
 				break;
 
 			case 'd':
@@ -670,7 +665,7 @@ main(int argc, char *argv[])
 				g_width = strtol(optarg, &p, 10);
 				if (g_width <= 0)
 				{
-					error("invalid geometry\n");
+					logger(Core, Error, "invalid geometry width specified");
 					return EX_USAGE;
 				}
 
@@ -679,7 +674,7 @@ main(int argc, char *argv[])
 
 				if (g_height <= 0)
 				{
-					error("invalid geometry\n");
+					logger(Core, Error, "invalid geometry heigth specified");
 					return EX_USAGE;
 				}
 
@@ -771,7 +766,7 @@ main(int argc, char *argv[])
 
 				if (*p)
 				{
-					error("invalid button size\n");
+					logger(Core, Error, "invalid button size");
 					return EX_USAGE;
 				}
 
@@ -796,13 +791,14 @@ main(int argc, char *argv[])
 				    g_server_depth != 15 && g_server_depth != 24
 				    && g_server_depth != 32)
 				{
-					error("Invalid server colour depth.\n");
+					logger(Core, Error,
+					       "Invalid server colour depth specified");
 					return EX_USAGE;
 				}
 				break;
 
 			case 'z':
-				DEBUG(("rdp compression enabled\n"));
+				logger(Core, Debug, "rdp compression enabled");
 				flags |= (RDP_INFO_COMPRESSION | RDP_INFO_COMPRESSION2);
 				break;
 
@@ -817,11 +813,14 @@ main(int argc, char *argv[])
 				else if (str_startswith(optarg, "b"))	/* broadband */
 				{
 					g_rdp5_performanceflags =
-						PERF_DISABLE_CURSOR_SHADOW | PERF_DISABLE_WALLPAPER | PERF_ENABLE_FONT_SMOOTHING;
+						PERF_DISABLE_CURSOR_SHADOW | PERF_DISABLE_WALLPAPER
+						| PERF_ENABLE_FONT_SMOOTHING;
 				}
 				else if (str_startswith(optarg, "l"))	/* lan */
 				{
-					g_rdp5_performanceflags = PERF_DISABLE_CURSOR_SHADOW | PERF_ENABLE_FONT_SMOOTHING;
+					g_rdp5_performanceflags =
+						PERF_DISABLE_CURSOR_SHADOW |
+						PERF_ENABLE_FONT_SMOOTHING;
 				}
 				else
 				{
@@ -857,14 +856,16 @@ main(int argc, char *argv[])
 							}
 
 #else
-								warning("Not compiled with sound support\n");
+								logger(Core, Warning,
+								       "Not compiled with sound support");
 #endif
 
 							if (str_startswith(optarg, "off"))
 #ifdef WITH_RDPSND
 								g_rdpsnd = False;
 #else
-								warning("Not compiled with sound support\n");
+								logger(Core, Warning,
+								       "Not compiled with sound support");
 #endif
 
 							optarg = p;
@@ -875,7 +876,8 @@ main(int argc, char *argv[])
 #ifdef WITH_RDPSND
 						g_rdpsnd = True;
 #else
-						warning("Not compiled with sound support\n");
+						logger(Core, Warning,
+						       "Not compiled with sound support");
 #endif
 					}
 				}
@@ -926,12 +928,15 @@ main(int argc, char *argv[])
 #ifdef WITH_SCARD
 					scard_enum_devices(&g_num_devices, optarg + 5);
 #else
-					warning("Not compiled with smartcard support\n");
+					logger(Core, Warning,
+					       "Not compiled with smartcard support\n");
 #endif
 				}
 				else
 				{
-					warning("Unknown -r argument\n\n\tPossible arguments are: comport, disk, lptport, printer, sound, clipboard, scard\n");
+					logger(Core, Warning,
+					       "Unknown -r argument '%s'. Possible arguments are: comport, disk, lptport, printer, sound, clipboard, scard",
+					       optarg);
 				}
 				break;
 
@@ -952,7 +957,9 @@ main(int argc, char *argv[])
 					char *p = strchr(optarg, '=');
 					if (p == NULL)
 					{
-						warning("Skipping option '%s' specified, lacks name=value format.\n", optarg);
+						logger(Core, Warning,
+						       "Skipping specified option '%s', lacks name=value format",
+						       optarg);
 						continue;
 					}
 
@@ -975,6 +982,9 @@ main(int argc, char *argv[])
 				}
 				break;
 #endif
+			case 'v':
+				logger_set_verbose(1);
+				break;
 			case 'h':
 			case '?':
 			default:
@@ -1001,33 +1011,33 @@ main(int argc, char *argv[])
 
 		if (g_win_button_size)
 		{
-			error("You cannot use -S and -A at the same time\n");
+			logger(Core, Error, "You cannot use -S and -A at the same time");
 			return EX_USAGE;
 		}
 		g_rdp5_performanceflags &= ~PERF_DISABLE_FULLWINDOWDRAG;
 		if (geometry_option)
 		{
-			error("You cannot use -g and -A at the same time\n");
+			logger(Core, Error, "You cannot use -g and -A at the same time");
 			return EX_USAGE;
 		}
 		if (g_fullscreen)
 		{
-			error("You cannot use -f and -A at the same time\n");
+			logger(Core, Error, "You cannot use -f and -A at the same time");
 			return EX_USAGE;
 		}
 		if (g_hide_decorations)
 		{
-			error("You cannot use -D and -A at the same time\n");
+			logger(Core, Error, "You cannot use -D and -A at the same time");
 			return EX_USAGE;
 		}
 		if (g_embed_wnd)
 		{
-			error("You cannot use -X and -A at the same time\n");
+			logger(Core, Error, "You cannot use -X and -A at the same time");
 			return EX_USAGE;
 		}
 		if (g_rdp_version < RDP_V5)
 		{
-			error("You cannot use -4 and -A at the same time\n");
+			logger(Core, Error, "You cannot use -4 and -A at the same time");
 			return EX_USAGE;
 		}
 		g_sizeopt = -100;
@@ -1039,7 +1049,8 @@ main(int argc, char *argv[])
 		pw = getpwuid(getuid());
 		if ((pw == NULL) || (pw->pw_name == NULL))
 		{
-			error("could not determine username, use -u\n");
+			logger(Core, Error,
+			       "could not determine username, use -u <username> to set one");
 			return EX_OSERR;
 		}
 		/* +1 for trailing \0 */
@@ -1048,7 +1059,6 @@ main(int argc, char *argv[])
 		STRNCPY(g_username, pw->pw_name, pwlen);
 	}
 
-#ifdef HAVE_ICONV
 	if (g_codepage[0] == 0)
 	{
 		if (setlocale(LC_CTYPE, ""))
@@ -1060,13 +1070,12 @@ main(int argc, char *argv[])
 			STRNCPY(g_codepage, DEFAULT_CODEPAGE, sizeof(g_codepage));
 		}
 	}
-#endif
 
 	if (g_hostname[0] == 0)
 	{
 		if (gethostname(fullhostname, sizeof(fullhostname)) == -1)
 		{
-			error("could not determine local hostname, use -n\n");
+			logger(Core, Error, "could not determine local hostname, use -n\n");
 			return EX_OSERR;
 		}
 
@@ -1081,7 +1090,8 @@ main(int argc, char *argv[])
 	{
 		if (locale && xkeymap_from_locale(locale))
 		{
-			fprintf(stderr, "Autoselected keyboard map %s\n", g_keymapname);
+			logger(Core, Notice, "Autoselecting keyboard map '%s' from locale",
+			       g_keymapname);
 		}
 		else
 		{
@@ -1111,19 +1121,19 @@ main(int argc, char *argv[])
 	{
 		if (ctrl_init(server, domain, g_username) < 0)
 		{
-			error("Failed to initialize ctrl mode.");
+			logger(Core, Error, "Failed to initialize ctrl mode");
 			exit(1);
 		}
 
 		if (ctrl_is_slave())
 		{
-			fprintf(stdout,
-				"rdesktop in slave mode sending command to master process.\n");
+			logger(Core, Notice,
+			       "rdesktop in slave mode sending command to master process");
 
 			if (g_seamless_spawn_cmd[0])
 				return ctrl_send_command("seamless.spawn", g_seamless_spawn_cmd);
 
-			fprintf(stdout, "No command specified to be spawn in seamless mode.\n");
+			logger(Core, Notice, "No command specified to be spawned in seamless mode");
 			return EX_USAGE;
 		}
 	}
@@ -1133,7 +1143,7 @@ main(int argc, char *argv[])
 
 #ifdef WITH_RDPSND
 	if (!rdpsnd_init(rdpsnd_optarg))
-		warning("Initializing sound-support failed!\n");
+		logger(Core, Warning, "Initializing sound-support failed");
 #endif
 
 	if (g_lspci_enabled)
@@ -1154,8 +1164,8 @@ main(int argc, char *argv[])
 			STRNCPY(server, g_redirect_server, sizeof(server));
 			flags |= RDP_INFO_AUTOLOGON;
 
-			fprintf(stderr, "Redirected to %s@%s session %d.\n",
-				g_redirect_username, g_redirect_server, g_redirect_session_id);
+			logger(Core, Notice, "Redirected to %s@%s session %d.",
+			       g_redirect_username, g_redirect_server, g_redirect_session_id);
 
 			/* A redirect on SSL from a 2003 WTS will result in a 'connection reset by peer'
 			   and therefor we just clear this error before we connect to redirected server.
@@ -1177,8 +1187,9 @@ main(int argc, char *argv[])
 			/* check if auto reconnect cookie has timed out */
 			if (time(NULL) - g_reconnect_random_ts > RECONNECT_TIMEOUT)
 			{
-				fprintf(stderr, "Tried to reconnect for %d minutes, giving up.\n",
-					RECONNECT_TIMEOUT / 60);
+				logger(Core, Notice,
+				       "Tried to reconnect for %d minutes, giving up.",
+				       RECONNECT_TIMEOUT / 60);
 				return EX_PROTOCOL;
 			}
 
@@ -1197,7 +1208,7 @@ main(int argc, char *argv[])
 		if (!g_packet_encryption)
 			g_encryption_initial = g_encryption = False;
 
-		DEBUG(("Connection successful.\n"));
+		logger(Core, Verbose, "Connection successful");
 
 		rd_create_ui();
 		tcp_run_ui(True);
@@ -1208,7 +1219,7 @@ main(int argc, char *argv[])
 
 		tcp_run_ui(False);
 
-		DEBUG(("Disconnecting...\n"));
+		logger(Core, Verbose, "Disconnecting...");
 		rdp_disconnect();
 
 		if (g_redirect)
@@ -1217,9 +1228,9 @@ main(int argc, char *argv[])
 		/* handle network error and start autoreconnect */
 		if (g_network_error && !deactivated)
 		{
-			fprintf(stderr,
-				"Disconnected due to network error, retrying to reconnect for %d minutes.\n",
-				RECONNECT_TIMEOUT / 60);
+			logger(Core, Notice,
+			       "Disconnected due to network error, retrying to reconnect for %d minutes.",
+			       RECONNECT_TIMEOUT / 60);
 			g_network_error = False;
 			g_reconnect_loop = True;
 			continue;
@@ -1343,7 +1354,7 @@ xmalloc(int size)
 	void *mem = malloc(size);
 	if (mem == NULL)
 	{
-		error("xmalloc %d\n", size);
+		logger(Core, Error, "xmalloc, failed to allocate %d bytes", size);
 		exit(EX_UNAVAILABLE);
 	}
 	return mem;
@@ -1355,7 +1366,7 @@ exit_if_null(void *ptr)
 {
 	if (ptr == NULL)
 	{
-		error("unexpected null pointer. Out of memory?\n");
+		logger(Core, Error, "unexpected null pointer. Out of memory?");
 		exit(EX_UNAVAILABLE);
 	}
 }
@@ -1367,7 +1378,7 @@ xstrdup(const char *s)
 	char *mem = strdup(s);
 	if (mem == NULL)
 	{
-		perror("strdup");
+		logger(Core, Error, "xstrdup(), strdup() failed: %s", strerror(errno));
 		exit(EX_UNAVAILABLE);
 	}
 	return mem;
@@ -1384,7 +1395,7 @@ xrealloc(void *oldmem, size_t size)
 	mem = realloc(oldmem, size);
 	if (mem == NULL)
 	{
-		error("xrealloc %ld\n", size);
+		logger(Core, Error, "xrealloc, failed to reallocate %ld bytes", size);
 		exit(EX_UNAVAILABLE);
 	}
 	return mem;
@@ -1395,45 +1406,6 @@ void
 xfree(void *mem)
 {
 	free(mem);
-}
-
-/* report an error */
-void
-error(char *format, ...)
-{
-	va_list ap;
-
-	fprintf(stderr, "ERROR: ");
-
-	va_start(ap, format);
-	vfprintf(stderr, format, ap);
-	va_end(ap);
-}
-
-/* report a warning */
-void
-warning(char *format, ...)
-{
-	va_list ap;
-
-	fprintf(stderr, "WARNING: ");
-
-	va_start(ap, format);
-	vfprintf(stderr, format, ap);
-	va_end(ap);
-}
-
-/* report an unimplemented protocol feature */
-void
-unimpl(char *format, ...)
-{
-	va_list ap;
-
-	fprintf(stderr, "NOT IMPLEMENTED: ");
-
-	va_start(ap, format);
-	vfprintf(stderr, format, ap);
-	va_end(ap);
 }
 
 /* produce a hex dump */
@@ -1624,13 +1596,13 @@ subprocess(char *const argv[], str_handle_lines_t linehandler, void *data)
 
 	if (pipe(fd) < 0)
 	{
-		perror("pipe");
+		logger(Core, Error, "subprocess(), pipe() failed: %s", strerror(errno));
 		return False;
 	}
 
 	if ((child = fork()) < 0)
 	{
-		perror("fork");
+		logger(Core, Error, "subprocess(), fork() failed: %s", strerror(errno));
 		return False;
 	}
 
@@ -1646,7 +1618,7 @@ subprocess(char *const argv[], str_handle_lines_t linehandler, void *data)
 
 		/* Execute */
 		execvp(argv[0], argv);
-		perror("Error executing child");
+		logger(Core, Error, "subprocess(), execvp() failed: %s", strerror(errno));
 		_exit(128);
 	}
 
@@ -1757,7 +1729,7 @@ save_licence(unsigned char *data, int length)
 	path[sizeof(path) - 1] = '\0';
 	if (utils_mkdir_p(path, 0700) == -1)
 	{
-		perror(path);
+		logger(Core, Error, "save_license(), utils_mkdir_p() failed: %s", strerror(errno));
 		return;
 	}
 
@@ -1777,18 +1749,18 @@ save_licence(unsigned char *data, int length)
 	fd = open(tmppath, O_WRONLY | O_CREAT | O_TRUNC, 0600);
 	if (fd == -1)
 	{
-		perror(tmppath);
+		logger(Core, Error, "save_license(), open() failed: %s", strerror(errno));
 		return;
 	}
 
 	if (write(fd, data, length) != length)
 	{
-		perror(tmppath);
+		logger(Core, Error, "save_license(), write() failed: %s", strerror(errno));
 		unlink(tmppath);
 	}
 	else if (rename(tmppath, path) == -1)
 	{
-		perror(path);
+		logger(Core, Error, "save_license(), rename() failed: %s", strerror(errno));
 		unlink(tmppath);
 	}
 
@@ -1823,7 +1795,7 @@ rd_pstcache_mkdir(void)
 
 	if ((mkdir(bmpcache_dir, S_IRWXU) == -1) && errno != EEXIST)
 	{
-		perror(bmpcache_dir);
+		logger(Core, Error, "rd_pstcache_mkdir(), mkdir() failed: %s", strerror(errno));
 		return False;
 	}
 
@@ -1831,7 +1803,7 @@ rd_pstcache_mkdir(void)
 
 	if ((mkdir(bmpcache_dir, S_IRWXU) == -1) && errno != EEXIST)
 	{
-		perror(bmpcache_dir);
+		logger(Core, Error, "rd_pstcache_mkdir(), mkdir() failed: %s", strerror(errno));
 		return False;
 	}
 
@@ -1852,7 +1824,8 @@ rd_open_file(char *filename)
 	sprintf(fn, "%s/.rdesktop/%s", home, filename);
 	fd = open(fn, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
 	if (fd == -1)
-		perror(fn);
+		logger(Core, Error, "rd_open_file(), open() failed: %s", strerror(errno));
+
 	return fd;
 }
 

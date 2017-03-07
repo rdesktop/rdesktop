@@ -3,6 +3,7 @@
    Secure sockets abstraction layer
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright (C) Jay Sorg <j@american-data.com> 2006-2008
+   Copyright 2016-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -140,6 +141,7 @@ rdssl_cert_to_rkey(RDSSL_CERT * cert, uint32 * key_len)
 	EVP_PKEY *epk = NULL;
 	RDSSL_RKEY *lkey;
 	int nid;
+	int ret;
 
 	/* By some reason, Microsoft sets the OID of the Public RSA key to
 	   the oid for "MD5 with RSA Encryption" instead of "RSA Encryption"
@@ -151,20 +153,34 @@ rdssl_cert_to_rkey(RDSSL_CERT * cert, uint32 * key_len)
 	X509_ALGOR *algor = NULL;
 
 	key = X509_get_X509_PUBKEY(cert);
-	algor = X509_PUBKEY_get0_param(NULL, NULL, 0, &algor, key);
+	if (key == NULL)
+	{
+		logger(Protocol, Error,
+		       "rdssl_cert_to_key(), failed to get public key from certificate");
+		return NULL;
+	}
+
+	ret = X509_PUBKEY_get0_param(NULL, NULL, 0, &algor, key);
+	if (ret != 1)
+	{
+		logger(Protocol, Error,
+		       "rdssl_cert_to_key(), failed to get algorithm used for public key");
+		return NULL;
+	}
 
 	nid = OBJ_obj2nid(algor->algorithm);
 
 	if ((nid == NID_md5WithRSAEncryption) || (nid == NID_shaWithRSAEncryption))
 	{
-		DEBUG_RDP5(("Re-setting algorithm type to RSA in server certificate\n"));
-		X509_PUBKEY_set0_param(key, OBJ_nid2obj(NID_rsaEncryption),
-				       0, NULL, NULL, 0);
+		logger(Protocol, Debug,
+		       "rdssl_cert_to_key(), re-setting algorithm type to RSA in server certificate");
+		X509_PUBKEY_set0_param(key, OBJ_nid2obj(NID_rsaEncryption), 0, NULL, NULL, 0);
 	}
 	epk = X509_get_pubkey(cert);
 	if (NULL == epk)
 	{
-		error("Failed to extract public key from certificate\n");
+		logger(Protocol, Error,
+		       "rdssl_cert_to_rkey(), failed to extract public key from certificate");
 		return NULL;
 	}
 
@@ -219,8 +235,7 @@ rdssl_rkey_get_exp_mod(RDSSL_RKEY * rkey, uint8 * exponent, uint32 max_exp_len, 
 	RSA_get0_key(rkey, &e, &n, NULL);
 #endif
 
-	if ((BN_num_bytes(e) > (int) max_exp_len) ||
-	    (BN_num_bytes(n) > (int) max_mod_len))
+	if ((BN_num_bytes(e) > (int) max_exp_len) || (BN_num_bytes(n) > (int) max_mod_len))
 	{
 		return 1;
 	}

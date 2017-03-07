@@ -3,6 +3,7 @@
    Common data types
    Copyright (C) Matthew Chapman 1999-2008
    Copyright 2014 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2017 Karl Mikaelsson <derfian@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -23,6 +24,10 @@ typedef int RD_BOOL;
 #ifndef True
 #define True  (1)
 #define False (0)
+#endif
+
+#ifndef PATH_MAX
+#define PATH_MAX 256
 #endif
 
 typedef unsigned char uint8;
@@ -222,6 +227,12 @@ typedef struct rdpdr_device_info
 }
 RDPDR_DEVICE;
 
+typedef struct rdpdr_disk_device_info
+{
+	char name[PATH_MAX];
+}
+DISK_DEVICE;
+
 typedef struct rdpdr_serial_device_info
 {
 	int dtr;
@@ -275,10 +286,6 @@ typedef struct notify_data
 	unsigned int num_entries;
 }
 NOTIFY;
-
-#ifndef PATH_MAX
-#define PATH_MAX 256
-#endif
 
 typedef struct fileinfo
 {
