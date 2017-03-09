@@ -2,14 +2,14 @@
 
 rdesktop is an open source client for Microsoft's RDP protocol. It is
 known to work with Windows versions ranging from NT 4 Terminal Server
-to Windows 2012r2 RDS. rdesktop currently implements the RDP version 4
+to Windows 2012r2 RDS. rdesktop currently has implemented the RDP version 4
 and 5 protocols.
 
 
 ## Installation
 
 rdesktop uses a GNU-style build procedure.  Typically all that is necessary
-to install rdesktop is the following::
+to install rdesktop is the following:
 
 	% ./configure
 	% make
@@ -25,18 +25,18 @@ the configure line.
 
 ## Note for users building from source
 
-If you have retreived a snapshot of rdesktop source, you will first
+If you have retreived a snapshot of the rdesktop source, you will first
 need to run `./bootstrap` in order to generate the build infrastructure.
 This is not necessary for release versions of rdesktop.
 
 
 ## Usage
 
-Conenct to a RDP server like:
+Connect to an RDP server with:
 
 	% rdesktop server
 
-where server is the name of the Terminal Services machine.  (If you receive
+where server is the name of the Terminal Services machine. (If you receive
 "Connection refused", this probably means that the server does not have
 Terminal Services enabled, or there is a firewall blocking access.)
 
