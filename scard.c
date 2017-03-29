@@ -665,6 +665,8 @@ TS_SCardEstablishContext(STREAM in, STREAM out)
 	MYPCSC_DWORD rv;
 	MYPCSC_SCARDCONTEXT myHContext;
 	SERVER_SCARDCONTEXT hContext;
+	char *readers = NULL;
+	DWORD readerCount = 1024;
 
 	hContext = 0;
 
@@ -679,11 +681,24 @@ TS_SCardEstablishContext(STREAM in, STREAM out)
 		goto bail_out;
 	}
 
-	if (myHContext == NULL)
+	if (!myHContext)
 	{
 		logger(SmartCard, Error, "TS_SCardEstablishedContext(), myHContext == NULL");
 		goto bail_out;
 	}
+
+	/* This is a workaround where windows application generally
+	   behaves better with polling of smartcard subsystem
+	   availability than were there are no readers available. */
+	rv = SCardListReaders(myHContext, NULL, readers, &readerCount);
+	if (rv != SCARD_S_SUCCESS)
+	{
+		logger(SmartCard, Debug,
+		       "TS_SCardEstablishContext(), No readers connected, return no service to client.");
+		rv = SCARD_E_NO_SERVICE;
+		goto bail_out;
+	}
+
 
 
 	/* add context to list of handle and get server handle */
