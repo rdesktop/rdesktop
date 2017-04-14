@@ -375,7 +375,7 @@ static void
 sec_establish_key(void)
 {
 	uint32 length = g_server_public_key_len + SEC_PADDING_SIZE;
-	uint32 flags = SEC_CLIENT_RANDOM;
+	uint32 flags = SEC_EXCHANGE_PKT;
 	STREAM s;
 
 	s = sec_init(flags, length + 4);
@@ -817,7 +817,8 @@ sec_process_mcs_data(STREAM s)
 STREAM
 sec_recv(uint8 * rdpver)
 {
-	uint32 sec_flags;
+	uint16 sec_flags;
+	uint16 sec_flags_hi;
 	uint16 channel;
 	STREAM s;
 
@@ -837,7 +838,9 @@ sec_recv(uint8 * rdpver)
 		}
 		if (g_encryption || (!g_licence_issued && !g_licence_error_result))
 		{
-			in_uint32_le(s, sec_flags);
+			/* TS_SECURITY_HEADER */
+			in_uint16_le(s, sec_flags);
+			in_uint16_le(s, sec_flags_hi);
 
 			if (g_encryption)
 			{
@@ -847,13 +850,13 @@ sec_recv(uint8 * rdpver)
 					sec_decrypt(s->p, s->end - s->p);
 				}
 
-				if (sec_flags & SEC_LICENCE_NEG)
+				if (sec_flags & SEC_LICENSE_PKT)
 				{
 					licence_process(s);
 					continue;
 				}
 
-				if (sec_flags & 0x0400)	/* SEC_REDIRECT_ENCRYPT */
+				if (sec_flags & SEC_REDIRECTION_PKT)
 				{
 					uint8 swapbyte;
 
@@ -885,7 +888,7 @@ sec_recv(uint8 * rdpver)
 			}
 			else
 			{
-				if ((sec_flags & 0xffff) == SEC_LICENCE_NEG)
+				if (sec_flags & SEC_LICENSE_PKT)
 				{
 					licence_process(s);
 					continue;

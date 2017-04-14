@@ -1961,6 +1961,13 @@ ui_init_connection(void)
 		/* Percent of screen */
 		if (-g_sizeopt >= 100)
 			g_using_full_workarea = True;
+
+		if (g_width > 0)
+			g_width = g_sizeopt;
+
+		if (g_height > 0)
+			g_height = g_sizeopt;
+
 		g_height = HeightOfScreen(g_screen) * (-g_height) / 100;
 		g_width = WidthOfScreen(g_screen) * (-g_width) / 100;
 	}

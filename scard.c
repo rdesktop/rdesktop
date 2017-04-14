@@ -665,34 +665,51 @@ TS_SCardEstablishContext(STREAM in, STREAM out)
 	MYPCSC_DWORD rv;
 	MYPCSC_SCARDCONTEXT myHContext;
 	SERVER_SCARDCONTEXT hContext;
-
-	/* code segment  */
-
-	logger(SmartCard, Debug, "TS_SCardEstablishContext()");
-	rv = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &myHContext);
+	char *readers = NULL;
+	DWORD readerCount = 1024;
 
 	hContext = 0;
-	if (myHContext)
-	{
-		_scard_handle_list_add(myHContext);
-		hContext = _scard_handle_list_get_server_handle(myHContext);
-	}
 
+	/* code segment  */
+	logger(SmartCard, Debug, "TS_SCardEstablishContext()");
 
-	if (rv)
+	rv = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &myHContext);
+	if (rv != SCARD_S_SUCCESS)
 	{
 		logger(SmartCard, Error, "TS_SCardEstablishContext(), failed: %s (0x%08x)",
 		       pcsc_stringify_error(rv), (unsigned int) rv);
+		goto bail_out;
 	}
-	else
+
+	if (!myHContext)
+	{
+		logger(SmartCard, Error, "TS_SCardEstablishedContext(), myHContext == NULL");
+		goto bail_out;
+	}
+
+	/* This is a workaround where windows application generally
+	   behaves better with polling of smartcard subsystem
+	   availability than were there are no readers available. */
+	rv = SCardListReaders(myHContext, NULL, readers, &readerCount);
+	if (rv != SCARD_S_SUCCESS)
 	{
 		logger(SmartCard, Debug,
-		       "TS_SCardEstablishContext(), success. context: 0x%08x, [0x%lx]", hContext,
-		       myHContext);
+		       "TS_SCardEstablishContext(), No readers connected, return no service to client.");
+		rv = SCARD_E_NO_SERVICE;
+		goto bail_out;
 	}
 
 
 
+	/* add context to list of handle and get server handle */
+	_scard_handle_list_add(myHContext);
+	hContext = _scard_handle_list_get_server_handle(myHContext);
+
+	logger(SmartCard, Debug,
+	       "TS_SCardEstablishContext(), success. context: 0x%08x, [0x%lx]", hContext,
+	       myHContext);
+
+      bail_out:
 	out_uint32_le(out, 0x00000004);
 	out_uint32_le(out, hContext);	/* must not be 0 (Seems to be pointer), don't know what is this (I use hContext as value) */
 	/* i hope it's not a pointer because i just downcasted it - jlj */

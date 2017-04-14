@@ -304,7 +304,7 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 	int len_dll = 2 * strlen("C:\\WINNT\\System32\\mstscax.dll") + 2;
 
 	int packetlen = 0;
-	uint32 sec_flags = g_encryption ? (SEC_LOGON_INFO | SEC_ENCRYPT) : SEC_LOGON_INFO;
+	uint32 sec_flags = g_encryption ? (SEC_INFO_PKT | SEC_ENCRYPT) : SEC_INFO_PKT;
 	STREAM s;
 	time_t t = time(NULL);
 	time_t tzone;
