@@ -35,6 +35,7 @@
 #include <openssl/err.h>
 
 #include "rdesktop.h"
+#include "ssl.h"
 
 #ifdef _WIN32
 #define socklen_t int
@@ -248,7 +249,7 @@ tcp_recv(STREAM s, uint32 length)
 					return NULL;
 				}
 
-				ERR_print_errors_fp(stdout);
+				rdssl_log_ssl_errors("tcp_recv()");
 				g_network_error = True;
 				return NULL;
 			}
@@ -356,7 +357,7 @@ tcp_tls_connect(void)
 
 	if (err < 0)
 	{
-		ERR_print_errors_fp(stdout);
+		rdssl_log_ssl_errors("tcp_tls_connect()");
 		goto fail;
 	}
 

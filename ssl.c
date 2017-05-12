@@ -22,6 +22,24 @@
 #include "rdesktop.h"
 #include "ssl.h"
 
+/* Helper function to log internal SSL errors using logger */
+void
+rdssl_log_ssl_errors(const char *prefix)
+{
+	unsigned long err;
+	while (1)
+	{
+		err = ERR_get_error();
+		if (err == 0)
+			break;
+
+		logger(Protocol, Error,
+		       "%s, 0x%.8x:%s:%s: %s",
+		       prefix, err, ERR_lib_error_string(err),
+		       ERR_func_error_string(err), ERR_reason_error_string(err));
+	}
+}
+
 void
 rdssl_sha1_init(RDSSL_SHA1 * sha1)
 {
@@ -157,6 +175,8 @@ rdssl_cert_to_rkey(RDSSL_CERT * cert, uint32 * key_len)
 	{
 		logger(Protocol, Error,
 		       "rdssl_cert_to_key(), failed to get public key from certificate");
+		rdssl_log_ssl_errors("rdssl_cert_to_key()");
+
 		return NULL;
 	}
 
@@ -165,6 +185,8 @@ rdssl_cert_to_rkey(RDSSL_CERT * cert, uint32 * key_len)
 	{
 		logger(Protocol, Error,
 		       "rdssl_cert_to_key(), failed to get algorithm used for public key");
+		rdssl_log_ssl_errors("rdssl_cert_to_key()");
+
 		return NULL;
 	}
 
@@ -181,6 +203,8 @@ rdssl_cert_to_rkey(RDSSL_CERT * cert, uint32 * key_len)
 	{
 		logger(Protocol, Error,
 		       "rdssl_cert_to_rkey(), failed to extract public key from certificate");
+		rdssl_log_ssl_errors("rdssl_cert_to_key()");
+
 		return NULL;
 	}
 

@@ -3,6 +3,7 @@
    Secure sockets abstraction layer
    Copyright (C) Matthew Chapman 1999-2008
    Copyright (C) Jay Sorg 2006-2008
+   Copyright 2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -24,6 +25,7 @@
 #include <openssl/rc4.h>
 #include <openssl/md5.h>
 #include <openssl/sha.h>
+#include <openssl/err.h>
 #include <openssl/bn.h>
 #include <openssl/x509v3.h>
 #include <openssl/hmac.h>
@@ -63,5 +65,5 @@ RD_BOOL rdssl_sig_ok(uint8 * exponent, uint32 exp_len, uint8 * modulus, uint32 m
 
 void rdssl_hmac_md5(const void *key, int key_len,
 		    const unsigned char *msg, int msg_len, unsigned char *md);
-
+void rdssl_log_ssl_errors(const char *prefix);
 #endif
