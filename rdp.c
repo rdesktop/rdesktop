@@ -1517,7 +1517,7 @@ process_redirect_pdu(STREAM s, RD_BOOL enhanced_redirect /*, uint32 * ext_disc_r
 	/* read connection flags */
 	in_uint32_le(s, g_redirect_flags);
 
-	if (g_redirect_flags & PDU_REDIRECT_HAS_IP)
+	if (g_redirect_flags & LB_TARGET_NET_ADDRESS)
 	{
 		/* read length of ip string */
 		in_uint32_le(s, len);
@@ -1526,7 +1526,7 @@ process_redirect_pdu(STREAM s, RD_BOOL enhanced_redirect /*, uint32 * ext_disc_r
 		rdp_in_unistr(s, len, &g_redirect_server, &g_redirect_server_len);
 	}
 
-	if (g_redirect_flags & PDU_REDIRECT_HAS_LOAD_BALANCE_INFO)
+	if (g_redirect_flags & LB_LOAD_BALANCE_INFO)
 	{
 		/* read length of load balance info blob */
 		in_uint32_le(s, g_redirect_lb_info_len);
@@ -1541,7 +1541,7 @@ process_redirect_pdu(STREAM s, RD_BOOL enhanced_redirect /*, uint32 * ext_disc_r
 		in_uint8p(s, g_redirect_lb_info, g_redirect_lb_info_len);
 	}
 
-	if (g_redirect_flags & PDU_REDIRECT_HAS_USERNAME)
+	if (g_redirect_flags & LB_USERNAME)
 	{
 		/* read length of username string */
 		in_uint32_le(s, len);
@@ -1550,7 +1550,7 @@ process_redirect_pdu(STREAM s, RD_BOOL enhanced_redirect /*, uint32 * ext_disc_r
 		rdp_in_unistr(s, len, &g_redirect_username, &g_redirect_username_len);
 	}
 
-	if (g_redirect_flags & PDU_REDIRECT_HAS_DOMAIN)
+	if (g_redirect_flags & LB_DOMAIN)
 	{
 		/* read length of domain string */
 		in_uint32_le(s, len);
@@ -1559,7 +1559,7 @@ process_redirect_pdu(STREAM s, RD_BOOL enhanced_redirect /*, uint32 * ext_disc_r
 		rdp_in_unistr(s, len, &g_redirect_domain, &g_redirect_domain_len);
 	}
 
-	if (g_redirect_flags & PDU_REDIRECT_HAS_PASSWORD)
+	if (g_redirect_flags & LB_PASSWORD)
 	{
 		/* the information in this blob is either a password or a cookie that
 		   should be passed though as blob and not parsed as a unicode string */
@@ -1577,26 +1577,26 @@ process_redirect_pdu(STREAM s, RD_BOOL enhanced_redirect /*, uint32 * ext_disc_r
 		in_uint8p(s, g_redirect_cookie, g_redirect_cookie_len);
 	}
 
-	if (g_redirect_flags & PDU_REDIRECT_DONT_STORE_USERNAME)
+	if (g_redirect_flags & LB_DONTSTOREUSERNAME)
 	{
 		logger(Protocol, Warning,
-		       "process_redirect_pdu(), unhandled PDU_REDIRECT_DONT_STORE_USERNAME set");
+		       "process_redirect_pdu(), unhandled LB_DONTSTOREUSERNAME set");
 	}
 
-	if (g_redirect_flags & PDU_REDIRECT_USE_SMARTCARD)
+	if (g_redirect_flags & LB_SMARTCARD_LOGON)
 	{
 		logger(Protocol, Warning,
-		       "process_redirect_pdu(), unhandled PDU_REDIRECT_USE_SMARTCARD set");
+		       "process_redirect_pdu(), unhandled LB_SMARTCARD_LOGON set");
 	}
 
-	if (g_redirect_flags & PDU_REDIRECT_INFORMATIONAL)
+	if (g_redirect_flags & LB_NOREDIRECT)
 	{
 		/* By spec this is only for information and doesn't mean that an actual
 		   redirect should be performed. How it should be used is not mentioned. */
 		g_redirect = False;
 	}
 
-	if (g_redirect_flags & PDU_REDIRECT_HAS_TARGET_FQDN)
+	if (g_redirect_flags & LB_TARGET_FQDN)
 	{
 		in_uint32_le(s, len);
 
@@ -1611,16 +1611,46 @@ process_redirect_pdu(STREAM s, RD_BOOL enhanced_redirect /*, uint32 * ext_disc_r
 		rdp_in_unistr(s, len, &g_redirect_server, &g_redirect_server_len);
 	}
 
-	if (g_redirect_flags & PDU_REDIRECT_HAS_TARGET_NETBIOS)
+	if (g_redirect_flags & LB_TARGET_NETBIOS)
 	{
 		logger(Protocol, Warning,
-		       "process_redirect_pdu(), unhandled PDU_REDIRECT_HAS_TARGET_NETBIOS set");
+		       "process_redirect_pdu(), unhandled LB_TARGET_NETBIOS");
 	}
 
-	if (g_redirect_flags & PDU_REDIRECT_HAS_TARGET_IP_ARRAY)
+	if (g_redirect_flags & LB_TARGET_NET_ADDRESSES)
 	{
 		logger(Protocol, Warning,
-		       "process_redirect_pdu(), unhandled  PDU_REDIRECT_HAS_TARGET_IP_ARRAY set");
+		       "process_redirect_pdu(), unhandled LB_TARGET_NET_ADDRESSES");
+	}
+
+	if (g_redirect_flags & LB_CLIENT_TSV_URL)
+	{
+		logger(Protocol, Warning,
+		       "process_redirect_pdu(), unhandled LB_CLIENT_TSV_URL");
+	}
+
+	if (g_redirect_flags & LB_SERVER_TSV_CAPABLE)
+	{
+		logger(Protocol, Warning,
+		       "process_redirect_pdu(), unhandled LB_SERVER_TSV_URL");
+	}
+
+	if (g_redirect_flags & LB_PASSWORD_IS_PK_ENCRYPTED)
+	{
+		logger(Protocol, Warning,
+		       "process_redirect_pdu(), unhandled LB_PASSWORD_IS_PK_ENCRYPTED ");
+	}
+
+	if (g_redirect_flags & LB_REDIRECTION_GUID)
+	{
+		logger(Protocol, Warning,
+		       "process_redirect_pdu(), unhandled LB_REDIRECTION_GUID ");
+	}
+
+	if (g_redirect_flags & LB_TARGET_CERTIFICATE)
+	{
+		logger(Protocol, Warning,
+		       "process_redirect_pdu(), unhandled LB_TARGET_CERTIFICATE");
 	}
 
 	return True;
