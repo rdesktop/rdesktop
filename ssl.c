@@ -202,7 +202,7 @@ rdssl_cert_to_rkey(RDSSL_CERT * cert, uint32 * key_len)
 	if (NULL == epk)
 	{
 		logger(Protocol, Error,
-		       "rdssl_cert_to_rkey(), failed to extract public key from certificate");
+		       "rdssl_cert_to_key(), failed to extract public key from certificate");
 		rdssl_log_ssl_errors("rdssl_cert_to_key()");
 
 		return NULL;
