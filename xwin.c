@@ -2206,7 +2206,6 @@ ui_resize_window()
 		g_backstore = bs;
 	}
 
-	ui_reset_clip();
 }
 
 RD_BOOL

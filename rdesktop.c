@@ -1755,11 +1755,16 @@ save_licence(unsigned char *data, int length)
 void
 rd_create_ui()
 {
-	/* only create a window if we dont have one intialized */
 	if (!ui_have_window())
 	{
+		/* create a window if we dont have one intialized */
 		if (!ui_create_window())
 			exit(EX_OSERR);
+	}
+	else
+	{
+		/* reset clipping if we already have a window */
+		ui_reset_clip();
 	}
 }
 
