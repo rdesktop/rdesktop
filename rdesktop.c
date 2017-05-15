@@ -1156,7 +1156,6 @@ main(int argc, char *argv[])
 			   and therefor we just clear this error before we connect to redirected server.
 			 */
 			g_network_error = False;
-			g_redirect = False;
 		}
 
 		ui_init_connection();

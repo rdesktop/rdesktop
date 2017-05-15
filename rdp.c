@@ -338,8 +338,10 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 
 		if (g_redirect == True && g_redirect_cookie_len > 0)
 		{
+			flags |= RDP_INFO_AUTOLOGON;
 			len_password = g_redirect_cookie_len;
 			len_password -= 2;	/* substract 2 bytes which is added below */
+			logger(Protocol, Debug, "rdp_send_logon_info(), Using %d bytes redirect cookie as password", g_redirect_cookie_len);
 		}
 
 		packetlen =
@@ -1575,6 +1577,8 @@ process_redirect_pdu(STREAM s, RD_BOOL enhanced_redirect /*, uint32 * ext_disc_r
 
 		/* read cookie as is */
 		in_uint8p(s, g_redirect_cookie, g_redirect_cookie_len);
+
+		logger(Protocol, Debug, "process_redirect_pdu(), Read %d bytes redirection cookie", g_redirect_cookie_len);
 	}
 
 	if (g_redirect_flags & LB_DONTSTOREUSERNAME)
