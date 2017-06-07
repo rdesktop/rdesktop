@@ -106,7 +106,7 @@ rdesktop-$(VERSION).tar.gz: Makefile configure
 	(cd /tmp/rdesktop-make-dist-dir; \
 	tar zcvf rdesktop-$(VERSION)/rdesktop-$(VERSION).tar.gz \
 	rdesktop-$(VERSION)/COPYING \
-	rdesktop-$(VERSION)/README \
+	rdesktop-$(VERSION)/README.md \
 	rdesktop-$(VERSION)/configure \
 	rdesktop-$(VERSION)/configure.ac \
 	rdesktop-$(VERSION)/config.sub \
