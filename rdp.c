@@ -341,7 +341,9 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 			flags |= RDP_INFO_AUTOLOGON;
 			len_password = g_redirect_cookie_len;
 			len_password -= 2;	/* substract 2 bytes which is added below */
-			logger(Protocol, Debug, "rdp_send_logon_info(), Using %d bytes redirect cookie as password", g_redirect_cookie_len);
+			logger(Protocol, Debug,
+			       "rdp_send_logon_info(), Using %d bytes redirect cookie as password",
+			       g_redirect_cookie_len);
 		}
 
 		packetlen =
@@ -1578,7 +1580,8 @@ process_redirect_pdu(STREAM s, RD_BOOL enhanced_redirect /*, uint32 * ext_disc_r
 		/* read cookie as is */
 		in_uint8p(s, g_redirect_cookie, g_redirect_cookie_len);
 
-		logger(Protocol, Debug, "process_redirect_pdu(), Read %d bytes redirection cookie", g_redirect_cookie_len);
+		logger(Protocol, Debug, "process_redirect_pdu(), Read %d bytes redirection cookie",
+		       g_redirect_cookie_len);
 	}
 
 	if (g_redirect_flags & LB_DONTSTOREUSERNAME)
@@ -1617,8 +1620,7 @@ process_redirect_pdu(STREAM s, RD_BOOL enhanced_redirect /*, uint32 * ext_disc_r
 
 	if (g_redirect_flags & LB_TARGET_NETBIOS)
 	{
-		logger(Protocol, Warning,
-		       "process_redirect_pdu(), unhandled LB_TARGET_NETBIOS");
+		logger(Protocol, Warning, "process_redirect_pdu(), unhandled LB_TARGET_NETBIOS");
 	}
 
 	if (g_redirect_flags & LB_TARGET_NET_ADDRESSES)
@@ -1629,14 +1631,12 @@ process_redirect_pdu(STREAM s, RD_BOOL enhanced_redirect /*, uint32 * ext_disc_r
 
 	if (g_redirect_flags & LB_CLIENT_TSV_URL)
 	{
-		logger(Protocol, Warning,
-		       "process_redirect_pdu(), unhandled LB_CLIENT_TSV_URL");
+		logger(Protocol, Warning, "process_redirect_pdu(), unhandled LB_CLIENT_TSV_URL");
 	}
 
 	if (g_redirect_flags & LB_SERVER_TSV_CAPABLE)
 	{
-		logger(Protocol, Warning,
-		       "process_redirect_pdu(), unhandled LB_SERVER_TSV_URL");
+		logger(Protocol, Warning, "process_redirect_pdu(), unhandled LB_SERVER_TSV_URL");
 	}
 
 	if (g_redirect_flags & LB_PASSWORD_IS_PK_ENCRYPTED)
@@ -1647,8 +1647,7 @@ process_redirect_pdu(STREAM s, RD_BOOL enhanced_redirect /*, uint32 * ext_disc_r
 
 	if (g_redirect_flags & LB_REDIRECTION_GUID)
 	{
-		logger(Protocol, Warning,
-		       "process_redirect_pdu(), unhandled LB_REDIRECTION_GUID ");
+		logger(Protocol, Warning, "process_redirect_pdu(), unhandled LB_REDIRECTION_GUID ");
 	}
 
 	if (g_redirect_flags & LB_TARGET_CERTIFICATE)
