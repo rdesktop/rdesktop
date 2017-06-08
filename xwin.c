@@ -2260,7 +2260,7 @@ xwin_toggle_fullscreen(void)
 }
 
 static void
-handle_button_event(XEvent xevent, RD_BOOL down)
+handle_button_event(XEvent xevent, uint32 ev_time, RD_BOOL down)
 {
 	uint16 button, flags = 0;
 	g_last_gesturetime = xevent.xbutton.time;
@@ -2306,7 +2306,7 @@ handle_button_event(XEvent xevent, RD_BOOL down)
 			{
 				/* Release the mouse button outside the minimize button, to prevent the
 				   actual minimazation to happen */
-				rdp_send_input(time(NULL), RDP_INPUT_MOUSE, button, 1, 1);
+				rdp_send_input(ev_time, RDP_INPUT_MOUSE, button, 1, 1);
 				XIconifyWindow(g_display, g_wnd, DefaultScreen(g_display));
 				return;
 			}
@@ -2343,17 +2343,16 @@ handle_button_event(XEvent xevent, RD_BOOL down)
 
 	if (xevent.xmotion.window == g_wnd)
 	{
-		rdp_send_input(time(NULL), RDP_INPUT_MOUSE,
+		rdp_send_input(ev_time, RDP_INPUT_MOUSE,
 			       flags | button, xevent.xbutton.x, xevent.xbutton.y);
 	}
 	else
 	{
 		/* SeamlessRDP */
-		rdp_send_input(time(NULL), RDP_INPUT_MOUSE,
+		rdp_send_input(ev_time, RDP_INPUT_MOUSE,
 			       flags | button, xevent.xbutton.x_root, xevent.xbutton.y_root);
 	}
 }
-
 
 /* Process events in Xlib queue
    Returns 0 after user quit, 1 otherwise */
@@ -2386,6 +2385,9 @@ xwin_process_events(void)
 			logger(GUI, Debug, "xwin_process_events(), filtering event");
 			continue;
 		}
+
+		/* event occurrence wallclock time */
+		ev_time = time(NULL);
 
 		switch (xevent.type)
 		{
@@ -2453,7 +2455,6 @@ xwin_process_events(void)
 				       get_ksname(keysym));
 
 				set_keypress_keysym(xevent.xkey.keycode, keysym);
-				ev_time = time(NULL);
 				if (handle_special_keys(keysym, xevent.xkey.state, ev_time, True))
 					break;
 
@@ -2470,20 +2471,20 @@ xwin_process_events(void)
 				       get_ksname(keysym));
 
 				keysym = reset_keypress_keysym(xevent.xkey.keycode, keysym);
-				ev_time = time(NULL);
 				if (handle_special_keys(keysym, xevent.xkey.state, ev_time, False))
 					break;
+
 
 				xkeymap_send_keys(keysym, xevent.xkey.keycode, xevent.xkey.state,
 						  ev_time, False, 0);
 				break;
 
 			case ButtonPress:
-				handle_button_event(xevent, True);
+				handle_button_event(xevent, ev_time, True);
 				break;
 
 			case ButtonRelease:
-				handle_button_event(xevent, False);
+				handle_button_event(xevent, ev_time, False);
 				break;
 
 			case MotionNotify:
@@ -2501,13 +2502,13 @@ xwin_process_events(void)
 
 				if (xevent.xmotion.window == g_wnd)
 				{
-					rdp_send_input(time(NULL), RDP_INPUT_MOUSE, MOUSE_FLAG_MOVE,
+					rdp_send_input(ev_time, RDP_INPUT_MOUSE, MOUSE_FLAG_MOVE,
 						       xevent.xmotion.x, xevent.xmotion.y);
 				}
 				else
 				{
 					/* SeamlessRDP */
-					rdp_send_input(time(NULL), RDP_INPUT_MOUSE, MOUSE_FLAG_MOVE,
+					rdp_send_input(ev_time, RDP_INPUT_MOUSE, MOUSE_FLAG_MOVE,
 						       xevent.xmotion.x_root,
 						       xevent.xmotion.y_root);
 				}
