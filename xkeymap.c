@@ -641,6 +641,24 @@ handle_special_keys(uint32 keysym, unsigned int state, uint32 ev_time, RD_BOOL p
 {
 	switch (keysym)
 	{
+		case XK_Left:
+		case XK_Right:
+		case XK_Tab:
+			if ((get_key_state(state, XK_Alt_L) || get_key_state(state, XK_Alt_R))
+				&& (get_key_state(state, XK_Control_L)
+				|| get_key_state(state, XK_Control_R)))
+			{
+				/* Ctrl-Alt-Left/Right/Tab:
+				* Ungrab the keyboard so that user can use Windows manager's hot keys */
+				extern RD_BOOL g_fullscreen;
+				if (g_fullscreen) { /* Turn to normal window. Otherwise, rdesktop will be always on top */
+					xwin_toggle_fullscreen();
+				}
+				XUngrabKeyboard(g_display, CurrentTime);
+				return True;
+			}
+			break;
+
 		case XK_Return:
 			if ((get_key_state(state, XK_Alt_L) || get_key_state(state, XK_Alt_R))
 			    && (get_key_state(state, XK_Control_L)
