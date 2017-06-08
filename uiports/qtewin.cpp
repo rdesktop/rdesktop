@@ -2366,6 +2366,10 @@ int parse_parameters(int in_argc, char ** in_argv)
 
   for (i = 1; i < in_argc; i++)
   {
+    /* check if g_server buffer can hold in_argv[i], otherwise ignore */
+    if (strlen(in_argv[i]) >= sizeof(g_server))
+        continue;
+
     strcpy(g_server, in_argv[i]);
     if (strcmp(in_argv[i], "-h") == 0)
     {
