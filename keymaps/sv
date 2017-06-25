@@ -59,8 +59,12 @@ dead_tilde 0x1b altgr
 #
 odiaeresis 0x27 
 Odiaeresis 0x27 shift
+oslash 0x27 altgr
+Oslash 0x27 shift altgr
 adiaeresis 0x28 
 Adiaeresis 0x28 shift
+ae 0x28 altgr
+AE 0x28 shift altgr
 apostrophe 0x2b
 asterisk 0x2b shift
 
