@@ -696,6 +696,7 @@ TS_SCardEstablishContext(STREAM in, STREAM out)
 		logger(SmartCard, Debug,
 		       "TS_SCardEstablishContext(), No readers connected, return no service to client.");
 		rv = SCARD_E_NO_SERVICE;
+		SCardReleaseContext(myHContext);
 		goto bail_out;
 	}
 
