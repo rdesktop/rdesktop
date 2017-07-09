@@ -2262,7 +2262,7 @@ xwin_toggle_fullscreen(void)
 static void
 handle_button_event(XEvent xevent, RD_BOOL down)
 {
-	uint16 button, flags = 0;
+	uint16 button, input_type, flags = 0;
 	g_last_gesturetime = xevent.xbutton.time;
 	/* Reverse the pointer button mapping, e.g. in the case of
 	   "left-handed mouse mode"; the RDP session expects to
@@ -2270,7 +2270,7 @@ handle_button_event(XEvent xevent, RD_BOOL down)
 	   logical button behavior depends on the remote desktop's own
 	   mouse settings */
 	xevent.xbutton.button = g_pointer_log_to_phys_map[xevent.xbutton.button - 1];
-	button = xkeymap_translate_button(xevent.xbutton.button);
+	button = xkeymap_translate_button(xevent.xbutton.button, &input_type);
 	if (button == 0)
 		return;
 
@@ -2306,7 +2306,7 @@ handle_button_event(XEvent xevent, RD_BOOL down)
 			{
 				/* Release the mouse button outside the minimize button, to prevent the
 				   actual minimazation to happen */
-				rdp_send_input(time(NULL), RDP_INPUT_MOUSE, button, 1, 1);
+				rdp_send_input(time(NULL), input_type, button, 1, 1);
 				XIconifyWindow(g_display, g_wnd, DefaultScreen(g_display));
 				return;
 			}
@@ -2343,13 +2343,13 @@ handle_button_event(XEvent xevent, RD_BOOL down)
 
 	if (xevent.xmotion.window == g_wnd)
 	{
-		rdp_send_input(time(NULL), RDP_INPUT_MOUSE,
+		rdp_send_input(time(NULL), input_type,
 			       flags | button, xevent.xbutton.x, xevent.xbutton.y);
 	}
 	else
 	{
 		/* SeamlessRDP */
-		rdp_send_input(time(NULL), RDP_INPUT_MOUSE,
+		rdp_send_input(time(NULL), input_type,
 			       flags | button, xevent.xbutton.x_root, xevent.xbutton.y_root);
 	}
 }

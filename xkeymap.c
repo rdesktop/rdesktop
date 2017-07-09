@@ -883,8 +883,10 @@ xkeymap_send_keys(uint32 keysym, unsigned int keycode, unsigned int state, uint3
 }
 
 uint16
-xkeymap_translate_button(unsigned int button)
+xkeymap_translate_button(unsigned int button, uint16* input_type)
 {
+	*input_type = RDP_INPUT_MOUSE;
+
 	switch (button)
 	{
 		case Button1:	/* left */
@@ -897,6 +899,12 @@ xkeymap_translate_button(unsigned int button)
 			return MOUSE_FLAG_BUTTON4;
 		case Button5:	/* wheel down */
 			return MOUSE_FLAG_BUTTON5;
+		case 8:	  /* button 4 */
+			*input_type = RDP_INPUT_MOUSEX;
+			return MOUSEX_FLAG_BUTTON1;
+		case 9:	  /* button 5 */
+			*input_type = RDP_INPUT_MOUSEX;
+			return MOUSEX_FLAG_BUTTON2;
 	}
 
 	return 0;
