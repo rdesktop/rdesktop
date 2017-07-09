@@ -667,28 +667,23 @@ handle_special_keys(uint32 keysym, unsigned int state, uint32 ev_time, RD_BOOL p
 			break;
 
 		case XK_Pause:
-			/* According to MS Keyboard Scan Code
-			   Specification, pressing Pause should result
-			   in E1 1D 45 E1 9D C5. I'm not exactly sure
-			   of how this is supposed to be sent via
-			   RDP. The code below seems to work, but with
-			   the side effect that Left Ctrl stays
-			   down. Therefore, we release it when Pause
-			   is released. */
+			/* According to the RDP documentation (MS-RDPBCGR, page 164),
+                           pressing Pause must result in:
+                           CTRL    (0x1D) DOWN  with the KBDFLAGS_EXTENDED1 flag
+                           NUMLOCK (0x45) DOWN
+                           CTRL    (0x1D) UP    with the KBDFLAGS_EXTENDED1 flag
+                           NUMLOCK (0x45) UP
+                        */
 			if (pressed)
 			{
-				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS, 0xe1, 0);
-				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS, 0x1d, 0);
-				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS, 0x45, 0);
-				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS, 0xe1, 0);
-				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS, 0x9d, 0);
-				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS, 0xc5, 0);
-			}
-			else
-			{
-				/* Release Left Ctrl */
+				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS | KBD_FLAG_EXT1,
+                                               0x1d, 0);
+				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS,
+                                               0x45, 0);
+				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYRELEASE | KBD_FLAG_EXT1,
+                                               0x1d, 0);
 				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYRELEASE,
-					       0x1d, 0);
+                                               0x45, 0);
 			}
 			return True;
 			break;
