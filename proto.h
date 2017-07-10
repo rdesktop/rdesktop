@@ -244,7 +244,7 @@ RD_BOOL handle_special_keys(uint32 keysym, unsigned int state, uint32 ev_time, R
 key_translation xkeymap_translate_key(uint32 keysym, unsigned int keycode, unsigned int state);
 void xkeymap_send_keys(uint32 keysym, unsigned int keycode, unsigned int state, uint32 ev_time,
 		       RD_BOOL pressed, uint8 nesting);
-uint16 xkeymap_translate_button(unsigned int button);
+uint16 xkeymap_translate_button(unsigned int button, uint16* input_type);
 char *get_ksname(uint32 keysym);
 void save_remote_modifiers(uint8 scancode);
 void restore_remote_modifiers(uint32 ev_time, uint8 scancode);
