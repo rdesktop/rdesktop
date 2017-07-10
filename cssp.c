@@ -173,7 +173,7 @@ cssp_gss_get_service_name(char *server, gss_name_t * name)
 }
 
 static RD_BOOL
-cssp_gss_wrap(gss_ctx_id_t * ctx, STREAM in, STREAM out)
+cssp_gss_wrap(gss_ctx_id_t ctx, STREAM in, STREAM out)
 {
 	int conf_state;
 	OM_uint32 major_status;
@@ -212,7 +212,7 @@ cssp_gss_wrap(gss_ctx_id_t * ctx, STREAM in, STREAM out)
 }
 
 static RD_BOOL
-cssp_gss_unwrap(gss_ctx_id_t * ctx, STREAM in, STREAM out)
+cssp_gss_unwrap(gss_ctx_id_t ctx, STREAM in, STREAM out)
 {
 	OM_uint32 major_status;
 	OM_uint32 minor_status;
