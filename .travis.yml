@@ -1,5 +1,11 @@
+dist: trusty
+
 language: c
 
 compiler: gcc
 
-script: ./bootstrap && ./configure --disable-credssp --disable-smartcard && make
+before_install:
+ - sudo apt-get -qq update
+ - sudo apt-get install -y libpcsclite-dev libgssglue-dev
+
+script: ./bootstrap && ./configure && make
