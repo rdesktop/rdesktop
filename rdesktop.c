@@ -152,13 +152,6 @@ extern RDPDR_DEVICE g_rdpdr_device[];
 extern uint32 g_num_devices;
 extern char *g_rdpdr_clientname;
 
-#ifdef RDP2VNC
-extern int rfb_port;
-extern int defer_time;
-void
-rdp2vnc_connect(char *server, uint32 flags, char *domain, char *password,
-		char *shell, char *directory);
-#endif
 /* Display usage information */
 static void
 usage(char *program)
@@ -169,10 +162,6 @@ usage(char *program)
 	fprintf(stderr, "See http://www.rdesktop.org/ for more information.\n\n");
 
 	fprintf(stderr, "Usage: %s [options] server[:port]\n", program);
-#ifdef RDP2VNC
-	fprintf(stderr, "   -V: vnc port\n");
-	fprintf(stderr, "   -Q: defer time (ms)\n");
-#endif
 	fprintf(stderr, "   -u: user name\n");
 	fprintf(stderr, "   -d: domain\n");
 	fprintf(stderr, "   -s: shell / seamless application to start remotely\n");
@@ -565,30 +554,11 @@ main(int argc, char *argv[])
 
 	g_num_devices = 0;
 
-#ifdef RDP2VNC
-#define VNCOPT "V:Q:"
-#else
-#define VNCOPT
-#endif
 	while ((c = getopt(argc, argv,
-			   VNCOPT "A:u:L:d:s:c:p:n:k:g:o:fbBeEitmzCDKS:T:NX:a:x:Pr:045vh?")) != -1)
+			   "A:u:L:d:s:c:p:n:k:g:o:fbBeEitmzCDKS:T:NX:a:x:Pr:045vh?")) != -1)
 	{
 		switch (c)
 		{
-#ifdef RDP2VNC
-			case 'V':
-				rfb_port = strtol(optarg, NULL, 10);
-				if (rfb_port < 100)
-					rfb_port += 5900;
-				break;
-
-			case 'Q':
-				defer_time = strtol(optarg, NULL, 10);
-				if (defer_time < 0)
-					defer_time = 0;
-				break;
-#endif
-
 			case 'A':
 				g_seamless_rdp = True;
 				STRNCPY(g_seamless_shell, optarg, sizeof(g_seamless_shell));
@@ -1096,11 +1066,6 @@ main(int argc, char *argv[])
 		strncat(g_title, server, sizeof(g_title) - sizeof("rdesktop - "));
 	}
 
-#ifdef RDP2VNC
-	rdp2vnc_connect(server, flags, domain, g_password, shell, directory);
-	return EX_OK;
-#else
-
 	/* Only startup ctrl functionality is seamless are used for now. */
 	if (g_use_ctrl && g_seamless_rdp)
 	{
@@ -1241,7 +1206,6 @@ main(int argc, char *argv[])
 
 	return handle_disconnect_reason(deactivated, ext_disc_reason);
 
-#endif
 	if (g_redirect_username)
 		xfree(g_redirect_username);
 

@@ -235,28 +235,6 @@ AC_DEFINE_UNQUOTED(EGD_SOCKET, "$EGD_SOCKET")
 
 
 #
-# rdp2vnc
-#
-vncserverconfig=libvncserver-config
-AC_ARG_WITH(libvncserver-config,
-    [  --with-libvncserver-config=CMD  use CMD as libvncserver-config],
-    [vncserverconfig="$withval"]
-)
-AC_ARG_WITH(libvncserver,
-    [  --with-libvncserver     make rdp2vnc],
-    [ 
-    VNCINC=`$vncserverconfig --cflags`
-    AC_SUBST(VNCINC)
-    LDVNC=`$vncserverconfig --libs`
-    AC_SUBST(LDVNC)
-    VNCLINK=`$vncserverconfig --link`
-    AC_SUBST(VNCLINK)
-    RDP2VNCTARGET="rdp2vnc"
-    AC_SUBST(RDP2VNCTARGET)
-    ]
-)
-
-#
 # sound
 #
 
