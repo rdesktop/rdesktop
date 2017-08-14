@@ -60,6 +60,7 @@ uint8 g_static_rdesktop_salt_16[16] = {
 
 char g_title[64] = "";
 char *g_username;
+char *env_password;
 char g_password[64] = "";
 char g_hostname[16] = "";
 char g_keymapname[PATH_MAX] = "";
@@ -620,11 +621,21 @@ main(int argc, char *argv[])
 			case 'p':
 				if ((optarg[0] == '-') && (optarg[1] == 0))
 				{
-					prompt_password = True;
-					break;
+					env_password = getenv("RDESKTOP_PASSWORD");
+					if(env_password == NULL){
+						prompt_password = True;
+						break;
+					}
 				}
 
-				STRNCPY(g_password, optarg, sizeof(g_password));
+				if(env_password != NULL)
+				{
+					STRNCPY(g_password, env_password, sizeof(g_password));
+				}
+				else
+				{
+					STRNCPY(g_password, optarg, sizeof(g_password));
+				}
 				flags |= RDP_INFO_AUTOLOGON;
 
 				/* try to overwrite argument so it won't appear in ps */
