@@ -122,27 +122,20 @@ fi
 
 dnl CredSSP feature
 AC_ARG_ENABLE([credssp], AS_HELP_STRING([--disable-credssp], [disable support for CredSSP]))
-AC_ARG_ENABLE([static-gssglue], AS_HELP_STRING([--enable-static-gssglue]), 
-	      [static_gssglue=yes], [static_gssglue=no])
 AS_IF([test "x$enable_credssp" != "xno"], [
 	  if test -n "$PKG_CONFIG"; then
-	    PKG_CHECK_MODULES(GSSGLUE, libgssglue, [WITH_CREDSSP=1], [WITH_CREDSSP=0])
+	    PKG_CHECK_MODULES(GSSAPI, krb5-gssapi, [WITH_CREDSSP=1], [WITH_CREDSSP=0])
 	  fi
 
 	  if test x"$WITH_CREDSSP" = "x1"; then
 	      CREDSSPOBJ="cssp.o"
-	      CFLAGS="$CFLAGS $GSSGLUE_CFLAGS"
-
-	      AS_IF([test "x$static_gssglue" != "xno"], [
-	          LIBS="$LIBS -Wl,-Bstatic -lgssglue -Wl,-Bdynamic"
-	      ], [
-	          LIBS="$LIBS -lgssglue"
-	      ])
+	      CFLAGS="$CFLAGS $GSSAPI_CFLAGS"
+	      LIBS="$LIBS $GSSAPI_LIBS"
 
 	      AC_DEFINE(WITH_CREDSSP)
 	  else
 		echo
-		echo "CredSSP support requires libgssglue, install the dependency"
+		echo "CredSSP support requires GSSAPI, install the dependency"
 		echo "or disable the feature using --disable-credssp."
 		echo
 		exit 1
