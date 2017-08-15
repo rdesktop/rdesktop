@@ -201,21 +201,23 @@ rdssl_cert_to_rkey(RDSSL_CERT * cert, uint32 * key_len)
 	{
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 		logger(Protocol, Debug,
-				"rdssl_cert_to_key(), re-setting algorithm type to RSA in server certificate");
+		       "rdssl_cert_to_key(), re-setting algorithm type to RSA in server certificate");
 		X509_PUBKEY_set0_param(key, OBJ_nid2obj(NID_rsaEncryption), 0, NULL, NULL, 0);
 #else
 
-		if (!X509_PUBKEY_get0_param(NULL, &p, &pklen, NULL, key)) {
+		if (!X509_PUBKEY_get0_param(NULL, &p, &pklen, NULL, key))
+		{
 			logger(Protocol, Error,
-					"rdssl_cert_to_key(), failed to get algorithm used for public key");
+			       "rdssl_cert_to_key(), failed to get algorithm used for public key");
 			rdssl_log_ssl_errors("rdssl_cert_to_key()");
 
 			return NULL;
 		}
 
-		if (!(rsa = d2i_RSAPublicKey(NULL, &p, pklen))) {
+		if (!(rsa = d2i_RSAPublicKey(NULL, &p, pklen)))
+		{
 			logger(Protocol, Error,
-					"rdssl_cert_to_key(), failed to extract public key from certificate");
+			       "rdssl_cert_to_key(), failed to extract public key from certificate");
 			rdssl_log_ssl_errors("rdssl_cert_to_key()");
 
 			return NULL;

@@ -664,22 +664,21 @@ handle_special_keys(uint32 keysym, unsigned int state, uint32 ev_time, RD_BOOL p
 
 		case XK_Pause:
 			/* According to the RDP documentation (MS-RDPBCGR, page 164),
-                           pressing Pause must result in:
-                           CTRL    (0x1D) DOWN  with the KBDFLAGS_EXTENDED1 flag
-                           NUMLOCK (0x45) DOWN
-                           CTRL    (0x1D) UP    with the KBDFLAGS_EXTENDED1 flag
-                           NUMLOCK (0x45) UP
-                        */
+			   pressing Pause must result in:
+			   CTRL    (0x1D) DOWN  with the KBDFLAGS_EXTENDED1 flag
+			   NUMLOCK (0x45) DOWN
+			   CTRL    (0x1D) UP    with the KBDFLAGS_EXTENDED1 flag
+			   NUMLOCK (0x45) UP
+			 */
 			if (pressed)
 			{
-				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS | KBD_FLAG_EXT1,
-                                               0x1d, 0);
-				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS,
-                                               0x45, 0);
-				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYRELEASE | KBD_FLAG_EXT1,
-                                               0x1d, 0);
-				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYRELEASE,
-                                               0x45, 0);
+				rdp_send_input(ev_time, RDP_INPUT_SCANCODE,
+					       RDP_KEYPRESS | KBD_FLAG_EXT1, 0x1d, 0);
+				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS, 0x45, 0);
+				rdp_send_input(ev_time, RDP_INPUT_SCANCODE,
+					       RDP_KEYRELEASE | KBD_FLAG_EXT1, 0x1d, 0);
+				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYRELEASE, 0x45,
+					       0);
 			}
 			return True;
 			break;
@@ -874,7 +873,7 @@ xkeymap_send_keys(uint32 keysym, unsigned int keycode, unsigned int state, uint3
 }
 
 uint16
-xkeymap_translate_button(unsigned int button, uint16* input_type)
+xkeymap_translate_button(unsigned int button, uint16 * input_type)
 {
 	*input_type = RDP_INPUT_MOUSE;
 
@@ -890,10 +889,10 @@ xkeymap_translate_button(unsigned int button, uint16* input_type)
 			return MOUSE_FLAG_BUTTON4;
 		case Button5:	/* wheel down */
 			return MOUSE_FLAG_BUTTON5;
-		case 8:	  /* button 4 */
+		case 8:	/* button 4 */
 			*input_type = RDP_INPUT_MOUSEX;
 			return MOUSEX_FLAG_BUTTON1;
-		case 9:	  /* button 5 */
+		case 9:	/* button 5 */
 			*input_type = RDP_INPUT_MOUSEX;
 			return MOUSEX_FLAG_BUTTON2;
 	}
