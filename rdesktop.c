@@ -522,7 +522,7 @@ main(int argc, char *argv[])
 	char domain[256];
 	char shell[256];
 	char directory[256];
-	RD_BOOL prompt_password, deactivated;
+	RD_BOOL deactivated;
 	struct passwd *pw;
 	uint32 flags, ext_disc_reason = 0;
 	char *p;
@@ -559,7 +559,6 @@ main(int argc, char *argv[])
 	flags = RDP_INFO_MOUSE | RDP_INFO_DISABLECTRLALTDEL
 		| RDP_INFO_UNICODE | RDP_INFO_MAXIMIZESHELL | RDP_INFO_ENABLEWINDOWSKEY;
 
-	prompt_password = False;
 	g_seamless_spawn_cmd[0] = domain[0] = g_password[0] = shell[0] = directory[0] = 0;
 	g_embed_wnd = 0;
 
@@ -599,19 +598,16 @@ main(int argc, char *argv[])
 				break;
 
 			case 'p':
-				if ((optarg[0] == '-') && (optarg[1] == 0))
+				if ((optarg[0] != '-') && (optarg[1] != 0))
 				{
-					prompt_password = True;
-					break;
+					STRNCPY(g_password, optarg, sizeof(g_password));
+					flags |= RDP_INFO_AUTOLOGON;
+
+					/* try to overwrite argument so it won't appear in ps */
+					p = optarg;
+					while (*p)
+						*(p++) = 'X';
 				}
-
-				STRNCPY(g_password, optarg, sizeof(g_password));
-				flags |= RDP_INFO_AUTOLOGON;
-
-				/* try to overwrite argument so it won't appear in ps */
-				p = optarg;
-				while (*p)
-					*(p++) = 'X';
 				break;
 #ifdef WITH_SCARD
 			case 'i':
@@ -1067,9 +1063,19 @@ main(int argc, char *argv[])
 	if (locale)
 		xfree(locale);
 
-
-	if (prompt_password && read_password(g_password, sizeof(g_password)))
-		flags |= RDP_INFO_AUTOLOGON;
+	/* If no password provided at this point, prompt for password / pin */
+	if (!g_password[0])
+	{
+		if (read_password(g_password, sizeof(g_password)))
+		{
+			flags |= RDP_INFO_AUTOLOGON;
+		}
+		else
+		{
+			logger(Core, Error, "Failed to read password or pin from stdin");
+			return EX_OSERR;
+		}
+	}
 
 	if (g_title[0] == 0)
 	{
