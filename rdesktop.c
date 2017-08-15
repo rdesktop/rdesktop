@@ -424,11 +424,22 @@ read_password(char *password, int size)
 	struct termios tios;
 	RD_BOOL ret = False;
 	int istty = 0;
+	const char *prompt;
 	char *p;
+
+
+	if (g_use_password_as_pin)
+	{
+		prompt = "Smart card PIN: ";
+	}
+	else
+	{
+		prompt = "Password: ";
+	}
 
 	if (tcgetattr(STDIN_FILENO, &tios) == 0)
 	{
-		fprintf(stderr, "Password: ");
+		fprintf(stderr, prompt);
 		tios.c_lflag &= ~ECHO;
 		tcsetattr(STDIN_FILENO, TCSANOW, &tios);
 		istty = 1;
