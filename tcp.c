@@ -4,6 +4,7 @@
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2005-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
    Copyright 2012-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2017 Alexander Zakharov <uglym8@gmail.com>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -28,14 +29,18 @@
 #include <netinet/tcp.h>	/* TCP_NODELAY */
 #include <arpa/inet.h>		/* inet_addr */
 #include <errno.h>		/* errno */
+#include <assert.h>
 #endif
 
-#include <openssl/ssl.h>
-#include <openssl/x509.h>
-#include <openssl/err.h>
+#include <gnutls/gnutls.h>
+#include <gnutls/x509.h>
 
 #include "rdesktop.h"
 #include "ssl.h"
+#include "asn.h"
+
+
+#define CHECK(x) assert((x)>=0)
 
 #ifdef _WIN32
 #define socklen_t int
@@ -66,8 +71,6 @@ struct sockaddr_in *g_server_address = NULL;
 
 static char *g_last_server_name = NULL;
 static RD_BOOL g_ssl_initialized = False;
-static SSL *g_ssl = NULL;
-static SSL_CTX *g_ssl_ctx = NULL;
 static int g_sock;
 static RD_BOOL g_run_ui = False;
 static struct stream g_in;
@@ -77,6 +80,8 @@ int g_tcp_port_rdp = TCP_PORT_RDP;
 extern RD_BOOL g_exit_mainloop;
 extern RD_BOOL g_network_error;
 extern RD_BOOL g_reconnect_loop;
+
+static gnutls_session_t g_tls_session;
 
 /* wait till socket is ready to write or timeout */
 static RD_BOOL
@@ -122,7 +127,6 @@ tcp_init(uint32 maxlen)
 void
 tcp_send(STREAM s)
 {
-	int ssl_err;
 	int length = s->end - s->data;
 	int sent, total = 0;
 
@@ -132,30 +136,22 @@ tcp_send(STREAM s)
 #ifdef WITH_SCARD
 	scard_lock(SCARD_LOCK_TCP);
 #endif
+
 	while (total < length)
 	{
-		if (g_ssl)
-		{
-			sent = SSL_write(g_ssl, s->data + total, length - total);
-			if (sent <= 0)
-			{
-				ssl_err = SSL_get_error(g_ssl, sent);
-				if (sent < 0 && (ssl_err == SSL_ERROR_WANT_READ ||
-						 ssl_err == SSL_ERROR_WANT_WRITE))
-				{
-					tcp_can_send(g_sock, 100);
-					sent = 0;
-				}
-				else
-				{
+		if (g_ssl_initialized) {
+			sent = gnutls_record_send(g_tls_session, s->data + total, length - total);
+			if (sent <= 0) {
+				if (gnutls_error_is_fatal(sent)) {
 #ifdef WITH_SCARD
 					scard_unlock(SCARD_LOCK_TCP);
 #endif
-					logger(Core, Error,
-					       "tcp_send(), SSL_write() failed with %d: %s",
-					       ssl_err, TCP_STRERROR);
+					logger(Core, Error, "tcp_send(), gnutls_record_send() failed with %d: %s\n", sent, gnutls_strerror(sent));
 					g_network_error = True;
 					return;
+				} else {
+					tcp_can_send(g_sock, 100);
+					sent = 0;
 				}
 			}
 		}
@@ -193,7 +189,7 @@ STREAM
 tcp_recv(STREAM s, uint32 length)
 {
 	uint32 new_length, end_offset, p_offset;
-	int rcvd = 0, ssl_err;
+	int rcvd = 0;
 
 	if (g_network_error == True)
 		return NULL;
@@ -226,7 +222,8 @@ tcp_recv(STREAM s, uint32 length)
 
 	while (length > 0)
 	{
-		if ((!g_ssl || SSL_pending(g_ssl) <= 0) && g_run_ui)
+
+		if ((!g_ssl_initialized || (gnutls_record_check_pending(g_tls_session) <= 0)) && g_run_ui)
 		{
 			ui_select(g_sock);
 
@@ -236,35 +233,17 @@ tcp_recv(STREAM s, uint32 length)
 				return NULL;
 		}
 
-		if (g_ssl)
-		{
-			rcvd = SSL_read(g_ssl, s->end, length);
-			ssl_err = SSL_get_error(g_ssl, rcvd);
+		if (g_ssl_initialized) {
+			rcvd = gnutls_record_recv(g_tls_session, s->end, length);
 
-			if (ssl_err == SSL_ERROR_SSL)
-			{
-				if (SSL_get_shutdown(g_ssl) & SSL_RECEIVED_SHUTDOWN)
-				{
-					logger(Core, Error,
-					       "tcp_recv(), remote peer initiated ssl shutdown");
+			if (rcvd < 0) {
+				if (gnutls_error_is_fatal(rcvd)) {
+					logger(Core, Error, "tcp_recv(), gnutls_record_recv() failed with %d: %s\n", rcvd, gnutls_strerror(rcvd));
+					g_network_error = True;
 					return NULL;
+				} else {
+					rcvd = 0;
 				}
-
-				rdssl_log_ssl_errors("tcp_recv()");
-				g_network_error = True;
-				return NULL;
-			}
-
-			if (ssl_err == SSL_ERROR_WANT_READ || ssl_err == SSL_ERROR_WANT_WRITE)
-			{
-				rcvd = 0;
-			}
-			else if (ssl_err != SSL_ERROR_NONE)
-			{
-				logger(Core, Error, "tcp_recv(), SSL_read() failed with %d: %s",
-				       ssl_err, TCP_STRERROR);
-				g_network_error = True;
-				return NULL;
 			}
 
 		}
@@ -280,7 +259,7 @@ tcp_recv(STREAM s, uint32 length)
 				else
 				{
 					logger(Core, Error, "tcp_recv(), recv() failed: %s",
-					       TCP_STRERROR);
+							TCP_STRERROR);
 					g_network_error = True;
 					return NULL;
 				}
@@ -304,74 +283,75 @@ RD_BOOL
 tcp_tls_connect(void)
 {
 	int err;
-	long options;
 
+	int type;
+	int status;
+	gnutls_datum_t out;
+	gnutls_certificate_credentials_t xcred;
+
+	/* Initialize TLS session */
 	if (!g_ssl_initialized)
 	{
-		SSL_load_error_strings();
-		SSL_library_init();
+		gnutls_global_init();
+		CHECK(gnutls_init(&g_tls_session, GNUTLS_CLIENT));
 		g_ssl_initialized = True;
 	}
 
-	/* create process context */
-	if (g_ssl_ctx == NULL)
-	{
-		g_ssl_ctx = SSL_CTX_new(TLSv1_client_method());
-		if (g_ssl_ctx == NULL)
-		{
-			logger(Core, Error,
-			       "tcp_tls_connect(), SSL_CTX_new() failed to create TLS v1.0 context\n");
-			goto fail;
+	/* It is recommended to use the default priorities */
+	CHECK(gnutls_set_default_priority(g_tls_session));
+	CHECK(gnutls_certificate_allocate_credentials(&xcred));
+	CHECK(gnutls_credentials_set(g_tls_session, GNUTLS_CRD_CERTIFICATE, xcred));
+
+#if GNUTLS_VERSION_NUMBER >= 0x030109
+	gnutls_transport_set_int(g_tls_session, g_sock);
+#else
+	gnutls_transport_set_ptr(g_tls_session, (gnutls_transport_ptr_t)g_sock);
+#endif
+
+#if GNUTLS_VERSION_NUMBER >= 0x030100
+	gnutls_handshake_set_timeout(g_tls_session, GNUTLS_DEFAULT_HANDSHAKE_TIMEOUT);
+#endif
+
+	/* Perform the TLS handshake */
+	do {
+		err = gnutls_handshake(g_tls_session);
+	} while (err < 0 && gnutls_error_is_fatal(err) == 0);
+
+	if (err < 0) {
+
+#if GNUTLS_VERSION_NUMBER >= 0x030406
+		if (err == GNUTLS_E_CERTIFICATE_VERIFICATION_ERROR) {
+			/* check certificate verification status */
+			type = gnutls_certificate_type_get(g_tls_session);
+			status = gnutls_session_get_verify_cert_status(g_tls_session);
+			CHECK(gnutls_certificate_verification_status_print(status, type, &out, 0));
+			gnutls_free(out.data);
 		}
+#endif
 
-		options = 0;
-#ifdef SSL_OP_NO_COMPRESSION
-		options |= SSL_OP_NO_COMPRESSION;
-#endif // __SSL_OP_NO_COMPRESSION
-		options |= SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS;
-		SSL_CTX_set_options(g_ssl_ctx, options);
-	}
-
-	/* free old connection */
-	if (g_ssl)
-		SSL_free(g_ssl);
-
-	/* create new ssl connection */
-	g_ssl = SSL_new(g_ssl_ctx);
-	if (g_ssl == NULL)
-	{
-		logger(Core, Error, "tcp_tls_connect(), SSL_new() failed");
 		goto fail;
-	}
 
-	if (SSL_set_fd(g_ssl, g_sock) < 1)
-	{
-		logger(Core, Error, "tcp_tls_connect(), SSL_set_fd() failed");
-		goto fail;
-	}
-
-	do
-	{
-		err = SSL_connect(g_ssl);
-	}
-	while (SSL_get_error(g_ssl, err) == SSL_ERROR_WANT_READ);
-
-	if (err < 0)
-	{
-		rdssl_log_ssl_errors("tcp_tls_connect()");
-		goto fail;
+	} else {
+#if GNUTLS_VERSION_NUMBER >= 0x03010a
+		char *desc;
+		desc = gnutls_session_get_desc(g_tls_session);
+		logger(Core, Verbose, "TLS  Session info: %s\n", desc);
+		gnutls_free(desc);
+#endif
 	}
 
 	return True;
 
-      fail:
-	if (g_ssl)
-		SSL_free(g_ssl);
-	if (g_ssl_ctx)
-		SSL_CTX_free(g_ssl_ctx);
+fail:
 
-	g_ssl = NULL;
-	g_ssl_ctx = NULL;
+	if (g_ssl_initialized) {
+		gnutls_deinit(g_tls_session);
+		// Not needed since 3.3.0
+		gnutls_global_deinit();
+
+		g_ssl_initialized = False;
+	}
+
 	return False;
 }
 
@@ -379,47 +359,85 @@ tcp_tls_connect(void)
 RD_BOOL
 tcp_tls_get_server_pubkey(STREAM s)
 {
-	X509 *cert = NULL;
-	EVP_PKEY *pkey = NULL;
+	int ret;
+	unsigned int list_size;
+	gnutls_datum_t *cert_list;
+	gnutls_x509_crt_t cert;
+
+	unsigned int algo, bits;
+	gnutls_datum_t m, e;
+
+	int pk_size;
+	uint8_t pk_data[1024];
 
 	s->data = s->p = NULL;
 	s->size = 0;
 
-	if (g_ssl == NULL)
-		goto out;
+	cert_list = gnutls_certificate_get_peers(g_tls_session, &list_size);
 
-	cert = SSL_get_peer_certificate(g_ssl);
-	if (cert == NULL)
-	{
-		logger(Core, Error,
-		       "tcp_tls_get_server_pubkey(), SSL_get_peer_certificate() failed");
+	if (!cert_list) {
+		logger(Core, Error, "%s:%s:%d Failed to get peer's certs' list\n", __FILE__, __func__, __LINE__);
 		goto out;
 	}
 
-	pkey = X509_get_pubkey(cert);
-	if (pkey == NULL)
-	{
-		logger(Core, Error, "tcp_tls_get_server_pubkey(), X509_get_pubkey() failed");
+	if ((ret = gnutls_x509_crt_init(&cert)) != GNUTLS_E_SUCCESS) {
+		logger(Core, Error, "%s:%s:%d Failed to init certificate structure. GnuTLS error: %s\n",
+				__FILE__, __func__, __LINE__, gnutls_strerror(ret));
 		goto out;
 	}
 
-	s->size = i2d_PublicKey(pkey, NULL);
-	if (s->size < 1)
-	{
-		logger(Core, Error, "tcp_tls_get_server_pubkey(), i2d_PublicKey() failed");
+	if ((ret = gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER)) != GNUTLS_E_SUCCESS) {
+		logger(Core, Error, "%s:%s:%d Failed to import DER certificate. GnuTLS error:%s\n",
+				__FILE__, __func__, __LINE__, gnutls_strerror(ret));
 		goto out;
 	}
 
+	algo = gnutls_x509_crt_get_pk_algorithm(cert, &bits);
+
+	if (algo == GNUTLS_PK_RSA) {
+		if ((ret = gnutls_x509_crt_get_pk_rsa_raw(cert, &m, &e)) !=  GNUTLS_E_SUCCESS) {
+			logger(Core, Error, "%s:%s:%d Failed to get RSA public key parameters from certificate. GnuTLS error:%s\n",
+					__FILE__, __func__, __LINE__, gnutls_strerror(ret));
+			goto out;
+		}
+	} else {
+			logger(Core, Error, "%s:%s:%d Peer's certificate public key algorithm is not RSA. GnuTLS error:%s\n",
+					__FILE__, __func__, __LINE__, gnutls_strerror(algo));
+			goto out;
+	}
+
+	pk_size = sizeof(pk_data);
+
+	/*
+	 * This key will be used further in cssp_connect() for server's key comparison.
+	 *
+	 * Note that we need to encode this RSA public key into PKCS#1 DER
+	 * ATM there's no way to encode/export RSA public key to PKCS#1 using GnuTLS,
+	 * gnutls_pubkey_export() encodes into PKCS#8. So besides fixing GnuTLS
+	 * we can use libtasn1 for encoding.
+	 */
+
+	if ((ret = write_pkcs1_der_pubkey(&m, &e, pk_data, &pk_size)) != 0) {
+			logger(Core, Error, "%s:%s:%d Failed to encode RSA public key to PKCS#1 DER\n",
+					__FILE__, __func__, __LINE__);
+			goto out;
+	}
+
+	s->size = pk_size;
 	s->data = s->p = xmalloc(s->size);
-	i2d_PublicKey(pkey, &s->p);
+	memcpy((void *)s->data, (void *)pk_data, pk_size);
 	s->p = s->data;
 	s->end = s->p + s->size;
 
-      out:
-	if (cert)
-		X509_free(cert);
-	if (pkey)
-		EVP_PKEY_free(pkey);
+out:
+	if ((e.size != 0) && (e.data)) {
+		free(e.data);
+	}
+
+	if ((m.size != 0) && (m.data)) {
+		free(m.data);
+	}
+
 	return (s->size != 0);
 }
 
@@ -614,15 +632,15 @@ void
 tcp_disconnect(void)
 {
 	int i;
+	int rv;
 
-	if (g_ssl)
-	{
-		if (!g_network_error)
-			(void) SSL_shutdown(g_ssl);
-		SSL_free(g_ssl);
-		g_ssl = NULL;
-		SSL_CTX_free(g_ssl_ctx);
-		g_ssl_ctx = NULL;
+	if (g_ssl_initialized) {
+		rv = gnutls_bye(g_tls_session, GNUTLS_SHUT_WR);
+		gnutls_deinit(g_tls_session);
+		// Not needed since 3.3.0
+		gnutls_global_deinit();
+
+		g_ssl_initialized = False;
 	}
 
 	TCP_CLOSE(g_sock);
