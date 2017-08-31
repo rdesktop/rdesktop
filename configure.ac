@@ -202,6 +202,20 @@ else
 	   exit 1
 fi
 
+# nettle
+if test -n "$PKG_CONFIG"; then
+    PKG_CHECK_MODULES(NETTLE, nettle, [HAVE_NETTLE=1], [HAVE_NETTLE=0])
+fi
+if test x"$HAVE_NETTLE" = "x1"; then
+    CFLAGS="$CFLAGS $NETTLE_CFLAGS"
+    LIBS="$LIBS $NETTLE_LIBS"
+else
+	   echo
+	   echo "rdesktop requires Nettle. Please install the dependency"
+	   echo
+	   exit 1
+fi
+
 dnl Smartcard support
 AC_ARG_ENABLE(smartcard, AS_HELP_STRING([--disable-smartcard], [disable support for smartcard]))
 AS_IF([test "x$enable_smartcard" != "xno"], [

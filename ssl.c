@@ -4,6 +4,7 @@
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright (C) Jay Sorg <j@american-data.com> 2006-2008
    Copyright 2016-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2017 Alexander Zakharov <uglym8@gmail.com>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -21,6 +22,7 @@
 
 #include "rdesktop.h"
 #include "ssl.h"
+#include "asn.h"
 
 /* Helper function to log internal SSL errors using logger */
 void
@@ -43,49 +45,49 @@ rdssl_log_ssl_errors(const char *prefix)
 void
 rdssl_sha1_init(RDSSL_SHA1 * sha1)
 {
-	SHA1_Init(sha1);
+	sha1_init(sha1);
 }
 
 void
 rdssl_sha1_update(RDSSL_SHA1 * sha1, uint8 * data, uint32 len)
 {
-	SHA1_Update(sha1, data, len);
+	sha1_update(sha1, len, data);
 }
 
 void
 rdssl_sha1_final(RDSSL_SHA1 * sha1, uint8 * out_data)
 {
-	SHA1_Final(out_data, sha1);
+	sha1_digest(sha1, SHA1_DIGEST_SIZE, out_data);
 }
 
 void
 rdssl_md5_init(RDSSL_MD5 * md5)
 {
-	MD5_Init(md5);
+	md5_init(md5);
 }
 
 void
 rdssl_md5_update(RDSSL_MD5 * md5, uint8 * data, uint32 len)
 {
-	MD5_Update(md5, data, len);
+	md5_update(md5, len, data);
 }
 
 void
 rdssl_md5_final(RDSSL_MD5 * md5, uint8 * out_data)
 {
-	MD5_Final(out_data, md5);
+	md5_digest(md5, MD5_DIGEST_SIZE, out_data);
 }
 
 void
 rdssl_rc4_set_key(RDSSL_RC4 * rc4, uint8 * key, uint32 len)
 {
-	RC4_set_key(rc4, len, key);
+	arcfour_set_key(rc4, len, key);
 }
 
 void
 rdssl_rc4_crypt(RDSSL_RC4 * rc4, uint8 * in_data, uint8 * out_data, uint32 len)
 {
-	RC4(rc4, len, in_data, out_data);
+	arcfour_crypt(rc4, len, out_data, in_data);
 }
 
 static void
@@ -327,5 +329,9 @@ void
 rdssl_hmac_md5(const void *key, int key_len, const unsigned char *msg, int msg_len,
 	       unsigned char *md)
 {
-	HMAC(EVP_md5(), key, key_len, msg, msg_len, md, NULL);
+	struct hmac_md5_ctx ctx;
+
+	hmac_md5_set_key(&ctx, key_len, key);
+	hmac_md5_update(&ctx, msg_len, msg);
+	hmac_md5_digest(&ctx, MD5_DIGEST_SIZE, md);
 }
