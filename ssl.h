@@ -23,26 +23,19 @@
 #ifndef _RDSSL_H
 #define _RDSSL_H
 
-#include <openssl/err.h>
-#include <openssl/bn.h>
-#include <openssl/x509v3.h>
-
-#if defined(OPENSSL_VERSION_NUMBER) && (OPENSSL_VERSION_NUMBER >= 0x0090800f)
-#define D2I_X509_CONST const
-#else
-#define D2I_X509_CONST
-#endif
-
 #include <nettle/md5.h>
 #include <nettle/sha1.h>
 #include <nettle/arcfour.h>
 #include <nettle/hmac.h>
+#include <nettle/rsa.h>
+
+#include <gnutls/x509.h>
 
 #define RDSSL_RC4 struct arcfour_ctx
 #define RDSSL_SHA1 struct sha1_ctx
 #define RDSSL_MD5 struct md5_ctx
-#define RDSSL_CERT X509
-#define RDSSL_RKEY RSA
+#define RDSSL_CERT gnutls_x509_crt_t
+#define RDSSL_RKEY struct rsa_public_key
 
 void rdssl_sha1_init(RDSSL_SHA1 * sha1);
 void rdssl_sha1_update(RDSSL_SHA1 * sha1, uint8 * data, uint32 len);
