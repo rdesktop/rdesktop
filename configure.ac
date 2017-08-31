@@ -229,6 +229,21 @@ else
 	   exit 1
 fi
 
+
+# GnuTLS
+if test -n "$PKG_CONFIG"; then
+    PKG_CHECK_MODULES(GNUTLS, gnutls, [HAVE_GNUTLS=1], [HAVE_GNUTLS=0])
+fi
+if test x"$HAVE_GNUTLS" = "x1"; then
+    CFLAGS="$CFLAGS $GNUTLS_CFLAGS"
+    LIBS="$LIBS $GNUTLS_LIBS"
+else
+	   echo
+	   echo "rdesktop requires GnuTLS. Please install the dependency"
+	   echo
+	   exit 1
+fi
+
 dnl Smartcard support
 AC_ARG_ENABLE(smartcard, AS_HELP_STRING([--disable-smartcard], [disable support for smartcard]))
 AS_IF([test "x$enable_smartcard" != "xno"], [
