@@ -1715,7 +1715,7 @@ void warning(char* format, ...)
 {
   va_list ap;
 
-  fprintf(stderr, "WARNING: ");
+  fputs("WARNING: ", stderr);
   va_start(ap, format);
   vfprintf(stderr, format, ap);
   va_end(ap);
@@ -1726,7 +1726,7 @@ void unimpl(char* format, ...)
 {
   va_list ap;
 
-  fprintf(stderr, "NOT IMPLEMENTED: ");
+  fputs("NOT IMPLEMENTED: ", stderr);
   va_start(ap, format);
   vfprintf(stderr, format, ap);
   va_end(ap);
@@ -1737,7 +1737,7 @@ void error(char* format, ...)
 {
   va_list ap;
 
-  fprintf(stderr, "ERROR: ");
+  fputs("ERROR: ", stderr);
   va_start(ap, format);
   vfprintf(stderr, format, ap);
   va_end(ap);
@@ -1810,20 +1810,20 @@ void get_username_and_hostname(void)
 /*****************************************************************************/
 void out_params(void)
 {
-  fprintf(stderr, "rdesktop: A Remote Desktop Protocol client.\n");
-  fprintf(stderr, "Version " VERSION ". Copyright (C) 1999-2003 Matt Chapman.\n");
-  fprintf(stderr, "See http://www.rdesktop.org/ for more information.\n\n");
-  fprintf(stderr, "Usage: svgardesktop [options] server\n");
-  fprintf(stderr, "   -g: desktop geometry (WxH)\n");
-  fprintf(stderr, "   -4: use RDP version 4\n");
-  fprintf(stderr, "   -5: use RDP version 5 (default)\n");
-  fprintf(stderr, "   -t: tcp port\n");
-  fprintf(stderr, "   -u: user name\n");
-  fprintf(stderr, "   -n: client hostname\n");
-  fprintf(stderr, "   -d: disable accel funcs\n");
-  fprintf(stderr, "   -a: connection colour depth\n");
-  fprintf(stderr, "   -l: low memory\n");
-  fprintf(stderr, "\n");
+  fputs("rdesktop: A Remote Desktop Protocol client.\n", stderr);
+  fputs("Version " VERSION ". Copyright (C) 1999-2003 Matt Chapman.\n", stderr);
+  fputs("See http://www.rdesktop.org/ for more information.\n\n", stderr);
+  fputs("Usage: svgardesktop [options] server\n", stderr);
+  fputs("   -g: desktop geometry (WxH)\n", stderr);
+  fputs("   -4: use RDP version 4\n", stderr);
+  fputs("   -5: use RDP version 5 (default)\n", stderr);
+  fputs("   -t: tcp port\n", stderr);
+  fputs("   -u: user name\n", stderr);
+  fputs("   -n: client hostname\n", stderr);
+  fputs("   -d: disable accel funcs\n", stderr);
+  fputs("   -a: connection colour depth\n", stderr);
+  fputs("   -l: low memory\n", stderr);
+  fputs("\n", stderr);
 }
 
 /* produce a hex dump */

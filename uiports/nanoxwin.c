@@ -1016,7 +1016,7 @@ void warning(char * format, ...)
 {
   va_list ap;
 
-  fprintf(stderr, "WARNING: ");
+  fputs("WARNING: ", stderr);
   va_start(ap, format);
   vfprintf(stderr, format, ap);
   va_end(ap);
@@ -1027,7 +1027,7 @@ void unimpl(char * format, ...)
 {
   va_list ap;
 
-  fprintf(stderr, "NOT IMPLEMENTED: ");
+  fputs("NOT IMPLEMENTED: ", stderr);
   va_start(ap, format);
   vfprintf(stderr, format, ap);
   va_end(ap);
@@ -1038,7 +1038,7 @@ void error(char * format, ...)
 {
   va_list ap;
 
-  fprintf(stderr, "ERROR: ");
+  fputs("ERROR: ", stderr);
   va_start(ap, format);
   vfprintf(stderr, format, ap);
   va_end(ap);
@@ -1411,18 +1411,18 @@ static void get_username_and_hostname(void)
 /*****************************************************************************/
 static void out_params(void)
 {
-  fprintf(stderr, "rdesktop: A Remote Desktop Protocol client.\n");
-  fprintf(stderr, "Version " VERSION ". Copyright (C) 1999-2005 Matt Chapman.\n");
-  fprintf(stderr, "nanox uiport by Jay Sorg\n");
-  fprintf(stderr, "See http://www.rdesktop.org/ for more information.\n\n");
-  fprintf(stderr, "Usage: nanoxrdesktop [options] server\n");
-  fprintf(stderr, "   -u: user name\n");
-  fprintf(stderr, "   -n: client hostname\n");
-  fprintf(stderr, "   -p: password\n");
-  fprintf(stderr, "   -d: domain\n");
-  fprintf(stderr, "   -s: shell\n");
-  fprintf(stderr, "   -c: working directory\n");
-  fprintf(stderr, "\n");
+  fputs("rdesktop: A Remote Desktop Protocol client.\n", stderr);
+  fputs("Version " VERSION ". Copyright (C) 1999-2005 Matt Chapman.\n", stderr);
+  fputs("nanox uiport by Jay Sorg\n", stderr);
+  fputs("See http://www.rdesktop.org/ for more information.\n\n", stderr);
+  fputs("Usage: nanoxrdesktop [options] server\n", stderr);
+  fputs("   -u: user name\n", stderr);
+  fputs("   -n: client hostname\n", stderr);
+  fputs("   -p: password\n", stderr);
+  fputs("   -d: domain\n", stderr);
+  fputs("   -s: shell\n", stderr);
+  fputs("   -c: working directory\n", stderr);
+  fputs("\n", stderr);
 }
 
 /*****************************************************************************/
@@ -1488,7 +1488,7 @@ int main(int in_argc, char ** in_argv)
   /* connect to server */
   if (GrOpen() < 0)
   {
-    fprintf(stderr, "Couldn't connect to Nano-X server\n");
+    fputs("Couldn't connect to Nano-X server\n", stderr);
     exit(1);
   }
   GrGetScreenInfo(&g_screen_info);
@@ -1513,7 +1513,7 @@ int main(int in_argc, char ** in_argv)
   if (!rdp_connect(g_servername, g_flags, g_domain, g_password, g_shell,
                    g_directory))
   {
-    fprintf(stderr, "Error connecting\n");
+    fputs("Error connecting\n", stderr);
     GrClose();
     exit(1);
   }

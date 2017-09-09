@@ -156,105 +156,88 @@ extern char *g_rdpdr_clientname;
 static void
 usage(char *program)
 {
-	fprintf(stderr, "rdesktop: A Remote Desktop Protocol client.\n");
-	fprintf(stderr,
-		"Version " PACKAGE_VERSION ". Copyright (C) 1999-2016 Matthew Chapman et al.\n");
-	fprintf(stderr, "See http://www.rdesktop.org/ for more information.\n\n");
+	fputs("rdesktop: A Remote Desktop Protocol client.\n", stderr);
+	fputs("Version " PACKAGE_VERSION ". Copyright (C) 1999-2016 Matthew Chapman et al.\n", stderr);
+	fputs("See http://www.rdesktop.org/ for more information.\n\n", stderr);
 
 	fprintf(stderr, "Usage: %s [options] server[:port]\n", program);
-	fprintf(stderr, "   -u: user name\n");
-	fprintf(stderr, "   -d: domain\n");
-	fprintf(stderr, "   -s: shell / seamless application to start remotely\n");
-	fprintf(stderr, "   -c: working directory\n");
-	fprintf(stderr, "   -p: password (- to prompt)\n");
-	fprintf(stderr, "   -n: client hostname\n");
-	fprintf(stderr, "   -k: keyboard layout on server (en-us, de, sv, etc.)\n");
-	fprintf(stderr, "   -g: desktop geometry (WxH)\n");
+	fputs("   -u: user name\n", stderr);
+	fputs("   -d: domain\n", stderr);
+	fputs("   -s: shell / seamless application to start remotely\n", stderr);
+	fputs("   -c: working directory\n", stderr);
+	fputs("   -p: password (- to prompt)\n", stderr);
+	fputs("   -n: client hostname\n", stderr);
+	fputs("   -k: keyboard layout on server (en-us, de, sv, etc.)\n", stderr);
+	fputs("   -g: desktop geometry (WxH)\n", stderr);
 #ifdef WITH_SCARD
-	fprintf(stderr, "   -i: enables smartcard authentication, password is used as pin\n");
+	fputs("   -i: enables smartcard authentication, password is used as pin\n", stderr);
 #endif
-	fprintf(stderr, "   -f: full-screen mode\n");
-	fprintf(stderr, "   -b: force bitmap updates\n");
-	fprintf(stderr, "   -L: local codepage\n");
-	fprintf(stderr, "   -A: path to SeamlessRDP shell, this enables SeamlessRDP mode\n");
-	fprintf(stderr, "   -B: use BackingStore of X-server (if available)\n");
-	fprintf(stderr, "   -e: disable encryption (French TS)\n");
-	fprintf(stderr, "   -E: disable encryption from client to server\n");
-	fprintf(stderr, "   -m: do not send motion events\n");
-	fprintf(stderr, "   -C: use private colour map\n");
-	fprintf(stderr, "   -D: hide window manager decorations\n");
-	fprintf(stderr, "   -K: keep window manager key bindings\n");
-	fprintf(stderr, "   -S: caption button size (single application mode)\n");
-	fprintf(stderr, "   -T: window title\n");
-	fprintf(stderr, "   -t: disable use of remote ctrl\n");
-	fprintf(stderr, "   -N: enable numlock syncronization\n");
-	fprintf(stderr, "   -X: embed into another window with a given id.\n");
-	fprintf(stderr, "   -a: connection colour depth\n");
-	fprintf(stderr, "   -z: enable rdp compression\n");
-	fprintf(stderr, "   -x: RDP5 experience (m[odem 28.8], b[roadband], l[an] or hex nr.)\n");
-	fprintf(stderr, "   -P: use persistent bitmap caching\n");
-	fprintf(stderr, "   -r: enable specified device redirection (this flag can be repeated)\n");
-	fprintf(stderr,
-		"         '-r comport:COM1=/dev/ttyS0': enable serial redirection of /dev/ttyS0 to COM1\n");
-	fprintf(stderr, "             or      COM1=/dev/ttyS0,COM2=/dev/ttyS1\n");
-	fprintf(stderr,
-		"         '-r disk:floppy=/mnt/floppy': enable redirection of /mnt/floppy to 'floppy' share\n");
-	fprintf(stderr, "             or   'floppy=/mnt/floppy,cdrom=/mnt/cdrom'\n");
-	fprintf(stderr, "         '-r clientname=<client name>': Set the client name displayed\n");
-	fprintf(stderr, "             for redirected disks\n");
-	fprintf(stderr,
-		"         '-r lptport:LPT1=/dev/lp0': enable parallel redirection of /dev/lp0 to LPT1\n");
-	fprintf(stderr, "             or      LPT1=/dev/lp0,LPT2=/dev/lp1\n");
-	fprintf(stderr, "         '-r printer:mydeskjet': enable printer redirection\n");
-	fprintf(stderr,
-		"             or      mydeskjet=\"HP LaserJet IIIP\" to enter server driver as well\n");
+	fputs("   -f: full-screen mode\n", stderr);
+	fputs("   -b: force bitmap updates\n", stderr);
+	fputs("   -L: local codepage\n", stderr);
+	fputs("   -A: path to SeamlessRDP shell, this enables SeamlessRDP mode\n", stderr);
+	fputs("   -B: use BackingStore of X-server (if available)\n", stderr);
+	fputs("   -e: disable encryption (French TS)\n", stderr);
+	fputs("   -E: disable encryption from client to server\n", stderr);
+	fputs("   -m: do not send motion events\n", stderr);
+	fputs("   -C: use private colour map\n", stderr);
+	fputs("   -D: hide window manager decorations\n", stderr);
+	fputs("   -K: keep window manager key bindings\n", stderr);
+	fputs("   -S: caption button size (single application mode)\n", stderr);
+	fputs("   -T: window title\n", stderr);
+	fputs("   -t: disable use of remote ctrl\n", stderr);
+	fputs("   -N: enable numlock syncronization\n", stderr);
+	fputs("   -X: embed into another window with a given id.\n", stderr);
+	fputs("   -a: connection colour depth\n", stderr);
+	fputs("   -z: enable rdp compression\n", stderr);
+	fputs("   -x: RDP5 experience (m[odem 28.8], b[roadband], l[an] or hex nr.)\n", stderr);
+	fputs("   -P: use persistent bitmap caching\n", stderr);
+	fputs("   -r: enable specified device redirection (this flag can be repeated)\n", stderr);
+	fputs("         '-r comport:COM1=/dev/ttyS0': enable serial redirection of /dev/ttyS0 to COM1\n", stderr);
+	fputs("             or      COM1=/dev/ttyS0,COM2=/dev/ttyS1\n", stderr);
+	fputs("         '-r disk:floppy=/mnt/floppy': enable redirection of /mnt/floppy to 'floppy' share\n", stderr);
+	fputs("             or   'floppy=/mnt/floppy,cdrom=/mnt/cdrom'\n", stderr);
+	fputs("         '-r clientname=<client name>': Set the client name displayed\n", stderr);
+	fputs("             for redirected disks\n", stderr);
+	fputs("         '-r lptport:LPT1=/dev/lp0': enable parallel redirection of /dev/lp0 to LPT1\n", stderr);
+	fputs("             or      LPT1=/dev/lp0,LPT2=/dev/lp1\n", stderr);
+	fputs("         '-r printer:mydeskjet': enable printer redirection\n", stderr);
+	fputs("             or      mydeskjet=\"HP LaserJet IIIP\" to enter server driver as well\n", stderr);
 #ifdef WITH_RDPSND
-	fprintf(stderr,
-		"         '-r sound:[local[:driver[:device]]|off|remote]': enable sound redirection\n");
-	fprintf(stderr, "                     remote would leave sound on server\n");
-	fprintf(stderr, "                     available drivers for 'local':\n");
+	fputs("         '-r sound:[local[:driver[:device]]|off|remote]': enable sound redirection\n", stderr);
+	fputs("                     remote would leave sound on server\n", stderr);
+	fputs("                     available drivers for 'local':\n", stderr);
 	rdpsnd_show_help();
 #endif
-	fprintf(stderr,
-		"         '-r clipboard:[off|PRIMARYCLIPBOARD|CLIPBOARD]': enable clipboard\n");
-	fprintf(stderr, "                      redirection.\n");
-	fprintf(stderr,
-		"                      'PRIMARYCLIPBOARD' looks at both PRIMARY and CLIPBOARD\n");
-	fprintf(stderr, "                      when sending data to server.\n");
-	fprintf(stderr, "                      'CLIPBOARD' looks at only CLIPBOARD.\n");
+	fputs("         '-r clipboard:[off|PRIMARYCLIPBOARD|CLIPBOARD]': enable clipboard\n", stderr);
+	fputs("                      redirection.\n", stderr);
+	fputs("                      'PRIMARYCLIPBOARD' looks at both PRIMARY and CLIPBOARD\n", stderr);
+	fputs("                      when sending data to server.\n", stderr);
+	fputs("                      'CLIPBOARD' looks at only CLIPBOARD.\n", stderr);
 #ifdef WITH_SCARD
-	fprintf(stderr, "         '-r scard[:\"Scard Name\"=\"Alias Name[;Vendor Name]\"[,...]]\n");
-	fprintf(stderr, "          example: -r scard:\"eToken PRO 00 00\"=\"AKS ifdh 0\"\n");
-	fprintf(stderr,
-		"                   \"eToken PRO 00 00\" -> Device in Linux/Unix enviroment\n");
-	fprintf(stderr,
-		"                   \"AKS ifdh 0\"       -> Device shown in Windows enviroment \n");
-	fprintf(stderr, "          example: -r scard:\"eToken PRO 00 00\"=\"AKS ifdh 0;AKS\"\n");
-	fprintf(stderr,
-		"                   \"eToken PRO 00 00\" -> Device in Linux/Unix enviroment\n");
-	fprintf(stderr,
-		"                   \"AKS ifdh 0\"       -> Device shown in Windows enviroment \n");
-	fprintf(stderr,
-		"                   \"AKS\"              -> Device vendor name                 \n");
+	fputs("         '-r scard[:\"Scard Name\"=\"Alias Name[;Vendor Name]\"[,...]]\n", stderr);
+	fputs("          example: -r scard:\"eToken PRO 00 00\"=\"AKS ifdh 0\"\n", stderr);
+	fputs("                   \"eToken PRO 00 00\" -> Device in Linux/Unix enviroment\n", stderr);
+	fputs("                   \"AKS ifdh 0\"       -> Device shown in Windows enviroment \n", stderr);
+	fputs("          example: -r scard:\"eToken PRO 00 00\"=\"AKS ifdh 0;AKS\"\n", stderr);
+	fputs("                   \"eToken PRO 00 00\" -> Device in Linux/Unix enviroment\n", stderr);
+	fputs("                   \"AKS ifdh 0\"       -> Device shown in Windows enviroment \n", stderr);
+	fputs("                   \"AKS\"              -> Device vendor name                 \n", stderr);
 #endif
-	fprintf(stderr, "   -0: attach to console\n");
-	fprintf(stderr, "   -4: use RDP version 4\n");
-	fprintf(stderr, "   -5: use RDP version 5 (default)\n");
+	fputs("   -0: attach to console\n", stderr);
+	fputs("   -4: use RDP version 4\n", stderr);
+	fputs("   -5: use RDP version 5 (default)\n", stderr);
 #ifdef WITH_SCARD
-	fprintf(stderr, "   -o: name=value: Adds an additional option to rdesktop.\n");
-	fprintf(stderr,
-		"           sc-csp-name        Specifies the Crypto Service Provider name which\n");
-	fprintf(stderr,
-		"                              is used to authenticate the user by smartcard\n");
-	fprintf(stderr,
-		"           sc-container-name  Specifies the container name, this is usally the username\n");
-	fprintf(stderr, "           sc-reader-name     Smartcard reader name to use\n");
-	fprintf(stderr,
-		"           sc-card-name       Specifies the card name of the smartcard to use\n");
+	fputs("   -o: name=value: Adds an additional option to rdesktop.\n", stderr);
+	fputs("           sc-csp-name        Specifies the Crypto Service Provider name which\n", stderr);
+	fputs("                              is used to authenticate the user by smartcard\n", stderr);
+	fputs("           sc-container-name  Specifies the container name, this is usally the username\n", stderr);
+	fputs("           sc-reader-name     Smartcard reader name to use\n", stderr);
+	fputs("           sc-card-name       Specifies the card name of the smartcard to use\n", stderr);
 #endif
-	fprintf(stderr, "   -v: enable verbose logging\n");
+	fputs("   -v: enable verbose logging\n", stderr);
 
-	fprintf(stderr, "\n");
+	fputs("\n", stderr);
 
 }
 
@@ -439,7 +422,7 @@ read_password(char *password, int size)
 
 	if (tcgetattr(STDIN_FILENO, &tios) == 0)
 	{
-		fprintf(stderr, prompt);
+		fputs(prompt, stderr);
 		tios.c_lflag &= ~ECHO;
 		tcsetattr(STDIN_FILENO, TCSANOW, &tios);
 		istty = 1;
@@ -459,7 +442,7 @@ read_password(char *password, int size)
 	{
 		tios.c_lflag |= ECHO;
 		tcsetattr(STDIN_FILENO, TCSANOW, &tios);
-		fprintf(stderr, "\n");
+		fputs("\n", stderr);
 	}
 
 	return ret;
