@@ -60,8 +60,8 @@ uint8 g_static_rdesktop_salt_16[16] = {
 
 char g_title[64] = "";
 char *g_username;
-char g_password[64] = "";
-char g_hostname[16] = "";
+char g_password[PASS_MAX] = "";
+char g_hostname[HOST_NAME_MAX] = "";
 char g_keymapname[PATH_MAX] = "";
 unsigned int g_keylayout = 0x409;	/* Defaults to US keyboard layout */
 int g_keyboard_type = 0x4;	/* Defaults to US keyboard layout */

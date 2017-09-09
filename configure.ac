@@ -531,6 +531,18 @@ size_t iconv();
 UTILS_FUNC_ICONV
 LIBS="$LIBS $LIBICONV"
 
+dnl Maximum hostname length.
+AC_MSG_CHECKING([HOST_NAME_MAX])
+AC_CHECK_DECL([HOST_NAME_MAX], , [AC_DEFINE([HOST_NAME_MAX], [64])], [include <unistd.h>])
+
+dnl Maximum password length.
+AC_MSG_CHECKING([PASS_MAX])
+AC_CHECK_DECL([PASS_MAX], , [AC_DEFINE([PASS_MAX], [256])])
+
+dnl Maximum path length.
+AC_MSG_CHECKING([PATH_MAX])
+AC_CHECK_DECL([PATH_MAX], , [AC_DEFINE([PATH_MAX], [256])])
+
 #
 # socklen_t
 # from curl
