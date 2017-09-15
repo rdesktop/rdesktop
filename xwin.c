@@ -2944,12 +2944,12 @@ get_next_xor_pixel(uint8 * xormask, int bpp, int *k)
 			break;
 		case 24:
 			s8 = xormask + *k;
-			rv = (s8[0] << 16) | (s8[1] << 8) | s8[2];
+			rv = (s8[2] << 16) | (s8[1] << 8) | s8[0];
 			(*k) += 3;
 			break;
 		case 32:
 			s8 = xormask + *k;
-			rv = (s8[1] << 16) | (s8[2] << 8) | s8[3];
+			rv = (s8[2] << 16) | (s8[1] << 8) | s8[0];
 			(*k) += 4;
 			break;
 		default:
