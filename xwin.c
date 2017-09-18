@@ -2949,7 +2949,7 @@ get_next_xor_pixel(uint8 * xormask, int bpp, int *k)
 			break;
 		case 32:
 			s8 = xormask + *k;
-			rv = (s8[2] << 16) | (s8[1] << 8) | s8[0];
+			rv = (s8[3] << 24) | (s8[2] << 16) | (s8[1] << 8) | s8[0];
 			(*k) += 4;
 			break;
 		default:
@@ -3001,15 +3001,22 @@ ui_create_cursor(unsigned int x, unsigned int y, int width, int height,
 		{
 			for (nextbit = 0x80; nextbit != 0; nextbit >>= 1)
 			{
-				if (get_next_xor_pixel(xormask, bpp, &k))
+				unsigned int argb = get_next_xor_pixel(xormask, bpp, &k);
+				int andpixel = (*andmask) & nextbit;
+				if (bpp == 32)
 				{
-					*pcursor |= (~(*andmask) & nextbit);
+					andpixel=(argb>>24)>0xf0 ? 0 : 0xff;
+					argb &= 0xFFFFFF;
+				}
+				if (argb)
+				{
+					*pcursor |= (~andpixel & nextbit);
 					*pmask |= nextbit;
 				}
 				else
 				{
-					*pcursor |= ((*andmask) & nextbit);
-					*pmask |= (~(*andmask) & nextbit);
+					*pcursor |= (andpixel & nextbit);
+					*pmask |= (~andpixel & nextbit);
 				}
 			}
 
