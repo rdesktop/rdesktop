@@ -221,28 +221,28 @@ ftruncate_growable(int fd, off_t length)
 	/* Get current position */
 	if ((pos = lseek(fd, 0, SEEK_CUR)) == -1)
 	{
-		logger(Core, Error, "ftruncate_growable(), lseek() failed: %s", strerror(errno));
+		logger(Disk, Error, "ftruncate_growable(), lseek() failed: %s", strerror(errno));
 		return -1;
 	}
 
 	/* Seek to new size */
 	if (lseek(fd, length, SEEK_SET) == -1)
 	{
-		logger(Core, Error, "ftruncate_growable(), lseek() failed: %s", strerror(errno));
+		logger(Disk, Error, "ftruncate_growable(), lseek() failed: %s", strerror(errno));
 		return -1;
 	}
 
 	/* Write a zero */
 	if (write(fd, &zero, 1) == -1)
 	{
-		logger(Core, Error, "ftruncate_growable(), write() failed: %s", strerror(errno));
+		logger(Disk, Error, "ftruncate_growable(), write() failed: %s", strerror(errno));
 		return -1;
 	}
 
 	/* Truncate. This shouldn't fail. */
 	if (ftruncate(fd, length) == -1)
 	{
-		logger(Core, Error, "ftruncate_growable(), ftruncate() failed: %s",
+		logger(Disk, Error, "ftruncate_growable(), ftruncate() failed: %s",
 		       strerror(errno));
 		return -1;
 	}
@@ -250,7 +250,7 @@ ftruncate_growable(int fd, off_t length)
 	/* Restore position */
 	if (lseek(fd, pos, SEEK_SET) == -1)
 	{
-		logger(Core, Error, "ftruncate_growable(), lseek() failed: %s", strerror(errno));
+		logger(Disk, Error, "ftruncate_growable(), lseek() failed: %s", strerror(errno));
 		return -1;
 	}
 
@@ -443,7 +443,7 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 					return RD_STATUS_NO_SUCH_FILE;
 
 				default:
-					logger(Core, Error, "disk_create(), opendir() failed: %s",
+					logger(Disk, Error, "disk_create(), opendir() failed: %s",
 					       strerror(errno));
 					return RD_STATUS_NO_SUCH_FILE;
 			}
@@ -487,7 +487,7 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 
 					return RD_STATUS_OBJECT_NAME_COLLISION;
 				default:
-					logger(Core, Error, "disk_create(), open() failed: %s",
+					logger(Disk, Error, "disk_create(), open() failed: %s",
 					       strerror(errno));
 					return RD_STATUS_NO_SUCH_FILE;
 			}
@@ -495,13 +495,13 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 
 		/* all read and writes of files should be non blocking */
 		if (fcntl(handle, F_SETFL, O_NONBLOCK) == -1)
-			logger(Core, Error, "disk_create(), fcntl() failed: %s", strerror(errno));
+			logger(Disk, Error, "disk_create(), fcntl() failed: %s", strerror(errno));
 
 	}
 
 	if (handle >= MAX_OPEN_FILES)
 	{
-		logger(Core, Error,
+		logger(Disk, Error,
 		       "disk_create(), maximum number of open files (%s) reached, increase MAX_OPEN_FILES!",
 		       handle);
 		exit(EX_SOFTWARE);
@@ -541,14 +541,14 @@ disk_close(RD_NTHANDLE handle)
 	{
 		if (closedir(pfinfo->pdir) < 0)
 		{
-			logger(Core, Error, "disk_close(), closedir() failed: %s", strerror(errno));
+			logger(Disk, Error, "disk_close(), closedir() failed: %s", strerror(errno));
 			return RD_STATUS_INVALID_HANDLE;
 		}
 
 		if (pfinfo->delete_on_close)
 			if (rmdir(pfinfo->path) < 0)
 			{
-				logger(Core, Error, "disk_close(), rmdir() failed: %s",
+				logger(Disk, Error, "disk_close(), rmdir() failed: %s",
 				       strerror(errno));
 				return RD_STATUS_ACCESS_DENIED;
 			}
@@ -558,13 +558,13 @@ disk_close(RD_NTHANDLE handle)
 	{
 		if (close(handle) < 0)
 		{
-			logger(Core, Error, "disk_close(), close() failed: %s", strerror(errno));
+			logger(Disk, Error, "disk_close(), close() failed: %s", strerror(errno));
 			return RD_STATUS_INVALID_HANDLE;
 		}
 		if (pfinfo->delete_on_close)
 			if (unlink(pfinfo->path) < 0)
 			{
-				logger(Core, Error, "disk_close(), unlink() failed: %s",
+				logger(Disk, Error, "disk_close(), unlink() failed: %s",
 				       strerror(errno));
 				return RD_STATUS_ACCESS_DENIED;
 			}
@@ -605,7 +605,7 @@ disk_read(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32
 				/* return STATUS_FILE_IS_A_DIRECTORY; */
 				return RD_STATUS_NOT_IMPLEMENTED;
 			default:
-				logger(Core, Error, "disk_read(), read failed: %s",
+				logger(Disk, Error, "disk_read(), read failed: %s",
 				       strerror(errno));
 				return RD_STATUS_INVALID_PARAMETER;
 		}
@@ -627,7 +627,7 @@ disk_write(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint3
 
 	if (n < 0)
 	{
-		logger(Core, Error, "disk_write(), write() failed: %s", strerror(errno));
+		logger(Disk, Error, "disk_write(), write() failed: %s", strerror(errno));
 		*result = 0;
 		switch (errno)
 		{
@@ -655,7 +655,7 @@ disk_query_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 	/* Get information about file */
 	if (fstat(handle, &filestat) != 0)
 	{
-		logger(Core, Error, "disk_query_information(), stat() failed: %s", strerror(errno));
+		logger(Disk, Error, "disk_query_information(), stat() failed: %s", strerror(errno));
 		out_uint8(out, 0);
 		return RD_STATUS_ACCESS_DENIED;
 	}
@@ -720,7 +720,7 @@ disk_query_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 			break;
 
 		default:
-			logger(Protocol, Warning,
+			logger(Disk, Warning,
 			       "disk_query_information(), unhandled query information class 0x%x",
 			       info_class);
 			return RD_STATUS_INVALID_PARAMETER;
@@ -796,7 +796,7 @@ disk_set_information(RD_NTHANDLE handle, uint32 info_class, STREAM in, STREAM ou
 
 			if (access_time || write_time || change_time)
 			{
-				logger(Protocol, Debug,
+				logger(Disk, Debug,
 				       "disk_set_information(), access time='%s', modify time='%s'",
 				       ctime(&tvs.actime), ctime(&tvs.modtime));
 				if (utime(pfinfo->path, &tvs) && errno != EPERM)
@@ -815,7 +815,7 @@ disk_set_information(RD_NTHANDLE handle, uint32 info_class, STREAM in, STREAM ou
 
 			mode &= 0777;
 
-			logger(Protocol, Debug, "disk_set_information(), access mode 0%o", mode);
+			logger(Disk, Debug, "disk_set_information(), access mode 0%o", mode);
 
 			if (fchmod(handle, mode))
 				return RD_STATUS_ACCESS_DENIED;
@@ -844,7 +844,7 @@ disk_set_information(RD_NTHANDLE handle, uint32 info_class, STREAM in, STREAM ou
 
 			if (rename(pfinfo->path, fullpath) != 0)
 			{
-				logger(Core, Error, "disk_set_information(), rename() failed: %s",
+				logger(Disk, Error, "disk_set_information(), rename() failed: %s",
 				       strerror(errno));
 				return RD_STATUS_ACCESS_DENIED;
 			}
@@ -927,7 +927,7 @@ disk_set_information(RD_NTHANDLE handle, uint32 info_class, STREAM in, STREAM ou
 
 			break;
 		default:
-			logger(Protocol, Warning,
+			logger(Disk, Warning,
 			       "disk_set_information(), unhandled information class 0x%x",
 			       info_class);
 			return RD_STATUS_INVALID_PARAMETER;
@@ -1005,7 +1005,7 @@ NotifyInfo(RD_NTHANDLE handle, uint32 info_class, NOTIFY * p)
 	pfinfo = &(g_fileinfo[handle]);
 	if (fstat(handle, &filestat) < 0)
 	{
-		logger(Core, Error, "NotifyInfo(), fstat failed: %s", strerror(errno));
+		logger(Disk, Error, "NotifyInfo(), fstat failed: %s", strerror(errno));
 		return RD_STATUS_ACCESS_DENIED;
 	}
 	p->modify_time = filestat.st_mtime;
@@ -1017,7 +1017,7 @@ NotifyInfo(RD_NTHANDLE handle, uint32 info_class, NOTIFY * p)
 	dpr = opendir(pfinfo->path);
 	if (!dpr)
 	{
-		logger(Core, Error, "NotifyInfo(), opendir failed: %s", strerror(errno));
+		logger(Disk, Error, "NotifyInfo(), opendir failed: %s", strerror(errno));
 		return RD_STATUS_ACCESS_DENIED;
 	}
 
@@ -1121,7 +1121,7 @@ disk_query_volume_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 
 	if (STATFS_FN(pfinfo->path, &stat_fs) != 0)
 	{
-		logger(Core, Error, "disk_query_volume_information(), statfs() failed: %s",
+		logger(Disk, Error, "disk_query_volume_information(), statfs() failed: %s",
 		       strerror(errno));
 		return RD_STATUS_ACCESS_DENIED;
 	}
@@ -1180,7 +1180,7 @@ disk_query_volume_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 		case FileFsMaximumInformation:
 
 		default:
-			logger(Protocol, Warning,
+			logger(Disk, Warning,
 			       "disk_query_volume_information(), unhandled volume info class 0x%x",
 			       info_class);
 			return RD_STATUS_INVALID_PARAMETER;
@@ -1242,7 +1242,7 @@ disk_query_directory(RD_NTHANDLE handle, uint32 info_class, char *pattern, STREA
 					default:
 						/* Fatal error. By returning STATUS_NO_SUCH_FILE, 
 						   the directory list operation will be aborted */
-						logger(Core, Error,
+						logger(Disk, Error,
 						       "disk_query_directory(), stat() failed: %s",
 						       strerror(errno));
 						out_uint8(out, 0);
@@ -1265,7 +1265,7 @@ disk_query_directory(RD_NTHANDLE handle, uint32 info_class, char *pattern, STREA
 			break;
 
 		default:
-			logger(Protocol, Warning,
+			logger(Disk, Warning,
 			       "disk_query_directory(), unhandled directory info class 0x%x",
 			       info_class);
 			return RD_STATUS_INVALID_PARAMETER;
@@ -1375,7 +1375,7 @@ disk_query_directory(RD_NTHANDLE handle, uint32 info_class, char *pattern, STREA
 
 
 		default:
-			logger(Protocol, Warning,
+			logger(Disk, Warning,
 			       "disk_query_directory(), unhandled directory info class 0x%x",
 			       info_class);
 			return RD_STATUS_INVALID_PARAMETER;
@@ -1396,14 +1396,12 @@ disk_device_control(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 	request >>= 2;
 	request &= 0xfff;
 
-	printf("DISK IOCTL %d\n", request);
-
 	switch (request)
 	{
 		case 25:	/* ? */
 		case 42:	/* ? */
 		default:
-			logger(Protocol, Warning, "disk_device_control(), unhandled disk ioctl %d",
+			logger(Disk, Warning, "disk_device_control(), unhandled disk ioctl %d",
 			       request);
 			return RD_STATUS_INVALID_PARAMETER;
 	}
