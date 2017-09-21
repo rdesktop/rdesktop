@@ -6,6 +6,6 @@ compiler: gcc
 
 before_install:
  - sudo apt-get -qq update
- - sudo apt-get install -y libpcsclite-dev
+ - sudo apt-get install -y libpcsclite-dev libxcursor-dev
 
 script: ./bootstrap && ./configure && make
