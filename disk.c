@@ -355,6 +355,9 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 	char path[PATH_MAX];
 	struct stat filestat;
 
+	logger(Disk, Debug, "disk_create(device_id=0x%x, accessmask=0x%x, sharemode=0x%x, "
+	       "create_disp=%d, flags=0x%x, fname=%s, ...)", device_id, accessmask,
+	       sharemode, create_disposition, flags_and_attributes, filename);
 	handle = 0;
 	dirp = NULL;
 	flags = 0;
@@ -528,6 +531,7 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 static RD_NTSTATUS
 disk_close(RD_NTHANDLE handle)
 {
+	logger(Disk, Debug, "disk_close(handle=0x%x)", handle);
 	struct fileinfo *pfinfo;
 
 	pfinfo = &(g_fileinfo[handle]);
@@ -646,6 +650,7 @@ disk_write(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint3
 RD_NTSTATUS
 disk_query_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 {
+	logger(Disk, Debug, "disk_query_information(handle=0x%x, info_class=0x%x)", handle, info_class);
 	uint32 file_attributes, ft_high, ft_low;
 	struct stat filestat;
 	char *path, *filename;
@@ -731,6 +736,7 @@ disk_query_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 RD_NTSTATUS
 disk_set_information(RD_NTHANDLE handle, uint32 info_class, STREAM in, STREAM out)
 {
+	logger(Disk, Debug, "disk_set_information(handle=0x%x, info_class=0x%x, ...)", handle, info_class);
 	uint32 length, file_attributes, ft_high, ft_low;
 	char *newname, fullpath[PATH_MAX];
 	struct fileinfo *pfinfo;
@@ -938,6 +944,7 @@ disk_set_information(RD_NTHANDLE handle, uint32 info_class, STREAM in, STREAM ou
 RD_NTSTATUS
 disk_check_notify(RD_NTHANDLE handle)
 {
+	logger(Disk, Debug, "disk_check_notify(handle=0x%x)", handle);
 	struct fileinfo *pfinfo;
 	RD_NTSTATUS status = RD_STATUS_PENDING;
 
@@ -969,7 +976,7 @@ disk_check_notify(RD_NTHANDLE handle)
 RD_NTSTATUS
 disk_create_notify(RD_NTHANDLE handle, uint32 info_class)
 {
-
+	logger(Disk, Debug, "disk_create_notify(handle=0x%x, info_class=0x%x)", handle, info_class);
 	struct fileinfo *pfinfo;
 	RD_NTSTATUS ret = RD_STATUS_PENDING;
 
@@ -1113,6 +1120,7 @@ FsVolumeInfo(char *fpath)
 RD_NTSTATUS
 disk_query_volume_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 {
+	logger(Disk, Debug, "disk_query_volume_information(handle=0x%x, info_class=0x%x)", handle, info_class);
 	struct STATFS_T stat_fs;
 	struct fileinfo *pfinfo;
 	FsInfoType *fsinfo;
@@ -1191,6 +1199,8 @@ disk_query_volume_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 RD_NTSTATUS
 disk_query_directory(RD_NTHANDLE handle, uint32 info_class, char *pattern, STREAM out)
 {
+	logger(Disk, Debug, "disk_query_directory(handle=0x%x, info_class=0x%x, pattern=%s, ...)",
+	       handle, info_class, pattern);
 	uint32 file_attributes, ft_low, ft_high;
 	char *dirname, fullpath[PATH_MAX];
 	DIR *pdir;
@@ -1389,6 +1399,7 @@ disk_query_directory(RD_NTHANDLE handle, uint32 info_class, char *pattern, STREA
 static RD_NTSTATUS
 disk_device_control(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 {
+	logger(Disk, Debug, "disk_device_control(handle=0x%x, request=0x%x, ...)", handle, request);
 	if (((request >> 16) != 20) || ((request >> 16) != 9))
 		return RD_STATUS_INVALID_PARAMETER;
 
