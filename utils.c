@@ -241,7 +241,8 @@ static char *subject[] = {
 	"Protocol",
 	"Graphics",
 	"Core",
-	"SmartCard"
+	"SmartCard",
+	"Disk"
 };
 
 static log_level_t _logger_level = Warning;
@@ -256,7 +257,8 @@ static log_level_t _logger_level = Warning;
 	| (1 << Protocol)			\
 	| (1 << Graphics)			\
 	| (1 << Core)				\
-	| (1 << SmartCard)
+	| (1 << SmartCard)                      \
+	| (1 << Disk)
 
 
 static int _logger_subjects = DEFAULT_LOGGER_SUBJECTS;
@@ -351,6 +353,8 @@ logger_set_subjects(char *subjects)
 			bit = (1 << Core);
 		else if (strcmp(token, "SmartCard") == 0)
 			bit = (1 << SmartCard);
+		else if (strcmp(token, "Disk") == 0)
+			bit = (1 << Disk);
 		else
 			continue;
 
