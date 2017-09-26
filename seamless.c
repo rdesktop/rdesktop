@@ -57,7 +57,7 @@ static RD_BOOL
 seamless_process_line(const char *line, void *data)
 {
 	char *p, *l;
-	char *tok1, *tok2, *tok3, *tok4, *tok5, *tok6, *tok7, *tok8;
+	char *tok1, *tok3, *tok4, *tok5, *tok6, *tok7, *tok8;
 	unsigned long id, flags;
 	char *endptr;
 
@@ -67,7 +67,7 @@ seamless_process_line(const char *line, void *data)
 	logger(Core, Debug, "seamless_process_line(), got '%s'", p);
 
 	tok1 = seamless_get_token(&p);
-	tok2 = seamless_get_token(&p);
+	(void)seamless_get_token(&p);
 	tok3 = seamless_get_token(&p);
 	tok4 = seamless_get_token(&p);
 	tok5 = seamless_get_token(&p);
