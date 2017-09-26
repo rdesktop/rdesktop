@@ -3005,6 +3005,7 @@ ui_create_cursor(unsigned int xhot, unsigned int yhot, int width,
 	}
 
 	cursor = XcursorImageLoadCursor(g_display, cimg);
+	XcursorImageDestroy(cimg);
 	if (!cursor)
 	{
 		logger(GUI, Error, "ui_create_cursor(): XcursorImageLoadCursor() failed");
