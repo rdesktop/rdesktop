@@ -379,7 +379,7 @@ rdpsnd_process(STREAM s)
 			in_uint8s(s, 1);	/* Padding */
 			in_uint16_le(s, len);
 
-			logger(Sound, Error, "rdpsnd_process(), Opcode = 0x%x Length= %d",
+			logger(Sound, Debug, "rdpsnd_process(), Opcode = 0x%x Length= %d",
 			       (int) packet_opcode, (int) len);
 
 			packet.p = packet.data;
