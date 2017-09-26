@@ -3017,6 +3017,9 @@ ui_create_cursor(unsigned int xhot, unsigned int yhot, int width,
 void
 ui_set_cursor(RD_HCURSOR cursor)
 {
+	logger(GUI, Debug, "ui_set_cursor(): g_current_cursor = %p, new = %p",
+	       g_current_cursor, cursor);
+
 	g_current_cursor = (Cursor) cursor;
 	XDefineCursor(g_display, g_wnd, g_current_cursor);
 	ON_ALL_SEAMLESS_WINDOWS(XDefineCursor, (g_display, sw->wnd, g_current_cursor));
