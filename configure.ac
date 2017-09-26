@@ -256,7 +256,7 @@ AC_DEFINE_UNQUOTED(EGD_SOCKET, "$EGD_SOCKET")
 
 sound="yes"
 AC_ARG_WITH(sound,
-    [  --with-sound            select sound system ("oss", "sgi", "sun", "alsa" or "libao") ],
+    [  --with-sound            select sound system ("oss", "sgi", "sun", "alsa", "pulse" or "libao") ],
     [ 
     sound="$withval" 
     ])
@@ -272,6 +272,7 @@ AC_ARG_ENABLE(static-libsamplerate,
 
 if test -n "$PKG_CONFIG"; then
     PKG_CHECK_MODULES(LIBAO, ao, [HAVE_LIBAO=1], [HAVE_LIBAO=0])
+    PKG_CHECK_MODULES(PULSE, libpulse, [HAVE_PULSE=1], [HAVE_PULSE=0])
     PKG_CHECK_MODULES(ALSA, alsa, [HAVE_ALSA=1], [HAVE_ALSA=0])
     PKG_CHECK_MODULES(LIBSAMPLERATE, samplerate, [HAVE_LIBSAMPLERATE=1], [HAVE_LIBSAMPLERATE=0])
     if test x"$HAVE_LIBSAMPLERATE" = "x1"; then
@@ -314,6 +315,13 @@ case $sound in
             CFLAGS="$CFLAGS $ALSA_CFLAGS"
             LIBS="$LIBS $ALSA_LIBS"
             AC_DEFINE(RDPSND_ALSA)
+        fi
+
+        if test x"$HAVE_PULSE" = "x1"; then
+            SOUNDOBJ="$SOUNDOBJ rdpsnd_pulse.o"
+            CFLAGS="$CFLAGS $PULSE_CFLAGS"
+            LIBS="$LIBS $PULSE_LIBS"
+            AC_DEFINE(RDPSND_PULSE)
         fi
 
         if test x"$HAVE_LIBAO" = "x1"; then
@@ -364,6 +372,17 @@ case $sound in
         fi
         ;;
 
+    pulse)
+        if test x"$HAVE_PULSE" = "x1"; then
+            SOUNDOBJ="$SOUNDOBJ rdpsnd_pulse.o"
+            CFLAGS="$CFLAGS $PULSE_CFLAGS"
+            LIBS="$LIBS $PULSE_LIBS"
+            AC_DEFINE(RDPSND_PULSE)
+        else
+            AC_MSG_ERROR([Selected sound system is not available.])
+        fi
+        ;;
+
     libao)
         if test x"$HAVE_LIBAO" = "x1"; then
             SOUNDOBJ="$SOUNDOBJ rdpsnd_libao.o"
@@ -380,7 +399,7 @@ case $sound in
 
     *)
         AC_MSG_WARN([sound support disabled])
-        AC_MSG_WARN([Currently supported systems are Open Sound System (oss), SGI AL (sgi), Sun/BSD (sun), ALSA (alsa) and libao])
+        AC_MSG_WARN([Currently supported systems are Open Sound System (oss), SGI AL (sgi), Sun/BSD (sun), ALSA (alsa), PulseAudio (pulse) and libao])
         ;;
 esac
 
