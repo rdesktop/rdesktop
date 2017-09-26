@@ -650,7 +650,8 @@ disk_write(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint3
 RD_NTSTATUS
 disk_query_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 {
-	logger(Disk, Debug, "disk_query_information(handle=0x%x, info_class=0x%x)", handle, info_class);
+	logger(Disk, Debug, "disk_query_information(handle=0x%x, info_class=0x%x)", handle,
+	       info_class);
 	uint32 file_attributes, ft_high, ft_low;
 	struct stat filestat;
 	char *path, *filename;
@@ -736,7 +737,8 @@ disk_query_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 RD_NTSTATUS
 disk_set_information(RD_NTHANDLE handle, uint32 info_class, STREAM in, STREAM out)
 {
-	logger(Disk, Debug, "disk_set_information(handle=0x%x, info_class=0x%x, ...)", handle, info_class);
+	logger(Disk, Debug, "disk_set_information(handle=0x%x, info_class=0x%x, ...)", handle,
+	       info_class);
 	uint32 length, file_attributes, ft_high, ft_low;
 	char *newname, fullpath[PATH_MAX];
 	struct fileinfo *pfinfo;
@@ -1120,7 +1122,8 @@ FsVolumeInfo(char *fpath)
 RD_NTSTATUS
 disk_query_volume_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 {
-	logger(Disk, Debug, "disk_query_volume_information(handle=0x%x, info_class=0x%x)", handle, info_class);
+	logger(Disk, Debug, "disk_query_volume_information(handle=0x%x, info_class=0x%x)", handle,
+	       info_class);
 	struct STATFS_T stat_fs;
 	struct fileinfo *pfinfo;
 	FsInfoType *fsinfo;
