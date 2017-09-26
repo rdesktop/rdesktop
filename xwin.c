@@ -2965,7 +2965,7 @@ ui_create_cursor(unsigned int xhot, unsigned int yhot, int width,
 	XcursorImage *cimg;
 	uint32 x, y, oidx, idx, argb;
 
-	logger(GUI, Debug, "ui_create_cursot(): xhot=%d, yhot=%d, width=%d, height=%d, bpp=%d",
+	logger(GUI, Debug, "ui_create_cursor(): xhot=%d, yhot=%d, width=%d, height=%d, bpp=%d",
 	       xhot, yhot, width, height, bpp);
 
 	if (bpp != 1 && bpp != 24 && bpp != 32)
