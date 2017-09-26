@@ -9,6 +9,6 @@ notifications:
     
 before_install:
  - sudo apt-get -qq update
- - sudo apt-get install -y libpcsclite-dev libxcursor-dev
+ - sudo apt-get install -y libpcsclite-dev libxcursor-dev libao-dev libasound2-dev
 
 script: ./bootstrap && ./configure && make
