@@ -30,34 +30,6 @@ extern char *g_sc_container_name;
 static gss_OID_desc _gss_spnego_krb5_mechanism_oid_desc =
 	{ 9, (void *) "\x2a\x86\x48\x86\xf7\x12\x01\x02\x02" };
 
-
-static void
-s_realloc(STREAM s, unsigned int size)
-{
-	unsigned char *data;
-
-	if (s->size >= size)
-		return;
-
-	data = s->data;
-	s->size = size;
-	s->data = xrealloc(data, size);
-	s->p = s->data + (s->p - data);
-	s->end = s->data + (s->end - data);
-	s->iso_hdr = s->data + (s->iso_hdr - data);
-	s->mcs_hdr = s->data + (s->mcs_hdr - data);
-	s->sec_hdr = s->data + (s->sec_hdr - data);
-	s->rdp_hdr = s->data + (s->rdp_hdr - data);
-	s->channel_hdr = s->data + (s->channel_hdr - data);
-}
-
-static void
-s_free(STREAM s)
-{
-	free(s->data);
-	free(s);
-}
-
 static STREAM
 ber_wrap_hdr_data(int tagval, STREAM in)
 {

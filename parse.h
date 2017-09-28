@@ -2,7 +2,7 @@
    rdesktop: A Remote Desktop Protocol client.
    Parsing primitives
    Copyright (C) Matthew Chapman 1999-2008
-   Copyright 2012 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2012-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -17,6 +17,9 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+
+#ifndef _PARSE_H
+#define _PARSE_H
 
 /* Parser state */
 typedef struct stream
@@ -36,13 +39,16 @@ typedef struct stream
 }
  *STREAM;
 
+void s_realloc(STREAM s, unsigned int size);
+void s_free(STREAM s);
+void s_reset(STREAM s);
+
 #define s_push_layer(s,h,n)	{ (s)->h = (s)->p; (s)->p += n; }
 #define s_pop_layer(s,h)	(s)->p = (s)->h;
 #define s_mark_end(s)		(s)->end = (s)->p;
 #define s_check_rem(s,n)	(((s)->p <= (s)->end) && ((size_t)n <= (size_t)((s)->end - (s)->p)))
 #define s_check_end(s)		((s)->p == (s)->end)
 #define s_length(s)		((s)->end - (s)->data)
-#define s_reset(s)		((s)->end = (s)->p = (s)->data)
 #define s_left(s)		((s)->size - (size_t)((s)->p - (s)->data))
 
 /* Verify that there is enough data/space before accessing a STREAM */
@@ -99,3 +105,6 @@ typedef struct stream
 #define out_uint8s(s,n)		{ s_assert_w(s, n); memset((s)->p,0,n); (s)->p += n; }
 
 #define next_be(s,v)		{ s_assert_r(s, 1); v = ((v) << 8) + *((s)->p++); }
+
+
+#endif /* _PARSE_H */
