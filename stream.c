@@ -20,7 +20,7 @@
 #include <stdlib.h>
 #include "rdesktop.h"
 
-#include "parse.h"
+#include "stream.h"
 
 void
 s_realloc(STREAM s, unsigned int size)

@@ -168,7 +168,7 @@
 #endif
 
 #include "utils.h"
-#include "parse.h"
+#include "stream.h"
 #include "constants.h"
 #include "types.h"
 

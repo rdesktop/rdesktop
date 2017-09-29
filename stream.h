@@ -18,8 +18,8 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _PARSE_H
-#define _PARSE_H
+#ifndef _STREAM_H
+#define _STREAM_H
 
 /* Parser state */
 typedef struct stream
@@ -103,4 +103,4 @@ void s_reset(STREAM s);
 #define next_be(s,v)		v = ((v) << 8) + *((s)->p++);
 
 
-#endif /* _PARSE_H */
+#endif /* _STREAM_H */
