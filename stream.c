@@ -77,33 +77,19 @@ local_to_utf16()
   return icv;
 }
 
-/* Writes a utf16 encoded string into stream including a null
-   termination. This function assumes that input string is ASCII
-   compatible, such as UTF-8.
-*/
-void
-out_utf16s(STREAM s, const char *string)
-{
-  out_utf16s_no_eos(s, string);
-
-  // append utf16 null termination
-  out_uint16(s, 0);
-}
-
-
 /* Writes a utf16 encoded string into stream excluding null termination.
    This function assumes that input is ASCII compatible, such as UTF-8.
  */
-void
-out_utf16s_no_eos(STREAM s, const char *string)
+static inline size_t
+_out_utf16s(STREAM s, size_t maxlength, const char *string)
 {
   static iconv_t icv_local_to_utf16;
-  size_t ibl, obl;
+  size_t bl, ibl, obl;
   const char *pin;
   char *pout;
 
   if (string == NULL)
-    return;
+    return 0;
 
   if (!icv_local_to_utf16)
     {
@@ -111,7 +97,7 @@ out_utf16s_no_eos(STREAM s, const char *string)
     }
 
   ibl = strlen(string);
-  obl = s_left(s);
+  obl = maxlength ? maxlength : s_left(s);
   pin = string;
   pout = (char *) s->p;
 
@@ -121,5 +107,50 @@ out_utf16s_no_eos(STREAM s, const char *string)
       abort();
     }
 
+  bl = (unsigned char*)pout - s->p;
+
   s->p = (unsigned char *)pout;
+
+  return bl;
+}
+
+/* Writes a utf16 encoded string into stream including a null
+   termination. The length is fixed and defined by width. If result is
+   longer than specified width, the string is truncated. pad,
+   specifies a character to pad with.
+*/
+void
+out_utf16s_padded(STREAM s, const char *string, size_t length, unsigned char pad)
+{
+  int i;
+  size_t bl;
+  bl = _out_utf16s(s, length - 2, string);
+
+  // append utf16 null termination
+  out_uint16(s, 0);
+  bl += 2;
+
+  for (i = 0; i < (length - bl); i++)
+    out_uint8(s, pad);
+}
+
+/* Writes a utf16 encoded string into stream including a null
+   termination.
+*/
+void
+out_utf16s(STREAM s, const char *string)
+{
+  _out_utf16s(s, 0, string);
+
+  // append utf16 null termination
+  out_uint16(s, 0);
+}
+
+
+/* Writes a utf16 encoded string into stream excluding null
+   termination. */
+void
+out_utf16s_no_eos(STREAM s, const char *string)
+{
+  _out_utf16s(s, 0, string);
 }
