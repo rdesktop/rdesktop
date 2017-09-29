@@ -1127,6 +1127,10 @@ disk_query_volume_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 	struct STATFS_T stat_fs;
 	struct fileinfo *pfinfo;
 	FsInfoType *fsinfo;
+	struct stream stmp;
+
+	memset(&stmp, 0, sizeof(stmp));
+	s_realloc(&stmp, PATH_MAX * 4);
 
 	pfinfo = &(g_fileinfo[handle]);
 
@@ -1142,15 +1146,16 @@ disk_query_volume_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 	switch (info_class)
 	{
 		case FileFsVolumeInformation:
+			s_reset(&stmp);
+			out_utf16s(&stmp, fsinfo->label);
+			s_mark_end(&stmp);
 
 			out_uint32_le(out, 0);	/* volume creation time low */
 			out_uint32_le(out, 0);	/* volume creation time high */
 			out_uint32_le(out, fsinfo->serial);	/* serial */
-
-			out_uint32_le(out, 2 * strlen(fsinfo->label));	/* length of string */
-
+			out_uint32_le(out, s_length(&stmp));	/* length of string */
 			out_uint8(out, 0);	/* support objects? */
-			rdp_out_unistr(out, fsinfo->label, 2 * strlen(fsinfo->label) - 2);
+			out_stream(out, &stmp);  /* fsinfo->label string*/
 			break;
 
 		case FileFsSizeInformation:
@@ -1176,12 +1181,15 @@ disk_query_volume_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 			break;
 
 		case FileFsAttributeInformation:
+			s_reset(&stmp);
+			out_utf16s_no_eos(&stmp, fsinfo->type);
+			s_mark_end(&stmp);
 
 			out_uint32_le(out, FS_CASE_SENSITIVE | FS_CASE_IS_PRESERVED);	/* fs attributes */
 			out_uint32_le(out, F_NAMELEN(stat_fs));	/* max length of filename */
 
-			out_uint32_le(out, 2 * strlen(fsinfo->type));	/* length of fs_type */
-			rdp_out_unistr(out, fsinfo->type, 2 * strlen(fsinfo->type) - 2);
+			out_uint32_le(out, s_length(&stmp));	/* length of fsinfo->type string */
+			out_stream(out, &stmp); /* fsinfo->typ string */
 			break;
 
 		case FileFsLabelInformation:
@@ -1210,12 +1218,15 @@ disk_query_directory(RD_NTHANDLE handle, uint32 info_class, char *pattern, STREA
 	struct dirent *pdirent;
 	struct stat filestat;
 	struct fileinfo *pfinfo;
+	struct stream stmp;
 
 	pfinfo = &(g_fileinfo[handle]);
 	pdir = pfinfo->pdir;
 	dirname = pfinfo->path;
 	file_attributes = 0;
 
+	memset(&stmp, 0, sizeof(stmp));
+	s_realloc(&stmp, PATH_MAX * 4);
 
 	switch (info_class)
 	{
@@ -1284,6 +1295,13 @@ disk_query_directory(RD_NTHANDLE handle, uint32 info_class, char *pattern, STREA
 			return RD_STATUS_INVALID_PARAMETER;
 	}
 
+	// Write entry name as utf16 into stmp
+	s_reset(&stmp);
+	out_utf16s_no_eos(&stmp, pdirent->d_name);
+	s_mark_end(&stmp);
+
+	logger(Disk, Notice, "Dirname: %d, %s", s_length(&stmp), pdirent->d_name);
+
 	switch (info_class)
 	{
 		case FileBothDirectoryInformation:
@@ -1310,14 +1328,11 @@ disk_query_directory(RD_NTHANDLE handle, uint32 info_class, char *pattern, STREA
 			out_uint32_le(out, filestat.st_size);	/* filesize low */
 			out_uint32_le(out, 0);	/* filesize high */
 			out_uint32_le(out, file_attributes);	/* FileAttributes */
-			out_uint32_le(out, 2 * strlen(pdirent->d_name) + 2);	/* unicode length */
+			out_uint32_le(out, s_length(&stmp));	/* length of dir entry name string */
 			out_uint32_le(out, 0);	/* EaSize */
 			out_uint8(out, 0);	/* ShortNameLength */
-			/* this should be correct according to MS-FSCC specification
-			   but it only works when commented out... */
-			/* out_uint8(out, 0); *//* Reserved/Padding */
-			out_uint8s(out, 2 * 12);	/* ShortName (8.3 name) */
-			rdp_out_unistr(out, pdirent->d_name, 2 * strlen(pdirent->d_name));
+			out_uint8s(out, 24);	/* ShortName (8.3 name) */
+			out_stream(out, &stmp); /* dir entry name string */
 			break;
 
 
@@ -1345,8 +1360,8 @@ disk_query_directory(RD_NTHANDLE handle, uint32 info_class, char *pattern, STREA
 			out_uint32_le(out, filestat.st_size);	/* filesize low */
 			out_uint32_le(out, 0);	/* filesize high */
 			out_uint32_le(out, file_attributes);
-			out_uint32_le(out, 2 * strlen(pdirent->d_name) + 2);	/* unicode length */
-			rdp_out_unistr(out, pdirent->d_name, 2 * strlen(pdirent->d_name));
+			out_uint32_le(out, s_length(&stmp));	/* dir entry name string length */
+			out_stream(out, &stmp); /* dir entry name */
 			break;
 
 
@@ -1374,16 +1389,16 @@ disk_query_directory(RD_NTHANDLE handle, uint32 info_class, char *pattern, STREA
 			out_uint32_le(out, filestat.st_size);	/* filesize low */
 			out_uint32_le(out, 0);	/* filesize high */
 			out_uint32_le(out, file_attributes);
-			out_uint32_le(out, 2 * strlen(pdirent->d_name) + 2);	/* unicode length */
+			out_uint32_le(out, s_length(&stmp));	/* dir entry name string length */
 			out_uint32_le(out, 0);	/* EaSize */
-			rdp_out_unistr(out, pdirent->d_name, 2 * strlen(pdirent->d_name));
+			out_stream(out, &stmp); /* dir entry name */
 			break;
 
 
 		case FileNamesInformation:
 
-			out_uint32_le(out, 2 * strlen(pdirent->d_name) + 2);	/* unicode length */
-			rdp_out_unistr(out, pdirent->d_name, 2 * strlen(pdirent->d_name));
+			out_uint32_le(out, s_length(&stmp));	/* dir entry name string length */
+			out_stream(out, &stmp); /* dir entry name */
 			break;
 
 
