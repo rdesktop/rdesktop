@@ -43,6 +43,9 @@ void s_realloc(STREAM s, unsigned int size);
 void s_free(STREAM s);
 void s_reset(STREAM s);
 
+void out_utf16s(STREAM s, const char *string);
+void out_utf16s_no_eos(STREAM s, const char *string);
+
 #define s_push_layer(s,h,n)	{ (s)->h = (s)->p; (s)->p += n; }
 #define s_pop_layer(s,h)	(s)->p = (s)->h;
 #define s_mark_end(s)		(s)->end = (s)->p;
@@ -50,6 +53,7 @@ void s_reset(STREAM s);
 #define s_check_rem(s,n)	((s)->p + n <= (s)->end)
 #define s_check_end(s)		((s)->p == (s)->end)
 #define s_length(s)		((s)->end - (s)->data)
+#define s_left(s)               ((s)->size - ((s)->p - (s)->data))
 
 #if defined(L_ENDIAN) && !defined(NEED_ALIGN)
 #define in_uint16_le(s,v)	{ v = *(uint16 *)((s)->p); (s)->p += 2; }
@@ -99,6 +103,7 @@ void s_reset(STREAM s);
 #define out_uint8p(s,v,n)	{ memcpy((s)->p,v,n); (s)->p += n; }
 #define out_uint8a(s,v,n)	out_uint8p(s,v,n);
 #define out_uint8s(s,n)		{ memset((s)->p,0,n); (s)->p += n; }
+#define out_stream(s, v)        out_uint8p(s, (v)->data, s_length((v)))
 
 #define next_be(s,v)		v = ((v) << 8) + *((s)->p++);
 

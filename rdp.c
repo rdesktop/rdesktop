@@ -174,6 +174,12 @@ rdp_send_data(STREAM s, uint8 data_pdu_type)
 void
 rdp_out_unistr_mandatory_null(STREAM s, char *string, int len)
 {
+	/* LEGACY:
+	 *
+	 *  Do not write new code that uses this function, use the ones defined
+	 *  in stream.h for writing utf16 strings to a stream.
+	 *
+	 */
 	if (string && len > 0)
 		rdp_out_unistr(s, string, len);
 	else
@@ -184,6 +190,12 @@ rdp_out_unistr_mandatory_null(STREAM s, char *string, int len)
 void
 rdp_out_unistr(STREAM s, char *string, int len)
 {
+	/* LEGACY:
+	 *
+	 *  Do not write new code that uses this function, use the ones defined
+	 *  in stream.h for writing utf16 strings to a stream.
+	 *
+	 */
 	static iconv_t icv_local_to_utf16;
 	size_t ibl, obl;
 	char *pin, *pout;

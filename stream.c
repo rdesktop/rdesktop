@@ -17,10 +17,13 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <errno.h>
+#include <iconv.h>
 #include <stdlib.h>
+
 #include "rdesktop.h"
 
-#include "stream.h"
+extern char g_codepage[16];
 
 void
 s_realloc(STREAM s, unsigned int size)
@@ -58,4 +61,65 @@ s_free(STREAM s)
 {
        free(s->data);
        free(s);
+}
+
+static iconv_t
+local_to_utf16()
+{
+  iconv_t icv;
+  icv = iconv_open(WINDOWS_CODEPAGE, g_codepage);
+  if (icv == (iconv_t) - 1)
+  {
+    logger(Core, Error, "locale_to_utf16(), iconv_open[%s -> %s] fail %p",
+	   g_codepage, WINDOWS_CODEPAGE, icv);
+    abort();
+  }
+  return icv;
+}
+
+/* Writes a utf16 encoded string into stream including a null
+   termination. This function assumes that input string is ASCII
+   compatible, such as UTF-8.
+*/
+void
+out_utf16s(STREAM s, const char *string)
+{
+  out_utf16s_no_eos(s, string);
+
+  // append utf16 null termination
+  out_uint16(s, 0);
+}
+
+
+/* Writes a utf16 encoded string into stream excluding null termination.
+   This function assumes that input is ASCII compatible, such as UTF-8.
+ */
+void
+out_utf16s_no_eos(STREAM s, const char *string)
+{
+  static iconv_t icv_local_to_utf16;
+  size_t ibl, obl;
+  const char *pin;
+  char *pout;
+
+  if (string == NULL)
+    return;
+
+  if (!icv_local_to_utf16)
+    {
+      icv_local_to_utf16 = local_to_utf16();
+    }
+
+  ibl = strlen(string);
+  obl = s_left(s);
+  pin = string;
+  pout = (char *) s->p;
+
+  if (iconv(icv_local_to_utf16, (char **) &pin, &ibl, &pout, &obl) == (size_t) - 1)
+    {
+      logger(Protocol, Error, "out_utf16s(), iconv(2) fail, errno %d", errno);
+      abort();
+    }
+
+  s->p = (unsigned char *)pout;
 }
