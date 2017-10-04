@@ -1248,17 +1248,6 @@ TS_SCardGetStatusChange(STREAM in, STREAM out, RD_BOOL wide)
 	       "TS_SCardGetStatusChange(), SCardGetStatusChange returned \"%s\" (0x%08x)",
 	       pcsc_stringify_error(rv), rv);
 
-	switch (rv)
-	{
-		case SCARD_S_SUCCESS:
-		case SCARD_E_TIMEOUT:
-			break;
-		default:
-			logger(SmartCard, Warning,
-			       "TS_SCardGetStatusChange(), unhandled error from SCardGetStatusChange: %s (0x%08x)",
-			       pcsc_stringify_error(rv), rv);
-	}
-
 	out_uint32_le(out, dwCount);
 	out_uint32_le(out, 0x00084dd8);
 	out_uint32_le(out, dwCount);
