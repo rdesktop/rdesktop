@@ -275,13 +275,13 @@ handle_disconnect_reason(RD_BOOL deactivated, uint16 reason)
 			break;
 
 		case ERRINFO_RPC_INITIATED_DISCONNECT:
-			text = "Server initiated disconnect";
-			retval = EXRD_API_DISCONNECT;
+			text = "Administrator initiated disconnect";
+			retval = EXRD_DISCONNECT_BY_ADMIN;
 			break;
 
 		case ERRINFO_RPC_INITIATED_LOGOFF:
-			text = "Server initiated logoff";
-			retval = EXRD_API_LOGOFF;
+			text = "Administrator initiated logout";
+			retval = EXRD_LOGOFF_BY_ADMIN;
 			break;
 
 		case ERRINFO_IDLE_TIMEOUT:
@@ -325,13 +325,13 @@ handle_disconnect_reason(RD_BOOL deactivated, uint16 reason)
 			break;
 
 		case ERRINFO_RPC_INITIATED_DISCONNECT_BYUSER:
-			text = "Disconnect initiated by administration tool";
-			retval = EXRD_RPC_DISCONNECT_BY_USER;
+			text = "Disconnect initiated by user";
+			retval = EXRD_DISCONNECT_BY_USER;
 			break;
 
 		case ERRINFO_LOGOFF_BYUSER:
-			text = "Disconnect initiated by user";
-			retval = EXRD_DISCONNECT_BY_USER;
+			text = "Logout initiated by user";
+			retval = EXRD_LOGOFF_BY_USER;
 			break;
 
 		case ERRINFO_LICENSE_INTERNAL:
