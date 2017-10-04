@@ -117,6 +117,18 @@
 #define EXRD_LIC_UPGRADE                 25
 #define EXRD_LIC_NOREMOTE                26
 
+#define EXRD_CB_DEST_NOT_FOUND           30
+#define EXRD_CB_DEST_LOADING             32
+#define EXRD_CB_REDIR_DEST               34
+#define EXRD_CB_VM_WAKE                  35
+#define EXRD_CB_VM_BOOT                  36
+#define EXRD_CB_VM_NODNS                 37
+#define EXRD_CB_DEST_POOL_NOT_FREE       38
+#define EXRD_CB_CONNECTION_CANCELLED     39
+#define EXRD_CB_INVALID_SETTINGS         40
+#define EXRD_CB_VM_BOOT_TIMEOUT          41
+#define EXRD_CB_VM_BOOT_SESSMON_FAILED   42
+
 /* other exit codes */
 #define EXRD_WINDOW_CLOSED  62
 #define EXRD_UNKNOWN        63

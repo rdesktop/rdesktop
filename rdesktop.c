@@ -389,6 +389,61 @@ handle_disconnect_reason(RD_BOOL deactivated, uint16 reason)
 			retval = EXRD_LIC_NOREMOTE;
 			break;
 
+		case ERRINFO_CB_DESTINATION_NOT_FOUND:
+			text = "The target endpoint chosen by the broker could not be found";
+			retval = EXRD_CB_DEST_NOT_FOUND;
+			break;
+
+		case ERRINFO_CB_LOADING_DESTINATION:
+			text = "The target endpoint is disconnecting from the broker";
+			retval = EXRD_CB_DEST_LOADING;
+			break;
+
+		case ERRINFO_CB_REDIRECTING_TO_DESTINATION:
+			text = "Error occured while being redirected by broker";
+			retval = EXRD_CB_REDIR_DEST;
+			break;
+
+		case ERRINFO_CB_SESSION_ONLINE_VM_WAKE:
+			text = "Error while the endpoint VM was being awakened by the broker";
+			retval = EXRD_CB_VM_WAKE;
+			break;
+
+		case ERRINFO_CB_SESSION_ONLINE_VM_BOOT:
+			text = "Error while the endpoint VM was being started by the broker";
+			retval = EXRD_CB_VM_BOOT;
+			break;
+
+		case ERRINFO_CB_SESSION_ONLINE_VM_NO_DNS:
+			text = "The IP address of the endpoint VM could not be determined by the broker";
+			retval = EXRD_CB_VM_NODNS;
+			break;
+
+		case ERRINFO_CB_DESTINATION_POOL_NOT_FREE:
+			text = "No available endpoints in the connection broker pool";
+			retval = EXRD_CB_DEST_POOL_NOT_FREE;
+			break;
+
+		case ERRINFO_CB_CONNECTION_CANCELLED:
+			text = "Connection processing cancelled by the broker";
+			retval = EXRD_CB_CONNECTION_CANCELLED;
+			break;
+
+		case ERRINFO_CB_CONNECTION_ERROR_INVALID_SETTINGS:
+			text = "The connection settings could not be validated by the broker";
+			retval = EXRD_CB_INVALID_SETTINGS;
+			break;
+
+		case ERRINFO_CB_SESSION_ONLINE_VM_BOOT_TIMEOUT:
+			text = "Timeout while the endpoint VM was being started by the broker";
+			retval = EXRD_CB_VM_BOOT_TIMEOUT;
+			break;
+
+		case ERRINFO_CB_SESSION_ONLINE_VM_SESSMON_FAILED:
+			text = "Session monitoring error while the endpoint VM was being started by the broker";
+			retval = EXRD_CB_VM_BOOT_SESSMON_FAILED;
+			break;
+
 		default:
 			text = "Unknown reason";
 			retval = EXRD_UNKNOWN;
