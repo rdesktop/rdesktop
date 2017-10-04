@@ -20,12 +20,8 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifdef RDP2VNC
-#include "vnc/x11stubs.h"
-#else
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
-#endif
 
 #include <ctype.h>
 #include <limits.h>
@@ -667,28 +663,22 @@ handle_special_keys(uint32 keysym, unsigned int state, uint32 ev_time, RD_BOOL p
 			break;
 
 		case XK_Pause:
-			/* According to MS Keyboard Scan Code
-			   Specification, pressing Pause should result
-			   in E1 1D 45 E1 9D C5. I'm not exactly sure
-			   of how this is supposed to be sent via
-			   RDP. The code below seems to work, but with
-			   the side effect that Left Ctrl stays
-			   down. Therefore, we release it when Pause
-			   is released. */
+			/* According to the RDP documentation (MS-RDPBCGR, page 164),
+			   pressing Pause must result in:
+			   CTRL    (0x1D) DOWN  with the KBDFLAGS_EXTENDED1 flag
+			   NUMLOCK (0x45) DOWN
+			   CTRL    (0x1D) UP    with the KBDFLAGS_EXTENDED1 flag
+			   NUMLOCK (0x45) UP
+			 */
 			if (pressed)
 			{
-				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS, 0xe1, 0);
-				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS, 0x1d, 0);
+				rdp_send_input(ev_time, RDP_INPUT_SCANCODE,
+					       RDP_KEYPRESS | KBD_FLAG_EXT1, 0x1d, 0);
 				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS, 0x45, 0);
-				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS, 0xe1, 0);
-				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS, 0x9d, 0);
-				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYPRESS, 0xc5, 0);
-			}
-			else
-			{
-				/* Release Left Ctrl */
-				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYRELEASE,
-					       0x1d, 0);
+				rdp_send_input(ev_time, RDP_INPUT_SCANCODE,
+					       RDP_KEYRELEASE | KBD_FLAG_EXT1, 0x1d, 0);
+				rdp_send_input(ev_time, RDP_INPUT_SCANCODE, RDP_KEYRELEASE, 0x45,
+					       0);
 			}
 			return True;
 			break;
@@ -883,8 +873,10 @@ xkeymap_send_keys(uint32 keysym, unsigned int keycode, unsigned int state, uint3
 }
 
 uint16
-xkeymap_translate_button(unsigned int button)
+xkeymap_translate_button(unsigned int button, uint16 * input_type)
 {
+	*input_type = RDP_INPUT_MOUSE;
+
 	switch (button)
 	{
 		case Button1:	/* left */
@@ -897,6 +889,12 @@ xkeymap_translate_button(unsigned int button)
 			return MOUSE_FLAG_BUTTON4;
 		case Button5:	/* wheel down */
 			return MOUSE_FLAG_BUTTON5;
+		case 8:	/* button 4 */
+			*input_type = RDP_INPUT_MOUSEX;
+			return MOUSEX_FLAG_BUTTON1;
+		case 9:	/* button 5 */
+			*input_type = RDP_INPUT_MOUSEX;
+			return MOUSEX_FLAG_BUTTON2;
 	}
 
 	return 0;
@@ -1024,16 +1022,12 @@ ensure_remote_modifiers(uint32 ev_time, key_translation tr)
 unsigned int
 read_keyboard_state()
 {
-#ifdef RDP2VNC
-	return 0;
-#else
 	unsigned int state;
 	Window wdummy;
 	int dummy;
 
 	XQueryPointer(g_display, g_wnd, &wdummy, &wdummy, &dummy, &dummy, &dummy, &dummy, &state);
 	return state;
-#endif
 }
 
 

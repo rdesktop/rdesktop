@@ -20,38 +20,19 @@ CFLAGS      = @CFLAGS@ @X_CFLAGS@ @DEFS@ -DKEYMAP_PATH=\"$(KEYMAP_PATH)\"
 LDFLAGS     = @LDFLAGS@ @LIBS@ @X_LIBS@ @X_EXTRA_LIBS@
 STRIP       = @STRIP@
 
-TARGETS     = rdesktop @RDP2VNCTARGET@
-VNCINC      = @VNCINC@
-LDVNC       = @LDVNC@
-VNCLINK     = @VNCLINK@
+TARGETS     = rdesktop
 SOUNDOBJ    = @SOUNDOBJ@
 SCARDOBJ    = @SCARDOBJ@
 CREDSSPOBJ  = @CREDSSPOBJ@
 
 RDPOBJ   = tcp.o asn.o iso.o mcs.o secure.o licence.o rdp.o orders.o bitmap.o cache.o rdp5.o channels.o rdpdr.o serial.o printer.o disk.o parallel.o printercache.o mppc.o pstcache.o lspci.o seamless.o ssl.o utils.o
 X11OBJ   = rdesktop.o xwin.o xkeymap.o ewmhints.o xclip.o cliprdr.o ctrl.o
-VNCOBJ   = vnc/rdp2vnc.o vnc/vnc.o vnc/xkeymap.o vnc/x11stubs.o
 
 .PHONY: all
 all: $(TARGETS)
 
 rdesktop: $(X11OBJ) $(SOUNDOBJ) $(RDPOBJ) $(SCARDOBJ) $(CREDSSPOBJ)
 	$(CC) $(CFLAGS) -o rdesktop $(X11OBJ) $(SOUNDOBJ) $(RDPOBJ) $(SCARDOBJ) $(CREDSSPOBJ) $(LDFLAGS) -lX11
-
-rdp2vnc: $(VNCOBJ) $(SOUNDOBJ) $(RDPOBJ) $(SCARDOBJ) $(CREDSSPOBJ)
-	$(VNCLINK) $(CFLAGS) -o rdp2vnc $(VNCOBJ) $(SOUNDOBJ) $(RDPOBJ) $(SCARDOBJ) $(CREDSSPOBJ) $(LDFLAGS) $(LDVNC)
-
-vnc/rdp2vnc.o: rdesktop.c
-	$(CC) $(CFLAGS) $(VNCINC) -DRDP2VNC -o vnc/rdp2vnc.o -c rdesktop.c
-
-vnc/vnc.o: vnc/vnc.c
-	$(CC) $(CFLAGS) $(VNCINC) -DRDP2VNC -o vnc/vnc.o -c vnc/vnc.c
-
-vnc/xkeymap.o: xkeymap.c
-	$(CC) $(CFLAGS) $(VNCINC) -DRDP2VNC -o vnc/xkeymap.o -c xkeymap.c
-
-vnc/x11stubs.o: vnc/x11stubs.c
-	$(CC) $(CFLAGS) $(VNCINC) -o vnc/x11stubs.o -c vnc/x11stubs.c
 
 .PHONY: install
 install: installbin installkeymaps installman
@@ -73,7 +54,7 @@ installman: doc/rdesktop.1
 installkeymaps:
 	mkdir -p $(DESTDIR)$(KEYMAP_PATH)
 # Prevent copying the CVS directory
-	cp keymaps/?? keymaps/??-?? $(DESTDIR)$(KEYMAP_PATH)
+	cp keymaps/?? keymaps/??-?? keymaps/??-??-???? $(DESTDIR)$(KEYMAP_PATH)
 	cp keymaps/common $(DESTDIR)$(KEYMAP_PATH)
 	cp keymaps/modifiers $(DESTDIR)$(KEYMAP_PATH)
 	chmod 644 $(DESTDIR)$(KEYMAP_PATH)/*
@@ -91,7 +72,7 @@ proto:
 
 .PHONY: clean
 clean:
-	rm -f *.o *~ vnc/*.o vnc/*~ rdesktop rdp2vnc
+	rm -f *.o *~ rdesktop
 
 .PHONY: distclean
 distclean: clean
@@ -106,7 +87,7 @@ rdesktop-$(VERSION).tar.gz: Makefile configure
 	(cd /tmp/rdesktop-make-dist-dir; \
 	tar zcvf rdesktop-$(VERSION)/rdesktop-$(VERSION).tar.gz \
 	rdesktop-$(VERSION)/COPYING \
-	rdesktop-$(VERSION)/README \
+	rdesktop-$(VERSION)/README.md \
 	rdesktop-$(VERSION)/configure \
 	rdesktop-$(VERSION)/configure.ac \
 	rdesktop-$(VERSION)/config.sub \
@@ -120,7 +101,7 @@ rdesktop-$(VERSION).tar.gz: Makefile configure
 	rdesktop-$(VERSION)/proto.head \
 	rdesktop-$(VERSION)/proto.tail \
 	rdesktop-$(VERSION)/keymaps/?? \
-	rdesktop-$(VERSION)/keymaps/??-?? \
+	rdesktop-$(VERSION)/keymaps/??-* \
 	rdesktop-$(VERSION)/keymaps/common \
 	rdesktop-$(VERSION)/keymaps/modifiers \
 	rdesktop-$(VERSION)/keymaps/convert-map \

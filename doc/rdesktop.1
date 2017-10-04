@@ -241,6 +241,10 @@ Linux/Unix enviroment, <Alias Name> - device name shown in Windows enviroment
 <Vendor Name> - optional device vendor name. For list of examples run
 rdesktop without parameters.
 .TP
+.BR "-r clipboard:[off|PRIMARYCLIPBOARD|CLIPBOARD]"
+Enable clipboard redirectino. 'PRIMARYCLIPBOARD' looks at both PRIMARY and
+CLIPBOARD when sending data to server. 'CLIPBOARD' looks at only 'CLIPBOARD'.
+.TP
 .BR "-0"
 Attach to the console of the server (requires Windows Server 2003
 or newer).

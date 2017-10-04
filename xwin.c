@@ -31,6 +31,7 @@
 #include <strings.h>
 #include "rdesktop.h"
 #include "xproto.h"
+#include <X11/Xcursor/Xcursor.h>
 #ifdef HAVE_XRANDR
 #include <X11/extensions/Xrandr.h>
 #endif
@@ -2206,7 +2207,6 @@ ui_resize_window()
 		g_backstore = bs;
 	}
 
-	ui_reset_clip();
 }
 
 RD_BOOL
@@ -2263,7 +2263,7 @@ xwin_toggle_fullscreen(void)
 static void
 handle_button_event(XEvent xevent, RD_BOOL down)
 {
-	uint16 button, flags = 0;
+	uint16 button, input_type, flags = 0;
 	g_last_gesturetime = xevent.xbutton.time;
 	/* Reverse the pointer button mapping, e.g. in the case of
 	   "left-handed mouse mode"; the RDP session expects to
@@ -2271,7 +2271,7 @@ handle_button_event(XEvent xevent, RD_BOOL down)
 	   logical button behavior depends on the remote desktop's own
 	   mouse settings */
 	xevent.xbutton.button = g_pointer_log_to_phys_map[xevent.xbutton.button - 1];
-	button = xkeymap_translate_button(xevent.xbutton.button);
+	button = xkeymap_translate_button(xevent.xbutton.button, &input_type);
 	if (button == 0)
 		return;
 
@@ -2307,7 +2307,7 @@ handle_button_event(XEvent xevent, RD_BOOL down)
 			{
 				/* Release the mouse button outside the minimize button, to prevent the
 				   actual minimazation to happen */
-				rdp_send_input(time(NULL), RDP_INPUT_MOUSE, button, 1, 1);
+				rdp_send_input(time(NULL), input_type, button, 1, 1);
 				XIconifyWindow(g_display, g_wnd, DefaultScreen(g_display));
 				return;
 			}
@@ -2344,13 +2344,13 @@ handle_button_event(XEvent xevent, RD_BOOL down)
 
 	if (xevent.xmotion.window == g_wnd)
 	{
-		rdp_send_input(time(NULL), RDP_INPUT_MOUSE,
+		rdp_send_input(time(NULL), input_type,
 			       flags | button, xevent.xbutton.x, xevent.xbutton.y);
 	}
 	else
 	{
 		/* SeamlessRDP */
-		rdp_send_input(time(NULL), RDP_INPUT_MOUSE,
+		rdp_send_input(time(NULL), input_type,
 			       flags | button, xevent.xbutton.x_root, xevent.xbutton.y_root);
 	}
 }
@@ -2907,136 +2907,111 @@ ui_destroy_glyph(RD_HGLYPH glyph)
 	XFreePixmap(g_display, (Pixmap) glyph);
 }
 
-/* convert next pixel to 32 bpp */
-static int
-get_next_xor_pixel(uint8 * xormask, int bpp, int *k)
+#define GET_BIT(ptr, bit) (*(ptr + bit / 8) & (1 << (7 - (bit % 8))))
+
+static uint32
+get_pixel(uint32 idx, uint8 * andmask, uint8 * xormask, int bpp)
 {
-	int rv = 0;
-	PixelColour pc;
-	uint8 *s8;
-	uint16 *s16;
+	uint32 offs;
+	uint32 argb;
+	uint8 alpha;
+	uint8 *pxor;
 
 	switch (bpp)
 	{
 		case 1:
-			s8 = xormask + (*k) / 8;
-			rv = (*s8) & (0x80 >> ((*k) % 8));
-			rv = rv ? 0xffffff : 0;
-			(*k) += 1;
+			offs = idx;
+			argb = GET_BIT(xormask, idx);
+			alpha = GET_BIT(andmask, idx) ? 0x00 : 0xff;
+			if (!GET_BIT(andmask, idx) == 0x00 && argb)
+			{
+				// If we have an xor bit is high and
+				// andmask bit is low, we should
+				// render a black pixle due to we can
+				// not xor blit in X11.
+
+				// TODO: add outline to make this
+				// prettier on black backgrounds.
+
+				argb = 0xff000000;
+			}
+			else
+				argb = (alpha << 24) | (argb ? 0xffffff : 0x000000);
 			break;
-		case 8:
-			s8 = xormask + *k;
-			/* should use colour map */
-			rv = s8[0];
-			rv = rv ? 0xffffff : 0;
-			(*k) += 1;
-			break;
-		case 15:
-			s16 = (uint16 *) xormask;
-			SPLITCOLOUR15(s16[*k], pc);
-			rv = (pc.red << 16) | (pc.green << 8) | pc.blue;
-			(*k) += 1;
-			break;
-		case 16:
-			s16 = (uint16 *) xormask;
-			SPLITCOLOUR16(s16[*k], pc);
-			rv = (pc.red << 16) | (pc.green << 8) | pc.blue;
-			(*k) += 1;
-			break;
+
 		case 24:
-			s8 = xormask + *k;
-			rv = (s8[0] << 16) | (s8[1] << 8) | s8[2];
-			(*k) += 3;
+			offs = idx * 3;
+			pxor = xormask + offs;
+			alpha = GET_BIT(andmask, idx) ? 0x00 : 0xff;
+			argb = (alpha << 24) | (pxor[2] << 16) | (pxor[1] << 8) | pxor[0];
 			break;
+
 		case 32:
-			s8 = xormask + *k;
-			rv = (s8[1] << 16) | (s8[2] << 8) | s8[3];
-			(*k) += 4;
-			break;
-		default:
-			logger(GUI, Warning, "get_next_xor_pixel(), unhandled bpp=%d", bpp);
+			offs = idx * 4;
+			pxor = xormask + offs;
+			argb = (pxor[3] << 24) | (pxor[2] << 16) | (pxor[1] << 8) | pxor[0];
 			break;
 	}
-	return rv;
+
+	return argb;
 }
 
 RD_HCURSOR
-ui_create_cursor(unsigned int x, unsigned int y, int width, int height,
-		 uint8 * andmask, uint8 * xormask, int bpp)
+ui_create_cursor(unsigned int xhot, unsigned int yhot, int width,
+		 int height, uint8 * andmask, uint8 * xormask, int bpp)
 {
-	RD_HGLYPH maskglyph, cursorglyph;
-	XColor bg, fg;
-	Cursor xcursor;
-	uint8 *cursor, *pcursor;
-	uint8 *mask, *pmask;
-	uint8 nextbit;
-	int scanline, offset, delta;
-	int i, j, k;
+	Cursor cursor;
+	XcursorPixel *out;
+	XcursorImage *cimg;
+	uint32 x, y, oidx, idx, argb;
 
-	k = 0;
-	scanline = (width + 7) / 8;
-	offset = scanline * height;
+	logger(GUI, Debug, "ui_create_cursot(): xhot=%d, yhot=%d, width=%d, height=%d, bpp=%d",
+	       xhot, yhot, width, height, bpp);
 
-	cursor = (uint8 *) xmalloc(offset);
-	memset(cursor, 0, offset);
-
-	mask = (uint8 *) xmalloc(offset);
-	memset(mask, 0, offset);
-	if (bpp == 1)
+	if (bpp != 1 && bpp != 24 && bpp != 32)
 	{
-		offset = 0;
-		delta = scanline;
+		logger(GUI, Warning, "ui_create_xcursor_cursor(): Unhandled cursor bit depth %d",
+		       bpp);
+		return g_null_cursor;
 	}
-	else
-	{
-		offset = scanline * height - scanline;
-		delta = -scanline;
-	}
-	/* approximate AND and XOR masks with a monochrome X pointer */
-	for (i = 0; i < height; i++)
-	{
-		pcursor = &cursor[offset];
-		pmask = &mask[offset];
 
-		for (j = 0; j < scanline; j++)
+	cimg = XcursorImageCreate(width, height);
+	if (!cimg)
+	{
+		logger(GUI, Error, "ui_create_xcursor_cursor(): XcursorImageCreate() failed");
+		return g_null_cursor;
+	}
+
+	cimg->xhot = xhot;
+	cimg->yhot = yhot;
+
+	out = cimg->pixels;
+	for (y = 0; y < height; y++)
+	{
+		for (x = 0; x < width; x++)
 		{
-			for (nextbit = 0x80; nextbit != 0; nextbit >>= 1)
+			oidx = y * width + x;
+
+			// Flip cursor on Y axis if color pointer
+			if (bpp != 1)
 			{
-				if (get_next_xor_pixel(xormask, bpp, &k))
-				{
-					*pcursor |= (~(*andmask) & nextbit);
-					*pmask |= nextbit;
-				}
-				else
-				{
-					*pcursor |= ((*andmask) & nextbit);
-					*pmask |= (~(*andmask) & nextbit);
-				}
+				oidx = (height - 1 - y) * width + x;
 			}
 
-			andmask++;
-			pcursor++;
-			pmask++;
+			idx = y * width + x;
+			argb = get_pixel(idx, andmask, xormask, bpp);
+			out[oidx] = argb;
 		}
-		offset += delta;
 	}
 
-	fg.red = fg.blue = fg.green = 0xffff;
-	bg.red = bg.blue = bg.green = 0x0000;
-	fg.flags = bg.flags = DoRed | DoBlue | DoGreen;
+	cursor = XcursorImageLoadCursor(g_display, cimg);
+	if (!cursor)
+	{
+		logger(GUI, Error, "ui_create_cursor(): XcursorImageLoadCursor() failed");
+		return g_null_cursor;
+	}
 
-	cursorglyph = ui_create_glyph(width, height, cursor);
-	maskglyph = ui_create_glyph(width, height, mask);
-
-	xcursor =
-		XCreatePixmapCursor(g_display, (Pixmap) cursorglyph,
-				    (Pixmap) maskglyph, &fg, &bg, x, y);
-
-	ui_destroy_glyph(maskglyph);
-	ui_destroy_glyph(cursorglyph);
-	xfree(mask);
-	xfree(cursor);
-	return (RD_HCURSOR) xcursor;
+	return (RD_HCURSOR) cursor;
 }
 
 void

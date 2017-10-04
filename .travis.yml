@@ -1,5 +1,14 @@
+dist: trusty
+
 language: c
 
 compiler: gcc
 
-script: ./bootstrap && ./configure --disable-credssp --disable-smartcard && make
+notifications:
+    slack: rdesktop:RZWCtYeVc9qVzsBvTzQtmyLt
+    
+before_install:
+ - sudo apt-get -qq update
+ - sudo apt-get install -y libpcsclite-dev libxcursor-dev
+
+script: ./bootstrap && ./configure && make

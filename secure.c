@@ -568,6 +568,7 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 	if (crypt_level == 0)
 	{
 		/* no encryption */
+		logger(Protocol, Debug, "sec_parse_crypt_info(), got ENCRYPTION_LEVEL_NONE");
 		return False;
 	}
 
@@ -586,7 +587,10 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 	/* RSA info */
 	end = s->p + rsa_info_len;
 	if (end > s->end)
+	{
+		logger(Protocol, Error, "sec_parse_crypt_info(), end > s->end");
 		return False;
+	}
 
 	in_uint32_le(s, flags);	/* 1 = RDP4-style, 0x80000002 = X.509 */
 	if (flags & 1)
@@ -606,7 +610,11 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 			{
 				case SEC_TAG_PUBKEY:
 					if (!sec_parse_public_key(s, modulus, exponent))
+					{
+						logger(Protocol, Error,
+						       "sec_parse_crypt_info(), invalid public key");
 						return False;
+					}
 					logger(Protocol, Debug,
 					       "sec_parse_crypt_info(), got public key");
 
@@ -614,7 +622,11 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 
 				case SEC_TAG_KEYSIG:
 					if (!sec_parse_public_sig(s, length, modulus, exponent))
+					{
+						logger(Protocol, Error,
+						       "sec_parse_crypt_info(), invalid public sig");
 						return False;
+					}
 					break;
 
 				default:
@@ -738,10 +750,7 @@ sec_process_crypt_info(STREAM s)
 	memset(modulus, 0, sizeof(modulus));
 	memset(exponent, 0, sizeof(exponent));
 	if (!sec_parse_crypt_info(s, &rc4_key_size, &server_random, modulus, exponent))
-	{
-		logger(Protocol, Error, "sec_process_crypt_info(), failed to parse crypt info");
 		return;
-	}
 
 	logger(Protocol, Debug, "sec_parse_crypt_info(), generating client random");
 	generate_random(g_client_random);

@@ -154,13 +154,6 @@ extern RDPDR_DEVICE g_rdpdr_device[];
 extern uint32 g_num_devices;
 extern char *g_rdpdr_clientname;
 
-#ifdef RDP2VNC
-extern int rfb_port;
-extern int defer_time;
-void
-rdp2vnc_connect(char *server, uint32 flags, char *domain, char *password,
-		char *shell, char *directory);
-#endif
 /* Display usage information */
 static void
 usage(char *program)
@@ -171,10 +164,6 @@ usage(char *program)
 	fprintf(stderr, "See http://www.rdesktop.org/ for more information.\n\n");
 
 	fprintf(stderr, "Usage: %s [options] server[:port]\n", program);
-#ifdef RDP2VNC
-	fprintf(stderr, "   -V: vnc port\n");
-	fprintf(stderr, "   -Q: defer time (ms)\n");
-#endif
 	fprintf(stderr, "   -u: user name\n");
 	fprintf(stderr, "   -d: domain\n");
 	fprintf(stderr, "   -s: shell / seamless application to start remotely\n");
@@ -438,11 +427,22 @@ read_password(char *password, int size)
 	struct termios tios;
 	RD_BOOL ret = False;
 	int istty = 0;
+	const char *prompt;
 	char *p;
+
+
+	if (g_use_password_as_pin)
+	{
+		prompt = "Smart card PIN: ";
+	}
+	else
+	{
+		prompt = "Password: ";
+	}
 
 	if (tcgetattr(STDIN_FILENO, &tios) == 0)
 	{
-		fprintf(stderr, "Password: ");
+		fprintf(stderr, prompt);
 		tios.c_lflag &= ~ECHO;
 		tcsetattr(STDIN_FILENO, TCSANOW, &tios);
 		istty = 1;
@@ -525,7 +525,7 @@ main(int argc, char *argv[])
 	char domain[256];
 	char shell[256];
 	char directory[256];
-	RD_BOOL prompt_password, deactivated;
+	RD_BOOL deactivated;
 	struct passwd *pw;
 	uint32 flags, ext_disc_reason = 0;
 	char *p;
@@ -562,36 +562,16 @@ main(int argc, char *argv[])
 	flags = RDP_INFO_MOUSE | RDP_INFO_DISABLECTRLALTDEL
 		| RDP_INFO_UNICODE | RDP_INFO_MAXIMIZESHELL | RDP_INFO_ENABLEWINDOWSKEY;
 
-	prompt_password = False;
 	g_seamless_spawn_cmd[0] = domain[0] = g_password[0] = shell[0] = directory[0] = 0;
 	g_embed_wnd = 0;
 
 	g_num_devices = 0;
 
-#ifdef RDP2VNC
-#define VNCOPT "V:Q:"
-#else
-#define VNCOPT
-#endif
 	while ((c = getopt(argc, argv,
-			   VNCOPT "A:u:L:d:s:c:p:n:k:g:o:fbBeEitmMzCDKS:T:NX:a:x:Pr:045vh?")) != -1)
+			   "A:u:L:d:s:c:p:n:k:g:o:fbBeEitmzCDKS:T:NX:a:x:Pr:045vh?")) != -1)
 	{
 		switch (c)
 		{
-#ifdef RDP2VNC
-			case 'V':
-				rfb_port = strtol(optarg, NULL, 10);
-				if (rfb_port < 100)
-					rfb_port += 5900;
-				break;
-
-			case 'Q':
-				defer_time = strtol(optarg, NULL, 10);
-				if (defer_time < 0)
-					defer_time = 0;
-				break;
-#endif
-
 			case 'A':
 				g_seamless_rdp = True;
 				STRNCPY(g_seamless_shell, optarg, sizeof(g_seamless_shell));
@@ -621,19 +601,16 @@ main(int argc, char *argv[])
 				break;
 
 			case 'p':
-				if ((optarg[0] == '-') && (optarg[1] == 0))
+				if ((optarg[0] != '-') && (optarg[1] != 0))
 				{
-					prompt_password = True;
-					break;
+					STRNCPY(g_password, optarg, sizeof(g_password));
+					flags |= RDP_INFO_AUTOLOGON;
+
+					/* try to overwrite argument so it won't appear in ps */
+					p = optarg;
+					while (*p)
+						*(p++) = 'X';
 				}
-
-				STRNCPY(g_password, optarg, sizeof(g_password));
-				flags |= RDP_INFO_AUTOLOGON;
-
-				/* try to overwrite argument so it won't appear in ps */
-				p = optarg;
-				while (*p)
-					*(p++) = 'X';
 				break;
 #ifdef WITH_SCARD
 			case 'i':
@@ -742,6 +719,7 @@ main(int argc, char *argv[])
 				break;
 			case 'M':
 				g_local_cursor = True;
+				break;
 
 			case 'C':
 				g_owncolmap = True;
@@ -1101,20 +1079,25 @@ main(int argc, char *argv[])
 	if (locale)
 		xfree(locale);
 
-
-	if (prompt_password && read_password(g_password, sizeof(g_password)))
-		flags |= RDP_INFO_AUTOLOGON;
+	/* If no password provided at this point, prompt for password / pin */
+	if (!g_password[0])
+	{
+		if (read_password(g_password, sizeof(g_password)))
+		{
+			flags |= RDP_INFO_AUTOLOGON;
+		}
+		else
+		{
+			logger(Core, Error, "Failed to read password or pin from stdin");
+			return EX_OSERR;
+		}
+	}
 
 	if (g_title[0] == 0)
 	{
 		strcpy(g_title, "rdesktop - ");
 		strncat(g_title, server, sizeof(g_title) - sizeof("rdesktop - "));
 	}
-
-#ifdef RDP2VNC
-	rdp2vnc_connect(server, flags, domain, g_password, shell, directory);
-	return EX_OK;
-#else
 
 	/* Only startup ctrl functionality is seamless are used for now. */
 	if (g_use_ctrl && g_seamless_rdp)
@@ -1171,7 +1154,6 @@ main(int argc, char *argv[])
 			   and therefor we just clear this error before we connect to redirected server.
 			 */
 			g_network_error = False;
-			g_redirect = False;
 		}
 
 		ui_init_connection();
@@ -1257,7 +1239,6 @@ main(int argc, char *argv[])
 
 	return handle_disconnect_reason(deactivated, ext_disc_reason);
 
-#endif
 	if (g_redirect_username)
 		xfree(g_redirect_username);
 
@@ -1771,11 +1752,16 @@ save_licence(unsigned char *data, int length)
 void
 rd_create_ui()
 {
-	/* only create a window if we dont have one intialized */
 	if (!ui_have_window())
 	{
+		/* create a window if we dont have one intialized */
 		if (!ui_create_window())
 			exit(EX_OSERR);
+	}
+	else
+	{
+		/* reset clipping if we already have a window */
+		ui_reset_clip();
 	}
 }
 

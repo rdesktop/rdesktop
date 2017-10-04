@@ -22,6 +22,24 @@
 #include "rdesktop.h"
 #include "ssl.h"
 
+/* Helper function to log internal SSL errors using logger */
+void
+rdssl_log_ssl_errors(const char *prefix)
+{
+	unsigned long err;
+	while (1)
+	{
+		err = ERR_get_error();
+		if (err == 0)
+			break;
+
+		logger(Protocol, Error,
+		       "%s, 0x%.8x:%s:%s: %s",
+		       prefix, err, ERR_lib_error_string(err),
+		       ERR_func_error_string(err), ERR_reason_error_string(err));
+	}
+}
+
 void
 rdssl_sha1_init(RDSSL_SHA1 * sha1)
 {
@@ -143,6 +161,11 @@ rdssl_cert_to_rkey(RDSSL_CERT * cert, uint32 * key_len)
 	int nid;
 	int ret;
 
+	const unsigned char *p;
+	int pklen;
+
+	RSA *rsa = NULL;
+
 	/* By some reason, Microsoft sets the OID of the Public RSA key to
 	   the oid for "MD5 with RSA Encryption" instead of "RSA Encryption"
 
@@ -157,6 +180,8 @@ rdssl_cert_to_rkey(RDSSL_CERT * cert, uint32 * key_len)
 	{
 		logger(Protocol, Error,
 		       "rdssl_cert_to_key(), failed to get public key from certificate");
+		rdssl_log_ssl_errors("rdssl_cert_to_key()");
+
 		return NULL;
 	}
 
@@ -165,6 +190,8 @@ rdssl_cert_to_rkey(RDSSL_CERT * cert, uint32 * key_len)
 	{
 		logger(Protocol, Error,
 		       "rdssl_cert_to_key(), failed to get algorithm used for public key");
+		rdssl_log_ssl_errors("rdssl_cert_to_key()");
+
 		return NULL;
 	}
 
@@ -172,15 +199,44 @@ rdssl_cert_to_rkey(RDSSL_CERT * cert, uint32 * key_len)
 
 	if ((nid == NID_md5WithRSAEncryption) || (nid == NID_shaWithRSAEncryption))
 	{
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 		logger(Protocol, Debug,
 		       "rdssl_cert_to_key(), re-setting algorithm type to RSA in server certificate");
 		X509_PUBKEY_set0_param(key, OBJ_nid2obj(NID_rsaEncryption), 0, NULL, NULL, 0);
+#else
+
+		if (!X509_PUBKEY_get0_param(NULL, &p, &pklen, NULL, key))
+		{
+			logger(Protocol, Error,
+			       "rdssl_cert_to_key(), failed to get algorithm used for public key");
+			rdssl_log_ssl_errors("rdssl_cert_to_key()");
+
+			return NULL;
+		}
+
+		if (!(rsa = d2i_RSAPublicKey(NULL, &p, pklen)))
+		{
+			logger(Protocol, Error,
+			       "rdssl_cert_to_key(), failed to extract public key from certificate");
+			rdssl_log_ssl_errors("rdssl_cert_to_key()");
+
+			return NULL;
+		}
+
+		lkey = RSAPublicKey_dup(rsa);
+		*key_len = RSA_size(lkey);
+		return lkey;
+#endif
+
 	}
+
 	epk = X509_get_pubkey(cert);
 	if (NULL == epk)
 	{
 		logger(Protocol, Error,
-		       "rdssl_cert_to_rkey(), failed to extract public key from certificate");
+		       "rdssl_cert_to_key(), failed to extract public key from certificate");
+		rdssl_log_ssl_errors("rdssl_cert_to_key()");
+
 		return NULL;
 	}
 
@@ -232,7 +288,7 @@ rdssl_rkey_get_exp_mod(RDSSL_RKEY * rkey, uint8 * exponent, uint32 max_exp_len, 
 	e = rkey->e;
 	n = rkey->n;
 #else
-	RSA_get0_key(rkey, &e, &n, NULL);
+	RSA_get0_key(rkey, &n, &e, NULL);
 #endif
 
 	if ((BN_num_bytes(e) > (int) max_exp_len) || (BN_num_bytes(n) > (int) max_mod_len))
