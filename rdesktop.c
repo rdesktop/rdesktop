@@ -390,18 +390,15 @@ handle_disconnect_reason(RD_BOOL deactivated, uint16 reason)
 			break;
 
 		default:
-			if (reason > 0x1000 && reason < 0x7fff)
-			{
-				text = "Internal protocol error";
-			}
-			else
-			{
-				text = "Unknown reason";
-			}
+			text = "Unknown reason";
 			retval = EXRD_UNKNOWN;
 	}
-	if (reason != ERRINFO_NO_INFO)
+
+	if (reason > 0x1000 && reason < 0x7fff) {
+		fprintf(stderr, "Internal protocol error: %x", reason);
+	} else if (reason != ERRINFO_NO_INFO) {
 		fprintf(stderr, "disconnect: %s.\n", text);
+	}
 
 	return retval;
 }
