@@ -285,12 +285,12 @@ handle_disconnect_reason(RD_BOOL deactivated, uint16 reason)
 			break;
 
 		case ERRINFO_IDLE_TIMEOUT:
-			text = "Server idle timeout reached";
+			text = "Server idle session time limit reached";
 			retval = EXRD_IDLE_TIMEOUT;
 			break;
 
 		case ERRINFO_LOGON_TIMEOUT:
-			text = "Server logon timeout reached";
+			text = "Server active session time limit reached";
 			retval = EXRD_LOGON_TIMEOUT;
 			break;
 
@@ -310,7 +310,7 @@ handle_disconnect_reason(RD_BOOL deactivated, uint16 reason)
 			break;
 
 		case ERRINFO_SERVER_DENIED_CONNECTION_FIPS:
-			text = "The server denied the connection for security reason";
+			text = "The server denied the connection for security reasons";
 			retval = EXRD_DENIED_FIPS;
 			break;
 
@@ -350,17 +350,17 @@ handle_disconnect_reason(RD_BOOL deactivated, uint16 reason)
 			break;
 
 		case ERRINFO_LICENSE_BAD_CLIENT_MSG:
-			text = "Invalid licensing message";
+			text = "Invalid licensing message from client";
 			retval = EXRD_LIC_MSG;
 			break;
 
 		case ERRINFO_LICENSE_HWID_DOESNT_MATCH_LICENSE:
-			text = "Hardware id doesn't match software license";
+			text = "The client license has been modified and does no longer match the hardware ID";
 			retval = EXRD_LIC_HWID;
 			break;
 
 		case ERRINFO_LICENSE_BAD_CLIENT_LICENSE:
-			text = "Client license error";
+			text = "The client license is in an invalid format";
 			retval = EXRD_LIC_CLIENT;
 			break;
 
@@ -380,7 +380,7 @@ handle_disconnect_reason(RD_BOOL deactivated, uint16 reason)
 			break;
 
 		case ERRINFO_LICENSE_CANT_UPGRADE_LICENSE:
-			text = "Can't upgrade license";
+			text = "Can't upgrade or renew license";
 			retval = EXRD_LIC_UPGRADE;
 			break;
 
