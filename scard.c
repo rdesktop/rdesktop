@@ -4,6 +4,7 @@
    Copyright (C) Alexi Volkov <alexi@myrealbox.com> 2006
    Copyright 2010-2013 Pierre Ossman <ossman@cendio.se> for Cendio AB
    Copyright 2011-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2017 Karl Mikaelsson <derfian@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -925,39 +926,45 @@ TS_SCardConnect(STREAM in, STREAM out, RD_BOOL wide)
 		hCard = _scard_handle_list_get_server_handle(myHCard);
 	}
 
-	if (rv != SCARD_S_SUCCESS)
+	switch (rv)
 	{
-		logger(SmartCard, Error, "TS_SCardConnect(), failed: %s (0x%08x)",
-		       pcsc_stringify_error(rv), (unsigned int) rv);
-	}
-	else
-	{
-		char *szVendor = getVendor(szReader);
-		logger(SmartCard, Debug, "TS_SCardConnect(), success, hcard: 0x%08x [0x%lx]",
-		       (unsigned) hCard, myHCard);
-
-		if (szVendor && (strlen(szVendor) > 0))
-		{
-			logger(SmartCard, Debug,
-			       "TS_SCardConnect(), set attribute ATTR_VENDOR_NAME");
-			pthread_mutex_lock(&hcardAccess);
-			PSCHCardRec hcard = xmalloc(sizeof(TSCHCardRec));
-			if (hcard)
+		case SCARD_S_SUCCESS:
 			{
-				hcard->hCard = hCard;
-				hcard->vendor = szVendor;
-				hcard->next = NULL;
-				hcard->prev = NULL;
+				char *szVendor = getVendor(szReader);
+				logger(SmartCard, Debug,
+				       "TS_SCardConnect(), success, hcard: 0x%08x [0x%lx]",
+				       (unsigned) hCard, myHCard);
 
-				if (hcardFirst)
+				if (szVendor && (strlen(szVendor) > 0))
 				{
-					hcardFirst->prev = hcard;
-					hcard->next = hcardFirst;
+					logger(SmartCard, Debug,
+					       "TS_SCardConnect(), set attribute ATTR_VENDOR_NAME");
+					pthread_mutex_lock(&hcardAccess);
+					PSCHCardRec hcard = xmalloc(sizeof(TSCHCardRec));
+					if (hcard)
+					{
+						hcard->hCard = hCard;
+						hcard->vendor = szVendor;
+						hcard->next = NULL;
+						hcard->prev = NULL;
+
+						if (hcardFirst)
+						{
+							hcardFirst->prev = hcard;
+							hcard->next = hcardFirst;
+						}
+						hcardFirst = hcard;
+					}
+					pthread_mutex_unlock(&hcardAccess);
 				}
-				hcardFirst = hcard;
 			}
-			pthread_mutex_unlock(&hcardAccess);
-		}
+			break;
+
+		default:
+			logger(SmartCard, Debug,
+			       "TS_SCardConnect(), SCardConnect failed: %s (0x%08x)",
+			       pcsc_stringify_error(rv), rv);
+			break;
 	}
 
 	out_uint32_le(out, 0x00000000);
@@ -1237,14 +1244,19 @@ TS_SCardGetStatusChange(STREAM in, STREAM out, RD_BOOL wide)
 				  myRsArray, (MYPCSC_DWORD) dwCount);
 	copyReaderState_MyPCSCToServer(myRsArray, rsArray, (MYPCSC_DWORD) dwCount);
 
-	if (rv != SCARD_S_SUCCESS)
+	logger(SmartCard, Debug,
+	       "TS_SCardGetStatusChange(), SCardGetStatusChange returned \"%s\" (0x%08x)",
+	       pcsc_stringify_error(rv), rv);
+
+	switch (rv)
 	{
-		logger(SmartCard, Error, "TS_SCardGetStatusChange(), failed: %s (0x%08x)",
-		       pcsc_stringify_error(rv), (unsigned int) rv);
-	}
-	else
-	{
-		logger(SmartCard, Debug, "TS_SCardGetStatusChange(), success");
+		case SCARD_S_SUCCESS:
+		case SCARD_E_TIMEOUT:
+			break;
+		default:
+			logger(SmartCard, Warning,
+			       "TS_SCardGetStatusChange(), unhandled error from SCardGetStatusChange: %s (0x%08x)",
+			       pcsc_stringify_error(rv), rv);
 	}
 
 	out_uint32_le(out, dwCount);
