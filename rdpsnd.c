@@ -26,13 +26,19 @@
 #include "rdpsnd.h"
 #include "rdpsnd_dsp.h"
 
-#define RDPSND_CLOSE		1
-#define RDPSND_WRITE		2
-#define RDPSND_SET_VOLUME	3
-#define RDPSND_UNKNOWN4		4
-#define RDPSND_COMPLETION	5
-#define RDPSND_PING			6
-#define RDPSND_NEGOTIATE	7
+#define SNDC_CLOSE		0x01
+#define SNDC_WAVE		0x02
+#define SNDC_SETVOLUME		0x03
+#define SNDC_SETPITCH		0x04
+#define SNDC_WAVECONFIRM	0x05
+#define SNDC_TRAINING		0x06
+#define SNDC_FORMATS		0x07
+#define SNDC_CRYPTKEY		0x08
+#define SNDC_WAVEENCRYPT	0x09
+#define SNDC_UDPWAVE		0x0A
+#define SNDC_UDPWAVELAST	0x0B
+#define SNDC_QUALITYMODE	0x0C
+#define SNDC_WAVE2		0x0D
 
 #define MAX_FORMATS		10
 #define MAX_QUEUE		50
@@ -67,12 +73,13 @@ static void rdpsnd_queue_complete_pending(void);
 static long rdpsnd_queue_next_completion(void);
 
 static STREAM
-rdpsnd_init_packet(uint16 type, uint16 size)
+rdpsnd_init_packet(uint8 type, uint16 size)
 {
 	STREAM s;
 
 	s = channel_init(rdpsnd_channel, size + 4);
-	out_uint16_le(s, type);
+	out_uint8(s, type);
+	out_uint8(s, 0);	/* protocol-mandated padding */
 	out_uint16_le(s, size);
 	return s;
 }
@@ -84,18 +91,18 @@ rdpsnd_send(STREAM s)
 }
 
 static void
-rdpsnd_send_completion(uint16 tick, uint8 packet_index)
+rdpsnd_send_waveconfirm(uint16 tick, uint8 packet_index)
 {
 	STREAM s;
 
-	s = rdpsnd_init_packet(RDPSND_COMPLETION, 4);
+	s = rdpsnd_init_packet(SNDC_WAVECONFIRM, 4);
 	out_uint16_le(s, tick);
 	out_uint8(s, packet_index);
 	out_uint8(s, 0);
 	s_mark_end(s);
 	rdpsnd_send(s);
 
-	logger(Sound, Debug, "rdpsnd_send_completion(), tick=%u, index=%u",
+	logger(Sound, Debug, "rdpsnd_send_waveconfirm(), tick=%u, index=%u",
 	       (unsigned) tick, (unsigned) packet_index);
 }
 
@@ -211,7 +218,7 @@ rdpsnd_process_negotiate(STREAM in)
 		}
 	}
 
-	out = rdpsnd_init_packet(RDPSND_NEGOTIATE | 0x200, 20 + 18 * format_count);
+	out = rdpsnd_init_packet(SNDC_FORMATS, 20 + 18 * format_count);
 
 	uint32 flags = TSSNDCAPS_VOLUME;
 
@@ -255,16 +262,17 @@ rdpsnd_process_negotiate(STREAM in)
 }
 
 static void
-rdpsnd_process_ping(STREAM in)
+rdpsnd_process_training(STREAM in)
 {
 	uint16 tick;
 	STREAM out;
 
 	in_uint16_le(in, tick);
 
-	logger(Sound, Debug, "rdpsmd_process_ping(), tick = 0x%04x", (unsigned) tick);
+	logger(Sound, Debug, "rdpsnd_process_training(), tick=0x%04x, packsize=%d", (unsigned) tick,
+	       packsize);
 
-	out = rdpsnd_init_packet(RDPSND_PING | 0x2300, 4);
+	out = rdpsnd_init_packet(SNDC_TRAINING, 4);
 	out_uint16_le(out, tick);
 	out_uint16_le(out, 0);
 	s_mark_end(out);
@@ -280,7 +288,7 @@ rdpsnd_process_packet(uint8 opcode, STREAM s)
 
 	switch (opcode)
 	{
-		case RDPSND_WRITE:
+		case SNDC_WAVE:
 			in_uint16_le(s, tick);
 			in_uint16_le(s, format);
 			in_uint8(s, packet_index);
@@ -302,21 +310,21 @@ rdpsnd_process_packet(uint8 opcode, STREAM s)
 				/*
 				 * If we haven't selected a device by now, then either
 				 * we've failed to find a working device, or the server
-				 * is sending bogus RDPSND_WRITE.
+				 * is sending bogus SNDC_WAVE.
 				 */
 				if (!current_driver)
 				{
-					rdpsnd_send_completion(tick, packet_index);
+					rdpsnd_send_waveconfirm(tick, packet_index);
 					break;
 				}
 				if (!device_open && !current_driver->wave_out_open())
 				{
-					rdpsnd_send_completion(tick, packet_index);
+					rdpsnd_send_waveconfirm(tick, packet_index);
 					break;
 				}
 				if (!current_driver->wave_out_set_format(&formats[format]))
 				{
-					rdpsnd_send_completion(tick, packet_index);
+					rdpsnd_send_waveconfirm(tick, packet_index);
 					current_driver->wave_out_close();
 					device_open = False;
 					break;
@@ -330,23 +338,23 @@ rdpsnd_process_packet(uint8 opcode, STREAM s)
 					    &formats[current_format]), tick, packet_index);
 			return;
 			break;
-		case RDPSND_CLOSE:
-			logger(Sound, Debug, "rdpsnd_process_packet(), RDPSND_CLOSE()");
+		case SNDC_CLOSE:
+			logger(Sound, Debug, "rdpsnd_process_packet(), SNDC_CLOSE()");
 			if (device_open)
 				current_driver->wave_out_close();
 			device_open = False;
 			break;
-		case RDPSND_NEGOTIATE:
+		case SNDC_FORMATS:
 			rdpsnd_process_negotiate(s);
 			break;
-		case RDPSND_PING:
-			rdpsnd_process_ping(s);
+		case SNDC_TRAINING:
+			rdpsnd_process_training(s);
 			break;
-		case RDPSND_SET_VOLUME:
+		case SNDC_SETVOLUME:
 			in_uint16_le(s, vol_left);
 			in_uint16_le(s, vol_right);
 			logger(Sound, Debug,
-			       "rdpsnd_process_packet(), RDPSND_VOLUME(left: 0x%04x (%u %%), right: 0x%04x (%u %%))\n",
+			       "rdpsnd_process_packet(), SNDC_SETVOLUME(left: 0x%04x (%u %%), right: 0x%04x (%u %%))",
 			       (unsigned) vol_left, (unsigned) vol_left / 655, (unsigned) vol_right,
 			       (unsigned) vol_right / 655);
 			if (device_open)
@@ -391,14 +399,14 @@ rdpsnd_process(STREAM s)
 			len = MIN(s->end - s->p, packet.end - packet.p);
 
 			/* Microsoft's server is so broken it's not even funny... */
-			if (packet_opcode == RDPSND_WRITE)
+			if (packet_opcode == SNDC_WAVE)
 			{
 				if ((packet.p - packet.data) < 12)
 					len = MIN(len, 12 - (packet.p - packet.data));
 				else if ((packet.p - packet.data) == 12)
 				{
 					logger(Sound, Debug,
-					       "rdpsnd_process(), eating 4 bytes of %d bytes...\n",
+					       "rdpsnd_process(), eating 4 bytes of %d bytes...",
 					       len);
 					in_uint8s(s, 4);
 					len -= 4;
@@ -715,7 +723,7 @@ rdpsnd_queue_complete_pending(void)
 		elapsed /= 1000;
 
 		xfree(packet->s.data);
-		rdpsnd_send_completion((packet->tick + elapsed) % 65536, packet->index);
+		rdpsnd_send_waveconfirm((packet->tick + elapsed) % 65536, packet->index);
 		queue_pending = (queue_pending + 1) % MAX_QUEUE;
 	}
 }
