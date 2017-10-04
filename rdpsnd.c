@@ -126,7 +126,7 @@ rdpsnd_auto_select(void)
 			       current_driver->name);
 			if (current_driver->wave_out_open())
 			{
-				logger(Sound, Debug, "rdpsnd_auto_select(), using driver '%s'",
+				logger(Sound, Verbose, "rdpsnd_auto_select(), using driver '%s'",
 				       current_driver->name);
 				current_driver->wave_out_close();
 				return True;
