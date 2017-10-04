@@ -92,33 +92,34 @@
 #endif
 
 /* rdesktop specific exit codes, lined up with disconnect PDU reasons */
-#define EXRD_DISCONNECT_BY_ADMIN 1
-#define EXRD_LOGOFF_BY_ADMIN 2
-#define EXRD_IDLE_TIMEOUT 3
-#define EXRD_LOGON_TIMEOUT 4
-#define EXRD_REPLACED 5
-#define EXRD_OUT_OF_MEM 6
-#define EXRD_DENIED 7
-#define EXRD_DENIED_FIPS 8
-#define EXRD_INSUFFICIENT_PRIVILEGES 9
-#define EXRD_FRESH_CREDENTIALS_REQUIRED 10
-#define EXRD_DISCONNECT_BY_USER 11
-#define EXRD_LOGOFF_BY_USER 12
-#define EXRD_LIC_INTERNAL 16
-#define EXRD_LIC_NOSERVER 17
-#define EXRD_LIC_NOLICENSE 18
-#define EXRD_LIC_MSG 19
-#define EXRD_LIC_HWID 20
-#define EXRD_LIC_CLIENT 21
-#define EXRD_LIC_NET 22
-#define EXRD_LIC_PROTO 23
-#define EXRD_LIC_ENC 24
-#define EXRD_LIC_UPGRADE 25
-#define EXRD_LIC_NOREMOTE 26
+#define EXRD_DISCONNECT_BY_ADMIN         1
+#define EXRD_LOGOFF_BY_ADMIN             2
+#define EXRD_IDLE_TIMEOUT                3
+#define EXRD_LOGON_TIMEOUT               4
+#define EXRD_REPLACED                    5
+#define EXRD_OUT_OF_MEM                  6
+#define EXRD_DENIED                      7
+#define EXRD_DENIED_FIPS                 8
+#define EXRD_INSUFFICIENT_PRIVILEGES     9
+#define EXRD_FRESH_CREDENTIALS_REQUIRED  10
+#define EXRD_DISCONNECT_BY_USER          11
+#define EXRD_LOGOFF_BY_USER              12
+
+#define EXRD_LIC_INTERNAL                16
+#define EXRD_LIC_NOSERVER                17
+#define EXRD_LIC_NOLICENSE               18
+#define EXRD_LIC_MSG                     19
+#define EXRD_LIC_HWID                    20
+#define EXRD_LIC_CLIENT                  21
+#define EXRD_LIC_NET                     22
+#define EXRD_LIC_PROTO                   23
+#define EXRD_LIC_ENC                     24
+#define EXRD_LIC_UPGRADE                 25
+#define EXRD_LIC_NOREMOTE                26
 
 /* other exit codes */
-#define EXRD_WINDOW_CLOSED 62
-#define EXRD_UNKNOWN 63
+#define EXRD_WINDOW_CLOSED  62
+#define EXRD_UNKNOWN        63
 
 #define STRNCPY(dst,src,n)	{ strncpy(dst,src,n-1); dst[n-1] = 0; }
 
