@@ -453,9 +453,9 @@ sec_out_mcs_data(STREAM s, uint32 selected_protocol)
 	if (g_dpi > 0)
 	{
 		/* Extended client info describing monitor geometry */
-		out_uint32_le(s, g_width * 100 / (g_dpi * 254)); /* desktop physical width */
-		out_uint32_le(s, g_height * 100 / (g_dpi * 254)); /* desktop physical height */
-		out_uint16_le(s, 0); /* orientation: portrait */
+		out_uint32_le(s, g_width * 254 / (g_dpi * 10)); /* desktop physical width */
+		out_uint32_le(s, g_height * 254 / (g_dpi * 10)); /* desktop physical height */
+		out_uint16_le(s, 0); /* orientation: landscape */
 		out_uint32_le(s, g_dpi < 96 ? 100 : (g_dpi * 100 + 48) / 96); /* desktop scale factor */
 		out_uint32_le(s, g_dpi < 134 ? 100 : (g_dpi < 173 ? 140 : 180)); /* device scale factor */
 		/* the only allowed values for device scale factor are 100, 140, and 180. */
@@ -931,7 +931,7 @@ sec_connect(char *server, char *username, char *domain, char *password, RD_BOOL 
 		return False;
 
 	/* We exchange some RDP data during the MCS-Connect */
-	mcs_data.size = 542;
+	mcs_data.size = 512;
 	mcs_data.p = mcs_data.data = (uint8 *) xmalloc(mcs_data.size);
 	sec_out_mcs_data(&mcs_data, selected_proto);
 
