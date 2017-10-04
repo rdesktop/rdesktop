@@ -444,12 +444,32 @@ handle_disconnect_reason(RD_BOOL deactivated, uint16 reason)
 			retval = EXRD_CB_VM_BOOT_SESSMON_FAILED;
 			break;
 
+		case ERRINFO_REMOTEAPPSNOTENABLED:
+			text = "The server can only host Remote Applications";
+			retval = EXRD_RDP_REMOTEAPPSNOTENABLED;
+			break;
+
+		case ERRINFO_UPDATESESSIONKEYFAILED:
+			text = "Update of session keys failed";
+			retval = EXRD_RDP_UPDATESESSIONKEYFAILED;
+			break;
+
+		case ERRINFO_DECRYPTFAILED:
+			text = "Decryption or session key creation failed";
+			retval = EXRD_RDP_DECRYPTFAILED;
+			break;
+
+		case ERRINFO_ENCRYPTFAILED:
+			text = "Encryption failed";
+			retval = EXRD_RDP_ENCRYPTFAILED;
+			break;
+
 		default:
 			text = "Unknown reason";
 			retval = EXRD_UNKNOWN;
 	}
 
-	if (reason > 0x1000 && reason < 0x7fff) {
+	if (reason > 0x1000 && reason < 0x7fff && retval == EXRD_UNKNOWN) {
 		fprintf(stderr, "Internal protocol error: %x", reason);
 	} else if (reason != ERRINFO_NO_INFO) {
 		fprintf(stderr, "disconnect: %s.\n", text);
