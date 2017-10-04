@@ -166,8 +166,6 @@ rdpsnd_process_negotiate(STREAM in)
 
 	if (rdpsnd_negotiated)
 	{
-		logger(Sound, Error,
-		       "rdpsnd_process_negotiate(), extra RDPSND_NEGOTIATE in the middle of a session");
 		/* Do a complete reset of the sound state */
 		rdpsnd_reset_state();
 	}
