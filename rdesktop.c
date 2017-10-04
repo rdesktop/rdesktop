@@ -568,7 +568,7 @@ main(int argc, char *argv[])
 	g_num_devices = 0;
 
 	while ((c = getopt(argc, argv,
-			   "A:u:L:d:s:c:p:n:k:g:o:fbBeEitmzCDKS:T:NX:a:x:Pr:045vh?")) != -1)
+			   "A:u:L:d:s:c:p:n:k:g:o:fbBeEitmMzCDKS:T:NX:a:x:Pr:045vh?")) != -1)
 	{
 		switch (c)
 		{

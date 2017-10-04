@@ -30,34 +30,6 @@ extern char *g_sc_container_name;
 static gss_OID_desc _gss_spnego_krb5_mechanism_oid_desc =
 	{ 9, (void *) "\x2a\x86\x48\x86\xf7\x12\x01\x02\x02" };
 
-
-static void
-s_realloc(STREAM s, unsigned int size)
-{
-	unsigned char *data;
-
-	if (s->size >= size)
-		return;
-
-	data = s->data;
-	s->size = size;
-	s->data = xrealloc(data, size);
-	s->p = s->data + (s->p - data);
-	s->end = s->data + (s->end - data);
-	s->iso_hdr = s->data + (s->iso_hdr - data);
-	s->mcs_hdr = s->data + (s->mcs_hdr - data);
-	s->sec_hdr = s->data + (s->sec_hdr - data);
-	s->rdp_hdr = s->data + (s->rdp_hdr - data);
-	s->channel_hdr = s->data + (s->channel_hdr - data);
-}
-
-static void
-s_free(STREAM s)
-{
-	free(s->data);
-	free(s);
-}
-
 static STREAM
 ber_wrap_hdr_data(int tagval, STREAM in)
 {
@@ -253,10 +225,11 @@ cssp_encode_tspasswordcreds(char *username, char *password, char *domain)
 	memset(&tmp, 0, sizeof(tmp));
 	memset(&message, 0, sizeof(message));
 
+	s_realloc(&tmp, 512 * 4);
+
 	// domainName [0]
-	s_realloc(&tmp, 4 + strlen(domain) * sizeof(uint16));
 	s_reset(&tmp);
-	rdp_out_unistr(&tmp, domain, strlen(domain) * sizeof(uint16));
+	out_utf16s(&tmp, domain);
 	s_mark_end(&tmp);
 	h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 0, h2);
@@ -267,9 +240,8 @@ cssp_encode_tspasswordcreds(char *username, char *password, char *domain)
 	s_free(h1);
 
 	// userName [1]
-	s_realloc(&tmp, 4 + strlen(username) * sizeof(uint16));
 	s_reset(&tmp);
-	rdp_out_unistr(&tmp, username, strlen(username) * sizeof(uint16));
+	out_utf16s(&tmp, username);
 	s_mark_end(&tmp);
 
 	h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
@@ -281,9 +253,8 @@ cssp_encode_tspasswordcreds(char *username, char *password, char *domain)
 	s_free(h1);
 
 	// password [2]
-	s_realloc(&tmp, 4 + strlen(password) * sizeof(uint16));
 	s_reset(&tmp);
-	rdp_out_unistr(&tmp, password, strlen(password) * sizeof(uint16));
+	out_utf16s(&tmp, password);
 	s_mark_end(&tmp);
 	h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 2, h2);
@@ -315,8 +286,9 @@ cssp_encode_tscspdatadetail(unsigned char keyspec, char *card, char *reader, cha
 	struct stream tmp = { 0 };
 	struct stream message = { 0 };
 
+	s_realloc(&tmp, 512 * 4);
+
 	// keySpec [0]
-	s_realloc(&tmp, sizeof(uint8));
 	s_reset(&tmp);
 	out_uint8(&tmp, keyspec);
 	s_mark_end(&tmp);
@@ -331,9 +303,8 @@ cssp_encode_tscspdatadetail(unsigned char keyspec, char *card, char *reader, cha
 	// cardName [1]
 	if (card)
 	{
-		s_realloc(&tmp, 4 + strlen(card) * sizeof(uint16));
 		s_reset(&tmp);
-		rdp_out_unistr(&tmp, card, strlen(card) * sizeof(uint16));
+		out_utf16s(&tmp, card);
 		s_mark_end(&tmp);
 		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 1, h2);
@@ -347,9 +318,8 @@ cssp_encode_tscspdatadetail(unsigned char keyspec, char *card, char *reader, cha
 	// readerName [2]
 	if (reader)
 	{
-		s_realloc(&tmp, 4 + strlen(reader) * sizeof(uint16));
 		s_reset(&tmp);
-		rdp_out_unistr(&tmp, reader, strlen(reader) * sizeof(uint16));
+		out_utf16s(&tmp, reader);
 		s_mark_end(&tmp);
 		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 2, h2);
@@ -363,9 +333,8 @@ cssp_encode_tscspdatadetail(unsigned char keyspec, char *card, char *reader, cha
 	// containerName [3]
 	if (container)
 	{
-		s_realloc(&tmp, 4 + strlen(container) * sizeof(uint16));
 		s_reset(&tmp);
-		rdp_out_unistr(&tmp, container, strlen(container) * sizeof(uint16));
+		out_utf16s(&tmp, container);
 		s_mark_end(&tmp);
 		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 3, h2);
@@ -379,9 +348,8 @@ cssp_encode_tscspdatadetail(unsigned char keyspec, char *card, char *reader, cha
 	// cspName [4]
 	if (csp)
 	{
-		s_realloc(&tmp, 4 + strlen(csp) * sizeof(uint16));
 		s_reset(&tmp);
-		rdp_out_unistr(&tmp, csp, strlen(csp) * sizeof(uint16));
+		out_utf16s(&tmp, csp);
 		s_mark_end(&tmp);
 		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 4, h2);
@@ -410,10 +378,11 @@ cssp_encode_tssmartcardcreds(char *username, char *password, char *domain)
 	struct stream tmp = { 0 };
 	struct stream message = { 0 };
 
+	s_realloc(&tmp, 512 * 4);
+
 	// pin [0]
-	s_realloc(&tmp, strlen(password) * sizeof(uint16));
 	s_reset(&tmp);
-	rdp_out_unistr(&tmp, password, strlen(password) * sizeof(uint16));
+	out_utf16s(&tmp, password);
 	s_mark_end(&tmp);
 	h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 0, h2);
@@ -423,7 +392,7 @@ cssp_encode_tssmartcardcreds(char *username, char *password, char *domain)
 	s_free(h2);
 	s_free(h1);
 
-	// cspData[1]        
+	// cspData [1]
 	h2 = cssp_encode_tscspdatadetail(AT_KEYEXCHANGE, g_sc_card_name, g_sc_reader_name,
 					 g_sc_container_name, g_sc_csp_name);
 	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 1, h2);
@@ -436,9 +405,8 @@ cssp_encode_tssmartcardcreds(char *username, char *password, char *domain)
 	// userHint [2]
 	if (username && strlen(username))
 	{
-		s_realloc(&tmp, strlen(username) * sizeof(uint16));
 		s_reset(&tmp);
-		rdp_out_unistr(&tmp, username, strlen(username) * sizeof(uint16));
+		out_utf16s(&tmp, username);
 		s_mark_end(&tmp);
 		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 2, h2);
@@ -452,9 +420,8 @@ cssp_encode_tssmartcardcreds(char *username, char *password, char *domain)
 	// domainHint [3]
 	if (domain && strlen(domain))
 	{
-		s_realloc(&tmp, strlen(domain) * sizeof(uint16));
 		s_reset(&tmp);
-		rdp_out_unistr(&tmp, domain, strlen(domain) * sizeof(uint16));
+		out_utf16s(&tmp, domain);
 		s_mark_end(&tmp);
 		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 3, h2);

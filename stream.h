@@ -2,7 +2,7 @@
    rdesktop: A Remote Desktop Protocol client.
    Parsing primitives
    Copyright (C) Matthew Chapman 1999-2008
-   Copyright 2012 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2012-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -17,6 +17,9 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+
+#ifndef _STREAM_H
+#define _STREAM_H
 
 /* Parser state */
 typedef struct stream
@@ -36,6 +39,14 @@ typedef struct stream
 }
  *STREAM;
 
+void s_realloc(STREAM s, unsigned int size);
+void s_free(STREAM s);
+void s_reset(STREAM s);
+
+void out_utf16s(STREAM s, const char *string);
+void out_utf16s_padded(STREAM s, const char *string, size_t width, unsigned char pad);
+void out_utf16s_no_eos(STREAM s, const char *string);
+
 #define s_push_layer(s,h,n)	{ (s)->h = (s)->p; (s)->p += n; }
 #define s_pop_layer(s,h)	(s)->p = (s)->h;
 #define s_mark_end(s)		(s)->end = (s)->p;
@@ -43,7 +54,7 @@ typedef struct stream
 #define s_check_rem(s,n)	((s)->p + n <= (s)->end)
 #define s_check_end(s)		((s)->p == (s)->end)
 #define s_length(s)		((s)->end - (s)->data)
-#define s_reset(s)		((s)->end = (s)->p = (s)->data)
+#define s_left(s)               ((s)->size - ((s)->p - (s)->data))
 
 #if defined(L_ENDIAN) && !defined(NEED_ALIGN)
 #define in_uint16_le(s,v)	{ v = *(uint16 *)((s)->p); (s)->p += 2; }
@@ -93,5 +104,9 @@ typedef struct stream
 #define out_uint8p(s,v,n)	{ memcpy((s)->p,v,n); (s)->p += n; }
 #define out_uint8a(s,v,n)	out_uint8p(s,v,n);
 #define out_uint8s(s,n)		{ memset((s)->p,0,n); (s)->p += n; }
+#define out_stream(s, v)        out_uint8p(s, (v)->data, s_length((v)))
 
 #define next_be(s,v)		v = ((v) << 8) + *((s)->p++);
+
+
+#endif /* _STREAM_H */

@@ -80,6 +80,8 @@ extern RD_BOOL g_has_reconnect_random;
 extern uint8 g_client_random[SEC_RANDOM_SIZE];
 static uint32 g_packetno;
 
+static void rdp_out_unistr(STREAM s, char *string, int len);
+
 /* Receive an RDP packet */
 static STREAM
 rdp_recv(uint8 * type)
@@ -171,9 +173,15 @@ rdp_send_data(STREAM s, uint8 data_pdu_type)
 /* Output a string in Unicode with mandatory null termination. If
    string is NULL or len is 0, write an unicode null termination to
    stream. */
-void
+static void
 rdp_out_unistr_mandatory_null(STREAM s, char *string, int len)
 {
+	/* LEGACY:
+	 *
+	 *  Do not write new code that uses this function, use the ones defined
+	 *  in stream.h for writing utf16 strings to a stream.
+	 *
+	 */
 	if (string && len > 0)
 		rdp_out_unistr(s, string, len);
 	else
@@ -181,9 +189,15 @@ rdp_out_unistr_mandatory_null(STREAM s, char *string, int len)
 }
 
 /* Output a string in Unicode */
-void
+static void
 rdp_out_unistr(STREAM s, char *string, int len)
 {
+	/* LEGACY:
+	 *
+	 *  Do not write new code that uses this function, use the ones defined
+	 *  in stream.h for writing utf16 strings to a stream.
+	 *
+	 */
 	static iconv_t icv_local_to_utf16;
 	size_t ibl, obl;
 	char *pin, *pout;

@@ -432,8 +432,7 @@ sec_out_mcs_data(STREAM s, uint32 selected_protocol)
 	out_uint32_le(s, 2600);	/* Client build. We are now 2600 compatible :-) */
 
 	/* Unicode name of client, padded to 32 bytes */
-	rdp_out_unistr(s, g_hostname, hostlen);
-	out_uint8s(s, 30 - hostlen);
+	out_utf16s_padded(s, g_hostname, 32, 0x00);
 
 	/* See
 	   http://msdn.microsoft.com/library/default.asp?url=/library/en-us/wceddk40/html/cxtsksupportingremotedesktopprotocol.asp */

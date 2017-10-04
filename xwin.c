@@ -24,6 +24,7 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/Xproto.h>
+#include <assert.h>
 #include <unistd.h>
 #include <sys/time.h>
 #include <time.h>
@@ -2910,13 +2911,14 @@ ui_destroy_glyph(RD_HGLYPH glyph)
 #define GET_BIT(ptr, bit) (*(ptr + bit / 8) & (1 << (7 - (bit % 8))))
 
 static uint32
-get_pixel(uint32 idx, uint8 * andmask, uint8 * xormask, int bpp)
+get_pixel(uint32 idx, uint8 * andmask, uint8 * xormask, int bpp, uint8 * xor_flag)
 {
 	uint32 offs;
 	uint32 argb;
 	uint8 alpha;
 	uint8 *pxor;
 
+	*xor_flag = 0;
 	switch (bpp)
 	{
 		case 1:
@@ -2929,11 +2931,8 @@ get_pixel(uint32 idx, uint8 * andmask, uint8 * xormask, int bpp)
 				// andmask bit is low, we should
 				// render a black pixle due to we can
 				// not xor blit in X11.
-
-				// TODO: add outline to make this
-				// prettier on black backgrounds.
-
 				argb = 0xff000000;
+				*xor_flag = 1;
 			}
 			else
 				argb = (alpha << 24) | (argb ? 0xffffff : 0x000000);
@@ -2956,16 +2955,57 @@ get_pixel(uint32 idx, uint8 * andmask, uint8 * xormask, int bpp)
 	return argb;
 }
 
+/* Copies the pixles from src to dest with given color and offset */
+static inline void
+xcursor_stencil(XcursorImage * src, XcursorImage * dst, int dx, int dy, uint32 argb)
+{
+	uint32 x, y, si, di;
+	assert(src->width == dst->width);
+	assert(src->height == dst->height);
+
+	for (y = 0; y < src->height; y++)
+	{
+		for (x = 0; x < src->width; x++)
+		{
+			si = y * src->width + x;
+			if (!src->pixels[si])
+				continue;
+
+			if ((y + dy) < 0 || (y + dy) >= dst->height)
+				continue;
+			if ((x + dx) < 0 || (x + dx) >= dst->width)
+				continue;
+			di = (y + dy) * src->width + (x + dx);
+			dst->pixels[di] = argb;
+		}
+	}
+}
+
+static inline void
+xcursor_merge(XcursorImage * src, XcursorImage * dst)
+{
+	uint32 i;
+	assert(src->width == dst->width);
+	assert(src->height == dst->height);
+	for (i = 0; i < src->width * src->height; i++)
+	{
+		if (!src->pixels[i])
+			continue;
+		dst->pixels[i] = src->pixels[i];
+	}
+}
+
 RD_HCURSOR
 ui_create_cursor(unsigned int xhot, unsigned int yhot, int width,
 		 int height, uint8 * andmask, uint8 * xormask, int bpp)
 {
 	Cursor cursor;
 	XcursorPixel *out;
-	XcursorImage *cimg;
+	XcursorImage *cimg, *tmp;
 	uint32 x, y, oidx, idx, argb;
+	uint8 outline, xor;
 
-	logger(GUI, Debug, "ui_create_cursot(): xhot=%d, yhot=%d, width=%d, height=%d, bpp=%d",
+	logger(GUI, Debug, "ui_create_cursor(): xhot=%d, yhot=%d, width=%d, height=%d, bpp=%d",
 	       xhot, yhot, width, height, bpp);
 
 	if (bpp != 1 && bpp != 24 && bpp != 32)
@@ -2986,6 +3026,8 @@ ui_create_cursor(unsigned int xhot, unsigned int yhot, int width,
 	cimg->yhot = yhot;
 
 	out = cimg->pixels;
+	xor = 0;
+	outline = 0;
 	for (y = 0; y < height; y++)
 	{
 		for (x = 0; x < width; x++)
@@ -2999,12 +3041,31 @@ ui_create_cursor(unsigned int xhot, unsigned int yhot, int width,
 			}
 
 			idx = y * width + x;
-			argb = get_pixel(idx, andmask, xormask, bpp);
+			argb = get_pixel(idx, andmask, xormask, bpp, &xor);
 			out[oidx] = argb;
+			if (xor)
+				outline = 1;
 		}
 	}
 
+
+	// Render a white outline of cursor shape when xor
+	// pixels are identified in cursor
+	if (outline)
+	{
+		tmp = XcursorImageCreate(width, height);
+		memset(tmp->pixels, 0, tmp->width * tmp->height * 4);
+		xcursor_stencil(cimg, tmp, -1, 0, 0xffffffff);
+		xcursor_stencil(cimg, tmp, 1, 0, 0xffffffff);
+		xcursor_stencil(cimg, tmp, 0, -1, 0xffffffff);
+		xcursor_stencil(cimg, tmp, 0, 1, 0xffffffff);
+		xcursor_merge(cimg, tmp);
+		xcursor_merge(tmp, cimg);
+		XcursorImageDestroy(tmp);
+	}
+
 	cursor = XcursorImageLoadCursor(g_display, cimg);
+	XcursorImageDestroy(cimg);
 	if (!cursor)
 	{
 		logger(GUI, Error, "ui_create_cursor(): XcursorImageLoadCursor() failed");
@@ -3018,12 +3079,13 @@ void
 ui_set_cursor(RD_HCURSOR cursor)
 {
 	extern RD_BOOL g_local_cursor;
-	if (!g_local_cursor)
-	{
-		g_current_cursor = (Cursor) cursor;
-		XDefineCursor(g_display, g_wnd, g_current_cursor);
-		ON_ALL_SEAMLESS_WINDOWS(XDefineCursor, (g_display, sw->wnd, g_current_cursor));
-	}
+	if (g_local_cursor) return ;
+	logger(GUI, Debug, "ui_set_cursor(): g_current_cursor = %p, new = %p",
+	       g_current_cursor, cursor);
+
+	g_current_cursor = (Cursor) cursor;
+	XDefineCursor(g_display, g_wnd, g_current_cursor);
+	ON_ALL_SEAMLESS_WINDOWS(XDefineCursor, (g_display, sw->wnd, g_current_cursor));
 }
 
 void

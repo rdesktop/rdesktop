@@ -210,21 +210,25 @@ rdpdr_send_client_name_request(void)
 {
 	/* DR_CORE_CLIENT_NAME_REQ */
 	STREAM s;
-	uint32 hostlen;
+	struct stream name = {0};
 
 	if (NULL == g_rdpdr_clientname)
 	{
 		g_rdpdr_clientname = g_hostname;
 	}
-	hostlen = (strlen(g_rdpdr_clientname) + 1) * 2;
 
-	s = channel_init(rdpdr_channel, 16 + hostlen);
+	s_realloc(&name, 512*4);
+	s_reset(&name);
+	out_utf16s(&name, g_rdpdr_clientname);
+	s_mark_end(&name);
+
+	s = channel_init(rdpdr_channel, 16 + s_length(&name));
 	out_uint16_le(s, RDPDR_CTYP_CORE);
 	out_uint16_le(s, PAKID_CORE_CLIENT_NAME);
 	out_uint32_le(s, 1);	/* UnicodeFlag */
 	out_uint32_le(s, 0);	/* CodePage */
-	out_uint32_le(s, hostlen);	/* ComputerNameLen */
-	rdp_out_unistr(s, g_rdpdr_clientname, hostlen - 2);
+	out_uint32_le(s, s_length(&name));	/* ComputerNameLen */
+	out_stream(s, &name);
 	s_mark_end(s);
 	channel_send(s, rdpdr_channel);
 }
@@ -275,11 +279,12 @@ static void
 rdpdr_send_client_device_list_announce(void)
 {
 	/* DR_CORE_CLIENT_ANNOUNCE_RSP */
-	uint32 driverlen, printerlen, bloblen, disklen, flags;
+	uint32 bloblen, disklen, flags;
 	int i;
 	STREAM s;
 	PRINTER *printerinfo;
 	DISK_DEVICE *diskinfo;
+	struct stream drv = {0}, prt = {0};
 
 	s = channel_init(rdpdr_channel, announcedata_size());
 	out_uint16_le(s, RDPDR_CTYP_CORE);
@@ -311,23 +316,31 @@ rdpdr_send_client_device_list_announce(void)
 			case DEVICE_TYPE_PRINTER:
 				printerinfo = (PRINTER *) g_rdpdr_device[i].pdevice_data;
 
-				driverlen = 2 * strlen(printerinfo->driver) + 2;
-				printerlen = 2 * strlen(printerinfo->printer) + 2;
+				s_realloc(&prt, 512*4);
+				s_reset(&prt);
+				out_utf16s(&prt, printerinfo->printer);
+				s_mark_end(&prt);
+
+				s_realloc(&drv, 512*4);
+				s_reset(&drv);
+				out_utf16s(&drv, printerinfo->driver);
+				s_mark_end(&drv);
+
 				bloblen = printerinfo->bloblen;
 				flags = 0;
 				if (printerinfo->default_printer)
 					flags |= RDPDR_PRINTER_ANNOUNCE_FLAG_DEFAULTPRINTER;
 
-				out_uint32_le(s, 24 + driverlen + printerlen + bloblen);	/* DeviceDataLength */
+				out_uint32_le(s, 24 + s_length(&drv) + s_length(&prt) + bloblen);	/* DeviceDataLength */
 				out_uint32_le(s, flags);	/* Flags */
 				out_uint32_le(s, 0);	/* Codepage */
 				out_uint32_le(s, 0);	/* PnPNameLen */
-				out_uint32_le(s, driverlen);	/* DriverNameLen */
-				out_uint32_le(s, printerlen);	/* PrinterNameLen */
+				out_uint32_le(s, s_length(&drv));	/* DriverNameLen */
+				out_uint32_le(s, s_length(&prt));	/* PrinterNameLen */
 				out_uint32_le(s, bloblen);	/* CachedFieldsLen */
-				rdp_out_unistr(s, NULL, 0);	/* PnPName */
-				rdp_out_unistr(s, printerinfo->driver, driverlen - 2);	/* DriverName */
-				rdp_out_unistr(s, printerinfo->printer, printerlen - 2);	/* PrinterName */
+				// out_uint8s(s, 0);       /* PnPName (Skipped) */
+				out_stream(s, &drv);	/* DriverName */
+				out_stream(s, &prt);	/* PrinterName */
 				out_uint8a(s, printerinfo->blob, bloblen);	/* CachedPrinterConfigData */
 
 				if (printerinfo->blob)
