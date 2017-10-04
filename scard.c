@@ -33,6 +33,7 @@
 #include <PCSC/wintypes.h>
 #include <PCSC/pcsclite.h>
 #include <PCSC/winscard.h>
+#define SCARD_CTL_CODE(code) (0x42000000 + (code))
 #else
 #include <wintypes.h>
 #include <pcsclite.h>
