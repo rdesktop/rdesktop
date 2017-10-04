@@ -266,7 +266,7 @@ handle_disconnect_reason(RD_BOOL deactivated, uint16 reason)
 
 	switch (reason)
 	{
-		case exDiscReasonNoInfo:
+		case ERRINFO_NO_INFO:
 			text = "No information available";
 			if (deactivated)
 				retval = EX_OK;
@@ -274,117 +274,117 @@ handle_disconnect_reason(RD_BOOL deactivated, uint16 reason)
 				retval = EXRD_UNKNOWN;
 			break;
 
-		case exDiscReasonAPIInitiatedDisconnect:
+		case ERRINFO_RPC_INITIATED_DISCONNECT:
 			text = "Server initiated disconnect";
 			retval = EXRD_API_DISCONNECT;
 			break;
 
-		case exDiscReasonAPIInitiatedLogoff:
+		case ERRINFO_RPC_INITIATED_LOGOFF:
 			text = "Server initiated logoff";
 			retval = EXRD_API_LOGOFF;
 			break;
 
-		case exDiscReasonServerIdleTimeout:
+		case ERRINFO_IDLE_TIMEOUT:
 			text = "Server idle timeout reached";
 			retval = EXRD_IDLE_TIMEOUT;
 			break;
 
-		case exDiscReasonServerLogonTimeout:
+		case ERRINFO_LOGON_TIMEOUT:
 			text = "Server logon timeout reached";
 			retval = EXRD_LOGON_TIMEOUT;
 			break;
 
-		case exDiscReasonReplacedByOtherConnection:
+		case ERRINFO_DISCONNECTED_BY_OTHERCONNECTION:
 			text = "The session was replaced";
 			retval = EXRD_REPLACED;
 			break;
 
-		case exDiscReasonOutOfMemory:
+		case ERRINFO_OUT_OF_MEMORY:
 			text = "The server is out of memory";
 			retval = EXRD_OUT_OF_MEM;
 			break;
 
-		case exDiscReasonServerDeniedConnection:
+		case ERRINFO_SERVER_DENIED_CONNECTION:
 			text = "The server denied the connection";
 			retval = EXRD_DENIED;
 			break;
 
-		case exDiscReasonServerDeniedConnectionFips:
+		case ERRINFO_SERVER_DENIED_CONNECTION_FIPS:
 			text = "The server denied the connection for security reason";
 			retval = EXRD_DENIED_FIPS;
 			break;
 
-		case exDiscReasonServerInsufficientPrivileges:
+		case ERRINFO_SERVER_INSUFFICIENT_PRIVILEGES:
 			text = "The user cannot connect to the server due to insufficient access privileges.";
 			retval = EXRD_INSUFFICIENT_PRIVILEGES;
 			break;
 
-		case exDiscReasonServerFreshCredentialsRequired:
+		case ERRINFO_SERVER_FRESH_CREDENTIALS_REQUIRED:
 			text = "The server does not accept saved user credentials and requires that the user enter their credentials for each connection.";
 			retval = EXRD_FRESH_CREDENTIALS_REQUIRED;
 			break;
 
-		case exDiscReasonRPCInitiatedDisconnectByUser:
+		case ERRINFO_RPC_INITIATED_DISCONNECT_BYUSER:
 			text = "Disconnect initiated by administration tool";
 			retval = EXRD_RPC_DISCONNECT_BY_USER;
 			break;
 
-		case exDiscReasonByUser:
+		case ERRINFO_LOGOFF_BYUSER:
 			text = "Disconnect initiated by user";
 			retval = EXRD_DISCONNECT_BY_USER;
 			break;
 
-		case exDiscReasonLicenseInternal:
+		case ERRINFO_LICENSE_INTERNAL:
 			text = "Internal licensing error";
 			retval = EXRD_LIC_INTERNAL;
 			break;
 
-		case exDiscReasonLicenseNoLicenseServer:
+		case ERRINFO_LICENSE_NO_LICENSE_SERVER:
 			text = "No license server available";
 			retval = EXRD_LIC_NOSERVER;
 			break;
 
-		case exDiscReasonLicenseNoLicense:
+		case ERRINFO_LICENSE_NO_LICENSE:
 			text = "No valid license available";
 			retval = EXRD_LIC_NOLICENSE;
 			break;
 
-		case exDiscReasonLicenseErrClientMsg:
+		case ERRINFO_LICENSE_BAD_CLIENT_MSG:
 			text = "Invalid licensing message";
 			retval = EXRD_LIC_MSG;
 			break;
 
-		case exDiscReasonLicenseHwidDoesntMatchLicense:
+		case ERRINFO_LICENSE_HWID_DOESNT_MATCH_LICENSE:
 			text = "Hardware id doesn't match software license";
 			retval = EXRD_LIC_HWID;
 			break;
 
-		case exDiscReasonLicenseErrClientLicense:
+		case ERRINFO_LICENSE_BAD_CLIENT_LICENSE:
 			text = "Client license error";
 			retval = EXRD_LIC_CLIENT;
 			break;
 
-		case exDiscReasonLicenseCantFinishProtocol:
+		case ERRINFO_LICENSE_CANT_FINISH_PROTOCOL:
 			text = "Network error during licensing protocol";
 			retval = EXRD_LIC_NET;
 			break;
 
-		case exDiscReasonLicenseClientEndedProtocol:
+		case ERRINFO_LICENSE_CLIENT_ENDED_PROTOCOL:
 			text = "Licensing protocol was not completed";
 			retval = EXRD_LIC_PROTO;
 			break;
 
-		case exDiscReasonLicenseErrClientEncryption:
+		case ERRINFO_LICENSE_BAD_CLIENT_ENCRYPTION:
 			text = "Incorrect client license encryption";
 			retval = EXRD_LIC_ENC;
 			break;
 
-		case exDiscReasonLicenseCantUpgradeLicense:
+		case ERRINFO_LICENSE_CANT_UPGRADE_LICENSE:
 			text = "Can't upgrade license";
 			retval = EXRD_LIC_UPGRADE;
 			break;
 
-		case exDiscReasonLicenseNoRemoteConnections:
+		case ERRINFO_LICENSE_NO_REMOTE_CONNECTIONS:
 			text = "The server is not licensed to accept remote connections";
 			retval = EXRD_LIC_NOREMOTE;
 			break;
@@ -400,7 +400,7 @@ handle_disconnect_reason(RD_BOOL deactivated, uint16 reason)
 			}
 			retval = EXRD_UNKNOWN;
 	}
-	if (reason != exDiscReasonNoInfo)
+	if (reason != ERRINFO_NO_INFO)
 		fprintf(stderr, "disconnect: %s.\n", text);
 
 	return retval;
