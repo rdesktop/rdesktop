@@ -531,8 +531,9 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 static RD_NTSTATUS
 disk_close(RD_NTHANDLE handle)
 {
-	logger(Disk, Debug, "disk_close(handle=0x%x)", handle);
 	struct fileinfo *pfinfo;
+
+	logger(Disk, Debug, "disk_close(handle=0x%x)", handle);
 
 	pfinfo = &(g_fileinfo[handle]);
 
@@ -650,11 +651,12 @@ disk_write(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint3
 RD_NTSTATUS
 disk_query_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 {
-	logger(Disk, Debug, "disk_query_information(handle=0x%x, info_class=0x%x)", handle,
-	       info_class);
 	uint32 file_attributes, ft_high, ft_low;
 	struct stat filestat;
 	char *path, *filename;
+
+	logger(Disk, Debug, "disk_query_information(handle=0x%x, info_class=0x%x)", handle,
+	       info_class);
 
 	path = g_fileinfo[handle].path;
 
@@ -737,8 +739,6 @@ disk_query_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 RD_NTSTATUS
 disk_set_information(RD_NTHANDLE handle, uint32 info_class, STREAM in, STREAM out)
 {
-	logger(Disk, Debug, "disk_set_information(handle=0x%x, info_class=0x%x, ...)", handle,
-	       info_class);
 	uint32 length, file_attributes, ft_high, ft_low;
 	char *newname, fullpath[PATH_MAX];
 	struct fileinfo *pfinfo;
@@ -747,6 +747,9 @@ disk_set_information(RD_NTHANDLE handle, uint32 info_class, STREAM in, STREAM ou
 	time_t write_time, change_time, access_time, mod_time;
 	struct utimbuf tvs;
 	struct STATFS_T stat_fs;
+
+	logger(Disk, Debug, "disk_set_information(handle=0x%x, info_class=0x%x, ...)", handle,
+	       info_class);
 
 	pfinfo = &(g_fileinfo[handle]);
 	g_notify_stamp = True;
@@ -946,11 +949,11 @@ disk_set_information(RD_NTHANDLE handle, uint32 info_class, STREAM in, STREAM ou
 RD_NTSTATUS
 disk_check_notify(RD_NTHANDLE handle)
 {
-	logger(Disk, Debug, "disk_check_notify(handle=0x%x)", handle);
 	struct fileinfo *pfinfo;
 	RD_NTSTATUS status = RD_STATUS_PENDING;
-
 	NOTIFY notify;
+
+	logger(Disk, Debug, "disk_check_notify(handle=0x%x)", handle);
 
 	pfinfo = &(g_fileinfo[handle]);
 	if (!pfinfo->pdir)
@@ -978,11 +981,10 @@ disk_check_notify(RD_NTHANDLE handle)
 RD_NTSTATUS
 disk_create_notify(RD_NTHANDLE handle, uint32 info_class)
 {
-	logger(Disk, Debug, "disk_create_notify(handle=0x%x, info_class=0x%x)", handle, info_class);
 	struct fileinfo *pfinfo;
 	RD_NTSTATUS ret = RD_STATUS_PENDING;
 
-	/* printf("start disk_create_notify info_class %X\n", info_class); */
+	logger(Disk, Debug, "disk_create_notify(handle=0x%x, info_class=0x%x)", handle, info_class);
 
 	pfinfo = &(g_fileinfo[handle]);
 	pfinfo->info_class = info_class;
@@ -1122,8 +1124,6 @@ FsVolumeInfo(char *fpath)
 RD_NTSTATUS
 disk_query_volume_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 {
-	logger(Disk, Debug, "disk_query_volume_information(handle=0x%x, info_class=0x%x)", handle,
-	       info_class);
 	struct STATFS_T stat_fs;
 	struct fileinfo *pfinfo;
 	FsInfoType *fsinfo;
@@ -1131,6 +1131,9 @@ disk_query_volume_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 
 	memset(&stmp, 0, sizeof(stmp));
 	s_realloc(&stmp, PATH_MAX * 4);
+
+	logger(Disk, Debug, "disk_query_volume_information(handle=0x%x, info_class=0x%x)", handle,
+	       info_class);
 
 	pfinfo = &(g_fileinfo[handle]);
 
@@ -1210,8 +1213,6 @@ disk_query_volume_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 RD_NTSTATUS
 disk_query_directory(RD_NTHANDLE handle, uint32 info_class, char *pattern, STREAM out)
 {
-	logger(Disk, Debug, "disk_query_directory(handle=0x%x, info_class=0x%x, pattern=%s, ...)",
-	       handle, info_class, pattern);
 	uint32 file_attributes, ft_low, ft_high;
 	char *dirname, fullpath[PATH_MAX];
 	DIR *pdir;
@@ -1219,6 +1220,9 @@ disk_query_directory(RD_NTHANDLE handle, uint32 info_class, char *pattern, STREA
 	struct stat filestat;
 	struct fileinfo *pfinfo;
 	struct stream stmp;
+
+	logger(Disk, Debug, "disk_query_directory(handle=0x%x, info_class=0x%x, pattern=%s, ...)",
+	       handle, info_class, pattern);
 
 	pfinfo = &(g_fileinfo[handle]);
 	pdir = pfinfo->pdir;
