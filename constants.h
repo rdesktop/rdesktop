@@ -540,31 +540,50 @@ enum RDP_INPUT_DEVICE
 #define RDPDR_CLIENT_DISPLAY_NAME_PDU 0x00000002
 #define RDPDR_USER_LOGGEDON_PDU       0x00000004
 
-/* RDP5 disconnect PDU */
-#define exDiscReasonNoInfo				0x0000
-#define exDiscReasonAPIInitiatedDisconnect		0x0001
-#define exDiscReasonAPIInitiatedLogoff			0x0002
-#define exDiscReasonServerIdleTimeout			0x0003
-#define exDiscReasonServerLogonTimeout			0x0004
-#define exDiscReasonReplacedByOtherConnection		0x0005
-#define exDiscReasonOutOfMemory				0x0006
-#define exDiscReasonServerDeniedConnection		0x0007
-#define exDiscReasonServerDeniedConnectionFips		0x0008
-#define exDiscReasonServerInsufficientPrivileges        0x0009
-#define exDiscReasonServerFreshCredentialsRequired      0x000a
-#define exDiscReasonRPCInitiatedDisconnectByUser        0x000b
-#define exDiscReasonByUser                              0x000c
-#define exDiscReasonLicenseInternal			0x0100
-#define exDiscReasonLicenseNoLicenseServer		0x0101
-#define exDiscReasonLicenseNoLicense			0x0102
-#define exDiscReasonLicenseErrClientMsg			0x0103
-#define exDiscReasonLicenseHwidDoesntMatchLicense	0x0104
-#define exDiscReasonLicenseErrClientLicense		0x0105
-#define exDiscReasonLicenseCantFinishProtocol		0x0106
-#define exDiscReasonLicenseClientEndedProtocol		0x0107
-#define exDiscReasonLicenseErrClientEncryption		0x0108
-#define exDiscReasonLicenseCantUpgradeLicense		0x0109
-#define exDiscReasonLicenseNoRemoteConnections		0x010a
+/* RDP5 disconnect PDU
+ *
+ * Named after the corresponding names on the server side:
+ * https://msdn.microsoft.com/en-us/library/cc240544.aspx
+ */
+#define ERRINFO_NO_INFO					0x0000
+#define ERRINFO_RPC_INITIATED_DISCONNECT		0x0001
+#define ERRINFO_RPC_INITIATED_LOGOFF			0x0002
+#define ERRINFO_IDLE_TIMEOUT				0x0003
+#define ERRINFO_LOGON_TIMEOUT				0x0004
+#define ERRINFO_DISCONNECTED_BY_OTHERCONNECTION		0x0005
+#define ERRINFO_OUT_OF_MEMORY				0x0006
+#define ERRINFO_SERVER_DENIED_CONNECTION		0x0007
+#define ERRINFO_SERVER_DENIED_CONNECTION_FIPS		0x0008
+#define ERRINFO_SERVER_INSUFFICIENT_PRIVILEGES		0x0009
+#define ERRINFO_SERVER_FRESH_CREDENTIALS_REQUIRED	0x000a
+#define ERRINFO_RPC_INITIATED_DISCONNECT_BYUSER		0x000b
+#define ERRINFO_LOGOFF_BYUSER				0x000c
+#define ERRINFO_LICENSE_INTERNAL			0x0100
+#define ERRINFO_LICENSE_NO_LICENSE_SERVER		0x0101
+#define ERRINFO_LICENSE_NO_LICENSE			0x0102
+#define ERRINFO_LICENSE_BAD_CLIENT_MSG			0x0103
+#define ERRINFO_LICENSE_HWID_DOESNT_MATCH_LICENSE	0x0104
+#define ERRINFO_LICENSE_BAD_CLIENT_LICENSE		0x0105
+#define ERRINFO_LICENSE_CANT_FINISH_PROTOCOL		0x0106
+#define ERRINFO_LICENSE_CLIENT_ENDED_PROTOCOL		0x0107
+#define ERRINFO_LICENSE_BAD_CLIENT_ENCRYPTION		0x0108
+#define ERRINFO_LICENSE_CANT_UPGRADE_LICENSE		0x0109
+#define ERRINFO_LICENSE_NO_REMOTE_CONNECTIONS		0x010a
+#define ERRINFO_CB_DESTINATION_NOT_FOUND		0x0400
+#define ERRINFO_CB_LOADING_DESTINATION			0x0402
+#define ERRINFO_CB_REDIRECTING_TO_DESTINATION		0x0404
+#define ERRINFO_CB_SESSION_ONLINE_VM_WAKE		0x0405
+#define ERRINFO_CB_SESSION_ONLINE_VM_BOOT		0x0406
+#define ERRINFO_CB_SESSION_ONLINE_VM_NO_DNS		0x0407
+#define ERRINFO_CB_DESTINATION_POOL_NOT_FREE		0x0408
+#define ERRINFO_CB_CONNECTION_CANCELLED			0x0409
+#define ERRINFO_CB_CONNECTION_ERROR_INVALID_SETTINGS	0x0410
+#define ERRINFO_CB_SESSION_ONLINE_VM_BOOT_TIMEOUT	0x0411
+#define ERRINFO_CB_SESSION_ONLINE_VM_SESSMON_FAILED	0x0412
+#define ERRINFO_REMOTEAPPSNOTENABLED			0x10f3
+#define ERRINFO_UPDATESESSIONKEYFAILED			0x1191
+#define ERRINFO_DECRYPTFAILED				0x1192
+#define ERRINFO_ENCRYPTFAILED				0x1193
 
 /* SeamlessRDP constants */
 #define SEAMLESSRDP_NOTYETMAPPED -1
