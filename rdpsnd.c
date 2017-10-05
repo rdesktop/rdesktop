@@ -267,8 +267,7 @@ rdpsnd_process_training(STREAM in)
 
 	in_uint16_le(in, tick);
 
-	logger(Sound, Debug, "rdpsnd_process_training(), tick=0x%04x, packsize=%d", (unsigned) tick,
-	       packsize);
+	logger(Sound, Debug, "rdpsnd_process_training(), tick=0x%04x", (unsigned) tick);
 
 	out = rdpsnd_init_packet(SNDC_TRAINING, 4);
 	out_uint16_le(out, tick);
