@@ -201,7 +201,7 @@ ewmh_init()
 /* 
    Get the window state: normal/minimized/maximized. 
 */
-#ifndef MAKE_PROTO
+
 int
 ewmh_get_window_state(Window w)
 {
@@ -579,9 +579,6 @@ ewmh_is_window_above(Window w)
 
 	return above;
 }
-
-#endif /* MAKE_PROTO */
-
 
 #if 0
 

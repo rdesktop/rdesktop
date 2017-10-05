@@ -189,7 +189,4 @@
 #include "stream.h"
 #include "constants.h"
 #include "types.h"
-
-#ifndef MAKE_PROTO
 #include "proto.h"
-#endif
