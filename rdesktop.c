@@ -183,7 +183,6 @@ usage(char *program)
 	fprintf(stderr, "   -e: disable encryption (French TS)\n");
 	fprintf(stderr, "   -E: disable encryption from client to server\n");
 	fprintf(stderr, "   -m: do not send motion events\n");
-	fprintf(stderr, "   -M: use local mouse cursor\n");
 	fprintf(stderr, "   -C: use private colour map\n");
 	fprintf(stderr, "   -D: hide window manager decorations\n");
 	fprintf(stderr, "   -K: keep window manager key bindings\n");
@@ -568,7 +567,7 @@ main(int argc, char *argv[])
 	g_num_devices = 0;
 
 	while ((c = getopt(argc, argv,
-			   "A:u:L:d:s:c:p:n:k:g:o:fbBeEitmMzCDKS:T:NX:a:x:Pr:045vh?")) != -1)
+			   "A:u:L:d:s:c:p:n:k:g:o:fbBeEitmzCDKS:T:NX:a:x:Pr:045vh?")) != -1)
 	{
 		switch (c)
 		{
@@ -716,9 +715,6 @@ main(int argc, char *argv[])
 				break;
 			case 'm':
 				g_sendmotion = False;
-				break;
-			case 'M':
-				g_local_cursor = True;
 				break;
 
 			case 'C':
@@ -975,6 +971,11 @@ main(int argc, char *argv[])
 	{
 		usage(argv[0]);
 		return EX_USAGE;
+	}
+	if (g_dpi >= 144 || !g_sendmotion)
+	{
+		g_local_cursor = True;
+		g_rdp5_performanceflags |= PERF_DISABLE_CURSOR_SHADOW;
 	}
 
 	STRNCPY(server, argv[optind], sizeof(server));
