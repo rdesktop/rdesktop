@@ -3,7 +3,9 @@ matrix:
     - os: linux
       dist: trusty
       sudo: required
-      compiler: gcc
+      compiler: 
+        - gcc
+        - clang
     - os: osx
       osx_image: xcode7.3
       compiler: clang
