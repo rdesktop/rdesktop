@@ -5,6 +5,7 @@
    Copyright 2009-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 2003-2008
    Copyright (C) GuoJunBo <guojunbo@ict.ac.cn> 2003
+   Copyright 2017 Karl Mikaelsson <derfian@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -263,15 +264,17 @@ static void
 rdpsnd_process_training(STREAM in)
 {
 	uint16 tick;
+	uint16 packsize;
 	STREAM out;
 
 	in_uint16_le(in, tick);
+	in_uint16_le(in, packsize);
 
 	logger(Sound, Debug, "rdpsnd_process_training(), tick=0x%04x", (unsigned) tick);
 
 	out = rdpsnd_init_packet(SNDC_TRAINING, 4);
 	out_uint16_le(out, tick);
-	out_uint16_le(out, 0);
+	out_uint16_le(out, packsize);
 	s_mark_end(out);
 	rdpsnd_send(out);
 }
