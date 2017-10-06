@@ -37,6 +37,11 @@
 #include <X11/extensions/Xrandr.h>
 #endif
 
+#ifdef __APPLE__
+#include <sys/param.h>
+#define HOST_NAME_MAX MAXHOSTNAMELEN
+#endif
+
 extern int g_sizeopt;
 extern int g_width;
 extern int g_height;

@@ -123,9 +123,19 @@ fi
 dnl CredSSP feature
 AC_ARG_ENABLE([credssp], AS_HELP_STRING([--disable-credssp], [disable support for CredSSP]))
 AS_IF([test "x$enable_credssp" != "xno"], [
-	  if test -n "$PKG_CONFIG"; then
-	    PKG_CHECK_MODULES(GSSAPI, krb5-gssapi, [WITH_CREDSSP=1], [WITH_CREDSSP=0])
-	  fi
+	case "$OSTYPE" in
+	     darwin*)
+		AC_CHECK_HEADER(Kerberos/gssapi_krb5.h, [WITH_CREDSSP=1], [WITH_CREDSSP=0])
+		GSSAPI_CFLAGS=""
+		GSSAPI_LIBS="-framework Kerberos"
+		;;
+	     *)
+		if test -n "$PKG_CONFIG"; then
+		  PKG_CHECK_MODULES(GSSAPI, krb5-gssapi, [WITH_CREDSSP=1], [WITH_CREDSSP=0])
+		fi
+		;;
+	esac
+
 
 	  if test x"$WITH_CREDSSP" = "x1"; then
 	      CREDSSPOBJ="cssp.o"
