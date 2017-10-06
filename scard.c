@@ -28,7 +28,6 @@
 #include <sys/types.h>
 #include <time.h>
 #include <arpa/inet.h>
-#ifndef MAKE_PROTO
 #ifdef __APPLE__
 #include <PCSC/wintypes.h>
 #include <PCSC/pcsclite.h>
@@ -87,7 +86,6 @@ static void *queue_handler_function(void *data);
 
 /* code segment */
 
-#endif /* MAKE_PROTO */
 void
 scardSetInfo(uint32 epoch, uint32 device, uint32 id, uint32 bytes_out)
 {
@@ -96,8 +94,6 @@ scardSetInfo(uint32 epoch, uint32 device, uint32 id, uint32 bytes_out)
 	curBytesOut = bytes_out;
 	curEpoch = epoch;
 }
-
-#ifndef MAKE_PROTO
 
 static RD_NTSTATUS
 scard_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create_disposition,
@@ -123,7 +119,6 @@ scard_write(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint
 {
 	return RD_STATUS_SUCCESS;
 }
-#endif /* MAKE_PROTO */
 
 /* Enumeration of devices from rdesktop.c        */
 /* returns numer of units found and initialized. */
@@ -248,7 +243,6 @@ scard_enum_devices(uint32 * id, char *optarg)
 	return count;
 }
 
-#ifndef MAKE_PROTO
 typedef struct _scard_handle_list_t
 {
 	struct _scard_handle_list_t *next;
@@ -2700,7 +2694,6 @@ DEVICE_FNS scard_fns = {
 	scard_write,
 	thread_wrapper
 };
-#endif /* MAKE_PROTO */
 
 void
 scard_lock(int lock)
