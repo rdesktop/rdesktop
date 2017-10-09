@@ -389,7 +389,7 @@ sec_establish_key(void)
 
 /* Output connect initial data blob */
 static void
-sec_out_mcs_data(STREAM s, uint32 selected_protocol)
+sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 {
 	int hostlen = 2 * strlen(g_hostname);
 	int length = 162 + 76 + 12 + 4;
@@ -921,7 +921,7 @@ sec_connect(char *server, char *username, char *domain, char *password, RD_BOOL 
 	/* We exchange some RDP data during the MCS-Connect */
 	mcs_data.size = 512;
 	mcs_data.p = mcs_data.data = (uint8 *) xmalloc(mcs_data.size);
-	sec_out_mcs_data(&mcs_data, selected_proto);
+	sec_out_mcs_connect_initial_pdu(&mcs_data, selected_proto);
 
 	/* finialize the MCS connect sequence */
 	if (!mcs_connect_finalize(&mcs_data))
