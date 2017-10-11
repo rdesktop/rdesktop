@@ -672,14 +672,14 @@ TS_SCardEstablishContext(STREAM in, STREAM out)
 	rv = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &myHContext);
 	if (rv != SCARD_S_SUCCESS)
 	{
-		logger(SmartCard, Error, "TS_SCardEstablishContext(), failed: %s (0x%08x)",
+		logger(SmartCard, Debug, "TS_SCardEstablishContext(), failed: %s (0x%08x)",
 		       pcsc_stringify_error(rv), (unsigned int) rv);
 		goto bail_out;
 	}
 
 	if (!myHContext)
 	{
-		logger(SmartCard, Error, "TS_SCardEstablishedContext(), myHContext == NULL");
+		logger(SmartCard, Debug, "TS_SCardEstablishedContext(), myHContext == NULL");
 		goto bail_out;
 	}
 
@@ -736,7 +736,7 @@ TS_SCardReleaseContext(STREAM in, STREAM out)
 
 	if (rv)
 	{
-		logger(SmartCard, Error, "TS_SCardReleaseContext(), failed: %s (0x%08x)",
+		logger(SmartCard, Debug, "TS_SCardReleaseContext(), failed: %s (0x%08x)",
 		       pcsc_stringify_error(rv), (unsigned int) rv);
 	}
 	else
@@ -779,7 +779,7 @@ TS_SCardIsValidContext(STREAM in, STREAM out)
 
 	if (rv)
 	{
-		logger(SmartCard, Error, "TS_SCardIsValidContext(), failed: %s (0x%08x)",
+		logger(SmartCard, Debug, "TS_SCardIsValidContext(), failed: %s (0x%08x)",
 		       pcsc_stringify_error(rv), (unsigned int) rv);
 		rv = SCARD_E_INVALID_HANDLE;
 	}
@@ -834,7 +834,7 @@ TS_SCardListReaders(STREAM in, STREAM out, RD_BOOL wide)
 	cur = readers;
 	if (rv != SCARD_S_SUCCESS)
 	{
-		logger(SmartCard, Error, "TS_SCardListReaders(), failed: %s (0x%08x)",
+		logger(SmartCard, Debug, "TS_SCardListReaders(), failed: %s (0x%08x)",
 		       pcsc_stringify_error(rv), (unsigned int) rv);
 	}
 	else
@@ -1009,7 +1009,7 @@ TS_SCardReconnect(STREAM in, STREAM out)
 			    (MYPCSC_DWORD) dwInitialization, &dwActiveProtocol);
 	if (rv != SCARD_S_SUCCESS)
 	{
-		logger(SmartCard, Error, "TS_SCardReconnect(), failed: %s (0x%08x)",
+		logger(SmartCard, Debug, "TS_SCardReconnect(), failed: %s (0x%08x)",
 		       pcsc_stringify_error(rv), (unsigned int) rv);
 	}
 	else
@@ -1073,7 +1073,7 @@ TS_SCardDisconnect(STREAM in, STREAM out)
 
 	if (rv != SCARD_S_SUCCESS)
 	{
-		logger(SmartCard, Error, "TS_SCardDisconnect(), failed: %s (0x%08x)",
+		logger(SmartCard, Debug, "TS_SCardDisconnect(), failed: %s (0x%08x)",
 		       pcsc_stringify_error(rv), (unsigned int) rv);
 	}
 	else
@@ -1285,7 +1285,7 @@ TS_SCardCancel(STREAM in, STREAM out)
 	rv = SCardCancel(myHContext);
 	if (rv != SCARD_S_SUCCESS)
 	{
-		logger(SmartCard, Error, "TS_SCardCancel(), failed: %s (0x%08x)",
+		logger(SmartCard, Debug, "TS_SCardCancel(), failed: %s (0x%08x)",
 		       pcsc_stringify_error(rv), (unsigned int) rv);
 	}
 	else
@@ -1376,7 +1376,7 @@ TS_SCardLocateCardsByATR(STREAM in, STREAM out, RD_BOOL wide)
 	copyReaderState_MyPCSCToServer(myRsArray, rsArray, readerCount);
 	if (rv != SCARD_S_SUCCESS)
 	{
-		logger(SmartCard, Error, "TS_SCardLocateCardsByATR(), failed: %s (0x%08x)",
+		logger(SmartCard, Debug, "TS_SCardLocateCardsByATR(), failed: %s (0x%08x)",
 		       pcsc_stringify_error(rv), (unsigned int) rv);
 	}
 	else
@@ -1447,7 +1447,7 @@ TS_SCardBeginTransaction(STREAM in, STREAM out)
 	rv = SCardBeginTransaction(myHCard);
 	if (rv != SCARD_S_SUCCESS)
 	{
-		logger(SmartCard, Error, "TS_SCardBeginTransaction(), failed: %s (0x%08x)",
+		logger(SmartCard, Debug, "TS_SCardBeginTransaction(), failed: %s (0x%08x)",
 		       pcsc_stringify_error(rv), (unsigned int) rv);
 	}
 	else
@@ -1479,7 +1479,7 @@ TS_SCardEndTransaction(STREAM in, STREAM out)
 	rv = SCardEndTransaction(myHCard, (MYPCSC_DWORD) dwDisposition);
 	if (rv != SCARD_S_SUCCESS)
 	{
-		logger(SmartCard, Error, "TS_SCardEndTransaction(), failed: %s (0x%08x)",
+		logger(SmartCard, Debug, "TS_SCardEndTransaction(), failed: %s (0x%08x)",
 		       pcsc_stringify_error(rv), (unsigned int) rv);
 	}
 	else
@@ -1670,7 +1670,7 @@ TS_SCardTransmit(STREAM in, STREAM out)
 
 	if (rv != SCARD_S_SUCCESS)
 	{
-		logger(SmartCard, Error, "TS_SCardTransmit(), failed: %s (0x%08x)",
+		logger(SmartCard, Debug, "TS_SCardTransmit(), failed: %s (0x%08x)",
 		       pcsc_stringify_error(rv), (unsigned int) rv);
 	}
 	else
@@ -1766,7 +1766,7 @@ TS_SCardStatus(STREAM in, STREAM out, RD_BOOL wide)
 
 	if (rv != SCARD_S_SUCCESS)
 	{
-		logger(SmartCard, Error, "TS_SCardTransmit(), failed: %s (0x%08x)",
+		logger(SmartCard, Debug, "TS_SCardTransmit(), failed: %s (0x%08x)",
 		       pcsc_stringify_error(rv), (unsigned int) rv);
 		return SC_returnCode(rv, &lcHandle, in, out);
 	}
@@ -1873,7 +1873,7 @@ TS_SCardState(STREAM in, STREAM out)
 
 	if (rv != SCARD_S_SUCCESS)
 	{
-		logger(SmartCard, Error, "TS_SCardState(), failed: %s (0x%08x)",
+		logger(SmartCard, Debug, "TS_SCardState(), failed: %s (0x%08x)",
 		       pcsc_stringify_error(rv), (unsigned int) rv);
 		return SC_returnCode(rv, &lcHandle, in, out);
 	}
@@ -2035,7 +2035,7 @@ TS_SCardGetAttrib(STREAM in, STREAM out)
 
 	if (rv != SCARD_S_SUCCESS)
 	{
-		logger(SmartCard, Error, "TS_SCardGetAttrib(), failed: %s (0x%08x)",
+		logger(SmartCard, Debug, "TS_SCardGetAttrib(), failed: %s (0x%08x)",
 		       pcsc_stringify_error(rv), (unsigned int) rv);
 		return SC_returnCode(rv, &lcHandle, in, out);
 	}
@@ -2215,7 +2215,7 @@ TS_SCardControl(STREAM in, STREAM out)
 
 	if (rv != SCARD_S_SUCCESS)
 	{
-		logger(SmartCard, Error, "TS_SCardControl(), failed: %s (0x%08x)",
+		logger(SmartCard, Debug, "TS_SCardControl(), failed: %s (0x%08x)",
 		       pcsc_stringify_error(rv), (unsigned int) rv);
 	}
 	else
@@ -2643,7 +2643,7 @@ SC_handleRequest(PSCThreadData data)
 	Result = pthread_create(&cur->thread, NULL, (void *(*)(void *)) thread_function, cur);
 	if (0 != Result)
 	{
-		logger(SmartCard, Error, "SC_handleRequest(), pthread_create() failed with 0x%.8x",
+		logger(SmartCard, Debug, "SC_handleRequest(), pthread_create() failed with 0x%.8x",
 		       Result);
 		SC_xfree(&threadListHandle, cur);
 		SC_destroyThreadData(data);
