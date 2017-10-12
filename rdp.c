@@ -624,30 +624,32 @@ rdp_send_fonts(uint16 seq)
 	rdp_send_data(s, RDP_DATA_PDU_FONT2);
 }
 
-/* Output general capability set */
+/* Output general capability set (TS_GENERAL_CAPABILITYSET) */
 static void
-rdp_out_general_caps(STREAM s)
+rdp_out_ts_general_capabilityset(STREAM s)
 {
+	uint16 extraFlags = 0;
+	if (g_rdp_version >= RDP_V5)
+	{
+		extraFlags |= NO_BITMAP_COMPRESSION_HDR;
+		extraFlags |= AUTORECONNECT_SUPPORTED;
+		extraFlags |= LONG_CREDENTIALS_SUPPORTED;
+		extraFlags |= FASTPATH_OUTPUT_SUPPORTED;
+	}
+
 	out_uint16_le(s, RDP_CAPSET_GENERAL);
 	out_uint16_le(s, RDP_CAPLEN_GENERAL);
-
-	out_uint16_le(s, 1);	/* OS major type */
-	out_uint16_le(s, 3);	/* OS minor type */
-	out_uint16_le(s, 0x200);	/* Protocol version */
-	out_uint16(s, 0);	/* Pad */
-	out_uint16(s, 0);	/* Compression types */
-	out_uint16_le(s, (g_rdp_version >= RDP_V5) ? 0x40d : 0);
-	/* Pad, according to T.128. 0x40d seems to 
-	   trigger
-	   the server to start sending RDP5 packets. 
-	   However, the value is 0x1d04 with W2KTSK and
-	   NT4MS. Hmm.. Anyway, thankyou, Microsoft,
-	   for sending such information in a padding 
-	   field.. */
-	out_uint16(s, 0);	/* Update capability */
-	out_uint16(s, 0);	/* Remote unshare capability */
-	out_uint16(s, 0);	/* Compression level */
-	out_uint16(s, 0);	/* Pad */
+	out_uint16_le(s, OSMAJORTYPE_WINDOWS);		/* osMajorType */
+	out_uint16_le(s, OSMINORTYPE_WINDOWSNT);	/* osMinorType */
+	out_uint16_le(s, TS_CAPS_PROTOCOLVERSION);	/* protocolVersion (must be TS_CAPS_PROTOCOLVERSION) */
+	out_uint16_le(s, 0);				/* pad2OctetsA */
+	out_uint16_le(s, 0);				/* generalCompressionTypes (must be 0) */
+	out_uint16_le(s, extraFlags);			/* extraFlags */
+	out_uint16_le(s, 0);				/* updateCapabilityFlag (must be 0) */
+	out_uint16_le(s, 0);				/* remoteUnshareFlag (must be 0) */
+	out_uint16_le(s, 0);				/* generalCompressionLevel (must be 0) */
+	out_uint8(s, 0);				/* refreshRectSupport */
+	out_uint8(s, 0);				/* suppressOutputSupport */
 }
 
 /* Output bitmap capability set */
@@ -914,7 +916,7 @@ rdp_send_confirm_active(void)
 	out_uint16_le(s, 0xe);	/* num_caps */
 	out_uint8s(s, 2);	/* pad */
 
-	rdp_out_general_caps(s);
+	rdp_out_ts_general_capabilityset(s);
 	rdp_out_bitmap_caps(s);
 	rdp_out_order_caps(s);
 	if (g_rdp_version >= RDP_V5)
