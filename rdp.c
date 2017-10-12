@@ -654,65 +654,82 @@ rdp_out_ts_general_capabilityset(STREAM s)
 
 /* Output bitmap capability set */
 static void
-rdp_out_bitmap_caps(STREAM s)
+rdp_out_ts_bitmap_capabilityset(STREAM s)
 {
 	out_uint16_le(s, RDP_CAPSET_BITMAP);
 	out_uint16_le(s, RDP_CAPLEN_BITMAP);
-
-	out_uint16_le(s, g_server_depth);	/* Preferred colour depth */
-	out_uint16_le(s, 1);	/* Receive 1 BPP */
-	out_uint16_le(s, 1);	/* Receive 4 BPP */
-	out_uint16_le(s, 1);	/* Receive 8 BPP */
-	out_uint16_le(s, 800);	/* Desktop width */
-	out_uint16_le(s, 600);	/* Desktop height */
-	out_uint16(s, 0);	/* Pad */
-	out_uint16(s, 1);	/* Allow resize */
-	out_uint16_le(s, g_bitmap_compression ? 1 : 0);	/* Support compression */
-	out_uint16(s, 0);	/* Unknown */
-	out_uint16_le(s, 1);	/* Unknown */
-	out_uint16(s, 0);	/* Pad */
+	out_uint16_le(s, g_server_depth);	/* preferredBitsPerPixel */
+	out_uint16_le(s, 1);			/* receive1BitPerPixel (ignored, should be 1) */
+	out_uint16_le(s, 1);			/* receive4BitPerPixel (ignored, should be 1) */
+	out_uint16_le(s, 1);			/* receive8BitPerPixel (ignored, should be 1) */
+	out_uint16_le(s, 800);			/* desktopWidth */
+	out_uint16_le(s, 600);			/* desktopHeight */
+	out_uint16_le(s, 0);			/* pad2Octets */
+	out_uint16_le(s, 1);			/* desktopResizeFlag */
+	out_uint16_le(s, 1);			/* bitmapCompressionFlag (must be 1) */
+	out_uint8(s, 0);			/* highColorFlags (ignored, should be 0) */
+	out_uint8(s, 0);			/* drawingFlags */
+	out_uint16_le(s, 1);			/* multipleRectangleSupport (must be 1) */
+	out_uint16_le(s, 0);			/* pad2OctetsB */
 }
 
 /* Output order capability set */
 static void
-rdp_out_order_caps(STREAM s)
+rdp_out_ts_order_capabilityset(STREAM s)
 {
 	uint8 order_caps[32];
+	uint16 orderflags = 0;
+	uint32 cachesize = 0;
+
+	orderflags |= (NEGOTIATEORDERSUPPORT | ZEROBOUNDSDELTASSUPPORT); /* mandatory flags */
+	orderflags |= COLORINDEXSUPPORT;
 
 	memset(order_caps, 0, 32);
-	order_caps[0] = 1;	/* dest blt */
-	order_caps[1] = 1;	/* pat blt */
-	order_caps[2] = 1;	/* screen blt */
-	order_caps[3] = (g_bitmap_cache ? 1 : 0);	/* memblt */
-	order_caps[4] = 0;	/* triblt */
-	order_caps[8] = 1;	/* line */
-	order_caps[9] = 1;	/* line */
-	order_caps[10] = 1;	/* rect */
-	order_caps[11] = (g_desktop_save ? 1 : 0);	/* desksave */
-	order_caps[13] = 1;	/* memblt */
-	order_caps[14] = 1;	/* triblt */
-	order_caps[20] = (g_polygon_ellipse_orders ? 1 : 0);	/* polygon */
-	order_caps[21] = (g_polygon_ellipse_orders ? 1 : 0);	/* polygon2 */
-	order_caps[22] = 1;	/* polyline */
-	order_caps[25] = (g_polygon_ellipse_orders ? 1 : 0);	/* ellipse */
-	order_caps[26] = (g_polygon_ellipse_orders ? 1 : 0);	/* ellipse2 */
-	order_caps[27] = 1;	/* text2 */
+
+	order_caps[TS_NEG_DSTBLT_INDEX] = 1;
+	order_caps[TS_NEG_PATBLT_INDEX] = 1;
+	order_caps[TS_NEG_SCRBLT_INDEX] = 1;
+	order_caps[TS_NEG_LINETO_INDEX] = 1;
+	order_caps[TS_NEG_MULTI_DRAWNINEGRID_INDEX] = 1;
+	order_caps[TS_NEG_POLYLINE_INDEX] = 1;
+	order_caps[TS_NEG_INDEX_INDEX] = 1;
+
+	if (g_bitmap_cache)
+		order_caps[TS_NEG_MEMBLT_INDEX] = 1;
+
+	if (g_desktop_save)
+	{
+		cachesize = 230400;
+		order_caps[TS_NEG_SAVEBITMAP_INDEX] = 1;
+	}
+
+	if (g_polygon_ellipse_orders)
+	{
+		order_caps[TS_NEG_POLYGON_SC_INDEX] = 1;
+		order_caps[TS_NEG_POLYGON_CB_INDEX] = 1;
+		order_caps[TS_NEG_ELLIPSE_SC_INDEX] = 1;
+		order_caps[TS_NEG_ELLIPSE_CB_INDEX] = 1;
+	}
+
 	out_uint16_le(s, RDP_CAPSET_ORDER);
 	out_uint16_le(s, RDP_CAPLEN_ORDER);
-
-	out_uint8s(s, 20);	/* Terminal desc, pad */
-	out_uint16_le(s, 1);	/* Cache X granularity */
-	out_uint16_le(s, 20);	/* Cache Y granularity */
-	out_uint16(s, 0);	/* Pad */
-	out_uint16_le(s, 1);	/* Max order level */
-	out_uint16_le(s, 0x147);	/* Number of fonts */
-	out_uint16_le(s, 0x2a);	/* Capability flags */
-	out_uint8p(s, order_caps, 32);	/* Orders supported */
-	out_uint16_le(s, 0x6a1);	/* Text capability flags */
-	out_uint8s(s, 6);	/* Pad */
-	out_uint32_le(s, g_desktop_save == False ? 0 : 0x38400);	/* Desktop cache size */
-	out_uint32(s, 0);	/* Unknown */
-	out_uint32_le(s, 0x4e4);	/* Unknown */
+	out_uint8s(s, 16);		/* terminalDescriptor (ignored, should be 0) */
+	out_uint8s(s, 4);		/* pad4OctetsA */
+	out_uint16_le(s, 1);		/* desktopSaveXGranularity (ignored, assumed to be 1) */
+	out_uint16_le(s, 20);		/* desktopSaveYGranularity (ignored, assumed to be 20) */
+	out_uint16_le(s, 0);		/* Pad */
+	out_uint16_le(s, 1);		/* maximumOrderLevel (ignored, should be 1) */
+	out_uint16_le(s, 0);		/* numberFonts (ignored, should be 0) */
+	out_uint16_le(s, orderflags);	/* orderFlags */
+	out_uint8p(s, order_caps, 32);	/* orderSupport */
+	out_uint16_le(s, 0);		/* textFlags (ignored) */
+	out_uint16_le(s, 0);    	/* orderSupportExFlags */
+	out_uint32_le(s, 0);		/* pad4OctetsB */
+	out_uint32_le(s, cachesize);	/* desktopSaveSize */
+	out_uint16_le(s, 0);		/* pad2OctetsC */
+	out_uint16_le(s, 0);		/* pad2OctetsD */
+	out_uint16_le(s, 1252);		/* textANSICodePage */
+	out_uint16_le(s, 0);		/* pad2OctetsE */
 }
 
 /* Output bitmap cache capability set */
@@ -917,8 +934,8 @@ rdp_send_confirm_active(void)
 	out_uint8s(s, 2);	/* pad */
 
 	rdp_out_ts_general_capabilityset(s);
-	rdp_out_bitmap_caps(s);
-	rdp_out_order_caps(s);
+	rdp_out_ts_bitmap_capabilityset(s);
+	rdp_out_ts_order_capabilityset(s);
 	if (g_rdp_version >= RDP_V5)
 	{
 		rdp_out_bmpcache2_caps(s);
