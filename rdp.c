@@ -4,6 +4,7 @@
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2003-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
    Copyright 2011-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2017 Karl Mikaelsson <derfian@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -855,41 +856,82 @@ rdp_out_brushcache_caps(STREAM s)
 	out_uint32_le(s, 1);	/* cache type */
 }
 
-static uint8 caps_0x0d[] = {
-	0x01, 0x00, 0x00, 0x00, 0x09, 0x04, 0x00, 0x00,
-	0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x0C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00
-};
-
-static uint8 caps_0x0c[] = { 0x01, 0x00, 0x00, 0x00 };
-
-static uint8 caps_0x0e[] = { 0x01, 0x00, 0x00, 0x00 };
-
-static uint8 caps_0x10[] = {
-	0xFE, 0x00, 0x04, 0x00, 0xFE, 0x00, 0x04, 0x00,
-	0xFE, 0x00, 0x08, 0x00, 0xFE, 0x00, 0x08, 0x00,
-	0xFE, 0x00, 0x10, 0x00, 0xFE, 0x00, 0x20, 0x00,
-	0xFE, 0x00, 0x40, 0x00, 0xFE, 0x00, 0x80, 0x00,
-	0xFE, 0x00, 0x00, 0x01, 0x40, 0x00, 0x00, 0x08,
-	0x00, 0x01, 0x00, 0x01, 0x02, 0x00, 0x00, 0x00
-};
-
-/* Output unknown capability sets */
+/* Output Input Capability Set */
 static void
-rdp_out_unknown_caps(STREAM s, uint16 id, uint16 length, uint8 * caps)
+rdp_out_ts_input_capabilityset(STREAM s)
 {
-	out_uint16_le(s, id);
-	out_uint16_le(s, length);
+	uint16 inputflags = 0;
+	inputflags |= INPUT_FLAG_SCANCODES;
 
-	out_uint8p(s, caps, length - 4);
+	out_uint16_le(s, RDP_CAPSET_INPUT);
+	out_uint16_le(s, RDP_CAPLEN_INPUT);
+
+	out_uint16_le(s, inputflags);		/* inputFlags */
+	out_uint16_le(s, 0);			/* pad2OctetsA */
+	out_uint32_le(s, 0x409);		/* keyboardLayout */
+	out_uint32_le(s, 0x4);			/* keyboardType */
+	out_uint32_le(s, 0);			/* keyboardSubtype */
+	out_uint32_le(s, 0xC);			/* keyboardFunctionKey */
+	out_utf16s_padded(s, "", 64, 0);	/* imeFileName */
+}
+
+/* Output Sound Capability Set */
+static void
+rdp_out_ts_sound_capabilityset(STREAM s)
+{
+	uint16 soundflags = SOUND_BEEPS_FLAG;
+
+	out_uint16_le(s, RDP_CAPSET_SOUND);
+	out_uint16_le(s, RDP_CAPLEN_SOUND);
+
+	out_uint16_le(s, soundflags);	/* soundFlags */
+	out_uint16_le(s, 0);		/* pad2OctetsA */
+}
+
+/* Output Font Capability Set */
+static void
+rdp_out_ts_font_capabilityset(STREAM s)
+{
+	uint16 flags = FONTSUPPORT_FONTLIST;
+
+	out_uint16_le(s, RDP_CAPSET_FONT);
+	out_uint16_le(s, RDP_CAPLEN_FONT);
+
+	out_uint16_le(s, flags);	/* fontSupportFlags */
+	out_uint16_le(s, 0);		/* pad2octets */
+}
+
+static void
+rdp_out_ts_cache_definition(STREAM s, uint16 entries, uint16 maxcellsize)
+{
+	out_uint16_le(s, entries);
+	out_uint16_le(s, maxcellsize);
+}
+
+/* Output Glyph Cache Capability Set */
+static void
+rdp_out_ts_glyphcache_capabilityset(STREAM s)
+{
+	uint16 supportlvl = GLYPH_SUPPORT_FULL;
+	uint32 fragcache = 0x01000100;
+	out_uint16_le(s, RDP_CAPSET_GLYPHCACHE);
+	out_uint16_le(s, RDP_CAPLEN_GLYPHCACHE);
+
+	/* GlyphCache - 10 TS_CACHE_DEFINITION structures */
+	rdp_out_ts_cache_definition(s, 254, 4);
+	rdp_out_ts_cache_definition(s, 254, 4);
+	rdp_out_ts_cache_definition(s, 254, 8);
+	rdp_out_ts_cache_definition(s, 254, 8);
+	rdp_out_ts_cache_definition(s, 254, 16);
+	rdp_out_ts_cache_definition(s, 254, 32);
+	rdp_out_ts_cache_definition(s, 254, 64);
+	rdp_out_ts_cache_definition(s, 254, 128);
+	rdp_out_ts_cache_definition(s, 254, 256);
+	rdp_out_ts_cache_definition(s, 64, 2048);
+
+	out_uint32_le(s, fragcache);	/* FragCache */
+	out_uint16_le(s, supportlvl);	/* GlyphSupportLevel */
+	out_uint16_le(s, 0);		/* pad2octets */
 }
 
 #define RDP5_FLAG 0x0030
@@ -952,10 +994,10 @@ rdp_send_confirm_active(void)
 	rdp_out_share_caps(s);
 	rdp_out_brushcache_caps(s);
 
-	rdp_out_unknown_caps(s, 0x0d, 0x58, caps_0x0d);	/* CAPSTYPE_INPUT */
-	rdp_out_unknown_caps(s, 0x0c, 0x08, caps_0x0c);	/* CAPSTYPE_SOUND */
-	rdp_out_unknown_caps(s, 0x0e, 0x08, caps_0x0e);	/* CAPSTYPE_FONT */
-	rdp_out_unknown_caps(s, 0x10, 0x34, caps_0x10);	/* CAPSTYPE_GLYPHCACHE */
+	rdp_out_ts_input_capabilityset(s);
+	rdp_out_ts_sound_capabilityset(s);
+	rdp_out_ts_font_capabilityset(s);
+	rdp_out_ts_glyphcache_capabilityset(s);
 
 	s_mark_end(s);
 	sec_send(s, sec_flags);
