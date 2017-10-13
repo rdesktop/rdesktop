@@ -1,6 +1,6 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
-   Protocol services - RDP5 short form PDU processing
+   Protocol services - RDP Fast-Path PDU processing
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2003-2008 Erik Forsberg <forsberg@cendio.se> for Cendio AB
    Copyright 2017 Karl Mikaelsson <derfian@cendio.se> for Cendio AB
@@ -26,10 +26,10 @@ extern uint8 *g_next_packet;
 extern RDPCOMP g_mppc_dict;
 
 void
-rdp5_process(STREAM s)
+process_ts_fp_updates(STREAM s)
 {
 	uint16 length, count, x, y;
-	uint8 type, ctype;
+	uint8 hdr, code, frag, comp, ctype = 0;
 	uint8 *next;
 
 	uint32 roff, rlen;
@@ -39,25 +39,24 @@ rdp5_process(STREAM s)
 	ui_begin_update();
 	while (s->p < s->end)
 	{
-		in_uint8(s, type);
-		if (type & RDP5_COMPRESSED)
-		{
-			in_uint8(s, ctype);
-			in_uint16_le(s, length);
-			type ^= RDP5_COMPRESSED;
-		}
-		else
-		{
-			ctype = 0;
-			in_uint16_le(s, length);
-		}
+		/* Reading a number of TS_FP_UPDATE structures from the stream here.. */
+		in_uint8(s, hdr);	/* updateHeader */
+		code = hdr & 0x0F;	/*  |- updateCode */
+		frag = hdr & 0x30;	/*  |- fragmentation */
+		comp = hdr & 0xC0;	/*  `- compression */
+
+		if (comp & FASTPATH_OUTPUT_COMPRESSION_USED)
+			in_uint8(s, ctype);	/* compressionFlags */
+
+		in_uint16_le(s, length);	/* length */
+
 		g_next_packet = next = s->p + length;
 
 		if (ctype & RDP_MPPC_COMPRESSED)
 		{
 			if (mppc_expand(s->p, length, ctype, &roff, &rlen) == -1)
 				logger(Protocol, Error,
-				       "rdp5_process(), error while decompressing packet");
+				       "process_ts_fp_update_pdu(), error while decompressing packet");
 
 			/* allocate memory and copy the uncompressed data into the temporary stream */
 			ns->data = (uint8 *) xrealloc(ns->data, rlen);
@@ -74,46 +73,46 @@ rdp5_process(STREAM s)
 		else
 			ts = s;
 
-		switch (type)
+		switch (code)
 		{
-			case 0:	/* update orders */
+			case FASTPATH_UPDATETYPE_ORDERS:
 				in_uint16_le(ts, count);
 				process_orders(ts, count);
 				break;
-			case 1:	/* update bitmap */
+			case FASTPATH_UPDATETYPE_BITMAP:
 				in_uint8s(ts, 2);	/* part length */
 				process_bitmap_updates(ts);
 				break;
-			case 2:	/* update palette */
+			case FASTPATH_UPDATETYPE_PALETTE:
 				in_uint8s(ts, 2);	/* uint16 = 2 */
 				process_palette(ts);
 				break;
-			case 3:	/* update synchronize */
+			case FASTPATH_UPDATETYPE_SYNCHRONIZE:
 				break;
-			case 5:	/* null pointer */
+			case FASTPATH_UPDATETYPE_PTR_NULL:
 				ui_set_null_cursor();
 				break;
-			case 6:	/* default pointer */
+			case FASTPATH_UPDATETYPE_PTR_DEFAULT:
 				set_system_pointer(SYSPTR_DEFAULT);
 				break;
-			case 8:	/* pointer position */
+			case FASTPATH_UPDATETYPE_PTR_POSITION:
 				in_uint16_le(ts, x);
 				in_uint16_le(ts, y);
 				if (s_check(ts))
 					ui_move_pointer(x, y);
 				break;
-			case 9:	/* color pointer */
+			case FASTPATH_UPDATETYPE_COLOR:
 				process_colour_pointer_pdu(ts);
 				break;
-			case 10:	/* cached pointer */
+			case FASTPATH_UPDATETYPE_CACHED:
 				process_cached_pointer_pdu(ts);
 				break;
-			case 11:
+			case FASTPATH_UPDATETYPE_POINTER:
 				process_new_pointer_pdu(ts);
 				break;
 			default:
-				logger(Protocol, Warning, "rdp5_process(), unhandled opcode %d",
-				       type);
+				logger(Protocol, Warning, "process_ts_fp_updates(), unhandled opcode %d",
+				       code);
 		}
 
 		s->p = next;

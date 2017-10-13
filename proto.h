@@ -144,7 +144,7 @@ int rd_write_file(int fd, void *ptr, int len);
 int rd_lseek_file(int fd, int offset);
 RD_BOOL rd_lock_file(int fd, int start, int len);
 /* rdp5.c */
-void rdp5_process(STREAM s);
+void process_ts_fp_updates(STREAM s);
 /* rdp.c */
 void rdp_in_unistr(STREAM s, int in_len, char **string, uint32 * str_size);
 void rdp_send_input(uint32 time, uint16 message_type, uint16 device_flags, uint16 param1,

@@ -104,8 +104,8 @@ rdp_recv(uint8 * type)
 		}
 		else if (rdpver != 3)
 		{
-			/* rdp5_process should move g_next_packet ok */
-			rdp5_process(rdp_s);
+			/* process_ts_fp_updates moves g_next_packet */
+			process_ts_fp_updates(rdp_s);
 			*type = 0;
 			return rdp_s;
 		}
