@@ -934,6 +934,14 @@ rdp_out_ts_glyphcache_capabilityset(STREAM s)
 	out_uint16_le(s, 0);		/* pad2octets */
 }
 
+static void
+rdp_out_ts_multifragmentupdate_capabilityset(STREAM s)
+{
+	out_uint16_le(s, RDP_CAPSET_MULTIFRAGMENTUPDATE);
+	out_uint16_le(s, RDP_CAPLEN_MULTIFRAGMENTUPDATE);
+	out_uint32_le(s, RDESKTOP_FASTPATH_MULTIFRAGMENT_MAX_SIZE);	/* MaxRequestSize */
+}
+
 #define RDP5_FLAG 0x0030
 /* Send a confirm active PDU */
 static void
@@ -954,6 +962,7 @@ rdp_send_confirm_active(void)
 		RDP_CAPLEN_FONT +
 		RDP_CAPLEN_SOUND +
 		RDP_CAPLEN_GLYPHCACHE +
+		RDP_CAPLEN_MULTIFRAGMENTUPDATE +
 		4 /* w2k fix, sessionid */ ;
 
 	if (g_rdp_version >= RDP_V5)
@@ -979,7 +988,7 @@ rdp_send_confirm_active(void)
 	out_uint16_le(s, caplen);
 
 	out_uint8p(s, RDP_SOURCE, sizeof(RDP_SOURCE));
-	out_uint16_le(s, 0xe);	/* num_caps */
+	out_uint16_le(s, 15);	/* num_caps */
 	out_uint8s(s, 2);	/* pad */
 
 	rdp_out_ts_general_capabilityset(s);
@@ -1005,6 +1014,7 @@ rdp_send_confirm_active(void)
 	rdp_out_ts_sound_capabilityset(s);
 	rdp_out_ts_font_capabilityset(s);
 	rdp_out_ts_glyphcache_capabilityset(s);
+	rdp_out_ts_multifragmentupdate_capabilityset(s);
 
 	s_mark_end(s);
 	sec_send(s, sec_flags);

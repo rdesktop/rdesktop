@@ -25,16 +25,67 @@ extern uint8 *g_next_packet;
 
 extern RDPCOMP g_mppc_dict;
 
+
+static void
+process_ts_fp_update_by_code(STREAM s, uint8 code)
+{
+	uint16 count, x, y;
+
+	switch (code)
+	{
+		case FASTPATH_UPDATETYPE_ORDERS:
+			in_uint16_le(s, count);
+			process_orders(s, count);
+			break;
+		case FASTPATH_UPDATETYPE_BITMAP:
+			in_uint8s(s, 2);	/* part length */
+			process_bitmap_updates(s);
+			break;
+		case FASTPATH_UPDATETYPE_PALETTE:
+			in_uint8s(s, 2);	/* uint16 = 2 */
+			process_palette(s);
+			break;
+		case FASTPATH_UPDATETYPE_SYNCHRONIZE:
+			break;
+		case FASTPATH_UPDATETYPE_PTR_NULL:
+			ui_set_null_cursor();
+			break;
+		case FASTPATH_UPDATETYPE_PTR_DEFAULT:
+			set_system_pointer(SYSPTR_DEFAULT);
+			break;
+		case FASTPATH_UPDATETYPE_PTR_POSITION:
+			in_uint16_le(s, x);
+			in_uint16_le(s, y);
+			if (s_check(s))
+				ui_move_pointer(x, y);
+			break;
+		case FASTPATH_UPDATETYPE_COLOR:
+			process_colour_pointer_pdu(s);
+			break;
+		case FASTPATH_UPDATETYPE_CACHED:
+			process_cached_pointer_pdu(s);
+			break;
+		case FASTPATH_UPDATETYPE_POINTER:
+			process_new_pointer_pdu(s);
+			break;
+		default:
+			logger(Protocol, Warning, "process_ts_fp_updates_by_code(), unhandled opcode %d",
+			       code);
+	}
+}
+
 void
 process_ts_fp_updates(STREAM s)
 {
-	uint16 length, count, x, y;
+	uint16 length;
 	uint8 hdr, code, frag, comp, ctype = 0;
 	uint8 *next;
 
 	uint32 roff, rlen;
 	struct stream *ns = &(g_mppc_dict.ns);
 	struct stream *ts;
+
+	static STREAM assembled[0x0F] = { 0 };
 
 	ui_begin_update();
 	while (s->p < s->end)
@@ -73,46 +124,33 @@ process_ts_fp_updates(STREAM s)
 		else
 			ts = s;
 
-		switch (code)
+		if (frag == FASTPATH_FRAGMENT_SINGLE)
 		{
-			case FASTPATH_UPDATETYPE_ORDERS:
-				in_uint16_le(ts, count);
-				process_orders(ts, count);
-				break;
-			case FASTPATH_UPDATETYPE_BITMAP:
-				in_uint8s(ts, 2);	/* part length */
-				process_bitmap_updates(ts);
-				break;
-			case FASTPATH_UPDATETYPE_PALETTE:
-				in_uint8s(ts, 2);	/* uint16 = 2 */
-				process_palette(ts);
-				break;
-			case FASTPATH_UPDATETYPE_SYNCHRONIZE:
-				break;
-			case FASTPATH_UPDATETYPE_PTR_NULL:
-				ui_set_null_cursor();
-				break;
-			case FASTPATH_UPDATETYPE_PTR_DEFAULT:
-				set_system_pointer(SYSPTR_DEFAULT);
-				break;
-			case FASTPATH_UPDATETYPE_PTR_POSITION:
-				in_uint16_le(ts, x);
-				in_uint16_le(ts, y);
-				if (s_check(ts))
-					ui_move_pointer(x, y);
-				break;
-			case FASTPATH_UPDATETYPE_COLOR:
-				process_colour_pointer_pdu(ts);
-				break;
-			case FASTPATH_UPDATETYPE_CACHED:
-				process_cached_pointer_pdu(ts);
-				break;
-			case FASTPATH_UPDATETYPE_POINTER:
-				process_new_pointer_pdu(ts);
-				break;
-			default:
-				logger(Protocol, Warning, "process_ts_fp_updates(), unhandled opcode %d",
-				       code);
+			process_ts_fp_update_by_code(ts, code);
+		}
+		else /* Fragmented packet, we must reassemble */
+		{
+			if (assembled[code] == NULL)
+			{
+				assembled[code] = xmalloc(sizeof(struct stream));
+				memset(assembled[code], 0, sizeof(struct stream));
+				s_realloc(assembled[code], RDESKTOP_FASTPATH_MULTIFRAGMENT_MAX_SIZE);
+				s_reset(assembled[code]);
+			}
+
+			if (frag == FASTPATH_FRAGMENT_FIRST)
+			{
+				s_reset(assembled[code]);
+			}
+
+			out_uint8p(assembled[code], ts->p, length);
+
+			if (frag == FASTPATH_FRAGMENT_LAST)
+			{
+				s_mark_end(assembled[code]);
+				assembled[code]->p = assembled[code]->data;
+				process_ts_fp_update_by_code(assembled[code], code);
+			}
 		}
 
 		s->p = next;
