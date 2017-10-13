@@ -154,6 +154,7 @@ void process_colour_pointer_pdu(STREAM s);
 void process_new_pointer_pdu(STREAM s);
 void process_cached_pointer_pdu(STREAM s);
 void process_system_pointer_pdu(STREAM s);
+void set_system_pointer(uint32 ptr);
 void process_bitmap_updates(STREAM s);
 void process_palette(STREAM s);
 void process_disconnect_pdu(STREAM s, uint32 * ext_disc_reason);

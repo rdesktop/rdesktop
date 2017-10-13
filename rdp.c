@@ -1200,19 +1200,26 @@ process_cached_pointer_pdu(STREAM s)
 void
 process_system_pointer_pdu(STREAM s)
 {
-	uint16 system_pointer_type;
+	uint32 system_pointer_type;
+	in_uint32_le(s, system_pointer_type);
 
-	in_uint16_le(s, system_pointer_type);
-	switch (system_pointer_type)
+	set_system_pointer(system_pointer_type);
+}
+
+/* Set a given system pointer */
+void
+set_system_pointer(uint32 ptr)
+{
+	switch (ptr)
 	{
-		case RDP_NULL_POINTER:
+		case SYSPTR_NULL:
 			ui_set_null_cursor();
 			break;
 
 		default:
 			logger(Protocol, Warning,
-			       "process_system_pointer_pdu(), unhandled pointer type 0x%x",
-			       system_pointer_type);
+			       "set_system_pointer(), unhandled pointer type 0x%x",
+			       ptr);
 	}
 }
 

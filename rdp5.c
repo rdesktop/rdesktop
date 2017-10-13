@@ -3,6 +3,7 @@
    Protocol services - RDP5 short form PDU processing
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2003-2008 Erik Forsberg <forsberg@cendio.se> for Cendio AB
+   Copyright 2017 Karl Mikaelsson <derfian@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -93,6 +94,7 @@ rdp5_process(STREAM s)
 				ui_set_null_cursor();
 				break;
 			case 6:	/* default pointer */
+				set_system_pointer(SYSPTR_DEFAULT);
 				break;
 			case 8:	/* pointer position */
 				in_uint16_le(ts, x);
