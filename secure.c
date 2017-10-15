@@ -455,8 +455,9 @@ sec_out_mcs_data(STREAM s, uint32 selected_protocol)
 		/* Extended client info describing monitor geometry */
 		out_uint32_le(s, g_width * 254 / (g_dpi * 10)); /* desktop physical width */
 		out_uint32_le(s, g_height * 254 / (g_dpi * 10)); /* desktop physical height */
-		out_uint16_le(s, 0); /* orientation: landscape */
+		out_uint16_le(s, ORIENTATION_LANDSCAPE);
 		out_uint32_le(s, g_dpi < 96 ? 100 : (g_dpi * 100 + 48) / 96); /* desktop scale factor */
+		/* the spec calls this out as being valid for range 100-500 but I doubt the upper range is accurate */
 		out_uint32_le(s, g_dpi < 134 ? 100 : (g_dpi < 173 ? 140 : 180)); /* device scale factor */
 		/* the only allowed values for device scale factor are 100, 140, and 180. */
 	}

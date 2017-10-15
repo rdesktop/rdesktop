@@ -676,7 +676,7 @@ main(int argc, char *argv[])
 					g_dpi = strtol(p + 1, &p, 10);
 					if (g_dpi <= 0)
 					{
-						error("invalid geometry\n");
+						logger(Core, Error, "invalid DPI: expected a positive integer after @\n");
 						return EX_USAGE;
 					}
 				}
