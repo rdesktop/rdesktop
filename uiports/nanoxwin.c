@@ -45,7 +45,6 @@ int g_polygon_ellipse_orders = 0;
 int g_bitmap_cache = 1;
 int g_bitmap_cache_persist_enable = 0;
 int g_bitmap_cache_precache = 1;
-int g_bitmap_compression = 1;
 uint32 g_rdp5_performanceflags =
   RDP5_NO_WALLPAPER | RDP5_NO_FULLWINDOWDRAG | RDP5_NO_MENUANIMATIONS;
 int g_console_session = 0;

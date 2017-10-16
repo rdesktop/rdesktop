@@ -83,7 +83,6 @@ extern int g_tcp_port_rdp;
 int g_server_depth = -1;
 int g_win_button_size = 0;	/* If zero, disable single app mode */
 RD_BOOL g_network_error = False;
-RD_BOOL g_bitmap_compression = True;
 RD_BOOL g_sendmotion = True;
 RD_BOOL g_bitmap_cache = True;
 RD_BOOL g_bitmap_cache_persist_enable = False;
