@@ -3103,6 +3103,12 @@ ui_set_null_cursor(void)
 	ui_set_cursor(g_null_cursor);
 }
 
+void
+ui_set_standard_cursor(void)
+{
+	XUndefineCursor(g_display, g_wnd);
+}
+
 #define MAKE_XCOLOR(xc,c) \
 		(xc)->red   = ((c)->red   << 8) | (c)->red; \
 		(xc)->green = ((c)->green << 8) | (c)->green; \

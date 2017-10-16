@@ -275,6 +275,7 @@ RD_HCURSOR ui_create_cursor(unsigned int x, unsigned int y, int width, int heigh
 void ui_set_cursor(RD_HCURSOR cursor);
 void ui_destroy_cursor(RD_HCURSOR cursor);
 void ui_set_null_cursor(void);
+void ui_set_standard_cursor(void);
 RD_HCOLOURMAP ui_create_colourmap(COLOURMAP * colours);
 void ui_destroy_colourmap(RD_HCOLOURMAP map);
 void ui_set_colourmap(RD_HCOLOURMAP map);
