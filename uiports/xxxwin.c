@@ -32,7 +32,6 @@ RD_BOOL g_polygon_ellipse_orders = False;
 RD_BOOL g_bitmap_cache = True;
 RD_BOOL g_bitmap_cache_persist_enable = False;
 RD_BOOL g_bitmap_cache_precache = True;
-RD_BOOL g_bitmap_compression = True;
 uint32 g_rdp5_performanceflags = 0;
 RD_BOOL g_console_session = False;
 uint32 g_keylayout = 0x409; /* Defaults to US keyboard layout */

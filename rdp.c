@@ -35,7 +35,6 @@ extern uint16 g_mcs_userid;
 extern char *g_username;
 extern char g_password[64];
 extern char g_codepage[16];
-extern RD_BOOL g_bitmap_compression;
 extern RD_BOOL g_orders;
 extern RD_BOOL g_encryption;
 extern RD_BOOL g_desktop_save;
