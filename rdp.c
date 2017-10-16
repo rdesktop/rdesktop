@@ -941,6 +941,16 @@ rdp_out_ts_multifragmentupdate_capabilityset(STREAM s)
 	out_uint32_le(s, RDESKTOP_FASTPATH_MULTIFRAGMENT_MAX_SIZE);	/* MaxRequestSize */
 }
 
+static void
+rdp_out_ts_large_pointer_capabilityset(STREAM s)
+{
+	uint16 flags = LARGE_POINTER_FLAG_96x96;
+
+	out_uint16_le(s, RDP_CAPSET_LARGE_POINTER);
+	out_uint16_le(s, RDP_CAPLEN_LARGE_POINTER);
+	out_uint16_le(s, flags);	/* largePointerSupportFlags */
+}
+
 #define RDP5_FLAG 0x0030
 /* Send a confirm active PDU */
 static void
@@ -962,6 +972,7 @@ rdp_send_confirm_active(void)
 		RDP_CAPLEN_SOUND +
 		RDP_CAPLEN_GLYPHCACHE +
 		RDP_CAPLEN_MULTIFRAGMENTUPDATE +
+		RDP_CAPLEN_LARGE_POINTER +
 		4 /* w2k fix, sessionid */ ;
 
 	if (g_rdp_version >= RDP_V5)
@@ -987,7 +998,7 @@ rdp_send_confirm_active(void)
 	out_uint16_le(s, caplen);
 
 	out_uint8p(s, RDP_SOURCE, sizeof(RDP_SOURCE));
-	out_uint16_le(s, 15);	/* num_caps */
+	out_uint16_le(s, 16);	/* num_caps */
 	out_uint8s(s, 2);	/* pad */
 
 	rdp_out_ts_general_capabilityset(s);
@@ -1014,6 +1025,7 @@ rdp_send_confirm_active(void)
 	rdp_out_ts_font_capabilityset(s);
 	rdp_out_ts_glyphcache_capabilityset(s);
 	rdp_out_ts_multifragmentupdate_capabilityset(s);
+	rdp_out_ts_large_pointer_capabilityset(s);
 
 	s_mark_end(s);
 	sec_send(s, sec_flags);
@@ -1171,11 +1183,10 @@ process_colour_pointer_common(STREAM s, int bpp)
 	in_uint16_le(s, datalen);
 	in_uint8p(s, data, datalen);
 	in_uint8p(s, mask, masklen);
-	if ((width != 32) || (height != 32))
-	{
-		logger(Protocol, Warning, "process_colour_pointer_common(), width %d height %d",
-		       width, height);
-	}
+
+	logger(Protocol, Debug,
+	       "process_colour_pointer_common(), new pointer %d with width %d and height %d",
+	       cache_idx, width, height);
 
 	/* keep hotspot within cursor bounding box */
 	x = MIN(x, width - 1);
