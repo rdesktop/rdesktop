@@ -1772,8 +1772,6 @@ TS_SCardStatus(STREAM in, STREAM out, RD_BOOL wide)
 	}
 	else
 	{
-		int i;
-
 		logger(SmartCard, Debug, "TS_SCardTransmit(), success, state=0x%08x, proto=0x%08x",
 		       (unsigned) dwState, (unsigned) dwProtocol);
 
@@ -1879,8 +1877,6 @@ TS_SCardState(STREAM in, STREAM out)
 	}
 	else
 	{
-		int i;
-
 		logger(SmartCard, Debug, "TS_SCardState(), success, state=0x%08x, proto=0x%08x",
 		       (unsigned) dwState, (unsigned) dwProtocol);
 

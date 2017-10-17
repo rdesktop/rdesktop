@@ -161,10 +161,11 @@ rdssl_cert_to_rkey(RDSSL_CERT * cert, uint32 * key_len)
 	int nid;
 	int ret;
 
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
 	const unsigned char *p;
-	int pklen;
-
 	RSA *rsa = NULL;
+	int pklen;
+#endif
 
 	/* By some reason, Microsoft sets the OID of the Public RSA key to
 	   the oid for "MD5 with RSA Encryption" instead of "RSA Encryption"
