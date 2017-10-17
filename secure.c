@@ -420,8 +420,8 @@ sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 	out_uint32_le(s, 0x61637544);	/* OEM ID: "Duca", as in Ducati. */
 	out_uint16_be(s, ((length - 14) | 0x8000));	/* remaining length */
 
-	/* Client information */
-	out_uint16_le(s, SEC_TAG_CLI_INFO);	/* type */
+	/* Client information (TS_UD_CS_CORE) */
+	out_uint16_le(s, CS_CORE);		/* type */
 	out_uint16_le(s, 216);			/* length */
 	out_uint32_le(s, rdpversion);           /* version */
 	out_uint16_le(s, g_width);		/* desktopWidth */
@@ -451,7 +451,7 @@ sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 
 	/* Write a Client Cluster Data (TS_UD_CS_CLUSTER) */
 	uint32 cluster_flags = 0;
-	out_uint16_le(s, SEC_TAG_CLI_CLUSTER);	/* header.type */
+	out_uint16_le(s, CS_CLUSTER);	/* header.type */
 	out_uint16_le(s, 12);	/* length */
 
 	cluster_flags |= SEC_CC_REDIRECTION_SUPPORTED;
@@ -463,16 +463,17 @@ sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 	out_uint32_le(s, cluster_flags);
 	out_uint32(s, g_redirect_session_id);
 
-	/* Client encryption settings */
-	out_uint16_le(s, SEC_TAG_CLI_CRYPT);		/* type */
+	/* Client encryption settings (TS_UD_CS_SEC) */
+	out_uint16_le(s, CS_SECURITY);			/* type */
 	out_uint16_le(s, 12);				/* length */
 	out_uint32_le(s, g_encryption ? 0x3 : 0);	/* encryptionMethods */
 	out_uint32(s, 0);				/* extEncryptionMethods */
 
+	/* Channel definitions (TS_UD_CS_NET) */
 	logger(Protocol, Debug, "sec_out_mcs_data(), g_num_channels is %d", g_num_channels);
 	if (g_num_channels > 0)
 	{
-		out_uint16_le(s, SEC_TAG_CLI_CHANNELS);
+		out_uint16_le(s, CS_NET);			/* type */
 		out_uint16_le(s, g_num_channels * 12 + 8);	/* length */
 		out_uint32_le(s, g_num_channels);	/* number of virtual channels */
 		for (i = 0; i < g_num_channels; i++)

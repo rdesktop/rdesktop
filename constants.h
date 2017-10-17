@@ -152,10 +152,10 @@ enum MCS_PDU_TYPE
 #define SEC_TAG_SRV_CRYPT	0x0c02
 #define SEC_TAG_SRV_CHANNELS	0x0c03
 
-#define SEC_TAG_CLI_INFO	0xc001
-#define SEC_TAG_CLI_CRYPT	0xc002
-#define SEC_TAG_CLI_CHANNELS    0xc003
-#define SEC_TAG_CLI_CLUSTER     0xc004
+#define CS_CORE			0xc001
+#define CS_SECURITY		0xc002
+#define CS_NET			0xc003
+#define CS_CLUSTER		0xc004
 
 #define SEC_TAG_PUBKEY		0x0006
 #define SEC_TAG_KEYSIG		0x0008
