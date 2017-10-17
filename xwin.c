@@ -649,7 +649,7 @@ sw_window_is_behind(Window wnd, Window behind)
 	Window dummy1, dummy2;
 	Window *child_list;
 	unsigned int num_children;
-	unsigned int i;
+	int i;
 	RD_BOOL found_behind = False;
 	RD_BOOL found_wnd = False;
 
