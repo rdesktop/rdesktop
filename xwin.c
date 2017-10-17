@@ -560,6 +560,7 @@ typedef struct _sw_configurenotify_context
 static Bool
 sw_configurenotify_p(Display * display, XEvent * xevent, XPointer arg)
 {
+	UNUSED(display);
 	sw_configurenotify_context *context = (sw_configurenotify_context *) arg;
 	if (xevent->xany.type == ConfigureNotify
 	    && xevent->xconfigure.window == context->window
@@ -3680,6 +3681,9 @@ ui_draw_glyph(int mixmode,
 	      /* src */ RD_HGLYPH glyph, int srcx, int srcy,
 	      int bgcolour, int fgcolour)
 {
+	UNUSED(srcx);
+	UNUSED(srcy);
+
 	SET_FOREGROUND(fgcolour);
 	SET_BACKGROUND(bgcolour);
 
@@ -3733,6 +3737,9 @@ ui_draw_text(uint8 font, uint8 flags, uint8 opcode, int mixmode, int x, int y,
 	     int boxx, int boxy, int boxcx, int boxcy, BRUSH * brush,
 	     int bgcolour, int fgcolour, uint8 * text, uint8 length)
 {
+	UNUSED(opcode);
+	UNUSED(brush);
+
 	/* TODO: use brush appropriately */
 
 	FONTGLYPH *glyph;
@@ -4161,6 +4168,8 @@ ui_seamless_create_window(unsigned long id, unsigned long group, unsigned long p
 void
 ui_seamless_destroy_window(unsigned long id, unsigned long flags)
 {
+	UNUSED(flags);
+
 	seamless_window *sw;
 
 	if (!g_seamless_active)
@@ -4182,6 +4191,8 @@ ui_seamless_destroy_window(unsigned long id, unsigned long flags)
 void
 ui_seamless_destroy_group(unsigned long id, unsigned long flags)
 {
+	UNUSED(flags);
+
 	seamless_window *sw, *sw_next;
 
 	if (!g_seamless_active)
@@ -4294,6 +4305,8 @@ ui_seamless_delicon(unsigned long id, const char *format, int width, int height)
 void
 ui_seamless_move_window(unsigned long id, int x, int y, int width, int height, unsigned long flags)
 {
+	UNUSED(flags);
+
 	seamless_window *sw;
 
 	if (!g_seamless_active)
@@ -4417,6 +4430,8 @@ ui_seamless_restack_window(unsigned long id, unsigned long behind, unsigned long
 void
 ui_seamless_settitle(unsigned long id, const char *title, unsigned long flags)
 {
+	UNUSED(flags);
+
 	seamless_window *sw;
 
 	if (!g_seamless_active)
@@ -4438,6 +4453,8 @@ ui_seamless_settitle(unsigned long id, const char *title, unsigned long flags)
 void
 ui_seamless_setstate(unsigned long id, unsigned int state, unsigned long flags)
 {
+	UNUSED(flags);
+
 	seamless_window *sw;
 
 	if (!g_seamless_active)
@@ -4491,6 +4508,8 @@ ui_seamless_setstate(unsigned long id, unsigned int state, unsigned long flags)
 void
 ui_seamless_syncbegin(unsigned long flags)
 {
+	UNUSED(flags);
+
 	if (!g_seamless_active)
 		return;
 
