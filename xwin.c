@@ -1553,9 +1553,10 @@ static void
 xwin_refresh_pointer_map(void)
 {
 	unsigned char phys_to_log_map[sizeof(g_pointer_log_to_phys_map)];
-	int i, pointer_buttons;
+	int i;
+	unsigned int pointer_buttons;
 
-	pointer_buttons = XGetPointerMapping(g_display, phys_to_log_map, sizeof(phys_to_log_map));
+	pointer_buttons = (unsigned int)XGetPointerMapping(g_display, phys_to_log_map, sizeof(phys_to_log_map));
 	if (pointer_buttons > sizeof(phys_to_log_map))
 		pointer_buttons = sizeof(phys_to_log_map);
 
@@ -2406,7 +2407,7 @@ xwin_process_events(void)
 			case ClientMessage:
 				if (xevent.xclient.message_type == g_protocol_atom)
 				{
-					if (xevent.xclient.data.l[0] == g_kill_atom)
+					if (xevent.xclient.data.l[0] == (long)g_kill_atom)
 					{
 						/* the window manager told us to quit */
 
@@ -2419,7 +2420,7 @@ xwin_process_events(void)
 						/* send seamless destroy process message */
 						seamless_send_destroy(sw->id);
 					}
-					else if (xevent.xclient.data.l[0] == g_net_wm_ping_atom)
+					else if (xevent.xclient.data.l[0] == (long)g_net_wm_ping_atom)
 					{
 						/* pass ping message further to root window */
 						xevent.xclient.window =
@@ -2968,7 +2969,7 @@ get_pixel(uint32 idx, uint8 * andmask, uint8 * xormask, int bpp, uint8 * xor_fla
 static inline void
 xcursor_stencil(XcursorImage * src, XcursorImage * dst, int dx, int dy, uint32 argb)
 {
-	uint32 x, y, si, di;
+	int x, y, si, di;
 	assert(src->width == dst->width);
 	assert(src->height == dst->height);
 
