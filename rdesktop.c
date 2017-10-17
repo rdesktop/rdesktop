@@ -1449,7 +1449,8 @@ void
 hexdump(unsigned char *p, unsigned int len)
 {
 	unsigned char *line = p;
-	int i, thisline, offset = 0;
+	unsigned offset = 0;
+	int i, thisline;
 
 	while (offset < len)
 	{
