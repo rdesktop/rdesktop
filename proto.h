@@ -24,6 +24,7 @@
 extern "C" {
 #endif
 /* *INDENT-ON* */
+#define UNUSED(param) ((void)param)
 /* bitmap.c */
 RD_BOOL bitmap_decompress(uint8 * output, int width, int height, uint8 * input, int size, int Bpp);
 /* cache.c */
