@@ -395,7 +395,7 @@ sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 	unsigned int i;
 	uint32 rdpversion = RDP_40;
 	uint16 capflags = RNS_UD_CS_SUPPORT_ERRINFO_PDU;
-	uint16 colorsupport = RNS_UD_24BPP_SUPPORT | RNS_UD_16BPP_SUPPORT;
+	uint16 colorsupport = RNS_UD_24BPP_SUPPORT | RNS_UD_16BPP_SUPPORT | RNS_UD_32BPP_SUPPORT;
 
 	if (g_rdp_version >= RDP_V5)
 		rdpversion = RDP_50;
@@ -441,7 +441,13 @@ sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 	out_uint16_le(s, RNS_UD_COLOR_8BPP);	/* postBeta2ColorDepth (overrides colorDepth) */
 	out_uint16_le(s, 1);			/* clientProductId (should be 1) */
 	out_uint32_le(s, 0);			/* serialNumber (should be 0) */
-	out_uint16_le(s, g_server_depth);	/* highColorDepth (overrides postBeta2ColorDepth) */
+
+	/* highColorDepth (overrides postBeta2ColorDepth). Capped at 24BPP.
+	   To get 32BPP sessions, we need to set a capability flag. */
+	out_uint16_le(s, MIN(g_server_depth, 24));
+	if (g_server_depth == 32)
+		capflags |= RNS_UD_CS_WANT_32BPP_SESSION;
+
 	out_uint16_le(s, colorsupport);		/* supportedColorDepths */
 	out_uint16_le(s, capflags);		/* earlyCapabilityFlags */
 	out_uint8s(s, 64);			/* clientDigProductId */
