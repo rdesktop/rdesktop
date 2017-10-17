@@ -2925,6 +2925,9 @@ get_pixel(uint32 idx, uint8 * andmask, uint8 * xormask, int bpp, uint8 * xor_fla
 	uint8 *pxor;
 
 	*xor_flag = 0;
+
+	/* return a red pixel if bpp is not supported to signal failure */
+	argb = 0xffff0000;
 	switch (bpp)
 	{
 		case 1:
