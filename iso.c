@@ -3,7 +3,7 @@
    Protocol services - ISO layer
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2005-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
-   Copyright 2012 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2012-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -251,13 +251,12 @@ iso_connect(char *server, char *username, char *domain, char *password,
 		/* handle RDP_NEG_REQ response */
 		const char *reason = NULL;
 
-		uint8 type = 0, flags = 0;
-		uint16 length = 0;
+		uint8 type = 0;
 		uint32 data = 0;
 
 		in_uint8(s, type);
-		in_uint8(s, flags);
-		in_uint16(s, length);
+		in_uint8s(s, 1); /* skip flags */
+		in_uint8s(s, 2); /* skip length */
 		in_uint32(s, data);
 
 		if (type == RDP_NEG_FAILURE)

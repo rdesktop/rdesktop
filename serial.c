@@ -554,10 +554,8 @@ serial_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 disposi
 {
 	RD_NTHANDLE serial_fd;
 	SERIAL_DEVICE *pser_inf;
-	struct termios *ptermios;
 
 	pser_inf = (SERIAL_DEVICE *) g_rdpdr_device[device_id].pdevice_data;
-	ptermios = pser_inf->ptermios;
 	serial_fd = open(g_rdpdr_device[device_id].local_path, O_RDWR | O_NOCTTY | O_NONBLOCK);
 
 	if (serial_fd == -1)
@@ -705,13 +703,11 @@ serial_device_control(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 	uint32 result, modemstate;
 	uint8 immediate;
 	SERIAL_DEVICE *pser_inf;
-	struct termios *ptermios;
 
 	if ((request >> 16) != FILE_DEVICE_SERIAL_PORT)
 		return RD_STATUS_INVALID_PARAMETER;
 
 	pser_inf = get_serial_info(handle);
-	ptermios = pser_inf->ptermios;
 
 	/* extract operation */
 	request >>= 2;

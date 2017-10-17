@@ -168,11 +168,7 @@ alsa_set_format(snd_pcm_t * pcm, RD_WAVEFORMATEX * pwfx)
 	snd_pcm_hw_params_t *hwparams = NULL;
 	int err;
 	unsigned int buffertime;
-	short samplewidth;
-	int audiochannels;
 	unsigned int rate;
-
-	samplewidth = pwfx->wBitsPerSample / 8;
 
 	if ((err = snd_pcm_hw_params_malloc(&hwparams)) < 0)
 	{
@@ -235,7 +231,6 @@ alsa_set_format(snd_pcm_t * pcm, RD_WAVEFORMATEX * pwfx)
 		return False;
 	}
 
-	audiochannels = pwfx->nChannels;
 	if ((err = snd_pcm_hw_params_set_channels(pcm, hwparams, pwfx->nChannels)) < 0)
 	{
 		logger(Sound, Error,

@@ -815,7 +815,6 @@ STREAM
 sec_recv(uint8 * rdpver)
 {
 	uint16 sec_flags;
-	uint16 sec_flags_hi;
 	uint16 channel;
 	STREAM s;
 
@@ -837,7 +836,7 @@ sec_recv(uint8 * rdpver)
 		{
 			/* TS_SECURITY_HEADER */
 			in_uint16_le(s, sec_flags);
-			in_uint16_le(s, sec_flags_hi);
+			in_uint8s(s, 2);                        /* skip sec_flags_hi */
 
 			if (g_encryption)
 			{
