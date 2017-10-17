@@ -1860,7 +1860,7 @@ set_wm_client_machine(Display * dpy, Window win)
 	if (gethostname(hostname, sizeof(hostname)) != 0)
 		return;
 
-	tp.value = hostname;
+	tp.value = (unsigned char *)hostname;
 	tp.nitems = strlen(hostname);
 	tp.encoding = XA_STRING;
 	tp.format = 8;
