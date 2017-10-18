@@ -389,17 +389,19 @@ sec_establish_key(void)
 
 /* Output connect initial data blob */
 static void
-sec_out_mcs_data(STREAM s, uint32 selected_protocol)
+sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 {
-	int hostlen = 2 * strlen(g_hostname);
 	int length = 162 + 76 + 12 + 4;
 	unsigned int i;
+	uint32 rdpversion = RDP_40;
+	uint16 capflags = RNS_UD_CS_SUPPORT_ERRINFO_PDU;
+	uint16 colorsupport = RNS_UD_24BPP_SUPPORT | RNS_UD_16BPP_SUPPORT;
+
+	if (g_rdp_version >= RDP_V5)
+		rdpversion = RDP_50;
 
 	if (g_num_channels > 0)
 		length += g_num_channels * 12 + 8;
-
-	if (hostlen > 30)
-		hostlen = 30;
 
 	/* Generic Conference Control (T.124) ConferenceCreateRequest */
 	out_uint16_be(s, 5);
@@ -418,41 +420,38 @@ sec_out_mcs_data(STREAM s, uint32 selected_protocol)
 	out_uint32_le(s, 0x61637544);	/* OEM ID: "Duca", as in Ducati. */
 	out_uint16_be(s, ((length - 14) | 0x8000));	/* remaining length */
 
-	/* Client information */
-	out_uint16_le(s, SEC_TAG_CLI_INFO);
-	out_uint16_le(s, 216);	/* length */
-	out_uint16_le(s, (g_rdp_version >= RDP_V5) ? 4 : 1);	/* RDP version. 1 == RDP4, 4 >= RDP5 to RDP8 */
-	out_uint16_le(s, 8);
-	out_uint16_le(s, g_width);
-	out_uint16_le(s, g_height);
-	out_uint16_le(s, 0xca01);
-	out_uint16_le(s, 0xaa03);
-	out_uint32_le(s, g_keylayout);
-	out_uint32_le(s, 2600);	/* Client build. We are now 2600 compatible :-) */
+	/* Client information (TS_UD_CS_CORE) */
+	out_uint16_le(s, CS_CORE);		/* type */
+	out_uint16_le(s, 216);			/* length */
+	out_uint32_le(s, rdpversion);           /* version */
+	out_uint16_le(s, g_width);		/* desktopWidth */
+	out_uint16_le(s, g_height);		/* desktopHeight */
+	out_uint16_le(s, RNS_UD_COLOR_8BPP);	/* colorDepth */
+	out_uint16_le(s, RNS_UD_SAS_DEL);	/* SASSequence */
+	out_uint32_le(s, g_keylayout);		/* keyboardLayout */
+	out_uint32_le(s, 2600);			/* Client build. We are now 2600 compatible :-) */
 
 	/* Unicode name of client, padded to 32 bytes */
 	out_utf16s_padded(s, g_hostname, 32, 0x00);
 
-	/* See
-	   http://msdn.microsoft.com/library/default.asp?url=/library/en-us/wceddk40/html/cxtsksupportingremotedesktopprotocol.asp */
-	out_uint32_le(s, g_keyboard_type);
-	out_uint32_le(s, g_keyboard_subtype);
-	out_uint32_le(s, g_keyboard_functionkeys);
-	out_uint8s(s, 64);	/* reserved? 4 + 12 doublewords */
-	out_uint16_le(s, 0xca01);	/* colour depth? */
-	out_uint16_le(s, 1);
-
-	out_uint32(s, 0);
-	out_uint8(s, g_server_depth);
-	out_uint16_le(s, 0x0700);
-	out_uint8(s, 0);
-	out_uint32_le(s, 1);
-	out_uint8s(s, 64);
-	out_uint32_le(s, selected_protocol);	/* End of client info */
+	out_uint32_le(s, g_keyboard_type);	/* keyboardType */
+	out_uint32_le(s, g_keyboard_subtype);	/* keyboardSubtype */
+	out_uint32_le(s, g_keyboard_functionkeys); /* keyboardFunctionKey */
+	out_uint8s(s, 64);			/* imeFileName */
+	out_uint16_le(s, RNS_UD_COLOR_8BPP);	/* postBeta2ColorDepth (overrides colorDepth) */
+	out_uint16_le(s, 1);			/* clientProductId (should be 1) */
+	out_uint32_le(s, 0);			/* serialNumber (should be 0) */
+	out_uint16_le(s, g_server_depth);	/* highColorDepth (overrides postBeta2ColorDepth) */
+	out_uint16_le(s, colorsupport);		/* supportedColorDepths */
+	out_uint16_le(s, capflags);		/* earlyCapabilityFlags */
+	out_uint8s(s, 64);			/* clientDigProductId */
+	out_uint8(s, 0);			/* connectionType */
+	out_uint8(s, 0);			/* pad */
+	out_uint32_le(s, selected_protocol);	/* serverSelectedProtocol */
 
 	/* Write a Client Cluster Data (TS_UD_CS_CLUSTER) */
 	uint32 cluster_flags = 0;
-	out_uint16_le(s, SEC_TAG_CLI_CLUSTER);	/* header.type */
+	out_uint16_le(s, CS_CLUSTER);	/* header.type */
 	out_uint16_le(s, 12);	/* length */
 
 	cluster_flags |= SEC_CC_REDIRECTION_SUPPORTED;
@@ -464,16 +463,17 @@ sec_out_mcs_data(STREAM s, uint32 selected_protocol)
 	out_uint32_le(s, cluster_flags);
 	out_uint32(s, g_redirect_session_id);
 
-	/* Client encryption settings */
-	out_uint16_le(s, SEC_TAG_CLI_CRYPT);
-	out_uint16_le(s, 12);	/* length */
-	out_uint32_le(s, g_encryption ? 0x3 : 0);	/* encryption supported, 128-bit supported */
-	out_uint32(s, 0);	/* Unknown */
+	/* Client encryption settings (TS_UD_CS_SEC) */
+	out_uint16_le(s, CS_SECURITY);			/* type */
+	out_uint16_le(s, 12);				/* length */
+	out_uint32_le(s, g_encryption ? 0x3 : 0);	/* encryptionMethods */
+	out_uint32(s, 0);				/* extEncryptionMethods */
 
+	/* Channel definitions (TS_UD_CS_NET) */
 	logger(Protocol, Debug, "sec_out_mcs_data(), g_num_channels is %d", g_num_channels);
 	if (g_num_channels > 0)
 	{
-		out_uint16_le(s, SEC_TAG_CLI_CHANNELS);
+		out_uint16_le(s, CS_NET);			/* type */
 		out_uint16_le(s, g_num_channels * 12 + 8);	/* length */
 		out_uint32_le(s, g_num_channels);	/* number of virtual channels */
 		for (i = 0; i < g_num_channels; i++)
@@ -921,7 +921,7 @@ sec_connect(char *server, char *username, char *domain, char *password, RD_BOOL 
 	/* We exchange some RDP data during the MCS-Connect */
 	mcs_data.size = 512;
 	mcs_data.p = mcs_data.data = (uint8 *) xmalloc(mcs_data.size);
-	sec_out_mcs_data(&mcs_data, selected_proto);
+	sec_out_mcs_connect_initial_pdu(&mcs_data, selected_proto);
 
 	/* finialize the MCS connect sequence */
 	if (!mcs_connect_finalize(&mcs_data))
