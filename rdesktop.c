@@ -110,9 +110,10 @@ char g_seamless_spawn_cmd[512];
 RD_BOOL g_seamless_persistent_mode = True;
 RD_BOOL g_user_quit = False;
 uint32 g_embed_wnd;
-uint32 g_rdp5_performanceflags =
-	PERF_DISABLE_WALLPAPER | PERF_DISABLE_FULLWINDOWDRAG | PERF_DISABLE_MENUANIMATIONS |
-	PERF_DISABLE_CURSOR_SHADOW | PERF_ENABLE_FONT_SMOOTHING;
+uint32 g_rdp5_performanceflags = (PERF_DISABLE_WALLPAPER |
+				  PERF_DISABLE_FULLWINDOWDRAG |
+				  PERF_DISABLE_MENUANIMATIONS |
+				  PERF_ENABLE_FONT_SMOOTHING);
 /* Session Directory redirection */
 RD_BOOL g_redirect = False;
 char *g_redirect_server;
@@ -838,27 +839,24 @@ main(int argc, char *argv[])
 			case 'x':
 				if (str_startswith(optarg, "m"))	/* modem */
 				{
-					g_rdp5_performanceflags = PERF_DISABLE_CURSOR_SHADOW |
-						PERF_DISABLE_WALLPAPER | PERF_DISABLE_FULLWINDOWDRAG
-						| PERF_DISABLE_MENUANIMATIONS |
-						PERF_DISABLE_THEMING;
+					g_rdp5_performanceflags = (PERF_DISABLE_CURSOR_SHADOW |
+								   PERF_DISABLE_WALLPAPER |
+								   PERF_DISABLE_FULLWINDOWDRAG |
+								   PERF_DISABLE_MENUANIMATIONS |
+								   PERF_DISABLE_THEMING);
 				}
 				else if (str_startswith(optarg, "b"))	/* broadband */
 				{
-					g_rdp5_performanceflags =
-						PERF_DISABLE_CURSOR_SHADOW | PERF_DISABLE_WALLPAPER
-						| PERF_ENABLE_FONT_SMOOTHING;
+					g_rdp5_performanceflags = (PERF_DISABLE_WALLPAPER |
+								   PERF_ENABLE_FONT_SMOOTHING);
 				}
 				else if (str_startswith(optarg, "l"))	/* lan */
 				{
-					g_rdp5_performanceflags =
-						PERF_DISABLE_CURSOR_SHADOW |
-						PERF_ENABLE_FONT_SMOOTHING;
+					g_rdp5_performanceflags = PERF_ENABLE_FONT_SMOOTHING;
 				}
 				else
 				{
-					g_rdp5_performanceflags = PERF_DISABLE_CURSOR_SHADOW |
-						strtol(optarg, NULL, 16);
+					g_rdp5_performanceflags = strtol(optarg, NULL, 16);
 				}
 				break;
 
