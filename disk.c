@@ -1304,8 +1304,6 @@ disk_query_directory(RD_NTHANDLE handle, uint32 info_class, char *pattern, STREA
 	out_utf16s_no_eos(&stmp, pdirent->d_name);
 	s_mark_end(&stmp);
 
-	logger(Disk, Notice, "Dirname: %d, %s", s_length(&stmp), pdirent->d_name);
-
 	switch (info_class)
 	{
 		case FileBothDirectoryInformation:
