@@ -2028,22 +2028,17 @@ TS_SCardGetAttrib(STREAM in, STREAM out)
 	       "TS_SCardGetAttrib(), hcard: 0x%08x [0x%08lx], attrib: 0x%08x (%d bytes)",
 	       (unsigned) hCard, (unsigned long) myHCard, (unsigned) dwAttrId, (int) dwAttrLen);
 
-	if (dwAttrLen > MAX_BUFFER_SIZE)
+	pbAttr = NULL;
+	if (dwAttrLen != (SERVER_DWORD)SCARD_AUTOALLOCATE)
+	{
+	  if (dwAttrLen > MAX_BUFFER_SIZE)
+	  {
 		dwAttrLen = MAX_BUFFER_SIZE;
+	  }
 
-
-	if (dwAttrLen > SCARD_AUTOALLOCATE)
-		pbAttr = NULL;
-	else if ((dwAttrLen < 0) || (dwAttrLen > SCARD_MAX_MEM))
-	{
-		dwAttrLen = (SERVER_DWORD) SCARD_AUTOALLOCATE;
-		pbAttr = NULL;
-	}
-	else
-	{
-		pbAttr = SC_xmalloc(&lcHandle, dwAttrLen);
-		if (!pbAttr)
-			return SC_returnNoMemoryError(&lcHandle, in, out);
+	  pbAttr = SC_xmalloc(&lcHandle, dwAttrLen);
+	  if (!pbAttr)
+	    return SC_returnNoMemoryError(&lcHandle, in, out);
 	}
 
 	attrLen = dwAttrLen;
