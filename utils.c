@@ -248,7 +248,7 @@ static char *subject[] = {
 
 static log_level_t _logger_level = Warning;
 
-#define DEFAULT_LOGGER_SUBJECTS (1 << Core);
+#define DEFAULT_LOGGER_SUBJECTS (1 << Core)
 
 #define ALL_LOGGER_SUBJECTS			\
 	  (1 << GUI)				\
