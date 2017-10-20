@@ -86,6 +86,7 @@ mcs_send_connect_initial(STREAM mcs_data)
 static RD_BOOL
 mcs_recv_connect_response(STREAM mcs_data)
 {
+	UNUSED(mcs_data);
 	uint8 result;
 	int length;
 	STREAM s;

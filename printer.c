@@ -103,6 +103,11 @@ static RD_NTSTATUS
 printer_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 disposition, uint32 flags,
 	       char *filename, RD_NTHANDLE * handle)
 {
+	UNUSED(access);
+	UNUSED(share_mode);
+	UNUSED(disposition);
+	UNUSED(flags);
+	UNUSED(filename);
 	char cmd[256];
 	PRINTER *pprinter_data;
 
@@ -141,6 +146,7 @@ printer_close(RD_NTHANDLE handle)
 static RD_NTSTATUS
 printer_write(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
 {
+	UNUSED(offset);
 	PRINTER *pprinter_data;
 
 	pprinter_data = get_printer_data(handle);

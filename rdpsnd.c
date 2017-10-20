@@ -110,6 +110,8 @@ rdpsnd_send_waveconfirm(uint16 tick, uint8 packet_index)
 void
 rdpsnd_record(const void *data, unsigned int size)
 {
+	UNUSED(data);
+	UNUSED(size);
 	/* TODO: Send audio over RDP */
 }
 
@@ -430,6 +432,7 @@ rdpsnd_process(STREAM s)
 static RD_BOOL
 rdpsnddbg_line_handler(const char *line, void *data)
 {
+	UNUSED(data);
 	logger(Sound, Debug, "rdpsnddbg_line_handler(), \"%s\"", line);
 	return True;
 }

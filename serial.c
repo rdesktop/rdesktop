@@ -552,6 +552,11 @@ static RD_NTSTATUS
 serial_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 disposition,
 	      uint32 flags_and_attributes, char *filename, RD_NTHANDLE * handle)
 {
+	UNUSED(access);
+	UNUSED(share_mode);
+	UNUSED(disposition);
+	UNUSED(flags_and_attributes);
+	UNUSED(filename);
 	RD_NTHANDLE serial_fd;
 	SERIAL_DEVICE *pser_inf;
 
@@ -625,6 +630,7 @@ serial_close(RD_NTHANDLE handle)
 static RD_NTSTATUS
 serial_read(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
 {
+	UNUSED(offset);
 	long timeout;
 	SERIAL_DEVICE *pser_inf;
 	struct termios *ptermios;
@@ -680,6 +686,7 @@ serial_read(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint
 static RD_NTSTATUS
 serial_write(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
 {
+	UNUSED(offset);
 	SERIAL_DEVICE *pser_inf;
 
 	/* FIXME: offset is not used ? */

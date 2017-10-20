@@ -69,6 +69,7 @@ channel_register(char *name, uint32 flags, void (*callback) (STREAM))
 STREAM
 channel_init(VCHANNEL * channel, uint32 length)
 {
+	UNUSED(channel);
 	STREAM s;
 
 	s = sec_init(g_encryption ? SEC_ENCRYPT : 0, length + 8);

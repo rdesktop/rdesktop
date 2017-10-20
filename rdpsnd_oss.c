@@ -71,6 +71,7 @@ static RD_BOOL oss_set_format(RD_WAVEFORMATEX * pwfx);
 static void
 oss_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv)
 {
+	UNUSED(tv);
 	if (dsp_fd == -1)
 		return;
 

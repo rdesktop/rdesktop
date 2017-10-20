@@ -59,6 +59,7 @@ void alsa_record(void);
 void
 alsa_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv)
 {
+	UNUSED(tv);
 	int err;
 	struct pollfd *f;
 

@@ -56,6 +56,7 @@ seamless_get_token(char **s)
 static RD_BOOL
 seamless_process_line(const char *line, void *data)
 {
+	UNUSED(data);
 	char *p, *l;
 	char *tok1, *tok3, *tok4, *tok5, *tok6, *tok7, *tok8;
 	unsigned long id, flags;

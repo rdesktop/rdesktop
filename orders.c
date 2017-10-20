@@ -826,6 +826,7 @@ process_ellipse2(STREAM s, ELLIPSE2_ORDER * os, uint32 present, RD_BOOL delta)
 static void
 process_text2(STREAM s, TEXT2_ORDER * os, uint32 present, RD_BOOL delta)
 {
+	UNUSED(delta);
 	BRUSH brush;
 
 	if (present & 0x000001)
@@ -1175,6 +1176,7 @@ process_compressed_8x8_brush_data(uint8 * in, uint8 * out, int Bpp)
 static void
 process_brushcache(STREAM s, uint16 flags)
 {
+	UNUSED(flags);
 	BRUSHDATA brush_data;
 	uint8 cache_idx, colour_code, width, height, size, type;
 	uint8 *comp_brush;

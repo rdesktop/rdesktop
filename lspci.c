@@ -43,6 +43,7 @@ static void lspci_send(const char *output);
 static RD_BOOL
 handle_child_line(const char *line, void *data)
 {
+	UNUSED(data);
 	const char *val;
 	char buf[1024];
 
@@ -108,6 +109,7 @@ handle_child_line(const char *line, void *data)
 static RD_BOOL
 lspci_process_line(const char *line, void *data)
 {
+	UNUSED(data);
 	char *lspci_command[5] = { "lspci", "-m", "-n", "-v", NULL };
 
 	if (!strcmp(line, "LSPCI"))

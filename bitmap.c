@@ -749,6 +749,7 @@ bitmap_decompress3(uint8 * output, int width, int height, uint8 * input, int siz
 static int
 process_plane(uint8 * in, int width, int height, uint8 * out, int size)
 {
+	UNUSED(size);
 	int indexw;
 	int indexh;
 	int code;

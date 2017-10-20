@@ -680,6 +680,7 @@ cssp_read_tsrequest(STREAM token, STREAM pubkey)
 RD_BOOL
 cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 {
+	UNUSED(s);
 	OM_uint32 actual_time;
 	gss_cred_id_t cred;
 	gss_buffer_desc input_tok, output_tok;

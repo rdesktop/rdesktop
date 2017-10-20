@@ -251,6 +251,8 @@ rdssl_cert_to_rkey(RDSSL_CERT * cert, uint32 * key_len)
 RD_BOOL
 rdssl_certs_ok(RDSSL_CERT * server_cert, RDSSL_CERT * cacert)
 {
+	UNUSED(server_cert);
+	UNUSED(cacert);
 	/* Currently, we don't use the CA Certificate.
 	   FIXME:
 	   *) Verify the server certificate (server_cert) with the
@@ -308,6 +310,12 @@ RD_BOOL
 rdssl_sig_ok(uint8 * exponent, uint32 exp_len, uint8 * modulus, uint32 mod_len,
 	     uint8 * signature, uint32 sig_len)
 {
+	UNUSED(exponent);
+	UNUSED(exp_len);
+	UNUSED(modulus);
+	UNUSED(mod_len);
+	UNUSED(signature);
+	UNUSED(sig_len);
 	/* Currently, we don't check the signature
 	   FIXME:
 	 */
