@@ -537,7 +537,7 @@ outBufferStart(STREAM out, int length)
 static void
 outBufferFinishWithLimit(STREAM out, char *buffer, unsigned int length, unsigned int highLimit)
 {
-	int header = (length < 0) ? (0) : ((length > highLimit) ? (highLimit) : (length));
+	unsigned int header = (length > highLimit) ? (highLimit) : (length);
 	out_uint32_le(out, header);
 
 	if (length <= 0)
@@ -579,7 +579,7 @@ inString(PMEM_HANDLE * handle, STREAM in, char **destination, SERVER_DWORD dataL
 
 	if (wide)
 	{
-		int i;
+		unsigned int i;
 		in_uint8a(in, buffer, 2 * dataLength);
 		for (i = 0; i < dataLength; i++)
 			if ((buffer[2 * i] < 0) || (buffer[2 * i + 1] != 0))
@@ -613,7 +613,7 @@ outString(STREAM out, char *source, RD_BOOL wide)
 
 	if (wide)
 	{
-		int i;
+		unsigned int i;
 		char *buffer = SC_xmalloc(&lcHandle, Result);
 
 		for (i = 0; i < dataLength; i++)
@@ -1320,7 +1320,7 @@ TS_SCardCancel(STREAM in, STREAM out)
 static MYPCSC_DWORD
 TS_SCardLocateCardsByATR(STREAM in, STREAM out, RD_BOOL wide)
 {
-	int i, j, k;
+	unsigned int i, j, k;
 	MYPCSC_DWORD rv;
 	SERVER_SCARDCONTEXT hContext;
 	MYPCSC_SCARDCONTEXT myHContext;
@@ -1752,9 +1752,9 @@ TS_SCardStatus(STREAM in, STREAM out, RD_BOOL wide)
 	       "TS_SCardStatus(), hcard: 0x%08x [0x%08lx], reader len: %d bytes, atr len: %d bytes",
 	       (unsigned) hCard, (unsigned long) myHCard, (int) dwReaderLen, (int) dwAtrLen);
 
-	if (dwReaderLen <= 0 || dwReaderLen == SCARD_AUTOALLOCATE || dwReaderLen > SCARD_MAX_MEM)
+	if (dwReaderLen == 0 || dwReaderLen == (SERVER_DWORD)SCARD_AUTOALLOCATE || dwReaderLen > SCARD_MAX_MEM)
 		dwReaderLen = SCARD_MAX_MEM;
-	if (dwAtrLen <= 0 || dwAtrLen == SCARD_AUTOALLOCATE || dwAtrLen > SCARD_MAX_MEM)
+	if (dwAtrLen == 0 || dwAtrLen == (SERVER_DWORD)SCARD_AUTOALLOCATE || dwAtrLen > SCARD_MAX_MEM)
 		dwAtrLen = SCARD_MAX_MEM;
 
 #if 1
@@ -1869,7 +1869,7 @@ TS_SCardState(STREAM in, STREAM out)
 	       (unsigned) hCard, (unsigned long) myHCard, (int) dwAtrLen);
 
 	dwReaderLen = SCARD_MAX_MEM;
-	if (dwAtrLen <= 0 || dwAtrLen == SCARD_AUTOALLOCATE || dwAtrLen > SCARD_MAX_MEM)
+	if (dwAtrLen <= 0 || dwAtrLen == (SERVER_DWORD)SCARD_AUTOALLOCATE || dwAtrLen > SCARD_MAX_MEM)
 		dwAtrLen = SCARD_MAX_MEM;
 
 	readerName = SC_xmalloc(&lcHandle, dwReaderLen + 2);
@@ -2244,7 +2244,7 @@ TS_SCardControl(STREAM in, STREAM out)
 #ifdef PCSCLITE_VERSION_NUMBER
 	if (dwControlCode == SCARD_CTL_CODE(3400))
 	{
-		int i;
+		unsigned int i;
 		SERVER_DWORD cc;
 
 		for (i = 0; i < nBytesReturned / 6; i++)

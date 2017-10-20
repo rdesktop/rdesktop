@@ -271,7 +271,7 @@ void ui_paint_bitmap(int x, int y, int cx, int cy, int width, int height, uint8 
 void ui_destroy_bitmap(RD_HBITMAP bmp);
 RD_HGLYPH ui_create_glyph(int width, int height, uint8 * data);
 void ui_destroy_glyph(RD_HGLYPH glyph);
-RD_HCURSOR ui_create_cursor(unsigned int x, unsigned int y, int width, int height, uint8 * andmask,
+RD_HCURSOR ui_create_cursor(unsigned int x, unsigned int y, uint32 width, uint32 height, uint8 * andmask,
 			    uint8 * xormask, int bpp);
 void ui_set_cursor(RD_HCURSOR cursor);
 void ui_destroy_cursor(RD_HCURSOR cursor);
@@ -284,24 +284,24 @@ void ui_set_clip(int x, int y, int cx, int cy);
 void ui_reset_clip(void);
 void ui_bell(void);
 void ui_destblt(uint8 opcode, int x, int y, int cx, int cy);
-void ui_patblt(uint8 opcode, int x, int y, int cx, int cy, BRUSH * brush, int bgcolour,
-	       int fgcolour);
+void ui_patblt(uint8 opcode, int x, int y, int cx, int cy, BRUSH * brush, uint32 bgcolour,
+	       uint32 fgcolour);
 void ui_screenblt(uint8 opcode, int x, int y, int cx, int cy, int srcx, int srcy);
 void ui_memblt(uint8 opcode, int x, int y, int cx, int cy, RD_HBITMAP src, int srcx, int srcy);
 void ui_triblt(uint8 opcode, int x, int y, int cx, int cy, RD_HBITMAP src, int srcx, int srcy,
-	       BRUSH * brush, int bgcolour, int fgcolour);
+	       BRUSH * brush, uint32 bgcolour, uint32 fgcolour);
 void ui_line(uint8 opcode, int startx, int starty, int endx, int endy, PEN * pen);
-void ui_rect(int x, int y, int cx, int cy, int colour);
+void ui_rect(int x, int y, int cx, int cy, uint32 colour);
 void ui_polygon(uint8 opcode, uint8 fillmode, RD_POINT * point, int npoints, BRUSH * brush,
-		int bgcolour, int fgcolour);
+		uint32 bgcolour, uint32 fgcolour);
 void ui_polyline(uint8 opcode, RD_POINT * points, int npoints, PEN * pen);
 void ui_ellipse(uint8 opcode, uint8 fillmode, int x, int y, int cx, int cy, BRUSH * brush,
-		int bgcolour, int fgcolour);
+		uint32 bgcolour, uint32 fgcolour);
 void ui_draw_glyph(int mixmode, int x, int y, int cx, int cy, RD_HGLYPH glyph, int srcx, int srcy,
-		   int bgcolour, int fgcolour);
+		   uint32 bgcolour, uint32 fgcolour);
 void ui_draw_text(uint8 font, uint8 flags, uint8 opcode, int mixmode, int x, int y, int clipx,
 		  int clipy, int clipcx, int clipcy, int boxx, int boxy, int boxcx, int boxcy,
-		  BRUSH * brush, int bgcolour, int fgcolour, uint8 * text, uint8 length);
+		  BRUSH * brush, uint32 bgcolour, uint32 fgcolour, uint8 * text, uint8 length);
 void ui_desktop_save(uint32 offset, int x, int y, int cx, int cy);
 void ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy);
 void ui_begin_update(void);
@@ -316,7 +316,7 @@ void ui_seamless_create_window(unsigned long id, unsigned long group, unsigned l
 void ui_seamless_destroy_window(unsigned long id, unsigned long flags);
 void ui_seamless_destroy_group(unsigned long id, unsigned long flags);
 void ui_seamless_seticon(unsigned long id, const char *format, int width, int height, int chunk,
-			 const char *data, int chunk_len);
+			 const char *data, size_t chunk_len);
 void ui_seamless_delicon(unsigned long id, const char *format, int width, int height);
 void ui_seamless_move_window(unsigned long id, int x, int y, int width, int height,
 			     unsigned long flags);

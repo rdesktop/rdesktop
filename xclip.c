@@ -506,11 +506,11 @@ xclip_probe_selections()
 void
 xclip_handle_SelectionNotify(XSelectionEvent * event)
 {
-	unsigned long nitems, bytes_left;
+	unsigned long i, nitems, bytes_left;
 	XWindowAttributes wa;
 	Atom type;
 	Atom *supported_targets;
-	int res, i, format;
+	int res, format;
 	uint8 *data = NULL;
 
 	if (event->property == None)

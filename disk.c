@@ -349,7 +349,7 @@ static RD_NTSTATUS
 disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create_disposition,
 	    uint32 flags_and_attributes, char *filename, RD_NTHANDLE * phandle)
 {
-	RD_NTHANDLE handle;
+	int handle;
 	DIR *dirp;
 	int flags, mode;
 	char path[PATH_MAX];

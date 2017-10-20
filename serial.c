@@ -557,12 +557,12 @@ serial_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 disposi
 	UNUSED(disposition);
 	UNUSED(flags_and_attributes);
 	UNUSED(filename);
-	RD_NTHANDLE serial_fd;
+	int serial_fd;
 	SERIAL_DEVICE *pser_inf;
 
 	pser_inf = (SERIAL_DEVICE *) g_rdpdr_device[device_id].pdevice_data;
-	serial_fd = open(g_rdpdr_device[device_id].local_path, O_RDWR | O_NOCTTY | O_NONBLOCK);
 
+	serial_fd = open(g_rdpdr_device[device_id].local_path, O_RDWR | O_NOCTTY | O_NONBLOCK);
 	if (serial_fd == -1)
 	{
 		logger(Core, Error, "serial_create(), open '%s' failed: %s",

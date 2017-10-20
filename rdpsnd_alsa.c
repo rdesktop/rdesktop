@@ -33,10 +33,10 @@
 #define MAX_FRAMES	32
 
 static struct pollfd pfds_out[32];
-static int num_fds_out;
+static size_t num_fds_out;
 
 static struct pollfd pfds_in[32];
-static int num_fds_in;
+static size_t num_fds_in;
 
 static snd_pcm_t *out_handle = NULL;
 static snd_pcm_t *in_handle = NULL;
@@ -359,7 +359,7 @@ alsa_play(void)
 	STREAM out;
 	int len;
 	static long prev_s, prev_us;
-	unsigned int duration;
+	int duration;
 	struct timeval tv;
 	int next_tick;
 

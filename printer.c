@@ -40,7 +40,7 @@ printer_enum_devices(uint32 * id, char *optarg)
 
 	char *pos = optarg;
 	char *pos2;
-	int count = 0;
+	size_t count = 0;
 	int already = 0;
 
 	/* we need to know how many printers we've already set up
