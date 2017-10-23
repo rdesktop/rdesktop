@@ -6,7 +6,7 @@ AC_CANONICAL_HOST
 
 AC_PROG_CC
 if test "$GCC" = yes; then
-    CFLAGS="$CFLAGS -Wall"
+    CFLAGS="$CFLAGS -Wall -Wextra -Wpedantic"
 fi
 
 AC_PROG_INSTALL
