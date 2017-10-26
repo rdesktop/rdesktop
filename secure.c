@@ -421,19 +421,6 @@ sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 	out_uint32_le(s, 0x61637544);	/* OEM ID: "Duca", as in Ducati. */
 	out_uint16_be(s, ((length - 14) | 0x8000));	/* remaining length */
 
-<<<<<<< HEAD
-	/* Client information */
-	out_uint16_le(s, SEC_TAG_CLI_INFO);
-	out_uint16_le(s, 216 + (g_dpi > 0 ? 18 : 0));	/* length */
-	out_uint16_le(s, (g_rdp_version >= RDP_V5) ? 4 : 1);	/* RDP version. 1 == RDP4, 4 >= RDP5 to RDP8 */
-	out_uint16_le(s, 8);
-	out_uint16_le(s, g_width);
-	out_uint16_le(s, g_height);
-	out_uint16_le(s, 0xca01);
-	out_uint16_le(s, 0xaa03);
-	out_uint32_le(s, g_keylayout);
-	out_uint32_le(s, 2600);	/* Client build. We are now 2600 compatible :-) */
-=======
 	/* Client information (TS_UD_CS_CORE) */
 	out_uint16_le(s, CS_CORE);		/* type */
 	out_uint16_le(s, 216);			/* length */
@@ -444,40 +431,10 @@ sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 	out_uint16_le(s, RNS_UD_SAS_DEL);	/* SASSequence */
 	out_uint32_le(s, g_keylayout);		/* keyboardLayout */
 	out_uint32_le(s, 2600);			/* Client build. We are now 2600 compatible :-) */
->>>>>>> master
 
 	/* Unicode name of client, padded to 32 bytes */
 	out_utf16s_padded(s, g_hostname, 32, 0x00);
 
-<<<<<<< HEAD
-	/* See
-	   http://msdn.microsoft.com/library/default.asp?url=/library/en-us/wceddk40/html/cxtsksupportingremotedesktopprotocol.asp */
-	out_uint32_le(s, g_keyboard_type);
-	out_uint32_le(s, g_keyboard_subtype);
-	out_uint32_le(s, g_keyboard_functionkeys);
-	out_uint8s(s, 64);	/* reserved? 4 + 12 doublewords */
-	out_uint16_le(s, 0xca01);	/* colour depth? */
-	out_uint16_le(s, 1);		/* product id */
-
-	out_uint32(s, 0);		/* serial number */
-	out_uint8(s, g_server_depth);	/* this stuff is misaligned should be 2,2,2,64,1,1 */
-	out_uint16_le(s, 0x0700);	/* this strange constant is split across fields */
-	out_uint8(s, 0);
-	out_uint32_le(s, 1);
-	out_uint8s(s, 64);
-	out_uint32_le(s, selected_protocol);	/* End of client info */
-	if (g_dpi > 0)
-	{
-		/* Extended client info describing monitor geometry */
-		out_uint32_le(s, g_width * 254 / (g_dpi * 10)); /* desktop physical width */
-		out_uint32_le(s, g_height * 254 / (g_dpi * 10)); /* desktop physical height */
-		out_uint16_le(s, ORIENTATION_LANDSCAPE);
-		out_uint32_le(s, g_dpi < 96 ? 100 : (g_dpi * 100 + 48) / 96); /* desktop scale factor */
-		/* the spec calls this out as being valid for range 100-500 but I doubt the upper range is accurate */
-		out_uint32_le(s, g_dpi < 134 ? 100 : (g_dpi < 173 ? 140 : 180)); /* device scale factor */
-		/* the only allowed values for device scale factor are 100, 140, and 180. */
-	}
-=======
 	out_uint32_le(s, g_keyboard_type);	/* keyboardType */
 	out_uint32_le(s, g_keyboard_subtype);	/* keyboardSubtype */
 	out_uint32_le(s, g_keyboard_functionkeys); /* keyboardFunctionKey */
@@ -492,7 +449,17 @@ sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 	out_uint8(s, 0);			/* connectionType */
 	out_uint8(s, 0);			/* pad */
 	out_uint32_le(s, selected_protocol);	/* serverSelectedProtocol */
->>>>>>> master
+	if (g_dpi > 0)
+	{
+		/* Extended client info describing monitor geometry */
+		out_uint32_le(s, g_width * 254 / (g_dpi * 10)); /* desktop physical width */
+		out_uint32_le(s, g_height * 254 / (g_dpi * 10)); /* desktop physical height */
+		out_uint16_le(s, ORIENTATION_LANDSCAPE);
+		out_uint32_le(s, g_dpi < 96 ? 100 : (g_dpi * 100 + 48) / 96); /* desktop scale factor */
+		/* the spec calls this out as being valid for range 100-500 but I doubt the upper range is accurate */
+		out_uint32_le(s, g_dpi < 134 ? 100 : (g_dpi < 173 ? 140 : 180)); /* device scale factor */
+		/* the only allowed values for device scale factor are 100, 140, and 180. */
+	}
 
 	/* Write a Client Cluster Data (TS_UD_CS_CLUSTER) */
 	uint32 cluster_flags = 0;
