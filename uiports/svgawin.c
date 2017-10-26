@@ -46,7 +46,6 @@ int g_polygon_ellipse_orders = 0;
 int g_bitmap_cache = 1;
 int g_bitmap_cache_persist_enable = False;
 int g_bitmap_cache_precache = True;
-int g_bitmap_compression = 1;
 int g_rdp5_performanceflags = 0;
 int g_console_session = 0;
 int g_keylayout = 0x409; /* Defaults to US keyboard layout */

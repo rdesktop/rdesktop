@@ -3,7 +3,7 @@
    Protocol services - ISO layer
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2005-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
-   Copyright 2012 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2012-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -110,16 +110,17 @@ iso_recv_msg(uint8 * code, uint8 * rdpver)
 	in_uint8(s, version);
 	if (rdpver != NULL)
 		*rdpver = version;
-	if (version == 3)
+	if (IS_SLOWPATH(version))
 	{
-		in_uint8s(s, 1);	/* pad */
-		in_uint16_be(s, length);
+		in_uint8s(s, 1);		/* reserved */
+		in_uint16_be(s, length);	/* length */
 	}
 	else
 	{
-		in_uint8(s, length);
+		in_uint8(s, length); /* length1 */
 		if (length & 0x80)
 		{
+			/* length2 is only present if the most significant bit of length1 is set */
 			length &= ~0x80;
 			next_be(s, length);
 		}
@@ -132,7 +133,7 @@ iso_recv_msg(uint8 * code, uint8 * rdpver)
 	s = tcp_recv(s, length - 4);
 	if (s == NULL)
 		return NULL;
-	if (version != 3)
+	if (IS_FASTPATH(version))
 		return s;
 	in_uint8s(s, 1);	/* hdrlen */
 	in_uint8(s, *code);
@@ -166,7 +167,7 @@ iso_send(STREAM s)
 	s_pop_layer(s, iso_hdr);
 	length = s->end - s->p;
 
-	out_uint8(s, 3);	/* version */
+	out_uint8(s, T123_HEADER_VERSION);	/* version */
 	out_uint8(s, 0);	/* reserved */
 	out_uint16_be(s, length);
 
@@ -188,7 +189,7 @@ iso_recv(uint8 * rdpver)
 	if (s == NULL)
 		return NULL;
 	if (rdpver != NULL)
-		if (*rdpver != 3)
+		if (IS_FASTPATH(*rdpver))
 			return s;
 	if (code != ISO_PDU_DT)
 	{
@@ -250,13 +251,12 @@ iso_connect(char *server, char *username, char *domain, char *password,
 		/* handle RDP_NEG_REQ response */
 		const char *reason = NULL;
 
-		uint8 type = 0, flags = 0;
-		uint16 length = 0;
+		uint8 type = 0;
 		uint32 data = 0;
 
 		in_uint8(s, type);
-		in_uint8(s, flags);
-		in_uint16(s, length);
+		in_uint8s(s, 1); /* skip flags */
+		in_uint8s(s, 2); /* skip length */
 		in_uint32(s, data);
 
 		if (type == RDP_NEG_FAILURE)

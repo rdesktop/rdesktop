@@ -503,7 +503,6 @@ xclip_probe_selections()
    The SelectionNotify event is sent from the clipboard owner to the requestor
    after his request was satisfied.
    If this function is called, we're the requestor side. */
-#ifndef MAKE_PROTO
 void
 xclip_handle_SelectionNotify(XSelectionEvent * event)
 {
@@ -954,7 +953,6 @@ xclip_handle_PropertyNotify(XPropertyEvent * event)
 	    (event->window == DefaultRootWindow(g_display)))
 		xclip_probe_selections();
 }
-#endif
 
 
 /* Called when the RDP server announces new clipboard data formats.

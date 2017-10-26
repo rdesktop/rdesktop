@@ -279,13 +279,13 @@ Specify the card name for example; "Telia EID IP5a".
 .IP "\fB0\fP"
 RDP session terminated normally
 .IP "\fB1\fP"
-Server initiated disconnect (also returned for logoff by XP joined to a domain)
+Administrator initiated disconnect (also returned for logoff by XP joined to a domain)
 .IP "\fB2\fP"
-Server initiated logoff
+Administrator initiated logout
 .IP "\fB3\fP"
-Server idle timeout reached
+Server idle session time limit reached
 .IP "\fB4\fP"
-Server logon timeout reached
+Server active session time limit reached
 .IP "\fB5\fP"
 The session was replaced
 .IP "\fB6\fP"
@@ -293,7 +293,7 @@ The server is out of memory
 .IP "\fB7\fP"
 The server denied the connection
 .IP "\fB8\fP"
-The server denied the connection for security reason
+The server denied the connection for security reasons
 .IP "\fB9\fP"
 The user cannot connect to the server due to insufficient access
 privileges
@@ -301,9 +301,9 @@ privileges
 The server does not accept saved user credentials and requires that
 the user enter their credentials for each connection
 .IP "\fB11\fP"
-Disconnect initiated by administration tool
-.IP "\fB12\fP"
 Disconnect initiated by user
+.IP "\fB12\fP"
+Logout initiated by user
 .IP "\fB16\fP"
 Internal licensing error
 .IP "\fB17\fP"
@@ -311,11 +311,11 @@ No license server available
 .IP "\fB18\fP"
 No valid license available
 .IP "\fB19\fP"
-Invalid licensing message
+Invalid licensing message from client
 .IP "\fB20\fP"
-Hardware id doesn't match software license
+The client license has been modified and does no longer match the hardware ID
 .IP "\fB21\fP"
-Client license error
+The client license is in an invalid format
 .IP "\fB22\fP"
 Network error during licensing protocol
 .IP "\fB23\fP"
@@ -323,9 +323,39 @@ Licensing protocol was not completed
 .IP "\fB24\fP"
 Incorrect client license enryption
 .IP "\fB25\fP"
-Can't upgrade license
+Can't upgrade or renew license
 .IP "\fB26\fP"
 The server is not licensed to accept remote connections
+.IP "\fB30\fP"
+The target endpoint chosen by the broker could not be found
+.IP "\fB32\fP"
+The target endpoint is disconnecting from the broker
+.IP "\fB34\fP"
+Error occured while being redirected by broker
+.IP "\fB35\fP"
+Error while the endpoint VM was being awakened by the broker
+.IP "\fB36\fP"
+Error while the endpoint VM was being started by the broker
+.IP "\fB37\fP"
+The IP address of the endpoint VM could not be determined by the broker
+.IP "\fB38\fP"
+No available endpoints in the connection broker pool
+.IP "\fB39\fP"
+Connection processing cancelled by the broker
+.IP "\fB40\fP"
+The connection settings could not be validated by the broker
+.IP "\fB41\fP"
+Timeout while the endpoint VM was being started by the broker
+.IP "\fB42\fP"
+Session monitoring error while the endpoint VM was being started by the broker
+.IP "\fB50\fP"
+The server can only host Remote Applications
+.IP "\fB51\fP"
+Update of session keys failed
+.IP "\fB52\fP"
+Decryption or session key creation failed
+.IP "\fB53\fP"
+Encryption failed
 .IP "\fB62\fP"
 The local client window was closed
 .IP "\fB63\fP"

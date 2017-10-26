@@ -37,6 +37,11 @@
 #include <X11/extensions/Xrandr.h>
 #endif
 
+#ifdef __APPLE__
+#include <sys/param.h>
+#define HOST_NAME_MAX MAXHOSTNAMELEN
+#endif
+
 extern int g_sizeopt;
 extern int g_width;
 extern int g_height;
@@ -555,6 +560,7 @@ typedef struct _sw_configurenotify_context
 static Bool
 sw_configurenotify_p(Display * display, XEvent * xevent, XPointer arg)
 {
+	UNUSED(display);
 	sw_configurenotify_context *context = (sw_configurenotify_context *) arg;
 	if (xevent->xany.type == ConfigureNotify
 	    && xevent->xconfigure.window == context->window
@@ -644,7 +650,7 @@ sw_window_is_behind(Window wnd, Window behind)
 	Window dummy1, dummy2;
 	Window *child_list;
 	unsigned int num_children;
-	unsigned int i;
+	int i;
 	RD_BOOL found_behind = False;
 	RD_BOOL found_wnd = False;
 
@@ -1547,9 +1553,10 @@ static void
 xwin_refresh_pointer_map(void)
 {
 	unsigned char phys_to_log_map[sizeof(g_pointer_log_to_phys_map)];
-	int i, pointer_buttons;
+	int i;
+	unsigned int pointer_buttons;
 
-	pointer_buttons = XGetPointerMapping(g_display, phys_to_log_map, sizeof(phys_to_log_map));
+	pointer_buttons = (unsigned int)XGetPointerMapping(g_display, phys_to_log_map, sizeof(phys_to_log_map));
 	if (pointer_buttons > sizeof(phys_to_log_map))
 		pointer_buttons = sizeof(phys_to_log_map);
 
@@ -1854,7 +1861,7 @@ set_wm_client_machine(Display * dpy, Window win)
 	if (gethostname(hostname, sizeof(hostname)) != 0)
 		return;
 
-	tp.value = hostname;
+	tp.value = (unsigned char *)hostname;
 	tp.nitems = strlen(hostname);
 	tp.encoding = XA_STRING;
 	tp.format = 8;
@@ -2400,7 +2407,7 @@ xwin_process_events(void)
 			case ClientMessage:
 				if (xevent.xclient.message_type == g_protocol_atom)
 				{
-					if (xevent.xclient.data.l[0] == g_kill_atom)
+					if (xevent.xclient.data.l[0] == (long)g_kill_atom)
 					{
 						/* the window manager told us to quit */
 
@@ -2413,7 +2420,7 @@ xwin_process_events(void)
 						/* send seamless destroy process message */
 						seamless_send_destroy(sw->id);
 					}
-					else if (xevent.xclient.data.l[0] == g_net_wm_ping_atom)
+					else if (xevent.xclient.data.l[0] == (long)g_net_wm_ping_atom)
 					{
 						/* pass ping message further to root window */
 						xevent.xclient.window =
@@ -2919,6 +2926,9 @@ get_pixel(uint32 idx, uint8 * andmask, uint8 * xormask, int bpp, uint8 * xor_fla
 	uint8 *pxor;
 
 	*xor_flag = 0;
+
+	/* return a red pixel if bpp is not supported to signal failure */
+	argb = 0xffff0000;
 	switch (bpp)
 	{
 		case 1:
@@ -2959,7 +2969,7 @@ get_pixel(uint32 idx, uint8 * andmask, uint8 * xormask, int bpp, uint8 * xor_fla
 static inline void
 xcursor_stencil(XcursorImage * src, XcursorImage * dst, int dx, int dy, uint32 argb)
 {
-	uint32 x, y, si, di;
+	int x, y, si, di;
 	assert(src->width == dst->width);
 	assert(src->height == dst->height);
 
@@ -3098,6 +3108,12 @@ void
 ui_set_null_cursor(void)
 {
 	ui_set_cursor(g_null_cursor);
+}
+
+void
+ui_set_standard_cursor(void)
+{
+	XUndefineCursor(g_display, g_wnd);
 }
 
 #define MAKE_XCOLOR(xc,c) \
@@ -3671,6 +3687,9 @@ ui_draw_glyph(int mixmode,
 	      /* src */ RD_HGLYPH glyph, int srcx, int srcy,
 	      int bgcolour, int fgcolour)
 {
+	UNUSED(srcx);
+	UNUSED(srcy);
+
 	SET_FOREGROUND(fgcolour);
 	SET_BACKGROUND(bgcolour);
 
@@ -3724,6 +3743,9 @@ ui_draw_text(uint8 font, uint8 flags, uint8 opcode, int mixmode, int x, int y,
 	     int boxx, int boxy, int boxcx, int boxcy, BRUSH * brush,
 	     int bgcolour, int fgcolour, uint8 * text, uint8 length)
 {
+	UNUSED(opcode);
+	UNUSED(brush);
+
 	/* TODO: use brush appropriately */
 
 	FONTGLYPH *glyph;
@@ -4152,6 +4174,8 @@ ui_seamless_create_window(unsigned long id, unsigned long group, unsigned long p
 void
 ui_seamless_destroy_window(unsigned long id, unsigned long flags)
 {
+	UNUSED(flags);
+
 	seamless_window *sw;
 
 	if (!g_seamless_active)
@@ -4173,6 +4197,8 @@ ui_seamless_destroy_window(unsigned long id, unsigned long flags)
 void
 ui_seamless_destroy_group(unsigned long id, unsigned long flags)
 {
+	UNUSED(flags);
+
 	seamless_window *sw, *sw_next;
 
 	if (!g_seamless_active)
@@ -4285,6 +4311,8 @@ ui_seamless_delicon(unsigned long id, const char *format, int width, int height)
 void
 ui_seamless_move_window(unsigned long id, int x, int y, int width, int height, unsigned long flags)
 {
+	UNUSED(flags);
+
 	seamless_window *sw;
 
 	if (!g_seamless_active)
@@ -4408,6 +4436,8 @@ ui_seamless_restack_window(unsigned long id, unsigned long behind, unsigned long
 void
 ui_seamless_settitle(unsigned long id, const char *title, unsigned long flags)
 {
+	UNUSED(flags);
+
 	seamless_window *sw;
 
 	if (!g_seamless_active)
@@ -4429,6 +4459,8 @@ ui_seamless_settitle(unsigned long id, const char *title, unsigned long flags)
 void
 ui_seamless_setstate(unsigned long id, unsigned int state, unsigned long flags)
 {
+	UNUSED(flags);
+
 	seamless_window *sw;
 
 	if (!g_seamless_active)
@@ -4482,6 +4514,8 @@ ui_seamless_setstate(unsigned long id, unsigned int state, unsigned long flags)
 void
 ui_seamless_syncbegin(unsigned long flags)
 {
+	UNUSED(flags);
+
 	if (!g_seamless_active)
 		return;
 

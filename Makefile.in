@@ -59,17 +59,6 @@ installkeymaps:
 	cp keymaps/modifiers $(DESTDIR)$(KEYMAP_PATH)
 	chmod 644 $(DESTDIR)$(KEYMAP_PATH)/*
 
-.PHONY: proto
-proto:
-	cat proto.head > proto.h
-	cproto -DMAKE_PROTO \
-	bitmap.c cache.c channels.c cliprdr.c disk.c mppc.c ewmhints.c	\
-	iso.c licence.c mcs.c orders.c parallel.c printer.c printercache.c \
-	pstcache.c rdesktop.c rdp5.c rdp.c rdpdr.c rdpsnd.c \
-	secure.c serial.c tcp.c xclip.c xkeymap.c xwin.c lspci.c seamless.c \
-	scard.c >> proto.h
-	cat proto.tail >> proto.h
-
 .PHONY: clean
 clean:
 	rm -f *.o *~ rdesktop
@@ -98,8 +87,6 @@ rdesktop-$(VERSION).tar.gz: Makefile configure
 	rdesktop-$(VERSION)/rdesktop.spec \
 	rdesktop-$(VERSION)/*.c \
 	rdesktop-$(VERSION)/*.h \
-	rdesktop-$(VERSION)/proto.head \
-	rdesktop-$(VERSION)/proto.tail \
 	rdesktop-$(VERSION)/keymaps/?? \
 	rdesktop-$(VERSION)/keymaps/??-* \
 	rdesktop-$(VERSION)/keymaps/common \

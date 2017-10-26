@@ -398,9 +398,7 @@ rdpdr_process_irp(STREAM s)
 		minor,
 		device,
 		offset,
-		bytes_in,
 		bytes_out,
-		error_mode,
 		share_mode, disposition, total_timeout, interval_timeout, flags_and_attributes = 0;
 
 	char *filename;
@@ -478,7 +476,7 @@ rdpdr_process_irp(STREAM s)
 
 			in_uint32_be(s, desired_access);
 			in_uint8s(s, 0x08);	/* unknown */
-			in_uint32_le(s, error_mode);
+			in_uint8s(s, 4);       /* skip error_mode*/
 			in_uint32_le(s, share_mode);
 			in_uint32_le(s, disposition);
 			in_uint32_le(s, flags_and_attributes);
@@ -731,7 +729,7 @@ rdpdr_process_irp(STREAM s)
 			}
 
 			in_uint32_le(s, bytes_out);
-			in_uint32_le(s, bytes_in);
+			in_uint8s(s,4);                  /* skip  bytes_in */
 			in_uint32_le(s, request);
 			in_uint8s(s, 0x14);
 
