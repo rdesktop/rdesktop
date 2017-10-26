@@ -128,6 +128,11 @@ but everything after this is unencrypted (including interactive logins).
 Do not send mouse motion events.  This saves bandwidth, although some Windows
 applications may rely on receiving mouse motion.
 .TP
+.BR "-M"
+Use local X cursor inherited from window manager instead of server cursor. This
+is mostly useful with -m, but is also useful if the server is sending bogus
+mouse cursors.
+.TP
 .BR "-C"
 Use private colourmap.  This will improve colour accuracy on an 8-bit display,
 but rdesktop will appear in false colour when not focused.
