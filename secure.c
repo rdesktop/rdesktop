@@ -423,7 +423,7 @@ sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 
 	/* Client information (TS_UD_CS_CORE) */
 	out_uint16_le(s, CS_CORE);		/* type */
-	out_uint16_le(s, 216);			/* length */
+	out_uint16_le(s, 216 + (g_dpi > 0 ? 18 : 0));	/* length */
 	out_uint32_le(s, rdpversion);           /* version */
 	out_uint16_le(s, g_width);		/* desktopWidth */
 	out_uint16_le(s, g_height);		/* desktopHeight */
