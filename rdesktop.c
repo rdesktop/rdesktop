@@ -96,7 +96,6 @@ RD_BOOL g_desktop_save = True;	/* desktop save order */
 RD_BOOL g_polygon_ellipse_orders = True;	/* polygon / ellipse orders */
 RD_BOOL g_fullscreen = False;
 RD_BOOL g_grab_keyboard = True;
-RD_BOOL g_local_cursor = False;
 RD_BOOL g_hide_decorations = False;
 RDP_VERSION g_rdp_version = RDP_V5;	/* Default to version 5 */
 RD_BOOL g_rdpclip = True;
@@ -1040,11 +1039,6 @@ main(int argc, char *argv[])
 	{
 		usage(argv[0]);
 		return EX_USAGE;
-	}
-	if (g_dpi >= 144 || !g_sendmotion)
-	{
-		g_local_cursor = True;
-		g_rdp5_performanceflags |= PERF_DISABLE_CURSOR_SHADOW;
 	}
 
 	STRNCPY(server, argv[optind], sizeof(server));

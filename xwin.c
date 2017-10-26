@@ -3088,8 +3088,6 @@ ui_create_cursor(unsigned int xhot, unsigned int yhot, int width,
 void
 ui_set_cursor(RD_HCURSOR cursor)
 {
-	extern RD_BOOL g_local_cursor;
-	if (g_local_cursor) return ;
 	logger(GUI, Debug, "ui_set_cursor(): g_current_cursor = %p, new = %p",
 	       g_current_cursor, cursor);
 
