@@ -77,7 +77,8 @@ utils_string_escape(const char *str)
 char *
 utils_string_unescape(const char *str)
 {
-	char *ns, *ps, *pd, c;
+	char *ns, *ps, *pd;
+	unsigned char c;
 
 	ns = xmalloc(strlen(str) + 1);
 	memcpy(ns, str, strlen(str) + 1);
@@ -90,7 +91,7 @@ utils_string_unescape(const char *str)
 		{
 			if (sscanf(ps, "%%%2hhX", &c) == 1)
 			{
-				pd[0] = c;
+				pd[0] = (char)c;
 				ps += 3;
 				pd++;
 				continue;
@@ -247,7 +248,7 @@ static char *subject[] = {
 
 static log_level_t _logger_level = Warning;
 
-#define DEFAULT_LOGGER_SUBJECTS (1 << Core);
+#define DEFAULT_LOGGER_SUBJECTS (1 << Core)
 
 #define ALL_LOGGER_SUBJECTS			\
 	  (1 << GUI)				\

@@ -99,24 +99,43 @@ static RD_NTSTATUS
 scard_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create_disposition,
 	     uint32 flags_and_attributes, char *filename, RD_NTHANDLE * phandle)
 {
-	return RD_STATUS_SUCCESS;
+    UNUSED(device_id);
+    UNUSED(accessmask);
+    UNUSED(sharemode);
+    UNUSED(create_disposition);
+    UNUSED(flags_and_attributes);
+    UNUSED(filename);
+    UNUSED(phandle);
+
+    return RD_STATUS_SUCCESS;
 }
 
 static RD_NTSTATUS
 scard_close(RD_NTHANDLE handle)
 {
+	UNUSED(handle);
 	return RD_STATUS_SUCCESS;
 }
 
 static RD_NTSTATUS
 scard_read(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
 {
+	UNUSED(handle);
+	UNUSED(data);
+	UNUSED(length);
+	UNUSED(offset);
+	UNUSED(result);
 	return RD_STATUS_SUCCESS;
 }
 
 static RD_NTSTATUS
 scard_write(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
 {
+	UNUSED(handle);
+	UNUSED(data);
+	UNUSED(length);
+	UNUSED(offset);
+	UNUSED(result);
 	return RD_STATUS_SUCCESS;
 }
 
@@ -518,7 +537,7 @@ outBufferStart(STREAM out, int length)
 static void
 outBufferFinishWithLimit(STREAM out, char *buffer, unsigned int length, unsigned int highLimit)
 {
-	int header = (length < 0) ? (0) : ((length > highLimit) ? (highLimit) : (length));
+	unsigned int header = (length > highLimit) ? (highLimit) : (length);
 	out_uint32_le(out, header);
 
 	if (length <= 0)
@@ -560,7 +579,7 @@ inString(PMEM_HANDLE * handle, STREAM in, char **destination, SERVER_DWORD dataL
 
 	if (wide)
 	{
-		int i;
+		unsigned int i;
 		in_uint8a(in, buffer, 2 * dataLength);
 		for (i = 0; i < dataLength; i++)
 			if ((buffer[2 * i] < 0) || (buffer[2 * i + 1] != 0))
@@ -594,7 +613,7 @@ outString(STREAM out, char *source, RD_BOOL wide)
 
 	if (wide)
 	{
-		int i;
+		unsigned int i;
 		char *buffer = SC_xmalloc(&lcHandle, Result);
 
 		for (i = 0; i < dataLength; i++)
@@ -644,6 +663,7 @@ inSkipLinked(STREAM in)
 static MYPCSC_DWORD
 SC_returnCode(MYPCSC_DWORD rc, PMEM_HANDLE * handle, STREAM in, STREAM out)
 {
+	UNUSED(in);
 	SC_xfreeallmemory(handle);
 	out_uint8s(out, 256);
 	return rc;
@@ -658,6 +678,7 @@ SC_returnNoMemoryError(PMEM_HANDLE * handle, STREAM in, STREAM out)
 static MYPCSC_DWORD
 TS_SCardEstablishContext(STREAM in, STREAM out)
 {
+	UNUSED(in);
 	MYPCSC_DWORD rv;
 	MYPCSC_SCARDCONTEXT myHContext;
 	SERVER_SCARDCONTEXT hContext;
@@ -1299,7 +1320,7 @@ TS_SCardCancel(STREAM in, STREAM out)
 static MYPCSC_DWORD
 TS_SCardLocateCardsByATR(STREAM in, STREAM out, RD_BOOL wide)
 {
-	int i, j, k;
+	unsigned int i, j, k;
 	MYPCSC_DWORD rv;
 	SERVER_SCARDCONTEXT hContext;
 	MYPCSC_SCARDCONTEXT myHContext;
@@ -1731,9 +1752,9 @@ TS_SCardStatus(STREAM in, STREAM out, RD_BOOL wide)
 	       "TS_SCardStatus(), hcard: 0x%08x [0x%08lx], reader len: %d bytes, atr len: %d bytes",
 	       (unsigned) hCard, (unsigned long) myHCard, (int) dwReaderLen, (int) dwAtrLen);
 
-	if (dwReaderLen <= 0 || dwReaderLen == SCARD_AUTOALLOCATE || dwReaderLen > SCARD_MAX_MEM)
+	if (dwReaderLen == 0 || dwReaderLen == (SERVER_DWORD)SCARD_AUTOALLOCATE || dwReaderLen > SCARD_MAX_MEM)
 		dwReaderLen = SCARD_MAX_MEM;
-	if (dwAtrLen <= 0 || dwAtrLen == SCARD_AUTOALLOCATE || dwAtrLen > SCARD_MAX_MEM)
+	if (dwAtrLen == 0 || dwAtrLen == (SERVER_DWORD)SCARD_AUTOALLOCATE || dwAtrLen > SCARD_MAX_MEM)
 		dwAtrLen = SCARD_MAX_MEM;
 
 #if 1
@@ -1848,7 +1869,7 @@ TS_SCardState(STREAM in, STREAM out)
 	       (unsigned) hCard, (unsigned long) myHCard, (int) dwAtrLen);
 
 	dwReaderLen = SCARD_MAX_MEM;
-	if (dwAtrLen <= 0 || dwAtrLen == SCARD_AUTOALLOCATE || dwAtrLen > SCARD_MAX_MEM)
+	if (dwAtrLen <= 0 || dwAtrLen == (SERVER_DWORD)SCARD_AUTOALLOCATE || dwAtrLen > SCARD_MAX_MEM)
 		dwAtrLen = SCARD_MAX_MEM;
 
 	readerName = SC_xmalloc(&lcHandle, dwReaderLen + 2);
@@ -2007,22 +2028,17 @@ TS_SCardGetAttrib(STREAM in, STREAM out)
 	       "TS_SCardGetAttrib(), hcard: 0x%08x [0x%08lx], attrib: 0x%08x (%d bytes)",
 	       (unsigned) hCard, (unsigned long) myHCard, (unsigned) dwAttrId, (int) dwAttrLen);
 
-	if (dwAttrLen > MAX_BUFFER_SIZE)
+	pbAttr = NULL;
+	if (dwAttrLen != (SERVER_DWORD)SCARD_AUTOALLOCATE)
+	{
+	  if (dwAttrLen > MAX_BUFFER_SIZE)
+	  {
 		dwAttrLen = MAX_BUFFER_SIZE;
+	  }
 
-
-	if (dwAttrLen > SCARD_AUTOALLOCATE)
-		pbAttr = NULL;
-	else if ((dwAttrLen < 0) || (dwAttrLen > SCARD_MAX_MEM))
-	{
-		dwAttrLen = (SERVER_DWORD) SCARD_AUTOALLOCATE;
-		pbAttr = NULL;
-	}
-	else
-	{
-		pbAttr = SC_xmalloc(&lcHandle, dwAttrLen);
-		if (!pbAttr)
-			return SC_returnNoMemoryError(&lcHandle, in, out);
+	  pbAttr = SC_xmalloc(&lcHandle, dwAttrLen);
+	  if (!pbAttr)
+	    return SC_returnNoMemoryError(&lcHandle, in, out);
 	}
 
 	attrLen = dwAttrLen;
@@ -2223,7 +2239,7 @@ TS_SCardControl(STREAM in, STREAM out)
 #ifdef PCSCLITE_VERSION_NUMBER
 	if (dwControlCode == SCARD_CTL_CODE(3400))
 	{
-		int i;
+		unsigned int i;
 		SERVER_DWORD cc;
 
 		for (i = 0; i < nBytesReturned / 6; i++)
@@ -2255,6 +2271,7 @@ TS_SCardControl(STREAM in, STREAM out)
 static MYPCSC_DWORD
 TS_SCardAccessStartedEvent(STREAM in, STREAM out)
 {
+	UNUSED(in);
 	logger(SmartCard, Debug, "TS_SCardAccessStartedEvent()");
 	out_uint8s(out, 8);
 	return SCARD_S_SUCCESS;
@@ -2264,6 +2281,7 @@ TS_SCardAccessStartedEvent(STREAM in, STREAM out)
 static RD_NTSTATUS
 scard_device_control(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 {
+	UNUSED(handle);
 	SERVER_DWORD Result = 0x00000000;
 	unsigned char *psize, *pend, *pStatusCode;
 	SERVER_DWORD addToEnd = 0;
@@ -2652,6 +2670,7 @@ SC_handleRequest(PSCThreadData data)
 static void *
 queue_handler_function(void *data)
 {
+	UNUSED(data);
 	PSCThreadData cur_data = NULL;
 	while (1)
 	{

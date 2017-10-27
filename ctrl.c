@@ -365,6 +365,7 @@ ctrl_add_fds(int *n, fd_set * rfds)
 void
 ctrl_check_fds(fd_set * rfds, fd_set * wfds)
 {
+	UNUSED(wfds);
 	int ns, res, offs;
 	struct sockaddr_un fsaun;
 	socklen_t fromlen;

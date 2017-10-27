@@ -97,7 +97,7 @@ _out_utf16s(STREAM s, size_t maxlength, const char *string)
     }
 
   ibl = strlen(string);
-  obl = maxlength ? maxlength : s_left(s);
+  obl = maxlength ? maxlength : (size_t)s_left(s);
   pin = string;
   pout = (char *) s->p;
 
@@ -122,8 +122,7 @@ _out_utf16s(STREAM s, size_t maxlength, const char *string)
 void
 out_utf16s_padded(STREAM s, const char *string, size_t length, unsigned char pad)
 {
-  int i;
-  size_t bl;
+  size_t i, bl;
   bl = _out_utf16s(s, length - 2, string);
 
   // append utf16 null termination

@@ -179,6 +179,7 @@ uint32
 rdpsnd_dsp_resample(unsigned char **out, unsigned char *in, unsigned int size,
 		    RD_WAVEFORMATEX * format, RD_BOOL stream_be)
 {
+	UNUSED(stream_be);
 #ifdef HAVE_LIBSAMPLERATE
 	SRC_DATA resample_data;
 	float *infloat, *outfloat;

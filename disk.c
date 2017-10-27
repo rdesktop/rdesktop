@@ -349,7 +349,7 @@ static RD_NTSTATUS
 disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create_disposition,
 	    uint32 flags_and_attributes, char *filename, RD_NTHANDLE * phandle)
 {
-	RD_NTHANDLE handle;
+	int handle;
 	DIR *dirp;
 	int flags, mode;
 	char path[PATH_MAX];
@@ -739,6 +739,7 @@ disk_query_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 RD_NTSTATUS
 disk_set_information(RD_NTHANDLE handle, uint32 info_class, STREAM in, STREAM out)
 {
+	UNUSED(out);
 	uint32 length, file_attributes, ft_high, ft_low;
 	char *newname, fullpath[PATH_MAX];
 	struct fileinfo *pfinfo;
@@ -1007,6 +1008,7 @@ disk_create_notify(RD_NTHANDLE handle, uint32 info_class)
 static RD_NTSTATUS
 NotifyInfo(RD_NTHANDLE handle, uint32 info_class, NOTIFY * p)
 {
+	UNUSED(info_class);
 	struct fileinfo *pfinfo;
 	struct stat filestat;
 	struct dirent *dp;
@@ -1419,6 +1421,9 @@ disk_query_directory(RD_NTHANDLE handle, uint32 info_class, char *pattern, STREA
 static RD_NTSTATUS
 disk_device_control(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 {
+	UNUSED(in);
+	UNUSED(out);
+
 	logger(Disk, Debug, "disk_device_control(handle=0x%x, request=0x%x, ...)", handle, request);
 	if (((request >> 16) != 20) || ((request >> 16) != 9))
 		return RD_STATUS_INVALID_PARAMETER;

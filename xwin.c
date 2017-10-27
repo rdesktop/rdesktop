@@ -2973,17 +2973,17 @@ xcursor_stencil(XcursorImage * src, XcursorImage * dst, int dx, int dy, uint32 a
 	assert(src->width == dst->width);
 	assert(src->height == dst->height);
 
-	for (y = 0; y < src->height; y++)
+	for (y = 0; y < (int)src->height; y++)
 	{
-		for (x = 0; x < src->width; x++)
+		for (x = 0; x < (int)src->width; x++)
 		{
 			si = y * src->width + x;
 			if (!src->pixels[si])
 				continue;
 
-			if ((y + dy) < 0 || (y + dy) >= dst->height)
+			if ((y + dy) < 0 || (y + dy) >= (int)dst->height)
 				continue;
-			if ((x + dx) < 0 || (x + dx) >= dst->width)
+			if ((x + dx) < 0 || (x + dx) >= (int)dst->width)
 				continue;
 			di = (y + dy) * src->width + (x + dx);
 			dst->pixels[di] = argb;
@@ -3006,8 +3006,8 @@ xcursor_merge(XcursorImage * src, XcursorImage * dst)
 }
 
 RD_HCURSOR
-ui_create_cursor(unsigned int xhot, unsigned int yhot, int width,
-		 int height, uint8 * andmask, uint8 * xormask, int bpp)
+ui_create_cursor(unsigned int xhot, unsigned int yhot, uint32 width,
+		 uint32 height, uint8 * andmask, uint8 * xormask, int bpp)
 {
 	Cursor cursor;
 	XcursorPixel *out;
@@ -3294,7 +3294,7 @@ static uint8 hatch_patterns[] = {
 void
 ui_patblt(uint8 opcode,
 	  /* dest */ int x, int y, int cx, int cy,
-	  /* brush */ BRUSH * brush, int bgcolour, int fgcolour)
+	  /* brush */ BRUSH * brush, uint32 bgcolour, uint32 fgcolour)
 {
 	Pixmap fill;
 	uint8 i, ipattern[8];
@@ -3421,7 +3421,7 @@ void
 ui_triblt(uint8 opcode,
 	  /* dest */ int x, int y, int cx, int cy,
 	  /* src */ RD_HBITMAP src, int srcx, int srcy,
-	  /* brush */ BRUSH * brush, int bgcolour, int fgcolour)
+	  /* brush */ BRUSH * brush, uint32 bgcolour, uint32 fgcolour)
 {
 	/* This is potentially difficult to do in general. Until someone
 	   comes up with a more efficient way of doing it I am using cases. */
@@ -3469,7 +3469,7 @@ ui_line(uint8 opcode,
 void
 ui_rect(
 	       /* dest */ int x, int y, int cx, int cy,
-	       /* brush */ int colour)
+	       /* brush */ uint32 colour)
 {
 	SET_FOREGROUND(colour);
 	FILL_RECTANGLE(x, y, cx, cy);
@@ -3479,7 +3479,7 @@ void
 ui_polygon(uint8 opcode,
 	   /* mode */ uint8 fillmode,
 	   /* dest */ RD_POINT * point, int npoints,
-	   /* brush */ BRUSH * brush, int bgcolour, int fgcolour)
+	   /* brush */ BRUSH * brush, uint32 bgcolour, uint32 fgcolour)
 {
 	uint8 style, i, ipattern[8];
 	Pixmap fill;
@@ -3596,7 +3596,7 @@ void
 ui_ellipse(uint8 opcode,
 	   /* mode */ uint8 fillmode,
 	   /* dest */ int x, int y, int cx, int cy,
-	   /* brush */ BRUSH * brush, int bgcolour, int fgcolour)
+	   /* brush */ BRUSH * brush, uint32 bgcolour, uint32 fgcolour)
 {
 	uint8 style, i, ipattern[8];
 	Pixmap fill;
@@ -3683,7 +3683,7 @@ void
 ui_draw_glyph(int mixmode,
 	      /* dest */ int x, int y, int cx, int cy,
 	      /* src */ RD_HGLYPH glyph, int srcx, int srcy,
-	      int bgcolour, int fgcolour)
+	      uint32 bgcolour, uint32 fgcolour)
 {
 	UNUSED(srcx);
 	UNUSED(srcy);
@@ -3739,7 +3739,7 @@ void
 ui_draw_text(uint8 font, uint8 flags, uint8 opcode, int mixmode, int x, int y,
 	     int clipx, int clipy, int clipcx, int clipcy,
 	     int boxx, int boxy, int boxcx, int boxcy, BRUSH * brush,
-	     int bgcolour, int fgcolour, uint8 * text, uint8 length)
+	     uint32 bgcolour, uint32 fgcolour, uint8 * text, uint8 length)
 {
 	UNUSED(opcode);
 	UNUSED(brush);
@@ -4217,7 +4217,7 @@ ui_seamless_destroy_group(unsigned long id, unsigned long flags)
 
 void
 ui_seamless_seticon(unsigned long id, const char *format, int width, int height, int chunk,
-		    const char *data, int chunk_len)
+		    const char *data, size_t chunk_len)
 {
 	seamless_window *sw;
 

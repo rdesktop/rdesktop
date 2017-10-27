@@ -246,7 +246,7 @@ ewmh_modify_state(Window wnd, int add, Atom atom1, Atom atom2)
 	XEvent xevent;
 
 	int result;
-	unsigned long nitems;
+	unsigned long i, nitems;
 	unsigned char *props;
 	uint32 state = WithdrawnState;
 
@@ -281,7 +281,6 @@ ewmh_modify_state(Window wnd, int add, Atom atom1, Atom atom2)
 		else
 		{
 			Atom *atoms;
-			int i;
 
 			if (get_property_value(wnd, "_NET_WM_STATE", 64, &nitems, &props, 1) < 0)
 				return 0;
@@ -438,7 +437,7 @@ ewmh_set_window_modal(Window wnd)
 }
 
 void
-ewmh_set_icon(Window wnd, int width, int height, const char *rgba_data)
+ewmh_set_icon(Window wnd, uint32 width, uint32 height, const char *rgba_data)
 {
 	unsigned long nitems, i;
 	unsigned char *props;
@@ -481,7 +480,7 @@ ewmh_set_icon(Window wnd, int width, int height, const char *rgba_data)
 	icon[1] = height;
 
 	/* Convert RGBA -> ARGB */
-	for (i = 0; i < width * height; i++)
+	for (i = 0; i < (width * height); i++)
 	{
 		icon[i + 2] =
 			rgba_data[i * 4 + 3] << 24 |
@@ -500,7 +499,7 @@ ewmh_set_icon(Window wnd, int width, int height, const char *rgba_data)
 }
 
 void
-ewmh_del_icon(Window wnd, int width, int height)
+ewmh_del_icon(Window wnd, uint32 width, uint32 height)
 {
 	unsigned long nitems, i, icon_size;
 	unsigned char *props;
