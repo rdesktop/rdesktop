@@ -2670,11 +2670,11 @@ xwin_process_events(void)
 				break;
 			case MapNotify:
 				if (!g_seamless_active)
-					rdp_send_client_window_status(1);
+					rdp_send_suppress_output_pdu(ALLOW_DISPLAY_UPDATES);
 				break;
 			case UnmapNotify:
 				if (!g_seamless_active)
-					rdp_send_client_window_status(0);
+					rdp_send_suppress_output_pdu(SUPPRESS_DISPLAY_UPDATES);
 				break;
 			case ConfigureNotify:
 #ifdef HAVE_XRANDR

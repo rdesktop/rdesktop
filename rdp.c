@@ -532,35 +532,37 @@ rdp_send_input(uint32 time, uint16 message_type, uint16 device_flags, uint16 par
 	rdp_send_data(s, RDP_DATA_PDU_INPUT);
 }
 
-/* Send a client window information PDU */
+/* Send a Suppress Output PDU */
 void
-rdp_send_client_window_status(int status)
+rdp_send_suppress_output_pdu(enum RDP_SUPPRESS_STATUS allowupdates)
 {
 	STREAM s;
 	static int current_status = 1;
 
-	if (current_status == status)
+	if (current_status == allowupdates)
 		return;
 
 	s = rdp_init_data(12);
 
-	out_uint32_le(s, status);
+	out_uint8(s, allowupdates);	/* allowDisplayUpdates */
+	out_uint8s(s, 3);	/* pad3Octets */
 
-	switch (status)
+	switch (allowupdates)
 	{
-		case 0:	/* shut the server up */
+		case SUPPRESS_DISPLAY_UPDATES:	/* shut the server up */
 			break;
 
-		case 1:	/* receive data again */
-			out_uint32_le(s, 0);	/* unknown */
-			out_uint16_le(s, g_width);
-			out_uint16_le(s, g_height);
+		case ALLOW_DISPLAY_UPDATES:	/* receive data again */
+			out_uint16_le(s, 0);		/* left */
+			out_uint16_le(s, 0);		/* top */
+			out_uint16_le(s, g_width);	/* right */
+			out_uint16_le(s, g_height);	/* bottom */
 			break;
 	}
 
 	s_mark_end(s);
 	rdp_send_data(s, RDP_DATA_PDU_CLIENT_WINDOW_STATUS);
-	current_status = status;
+	current_status = allowupdates;
 }
 
 /* Send persistent bitmap cache enumeration PDU's */

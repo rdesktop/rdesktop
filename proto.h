@@ -150,7 +150,7 @@ void process_ts_fp_updates(STREAM s);
 void rdp_in_unistr(STREAM s, int in_len, char **string, uint32 * str_size);
 void rdp_send_input(uint32 time, uint16 message_type, uint16 device_flags, uint16 param1,
 		    uint16 param2);
-void rdp_send_client_window_status(int status);
+void rdp_send_suppress_output_pdu(enum RDP_SUPPRESS_STATUS allowupdates);
 void process_colour_pointer_pdu(STREAM s);
 void process_new_pointer_pdu(STREAM s);
 void process_cached_pointer_pdu(STREAM s);
