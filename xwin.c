@@ -1856,7 +1856,7 @@ static void
 set_wm_client_machine(Display * dpy, Window win)
 {
 	XTextProperty tp;
-	char hostname[HOST_NAME_MAX];
+	unsigned char hostname[HOST_NAME_MAX];
 
 	if (gethostname(hostname, sizeof(hostname)) != 0)
 		return;

@@ -26,10 +26,6 @@ typedef int RD_BOOL;
 #define False (0)
 #endif
 
-#ifndef PATH_MAX
-#define PATH_MAX 256
-#endif
-
 typedef unsigned char uint8;
 typedef signed char sint8;
 typedef unsigned short uint16;

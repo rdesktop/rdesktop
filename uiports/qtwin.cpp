@@ -1521,7 +1521,7 @@ void warning(char * format, ...)
 {
   va_list ap;
 
-  fprintf(stderr, "WARNING: ");
+  fputs("WARNING: ", stderr);
   va_start(ap, format);
   vfprintf(stderr, format, ap);
   va_end(ap);
@@ -1532,7 +1532,7 @@ void unimpl(char * format, ...)
 {
   va_list ap;
 
-  fprintf(stderr, "NOT IMPLEMENTED: ");
+  fputs("NOT IMPLEMENTED: ", stderr);
   va_start(ap, format);
   vfprintf(stderr, format, ap);
   va_end(ap);
@@ -1543,7 +1543,7 @@ void error(char * format, ...)
 {
   va_list ap;
 
-  fprintf(stderr, "ERROR: ");
+  fputs("ERROR: ", stderr);
   va_start(ap, format);
   vfprintf(stderr, format, ap);
   va_end(ap);
@@ -1552,22 +1552,22 @@ void error(char * format, ...)
 /*****************************************************************************/
 void out_params(void)
 {
-  fprintf(stderr, "rdesktop: A Remote Desktop Protocol client.\n");
-  fprintf(stderr, "Version " VERSION ". Copyright (C) 1999-2007 Matt Chapman.\n");
-  fprintf(stderr, "QT uiport by Jay Sorg\n");
-  fprintf(stderr, "See http://www.rdesktop.org/ for more information.\n\n");
-  fprintf(stderr, "Usage: qtrdesktop [options] server\n");
-  fprintf(stderr, "   -g WxH: desktop geometry\n");
-  fprintf(stderr, "   -4: use RDP version 4\n");
-  fprintf(stderr, "   -5: use RDP version 5 (default)\n");
-  fprintf(stderr, "   -t 3389: tcp port)\n");
-  fprintf(stderr, "   -a 8|16|24: connection colour depth\n");
-  fprintf(stderr, "   -T title: window title\n");
-  fprintf(stderr, "   -P: use persistent bitmap caching\n");
-  fprintf(stderr, "   -0: attach to console\n");
-  fprintf(stderr, "   -z: enable rdp compression\n");
-  fprintf(stderr, "   -r sound: enable sound\n");
-  fprintf(stderr, "\n");
+  fputs("rdesktop: A Remote Desktop Protocol client.\n", stderr);
+  fputs("Version " VERSION ". Copyright (C) 1999-2007 Matt Chapman.\n", stderr);
+  fputs("QT uiport by Jay Sorg\n", stderr);
+  fputs("See http://www.rdesktop.org/ for more information.\n\n", stderr);
+  fputs("Usage: qtrdesktop [options] server\n", stderr);
+  fputs("   -g WxH: desktop geometry\n", stderr);
+  fputs("   -4: use RDP version 4\n", stderr);
+  fputs("   -5: use RDP version 5 (default)\n", stderr);
+  fputs("   -t 3389: tcp port)\n", stderr);
+  fputs("   -a 8|16|24: connection colour depth\n", stderr);
+  fputs("   -T title: window title\n", stderr);
+  fputs("   -P: use persistent bitmap caching\n", stderr);
+  fputs("   -0: attach to console\n", stderr);
+  fputs("   -z: enable rdp compression\n", stderr);
+  fputs("   -r sound: enable sound\n", stderr);
+  fputs("\n", stderr);
 }
 
 /*****************************************************************************/
