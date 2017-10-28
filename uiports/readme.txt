@@ -10,7 +10,7 @@ see xxxreadme.txt for info on a blank empty uiport
 
 see qtreadme.txt for info on the Qt/X11 uiport
 
-see qtereadme.txt for info on the Qt embeded uiport
+see qtereadme.txt for info on the Qt embedded uiport
 
 see svgareadme.txt for info on the svga uiport
 

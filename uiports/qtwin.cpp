@@ -747,7 +747,7 @@ void ui_destroy_colourmap(RD_HCOLOURMAP map)
 /*****************************************************************************/
 void ui_set_colourmap(void * map)
 {
-  // destoy old colormap
+  // destroy old colormap
   ui_destroy_colourmap(g_CM);
   g_CM = (QColorMap*)map;
 }
@@ -813,7 +813,7 @@ RD_HBITMAP ui_create_bitmap(int width, int height, uint8 * data)
 }
 
 //******************************************************************************
-// adjust coordinates for cliping rect
+// adjust coordinates for clipping rect
 int WarpCoords(int * x, int * y, int * cx, int * cy, int * srcx, int * srcy)
 {
   int dx, dy;

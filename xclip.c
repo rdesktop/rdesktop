@@ -154,7 +154,7 @@ utf16_lf2crlf(uint8 * data, uint32 * size)
 {
 	uint8 *result;
 	uint16 *inptr, *outptr;
-	RD_BOOL swap_endianess;
+	RD_BOOL swap_endianness;
 
 	/* Worst case: Every char is LF */
 	result = xmalloc((*size * 2) + 2);
@@ -165,16 +165,16 @@ utf16_lf2crlf(uint8 * data, uint32 * size)
 	outptr = (uint16 *) result;
 
 	/* Check for a reversed BOM */
-	swap_endianess = (*inptr == 0xfffe);
+	swap_endianness = (*inptr == 0xfffe);
 
 	uint16 uvalue_previous = 0;	/* Kept so we'll avoid translating CR-LF to CR-CR-LF */
 	while ((uint8 *) inptr < data + *size)
 	{
 		uint16 uvalue = *inptr;
-		if (swap_endianess)
+		if (swap_endianness)
 			uvalue = ((uvalue << 8) & 0xff00) + (uvalue >> 8);
 		if ((uvalue == 0x0a) && (uvalue_previous != 0x0d))
-			*outptr++ = swap_endianess ? 0x0d00 : 0x0d;
+			*outptr++ = swap_endianness ? 0x0d00 : 0x0d;
 		uvalue_previous = uvalue;
 		*outptr++ = *inptr++;
 	}
@@ -873,7 +873,7 @@ xclip_handle_SelectionRequest(XSelectionRequestEvent * event)
    is offered by the RDP server (and when it is pasted inside RDP, there's no network
    roundtrip).
 
-   This event (SelectionClear) symbolizes this rdesktop lost onwership of the clipboard
+   This event (SelectionClear) symbolizes this rdesktop lost ownership of the clipboard
    to some other X client. We should find out what clipboard formats this other
    client offers and announce that to RDP. */
 void
@@ -902,7 +902,7 @@ xclip_handle_PropertyNotify(XPropertyEvent * event)
 
 		while (bytes_left > 0)
 		{
-			/* Unlike the specification, we don't set the 'delete' arugment to True
+			/* Unlike the specification, we don't set the 'delete' argument to True
 			   since we slurp the INCR's chunks in even-smaller chunks of 4096 bytes. */
 			if ((XGetWindowProperty
 			     (g_display, g_wnd, rdesktop_clipboard_target_atom, offset, 4096L,
@@ -967,11 +967,11 @@ ui_clip_format_announce(uint8 * data, uint32 length)
 
 	XSetSelectionOwner(g_display, primary_atom, g_wnd, acquire_time);
 	if (XGetSelectionOwner(g_display, primary_atom) != g_wnd)
-		logger(Clipboard, Warning, "failed to aquire ownership of PRIMARY clipboard");
+		logger(Clipboard, Warning, "failed to acquire ownership of PRIMARY clipboard");
 
 	XSetSelectionOwner(g_display, clipboard_atom, g_wnd, acquire_time);
 	if (XGetSelectionOwner(g_display, clipboard_atom) != g_wnd)
-		logger(Clipboard, Warning, "failed to aquire ownership of CLIPBOARD clipboard");
+		logger(Clipboard, Warning, "failed to acquire ownership of CLIPBOARD clipboard");
 
 	if (formats_data)
 		xfree(formats_data);

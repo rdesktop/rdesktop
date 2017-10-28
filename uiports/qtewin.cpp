@@ -1094,7 +1094,7 @@ void set_pixel(int x, int y, int pixel, int op = 0xc)
 }
 
 /******************************************************************************/
-// adjust coordinates for cliping rect
+// adjust coordinates for clipping rect
 bool WarpCoords(int * x, int * y, int * cx, int * cy, int * srcx, int * srcy)
 {
   int dx, dy;

@@ -41,15 +41,15 @@ rdesktop (1.8.1)
   * Fix issue with reconnect, make use of deactivate variable
   * Added 4 new disconnect reasons with exit codes
   * Fix issues of window handling in SeamlessRDP parts of rdesktop
-  * Fix a backward compability with OpenSSL < 0.9.9
+  * Fix a backward compatibility with OpenSSL < 0.9.9
   * Fix a bug when code needs a x window available but there are none.
   * Fix a sigsegv zeroing memory
-  * Fix a 64bit portability issue
+  * Fix a 64-bit portability issue
 
   -- Henrik Andersson <hean01@users.sourceforge.net> 2013-11-18
 
 rdesktop (1.8.0)
-  * Support for protocol negotiation eg. SSL/TLSv1 and CredSSP
+  * Support for protocol negotiation e.g. SSL/TLSv1 and CredSSP
   * Support for CredSSP + Kerberos authentication (NLA)
   * Support for smart card single-sign-on
   * Support passing smart card pin as password as argument
@@ -67,10 +67,10 @@ rdesktop (1.8.0)
 
 rdesktop (1.7.1)
   * Fix clipboard issue when not building with unicode support
-  * Fix compilation against newer PCSC lite versions
+  * Fix compilation against newer PCSC-lite versions
   * Fix for per-device license mode on Windows 2008 R2 terminal server
-  * Fix building 64bit version with static openssl linkage
-  * Rewrite of smartcard handling for 64bit support, fixes several bugs
+  * Fix building 64-bit version with static openssl linkage
+  * Rewrite of smartcard handling for 64-bit support, fixes several bugs
   * Improved license handling using XDG directories
 
   -- Henrik Andersson <hean01@users.sourceforge.net> 2012-01-09
@@ -113,7 +113,7 @@ rdesktop (1.6.0)
 rdesktop (1.5.0)
   * SeamlessRDP - seamless windows support
   * Keymap fixes
-  * Fix connection issues with Windows XP RTM
+  * Fix connection issues with Microsoft Windows XP RTM
   * Keyboard handling improvements and fixes
   * SGI/Irix sound-driver fixes
   * Support for clipboard INCR protocol
@@ -125,7 +125,7 @@ rdesktop (1.5.0)
   * Large file support
   * The default color depth is now the depth of the root window
   * Basic support for Windows Vista Beta 2
-  * Fix high cpu-usage in OSS-driver
+  * Fix high CPU-usage in OSS-driver
 
   -- Peter Astrand <astrand@cendio.se>  Wed, 13 Sep 2006 15:11:39 +0200 (CEST)
 
@@ -162,7 +162,7 @@ rdesktop (1.4.0)
 rdesktop (1.3.1)
    * Crypto fixes for RDP5
    * Keyboard and keymap fixes
-   * some endianess fixes for high color
+   * some endianness fixes for high color
    * portability enhancements
 
   -- Matthew Chapman <matthewc@cse.unsw.edu.au>  Tue, 21 Jan 2004 20:34
@@ -170,7 +170,7 @@ rdesktop (1.3.1)
 rdesktop (1.3.0)
 
    * RDP5
-   * 15, 16 and 24 bit color depths
+   * 15, 16 and 24-bit color depths
    * Basic clipboard redirection
    * Sound
    * IPv6

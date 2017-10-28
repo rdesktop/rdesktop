@@ -354,7 +354,7 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 		{
 			flags |= RDP_INFO_AUTOLOGON;
 			len_password = g_redirect_cookie_len;
-			len_password -= 2;	/* substract 2 bytes which is added below */
+			len_password -= 2;	/* subtract 2 bytes which is added below */
 			logger(Protocol, Debug,
 			       "rdp_send_logon_info(), Using %d bytes redirect cookie as password",
 			       g_redirect_cookie_len);
@@ -375,8 +375,8 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 			2 + len_program +	/* AlternateShell */
 			2 + len_directory +	/* WorkingDir */
 			/* size of TS_EXTENDED_INFO_PACKET */
-			2 +	/* clientAdressFamily */
-			2 +	/* cbClientAdress */
+			2 +	/* clientAddressFamily */
+			2 +	/* cbClientAddress */
 			len_ip +	/* clientAddress */
 			2 +	/* cbClientDir */
 			len_dll +	/* clientDir */
@@ -566,7 +566,7 @@ rdp_send_suppress_output_pdu(enum RDP_SUPPRESS_STATUS allowupdates)
 	current_status = allowupdates;
 }
 
-/* Send persistent bitmap cache enumeration PDU's */
+/* Send persistent bitmap cache enumeration PDUs */
 static void
 rdp_enum_bmpcache2(void)
 {
@@ -1741,14 +1741,14 @@ process_redirect_pdu(STREAM s, RD_BOOL enhanced_redirect /*, uint32 * ext_disc_r
 	{
 		in_uint32_le(s, len);
 
-		/* Let target fqdn replace target ip address */
+		/* Let target FQDN replace target IP address */
 		if (g_redirect_server)
 		{
 			free(g_redirect_server);
 			g_redirect_server = NULL;
 		}
 
-		/* read fqdn string */
+		/* read FQDN string */
 		rdp_in_unistr(s, len, &g_redirect_server, &g_redirect_server_len);
 	}
 
@@ -1806,7 +1806,7 @@ rdp_main_loop(RD_BOOL * deactivated, uint32 * ext_disc_reason)
 	}
 }
 
-/* used in uiports and rdp_main_loop, processes the rdp packets waiting */
+/* used in uiports and rdp_main_loop, processes the RDP packets waiting */
 RD_BOOL
 rdp_loop(RD_BOOL * deactivated, uint32 * ext_disc_reason)
 {

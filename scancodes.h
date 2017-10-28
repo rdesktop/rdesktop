@@ -13,7 +13,7 @@
    0x61 - 0x79: Normal
    0xfa - : keyboard drivers interpret these as responses from the 8042 chip
 
-   We use bit 7 to indicate 0xe0 prefix instead of two-byte sequence (0xe0, something). Eq.,
+   We use bit 7 to indicate 0xe0 prefix instead of two-byte sequence (0xe0, something). E.g.
    0xe 0x38 is defined as (0x80 | 0x38)
 */
 

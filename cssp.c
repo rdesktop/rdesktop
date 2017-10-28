@@ -1,6 +1,6 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
-   CredSSP layer and kerberos support.
+   CredSSP layer and Kerberos support.
    Copyright 2012-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
@@ -710,7 +710,7 @@ cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 		return False;
 	}
 
-	// Establish tls connection to server
+	// Establish TLS connection to server
 	if (!tcp_tls_connect())
 	{
 		logger(Core, Debug, "cssp_connect(), failed to establish TLS connection");
@@ -751,7 +751,7 @@ cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 		{
 			if (i == 0)
 				logger(Core, Notice,
-				       "Failed to intialize NLA, do you have correct kerberos tgt initialized ?");
+				       "Failed to initialize NLA, do you have correct Kerberos TGT initialized ?");
 			else
 				logger(Core, Error, "cssp_connect(), negotiation failed");
 
@@ -764,7 +764,7 @@ cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 		if (!(actual_services & GSS_C_CONF_FLAG))
 		{
 			logger(Core, Error,
-			       "cssp_connect(), confidiality service required but is not available");
+			       "cssp_connect(), confidentiality service required but is not available");
 			goto bail_out;
 		}
 

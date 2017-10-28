@@ -132,7 +132,7 @@ pstcache_enumerate(uint8 id, HASH_KEY * keylist)
 		{
 			memcpy(keylist[idx], cellhdr.key, sizeof(HASH_KEY));
 
-			/* Pre-cache (not possible for 8 bit colour depth cause it needs a colourmap) */
+			/* Pre-cache (not possible for 8-bit colour depth cause it needs a colourmap) */
 			if (g_bitmap_cache_precache && cellhdr.stamp && g_server_depth > 8)
 				pstcache_load_bitmap(id, idx);
 

@@ -49,7 +49,7 @@
 
 #include "ssl.h"
 
-/* Reconnect timeout based on approxiamted cookie life-time */
+/* Reconnect timeout based on approximated cookie life-time */
 #define RECONNECT_TIMEOUT (3600+600)
 #define RDESKTOP_LICENSE_STORE "/.local/share/rdesktop/licenses"
 
@@ -171,7 +171,7 @@ usage(char *program)
 	fprintf(stderr, "   -p: password (- to prompt)\n");
 	fprintf(stderr, "   -n: client hostname\n");
 	fprintf(stderr, "   -k: keyboard layout on server (en-us, de, sv, etc.)\n");
-	fprintf(stderr, "   -g: desktop geometry (WxH[@dpi])\n");
+	fprintf(stderr, "   -g: desktop geometry (WxH[@DPI][+X[+Y]])\n");
 #ifdef WITH_SCARD
 	fprintf(stderr, "   -i: enables smartcard authentication, password is used as pin\n");
 #endif
@@ -190,7 +190,7 @@ usage(char *program)
 	fprintf(stderr, "   -S: caption button size (single application mode)\n");
 	fprintf(stderr, "   -T: window title\n");
 	fprintf(stderr, "   -t: disable use of remote ctrl\n");
-	fprintf(stderr, "   -N: enable numlock syncronization\n");
+	fprintf(stderr, "   -N: enable numlock synchronization\n");
 	fprintf(stderr, "   -X: embed into another window with a given id.\n");
 	fprintf(stderr, "   -a: connection colour depth\n");
 	fprintf(stderr, "   -z: enable rdp compression\n");
@@ -229,14 +229,14 @@ usage(char *program)
 	fprintf(stderr, "         '-r scard[:\"Scard Name\"=\"Alias Name[;Vendor Name]\"[,...]]\n");
 	fprintf(stderr, "          example: -r scard:\"eToken PRO 00 00\"=\"AKS ifdh 0\"\n");
 	fprintf(stderr,
-		"                   \"eToken PRO 00 00\" -> Device in Linux/Unix enviroment\n");
+		"                   \"eToken PRO 00 00\" -> Device in GNU/Linux and UNIX environment\n");
 	fprintf(stderr,
-		"                   \"AKS ifdh 0\"       -> Device shown in Windows enviroment \n");
+		"                   \"AKS ifdh 0\"       -> Device shown in Windows environment \n");
 	fprintf(stderr, "          example: -r scard:\"eToken PRO 00 00\"=\"AKS ifdh 0;AKS\"\n");
 	fprintf(stderr,
-		"                   \"eToken PRO 00 00\" -> Device in Linux/Unix enviroment\n");
+		"                   \"eToken PRO 00 00\" -> Device in GNU/Linux and UNIX environment\n");
 	fprintf(stderr,
-		"                   \"AKS ifdh 0\"       -> Device shown in Windows enviroment \n");
+		"                   \"AKS ifdh 0\"       -> Device shown in Microsoft Windows environment \n");
 	fprintf(stderr,
 		"                   \"AKS\"              -> Device vendor name                 \n");
 #endif
@@ -250,7 +250,7 @@ usage(char *program)
 	fprintf(stderr,
 		"                              is used to authenticate the user by smartcard\n");
 	fprintf(stderr,
-		"           sc-container-name  Specifies the container name, this is usally the username\n");
+		"           sc-container-name  Specifies the container name, this is usually the username\n");
 	fprintf(stderr, "           sc-reader-name     Smartcard reader name to use\n");
 	fprintf(stderr,
 		"           sc-card-name       Specifies the card name of the smartcard to use\n");
@@ -403,7 +403,7 @@ handle_disconnect_reason(RD_BOOL deactivated, uint16 reason)
 			break;
 
 		case ERRINFO_CB_REDIRECTING_TO_DESTINATION:
-			text = "Error occured while being redirected by broker";
+			text = "Error occurred while being redirected by broker";
 			retval = EXRD_CB_REDIR_DEST;
 			break;
 
@@ -569,7 +569,7 @@ parse_server_and_port(char *server)
 	}
 	else
 	{
-		/* dns name or IPv4 style address format - server.example.com:port or 1.2.3.4:port */
+		/* DNS name or IPv4 style address format - server.example.com:port or 1.2.3.4:port */
 		p = strchr(server, ':');
 		if (p != NULL)
 		{
@@ -678,7 +678,7 @@ main(int argc, char *argv[])
 					STRNCPY(g_password, optarg, sizeof(g_password));
 					flags |= RDP_INFO_AUTOLOGON;
 
-					/* try to overwrite argument so it won't appear in ps */
+					/* try to overwrite argument so it won't appear in `ps` */
 					p = optarg;
 					while (*p)
 						*(p++) = 'X';
@@ -723,7 +723,7 @@ main(int argc, char *argv[])
 
 				if (g_height <= 0)
 				{
-					logger(Core, Error, "invalid geometry heigth specified");
+					logger(Core, Error, "invalid geometry height specified");
 					return EX_USAGE;
 				}
 
@@ -866,7 +866,7 @@ main(int argc, char *argv[])
 					g_rdp5_performanceflags = (PERF_DISABLE_WALLPAPER |
 								   PERF_ENABLE_FONT_SMOOTHING);
 				}
-				else if (str_startswith(optarg, "l"))	/* lan */
+				else if (str_startswith(optarg, "l"))	/* LAN */
 				{
 					g_rdp5_performanceflags = PERF_ENABLE_FONT_SMOOTHING;
 				}
@@ -1499,7 +1499,7 @@ hexdump(unsigned char *p, unsigned int len)
   	 Needle may be escaped by a backslash, in
 	 that case we ignore that particular needle.
   return value: returns next src pointer, for
-  	succesive executions, like in a while loop
+  	successive executions, like in a while loop
 	if retval is 0, then there are no more args.
   pitfalls:
   	src is modified. 0x00 chars are inserted to
@@ -1830,7 +1830,7 @@ rd_create_ui()
 {
 	if (!ui_have_window())
 	{
-		/* create a window if we dont have one intialized */
+		/* create a window if we don't have one initialized */
 		if (!ui_create_window())
 			exit(EX_OSERR);
 	}

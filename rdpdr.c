@@ -83,7 +83,7 @@ char *g_rdpdr_clientname = NULL;
 
 /* Used to store incoming io request, until they are ready to be completed */
 /* using a linked list ensures that they are processed in the right order, */
-/* if multiple ios are being done on the same fd */
+/* if multiple IOs are being done on the same FD */
 struct async_iorequest
 {
 	uint32 fd, major, minor, offset, device, id, length, partial_len;
@@ -929,7 +929,7 @@ rdpdr_init()
 void
 rdpdr_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv, RD_BOOL * timeout)
 {
-	uint32 select_timeout = 0;	/* Timeout value to be used for select() (in millisecons). */
+	uint32 select_timeout = 0;	/* Timeout value to be used for select() (in milliseconds). */
 	struct async_iorequest *iorq;
 	char c;
 

@@ -31,9 +31,9 @@ extern int g_pstcache_fd[];
 #define IS_SET(idx) (idx >= 0)
 
 /*
- * TODO: Test for optimal value of BUMP_COUNT. TO_TOP gives lowest cpu utilisation but using
+ * TODO: Test for optimal value of BUMP_COUNT. TO_TOP gives lowest CPU utilisation but using
  * a positive value will hopefully result in less frequently used bitmaps having a greater chance
- * of being evicted from the cache, and therby reducing the need to load bitmaps from disk.
+ * of being evicted from the cache, and thereby reducing the need to load bitmaps from disk.
  * (Jeroen)
  */
 #define BUMP_COUNT 40
@@ -437,7 +437,7 @@ cache_put_cursor(uint16 cache_idx, RD_HCURSOR cursor)
 }
 
 /* BRUSH CACHE */
-/* index 0 is 2 colour brush, index 1 is muti colour brush */
+/* index 0 is 2 colour brush, index 1 is multi colour brush */
 static BRUSHDATA g_brushcache[2][64];
 
 /* Retrieve brush from cache */
@@ -454,7 +454,7 @@ cache_get_brush_data(uint8 colour_code, uint8 idx)
 }
 
 /* Store brush in cache */
-/* this function takes over the data pointer in struct, eg, caller gives it up */
+/* this function takes over the data pointer in struct, e.g. caller gives it up */
 void
 cache_put_brush_data(uint8 colour_code, uint8 idx, BRUSHDATA * brush_data)
 {

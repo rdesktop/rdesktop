@@ -145,7 +145,7 @@ State can have one of three values:
  1 : Minimized.
  2 : Maximized.
 
-The initial STATE for a window will always be preceeded by one CREATE and one
+The initial STATE for a window will always be preceded by one CREATE and one
 POSITION. Optionally, a TITLE may also be sent before the first STATE.
 
 DEBUG
@@ -338,7 +338,7 @@ Sets which window has input focus.
 Syntax:
 	FOCUS,<SERIAL>,<ID>,<FLAGS>
 
-Changes which window that will recieve the keyboard events. Note that this
+Changes which window that will receive the keyboard events. Note that this
 might cause the window to change z order.
 
 DESTROY
@@ -354,7 +354,7 @@ Spawn a new application.
 Syntax:
 	SPAWN,<SERIAL>,<COMMANDLINE>
 
-Spawns a new application specified by commandline.
+Spawns a new application specified by command line.
 
 
 Test Cases
@@ -371,7 +371,7 @@ Blackbox, IceWM etc). You can also test without a window manager.
 3  Open "Open Dialog". Resize, bigger than main window. Verify no
    additional task bar icons. Verify that the Open dialog is focused.
  
-4  Open File Format box dropdown. Verify that it correctly appears
+4  Open File Format box drop-down. Verify that it correctly appears
    outside main window. Verify no additional task bar icons. 
  
 5  Abort Open. Select About Wordpad. Verify no additional task bar
@@ -415,9 +415,9 @@ Blackbox, IceWM etc). You can also test without a window manager.
 19 Try the menus in Microsoft Office XP, which uses shaded menus. 
  
  
-20 Test transient windows: Run a program (ie Excel) seamlessly and open
-   a modal dialog (ie Open). Move the dialog so it partially overlaps
-   its parent window. Cover both windows with a third (ie a maximized
+20 Test transient windows: Run a program (i.e. Excel) seamlessly and open
+   a modal dialog (i.e. Open). Move the dialog so it partially overlaps
+   its parent window. Cover both windows with a third (i.e. a maximized
    xterm). Click on Excel's taskbar entry to bring it to the front.
  
  
@@ -425,7 +425,7 @@ Blackbox, IceWM etc). You can also test without a window manager.
    (...\seamlessrdpshell.exe taskmgr). From Task Manager's File menu,
    select 'New Task (Run)' and run Notepad. Move Notepad so it
    partially overlaps Task Manager. Cover both windows with a native
-   window (ie a maximized xterm). Click on Notepad's taskbar entry to
+   window (i.e. a maximized xterm). Click on Notepad's taskbar entry to
    bring it to the front.
  
  
@@ -461,7 +461,7 @@ Blackbox, IceWM etc). You can also test without a window manager.
    broken WM at startup.
 
 
-26 If running on a 64 bit Windows version, try a 32 bit application:
+26 If running on a 64-bit Windows version, try a 32-bit application:
    Run Task Manager seamlessly (...\seamlessrdpshell.exe
    taskmgr). From Task Manager's File menu, select 'New Task (Run)'
    and run %windir%\syswow64\notepad.exe. Try various window

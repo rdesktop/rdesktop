@@ -13,7 +13,7 @@ A method call from Slave to the Master have the following syntax:
 
 	METHOD [ARG1[ ARG2 [...]]]
 
-Argument string sent for a method call should be escaped as descibed below under 
+Argument string sent for a method call should be escaped as described below under 
 String escaping section.
 
 
@@ -30,7 +30,7 @@ One line may not exceed 1024 bytes, including newline.
 
 String escaping
 ===============
-Percentage sign has been choosen as escaping character.
+Percentage sign has been chosen as escaping character.
 
 The rules for escaping are:
 

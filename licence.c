@@ -58,7 +58,7 @@ licence_generate_hwid(uint8 * hwid)
 	strncpy((char *) (hwid + 4), g_hostname, LICENCE_HWID_SIZE - 4);
 }
 
-/* Send a lincece info packet to server */
+/* Send a licence info packet to server */
 static void
 licence_info(uint8 * client_random, uint8 * rsa_data,
 	     uint8 * licence_data, int licence_size, uint8 * hwid, uint8 * signature)
@@ -188,9 +188,9 @@ licence_process_request(STREAM s)
 	licence_send_new_licence_request(null_data, null_data, g_username, g_hostname);
 }
 
-/* Send a platform challange response packet */
+/* Send a platform challenge response packet */
 static void
-licence_send_platform_challange_response(uint8 * token, uint8 * crypt_hwid, uint8 * signature)
+licence_send_platform_challenge_response(uint8 * token, uint8 * crypt_hwid, uint8 * signature)
 {
 	uint32 sec_flags = SEC_LICENSE_PKT;
 	uint16 length = 58;
@@ -198,7 +198,7 @@ licence_send_platform_challange_response(uint8 * token, uint8 * crypt_hwid, uint
 
 	s = sec_init(sec_flags, length + 2);
 
-	out_uint8(s, LICENCE_TAG_PLATFORM_CHALLANGE_RESPONSE);
+	out_uint8(s, LICENCE_TAG_PLATFORM_CHALLENGE_RESPONSE);
 	out_uint8(s, ((g_rdp_version >= RDP_V5) ? 3 : 2));	/* version */
 	out_uint16_le(s, length);
 
@@ -216,9 +216,9 @@ licence_send_platform_challange_response(uint8 * token, uint8 * crypt_hwid, uint
 	sec_send(s, sec_flags);
 }
 
-/* Parse an platform challange request packet */
+/* Parse an platform challenge request packet */
 static RD_BOOL
-licence_parse_platform_challange(STREAM s, uint8 ** token, uint8 ** signature)
+licence_parse_platform_challenge(STREAM s, uint8 ** token, uint8 ** signature)
 {
 	uint16 tokenlen;
 
@@ -238,9 +238,9 @@ licence_parse_platform_challange(STREAM s, uint8 ** token, uint8 ** signature)
 	return s_check_end(s);
 }
 
-/* Process a platform challange  packet */
+/* Process a platform challenge  packet */
 static void
-licence_process_platform_challange(STREAM s)
+licence_process_platform_challenge(STREAM s)
 {
 	uint8 *in_token = NULL, *in_sig;
 	uint8 out_token[LICENCE_TOKEN_SIZE], decrypt_token[LICENCE_TOKEN_SIZE];
@@ -250,7 +250,7 @@ licence_process_platform_challange(STREAM s)
 	RDSSL_RC4 crypt_key;
 
 	/* Parse incoming packet and save the encrypted token */
-	licence_parse_platform_challange(s, &in_token, &in_sig);
+	licence_parse_platform_challenge(s, &in_token, &in_sig);
 	memcpy(out_token, in_token, LICENCE_TOKEN_SIZE);
 
 	/* Decrypt the token. It should read TEST in Unicode. */
@@ -267,7 +267,7 @@ licence_process_platform_challange(STREAM s)
 	rdssl_rc4_set_key(&crypt_key, g_licence_key, 16);
 	rdssl_rc4_crypt(&crypt_key, hwid, crypt_hwid, LICENCE_HWID_SIZE);
 
-	licence_send_platform_challange_response(out_token, crypt_hwid, out_sig);
+	licence_send_platform_challenge_response(out_token, crypt_hwid, out_sig);
 }
 
 /* Process a new licence packet */
@@ -327,7 +327,7 @@ licence_process_error_alert(STREAM s)
 		return;
 	}
 
-	/* handle error codes, for now, jsut report them */
+	/* handle error codes, for now, just report them */
 	switch (error_code)
 	{
 		case 0x6:	// ERR_NO_LICENSE_SERVER
@@ -370,8 +370,8 @@ licence_process(STREAM s)
 			licence_process_request(s);
 			break;
 
-		case LICENCE_TAG_PLATFORM_CHALLANGE:
-			licence_process_platform_challange(s);
+		case LICENCE_TAG_PLATFORM_CHALLENGE:
+			licence_process_platform_challenge(s);
 			break;
 
 		case LICENCE_TAG_NEW_LICENCE:

@@ -208,7 +208,7 @@ add_sequence(char *rest, char *mapname)
 		return;
 	}
 
-	logger(Keyboard, Debug, "add_sequence(), adding squence for keysym '%s' (0x%lx)", keyname,
+	logger(Keyboard, Debug, "add_sequence(), adding sequence for keysym '%s' (0x%lx)", keyname,
 	       keysym);
 
 	entry = new_key_translation_entry(keysym);

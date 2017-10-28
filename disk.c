@@ -276,7 +276,7 @@ open_weak_exclusive(const char *pathname, int flags, mode_t mode)
 		return ret;
 	}
 
-	/* An error occured, and we are using O_EXCL. In case the FS
+	/* An error occurred, and we are using O_EXCL. In case the FS
 	   doesn't support O_EXCL, some kind of error will be
 	   returned. Unfortunately, we don't know which one. Linux
 	   2.6.8 seems to return 524, but I cannot find a documented
@@ -309,7 +309,7 @@ open_weak_exclusive(const char *pathname, int flags, mode_t mode)
 }
 
 /* Enumeration of devices from rdesktop.c        */
-/* returns numer of units found and initialized. */
+/* returns number of units found and initialized. */
 /* optarg looks like ':h=/mnt/floppy,b=/mnt/usbdevice1' */
 /* when it arrives to this function.             */
 int
@@ -368,7 +368,7 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 
 	sprintf(path, "%s%s", g_rdpdr_device[device_id].local_path, filename ? filename : "");
 
-	/* Protect against mailicous servers:
+	/* Protect against malicious servers:
 	   somelongpath/..     not allowed
 	   somelongpath/../b   not allowed
 	   somelongpath/..b    in principle ok, but currently not allowed
@@ -416,7 +416,7 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 
 	/*printf("Open: \"%s\"  flags: %X, accessmask: %X sharemode: %X create disp: %X\n", path, flags_and_attributes, accessmask, sharemode, create_disposition); */
 
-	/* Get information about file and set that flag ourselfs */
+	/* Get information about file and set that flag ourselves */
 	if ((stat(path, &filestat) == 0) && (S_ISDIR(filestat.st_mode)))
 	{
 		if (flags_and_attributes & FILE_NON_DIRECTORY_FILE)
@@ -1168,7 +1168,7 @@ disk_query_volume_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 			out_uint32_le(out, stat_fs.f_blocks);	/* Total allocation units low */
 			out_uint32_le(out, 0);	/* Total allocation high units */
 			out_uint32_le(out, stat_fs.f_bfree);	/* Available allocation units */
-			out_uint32_le(out, 0);	/* Available allowcation units */
+			out_uint32_le(out, 0);	/* Available allocation units */
 			out_uint32_le(out, stat_fs.f_bsize / 0x200);	/* Sectors per allocation unit */
 			out_uint32_le(out, 0x200);	/* Bytes per sector */
 			break;
@@ -1180,7 +1180,7 @@ disk_query_volume_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 			out_uint32_le(out, stat_fs.f_bavail);	/* Caller allocation units low */
 			out_uint32_le(out, 0);	/* Caller allocation units high */
 			out_uint32_le(out, stat_fs.f_bfree);	/* Available allocation units */
-			out_uint32_le(out, 0);	/* Available allowcation units */
+			out_uint32_le(out, 0);	/* Available allocation units */
 			out_uint32_le(out, stat_fs.f_bsize / 0x200);	/* Sectors per allocation unit */
 			out_uint32_le(out, 0x200);	/* Bytes per sector */
 			break;

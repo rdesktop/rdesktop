@@ -82,7 +82,7 @@ _ctrl_slave_new(int sock)
 	}
 	else
 	{
-		/* no elemnts in list, lets add first */
+		/* no elements in list, lets add first */
 		_ctrl_slaves = ns;
 	}
 }
@@ -427,7 +427,7 @@ ctrl_check_fds(fd_set * rfds, fd_set * wfds)
 					p = strchr(p + 1, '\n');
 				}
 
-				/* If we havent found an nonescaped \n we need more data */
+				/* If we haven't found a nonescaped \n we need more data */
 				if (p == NULL)
 					continue;
 
@@ -485,12 +485,12 @@ ctrl_send_command(const char *cmd, const char *arg)
 	if (ret != 0)
 		goto bail_out;
 
-	/* escape the utf-8 string */
+	/* escape the UTF-8 string */
 	escaped = utils_string_escape(tmp);
 	if ((strlen(escaped) + 1) > CTRL_LINEBUF_SIZE - 1)
 		goto bail_out;
 
-	/* send escaped utf-8 command to master */
+	/* send escaped UTF-8 command to master */
 	send(s, escaped, strlen(escaped), 0);
 	send(s, "\n", 1, 0);
 

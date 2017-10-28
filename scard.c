@@ -265,10 +265,10 @@ scard_enum_devices(uint32 * id, char *optarg)
 typedef struct _scard_handle_list_t
 {
 	struct _scard_handle_list_t *next;
-	/* pcsc handles is datatype long which 
-	   is arch sizedependent */
+	/* PCSC handle is datatype long which 
+	   is arch size-dependent */
 	long handle;
-	/* rdp server handles are always 32bit */
+	/* RDP server handles are always 32 bit */
 	uint32_t server;
 } _scard_handle_list_t;
 
@@ -284,7 +284,7 @@ void
 _scard_handle_list_add(long handle)
 {
 	_scard_handle_list_t *list = g_scard_handle_list;
-	/* we dont care of order of list so to simplify the add 
+	/* we don't care of order of list so to simplify the add 
 	   we add new items to front of list */
 	_scard_handle_list_t *item = xmalloc(sizeof(_scard_handle_list_t));
 	item->next = list;
@@ -730,7 +730,7 @@ TS_SCardEstablishContext(STREAM in, STREAM out)
       bail_out:
 	out_uint32_le(out, 0x00000004);
 	out_uint32_le(out, hContext);	/* must not be 0 (Seems to be pointer), don't know what is this (I use hContext as value) */
-	/* i hope it's not a pointer because i just downcasted it - jlj */
+	/* I hope it's not a pointer because i just downcasted it - jlj */
 	out_uint32_le(out, 0x00000004);
 	out_uint32_le(out, hContext);
 	outForceAlignment(out, 8);
@@ -1251,7 +1251,7 @@ TS_SCardGetStatusChange(STREAM in, STREAM out, RD_BOOL wide)
 	memset(myRsArray, 0, dwCount * sizeof(SERVER_SCARD_READERSTATE_A));
 	copyReaderState_ServerToMyPCSC(rsArray, myRsArray, (SERVER_DWORD) dwCount);
 
-	/* Workaround for a bug in pcsclite, timeout value of 0 is handled as INFINIT
+	/* Workaround for a bug in pcsc-lite, timeout value of 0 is handled as INFINIT
 	   but is by Windows PCSC spec. used for polling current state.
 	 */
 	if (dwTimeout == 0)
@@ -2292,7 +2292,7 @@ scard_device_control(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 	out_uint32_le(out, 0xCCCCCCCC);
 	psize = out->p;
 	out_uint32_le(out, 0x00000000);	/* Size of data portion */
-	out_uint32_le(out, 0x00000000);	/* Zero bytes (may be usefull) */
+	out_uint32_le(out, 0x00000000);	/* Zero bytes (may be useful) */
 	pStatusCode = out->p;
 	out_uint32_le(out, 0x00000000);	/* Status Code */
 
@@ -2590,7 +2590,7 @@ SC_deviceControl(PSCThreadData data)
 	buffer_len = (size_t) data->out->p - (size_t) data->out->data;
 
 	/* if iorequest belongs to another epoch, don't send response
-	   back to server due to it's considered as abdonend.
+	   back to server due to it's considered as abandoned.
 	 */
 	if (data->epoch == curEpoch)
 		rdpdr_send_completion(data->device, data->id, 0, buffer_len, data->out->data,

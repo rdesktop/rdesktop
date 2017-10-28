@@ -74,7 +74,7 @@ static int scrolllock;
 // this is non null if vgalib has non accel functions available
 // reading from video memory is sooo slow
 static uint8* sdata = 0;
-static int g_save_mem = 0; // for video memory use eg sdata == 0
+static int g_save_mem = 0; // for video memory use e.g. sdata == 0
 
 // video acceleration
 static int use_accel = 1;
@@ -1819,7 +1819,7 @@ void out_params(void)
   fprintf(stderr, "   -t: tcp port\n");
   fprintf(stderr, "   -u: user name\n");
   fprintf(stderr, "   -n: client hostname\n");
-  fprintf(stderr, "   -d: disable accel funcs\n");
+  fprintf(stderr, "   -d: disable acceleration functions\n");
   fprintf(stderr, "   -a: connection colour depth\n");
   fprintf(stderr, "   -l: low memory\n");
   fprintf(stderr, "\n");

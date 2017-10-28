@@ -27,7 +27,7 @@
 
 /* Contacts:                                */
 
-/* hifn contact mentioned in the faq is     */
+/* hifn contact mentioned in the FAQ is     */
 /* Robert Friend rfriend at hifn dot com    */
 
 /* if you have questions regarding MPPC     */
@@ -41,7 +41,7 @@
 
 /* Algorithm: */
 
-/* as the rfc states the algorithm seems to */
+/* as the RFC states the algorithm seems to */
 /* be LZ77 with a sliding buffer            */
 /* that is empty at init.                   */
 

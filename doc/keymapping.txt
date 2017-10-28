@@ -2,7 +2,7 @@ Keyboard mapping
 ================
 This release of rdesktop uses a new, portable keyboard mapping
 implementation. It should hopefully work on all X11 systems. This new
-implementation only looks at X11 keysyms: Not on (nonportable)
+implementation only looks at X11 keysyms: Not on (non-portable)
 keycodes or modifier status. This means that rdesktop will obey your
 local keyboard configuration. For example, if you have swapped
 CapsLock and Control, rdesktop will use this mapping. 
@@ -224,7 +224,7 @@ works:
 
    xmodmap -e "keycode 49 = egrave"
 
-4. Test a char generated with AltGr, such as @ on a swedish keyboard. 
+4. Test a char generated with AltGr, such as @ on a Swedish keyboard. 
 
 5. Test Ctrl-Alt-Delete. 
 
@@ -244,7 +244,7 @@ works:
     KEYMAP_PATH, $CWD/keymaps, and from an absolute path. 
 
 11. Press Shift, then press a key modified by shift, the release
-    shift, then release the other key.  Do this in a speedy fasion.
+    shift, then release the other key.  Do this in a speedy fashion.
     Make sure the shift state is not stuck down.
 
 12. Test all numpad keys, when not using the -N option. 
