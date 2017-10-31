@@ -457,6 +457,7 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 		/* Client Auto-Reconnect */
 		if (g_has_reconnect_random)
 		{
+			logger(Protocol, Debug, "rdp_send_logon_info(), Sending auto-reconnect cookie.");
 			out_uint16_le(s, 28);	/* cbAutoReconnectLen */
 			/* ARC_CS_PRIVATE_PACKET */
 			out_uint32_le(s, 28);	/* cbLen */
@@ -1436,51 +1437,69 @@ process_update_pdu(STREAM s)
 }
 
 
-/* Process a Save Session Info PDU */
+/* Process TS_LOGIN_INFO_EXTENDED data structure */
+static void
+process_ts_logon_info_extended(STREAM s)
+{
+	uint32 fieldspresent;
+	uint32 len;
+	uint32 version;
+
+	in_uint8s(s, 2);	/* Length */
+	in_uint32_le(s, fieldspresent);
+	if (fieldspresent & LOGON_EX_AUTORECONNECTCOOKIE)
+	{
+		/* TS_LOGON_INFO_FIELD */
+		in_uint8s(s, 4);	/* cbFieldData */
+
+		/* ARC_SC_PRIVATE_PACKET */
+		in_uint32_le(s, len);
+		if (len != 28)
+		{
+			logger(Protocol, Error,
+			       "process_ts_logon_info_extended(), invalid length in Auto-Reconnect packet");
+			return;
+		}
+
+		in_uint32_le(s, version);
+		if (version != 1)
+		{
+			logger(Protocol, Error,
+			       "process_ts_logon_info_extended(), unsupported version of Auto-Reconnect packet");
+			return;
+		}
+
+		in_uint32_le(s, g_reconnect_logonid);
+		in_uint8a(s, g_reconnect_random, 16);
+		g_has_reconnect_random = True;
+		g_reconnect_random_ts = time(NULL);
+		logger(Protocol, Debug,
+		       "process_ts_logon_info_extended(), saving Auto-Reconnect cookie, id=%u",
+		       g_reconnect_logonid);
+	}
+}
+
+/* Process TS_SAVE_SESSION_INFO_PDU_DATA data structure */
 void
 process_pdu_logon(STREAM s)
 {
 	uint32 infotype;
 	in_uint32_le(s, infotype);
-	if (infotype == INFOTYPE_LOGON_EXTENDED_INF)
+
+	switch(infotype)
 	{
-		uint32 fieldspresent;
+	case INFOTYPE_LOGON_PLAINNOTIFY: /* TS_PLAIN_NOTIFY */
+		logger(Protocol, Debug, "process_pdu_logon(), Received TS_LOGIN_PLAIN_NOTIFY");
+		in_uint8s(s, 576); /* pad */
+		break;
 
-		in_uint8s(s, 2);	/* Length */
-		in_uint32_le(s, fieldspresent);
-		if (fieldspresent & LOGON_EX_AUTORECONNECTCOOKIE)
-		{
-			uint32 len;
-			uint32 version;
+	case INFOTYPE_LOGON_EXTENDED_INF: /* TS_LOGON_INFO_EXTENDED */
+		logger(Protocol, Debug, "process_pdu_logon(), Received TS_LOGIN_INFO_EXTENDED");
+		process_ts_logon_info_extended(s);
+		break;
 
-			/* TS_LOGON_INFO_FIELD */
-			in_uint8s(s, 4);	/* cbFieldData */
-
-			/* ARC_SC_PRIVATE_PACKET */
-			in_uint32_le(s, len);
-			if (len != 28)
-			{
-				logger(Protocol, Error,
-				       "process_pdu_logon(), invalid length in Auto-Reconnect packet");
-				return;
-			}
-
-			in_uint32_le(s, version);
-			if (version != 1)
-			{
-				logger(Protocol, Error,
-				       "process_pdu_logon(), unsupported version of Auto-Reconnect packet");
-				return;
-			}
-
-			in_uint32_le(s, g_reconnect_logonid);
-			in_uint8a(s, g_reconnect_random, 16);
-			g_has_reconnect_random = True;
-			g_reconnect_random_ts = time(NULL);
-			logger(Protocol, Debug,
-			       "process_pdu_logon(), saving Auto-Reconnect cookie, id=%u",
-			       g_reconnect_logonid);
-		}
+	default:
+		logger(Protocol, Warning, "process_pdu_logon(), Unhandled login infotype %d", infotype);
 	}
 }
 
