@@ -25,6 +25,7 @@
 extern char g_hostname[16];
 extern int g_width;
 extern int g_height;
+extern int g_dpi;
 extern unsigned int g_keylayout;
 extern int g_keyboard_type;
 extern int g_keyboard_subtype;
@@ -391,7 +392,7 @@ sec_establish_key(void)
 static void
 sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 {
-	int length = 162 + 76 + 12 + 4;
+	int length = 162 + 76 + 12 + 4 + (g_dpi > 0 ? 18 : 0);
 	unsigned int i;
 	uint32 rdpversion = RDP_40;
 	uint16 capflags = RNS_UD_CS_SUPPORT_ERRINFO_PDU;
@@ -422,7 +423,7 @@ sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 
 	/* Client information (TS_UD_CS_CORE) */
 	out_uint16_le(s, CS_CORE);		/* type */
-	out_uint16_le(s, 216);			/* length */
+	out_uint16_le(s, 216 + (g_dpi > 0 ? 18 : 0));	/* length */
 	out_uint32_le(s, rdpversion);           /* version */
 	out_uint16_le(s, g_width);		/* desktopWidth */
 	out_uint16_le(s, g_height);		/* desktopHeight */
@@ -454,6 +455,17 @@ sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 	out_uint8(s, 0);			/* connectionType */
 	out_uint8(s, 0);			/* pad */
 	out_uint32_le(s, selected_protocol);	/* serverSelectedProtocol */
+	if (g_dpi > 0)
+	{
+		/* Extended client info describing monitor geometry */
+		out_uint32_le(s, g_width * 254 / (g_dpi * 10)); /* desktop physical width */
+		out_uint32_le(s, g_height * 254 / (g_dpi * 10)); /* desktop physical height */
+		out_uint16_le(s, ORIENTATION_LANDSCAPE);
+		out_uint32_le(s, g_dpi < 96 ? 100 : (g_dpi * 100 + 48) / 96); /* desktop scale factor */
+		/* the spec calls this out as being valid for range 100-500 but I doubt the upper range is accurate */
+		out_uint32_le(s, g_dpi < 134 ? 100 : (g_dpi < 173 ? 140 : 180)); /* device scale factor */
+		/* the only allowed values for device scale factor are 100, 140, and 180. */
+	}
 
 	/* Write a Client Cluster Data (TS_UD_CS_CLUSTER) */
 	uint32 cluster_flags = 0;

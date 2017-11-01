@@ -71,6 +71,7 @@ int g_sizeopt = 0;		/* If non-zero, a special size has been
 				   requested. If 1, the geometry will be fetched
 				   from _NET_WORKAREA. If negative, absolute value
 				   specifies the percent of the whole screen. */
+int g_dpi = 0;			/* device DPI: default not set */
 int g_width = 800;
 int g_height = 600;
 int g_xpos = 0;
@@ -169,7 +170,7 @@ usage(char *program)
 	fprintf(stderr, "   -p: password (- to prompt)\n");
 	fprintf(stderr, "   -n: client hostname\n");
 	fprintf(stderr, "   -k: keyboard layout on server (en-us, de, sv, etc.)\n");
-	fprintf(stderr, "   -g: desktop geometry (WxH)\n");
+	fprintf(stderr, "   -g: desktop geometry (WxH[@dpi])\n");
 #ifdef WITH_SCARD
 	fprintf(stderr, "   -i: enables smartcard authentication, password is used as pin\n");
 #endif
@@ -739,6 +740,16 @@ main(int argc, char *argv[])
 					}
 
 					p++;
+				}
+
+				if (*p == '@')
+				{
+					g_dpi = strtol(p + 1, &p, 10);
+					if (g_dpi <= 0)
+					{
+						logger(Core, Error, "invalid DPI: expected a positive integer after @\n");
+						return EX_USAGE;
+					}
 				}
 
 				if (*p == '+' || *p == '-')
