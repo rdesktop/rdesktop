@@ -902,7 +902,7 @@ process_text2(STREAM s, TEXT2_ORDER * os, uint32 present, RD_BOOL delta)
 
 /* Process a raw bitmap cache order */
 static void
-process_raw_bmpcache(STREAM s)
+process_cache_bitmap_uncompressed(STREAM s)
 {
 	RD_HBITMAP bitmap;
 	uint16 cache_idx, bufsize;
@@ -920,7 +920,7 @@ process_raw_bmpcache(STREAM s)
 	in_uint16_le(s, cache_idx);
 	in_uint8p(s, data, bufsize);
 
-	logger(Graphics, Debug, "process_raw_bpmcache(), cx=%d, cy=%d, id=%d, idx=%d", width,
+	logger(Graphics, Debug, "process_cache_bitmap_uncompressed(), cx=%d, cy=%d, id=%d, idx=%d", width,
 	       height, cache_id, cache_idx);
 	inverted = (uint8 *) xmalloc(width * height * Bpp);
 	for (y = 0; y < height; y++)
@@ -936,7 +936,7 @@ process_raw_bmpcache(STREAM s)
 
 /* Process a bitmap cache order */
 static void
-process_bmpcache(STREAM s)
+process_cache_bitmap_compressed(STREAM s)
 {
 	RD_HBITMAP bitmap;
 	uint16 cache_idx, size;
@@ -973,7 +973,7 @@ process_bmpcache(STREAM s)
 	}
 	in_uint8p(s, data, size);
 	logger(Graphics, Debug,
-	       "process_bmpcache(), cx=%d, cy=%d, id=%d, idx=%d, bpp=%d, size=%d, pad1=%d, bufsize=%d, pad2=%d, rs=%d, fs=%d",
+	       "process_cache_bitmap_compressed(), cx=%d, cy=%d, id=%d, idx=%d, bpp=%d, size=%d, pad1=%d, bufsize=%d, pad2=%d, rs=%d, fs=%d",
 	       width, height, cache_id, cache_idx, bpp, size, pad1, bufsize, pad2, row_size,
 	       final_size);
 
@@ -986,7 +986,7 @@ process_bmpcache(STREAM s)
 	}
 	else
 	{
-		logger(Graphics, Error, "process_bmpcache(), Failed to decompress bitmap data");
+		logger(Graphics, Error, "process_cache_bitmap_compressed(), Failed to decompress bitmap data");
 	}
 
 	xfree(bmpdata);
@@ -994,7 +994,7 @@ process_bmpcache(STREAM s)
 
 /* Process a bitmap cache v2 order */
 static void
-process_bmpcache2(STREAM s, uint16 flags, RD_BOOL compressed)
+process_cache_bitmap_rev2(STREAM s, uint16 flags, RD_BOOL compressed)
 {
 	RD_HBITMAP bitmap;
 	int y;
@@ -1035,7 +1035,7 @@ process_bmpcache2(STREAM s, uint16 flags, RD_BOOL compressed)
 	in_uint8p(s, data, bufsize);
 
 	logger(Graphics, Debug,
-	       "process_bmpcache2(), compr=%d, flags=%x, cx=%d, cy=%d, id=%d, idx=%d, Bpp=%d, bs=%d",
+	       "process_cache_bitmap_rev2(), compr=%d, flags=%x, cx=%d, cy=%d, id=%d, idx=%d, Bpp=%d, bs=%d",
 	       compressed, flags, width, height, cache_id, cache_idx, Bpp, bufsize);
 
 	bmpdata = (uint8 *) xmalloc(width * height * Bpp);
@@ -1045,7 +1045,7 @@ process_bmpcache2(STREAM s, uint16 flags, RD_BOOL compressed)
 		if (!bitmap_decompress(bmpdata, width, height, data, bufsize, Bpp))
 		{
 			logger(Graphics, Error,
-			       "process_bmpcache2(), failed to decompress bitmap data");
+			       "process_cache_bitmap_rev2(), failed to decompress bitmap data");
 			xfree(bmpdata);
 			return;
 		}
@@ -1068,15 +1068,15 @@ process_bmpcache2(STREAM s, uint16 flags, RD_BOOL compressed)
 	}
 	else
 	{
-		logger(Graphics, Error, "process_bmpcache2(), ui_create_bitmap(), failed");
+		logger(Graphics, Error, "process_cache_bitmap_rev2(), ui_create_bitmap() failed");
 	}
 
 	xfree(bmpdata);
 }
 
-/* Process a colourmap cache order */
+/* Process a colormap cache order */
 static void
-process_colcache(STREAM s)
+process_cache_color_table(STREAM s)
 {
 	COLOURENTRY *entry;
 	COLOURMAP map;
@@ -1098,7 +1098,7 @@ process_colcache(STREAM s)
 		in_uint8s(s, 1);	/* pad */
 	}
 
-	logger(Graphics, Debug, "process_colcache(), id=%d, n=%d", cache_id, map.ncolours);
+	logger(Graphics, Debug, "process_cache_color_table(), id=%d, n=%d", cache_id, map.ncolours);
 
 	hmap = ui_create_colourmap(&map);
 
@@ -1110,7 +1110,7 @@ process_colcache(STREAM s)
 
 /* Process a font cache order */
 static void
-process_fontcache(STREAM s)
+process_cache_glyph(STREAM s)
 {
 	RD_HGLYPH bitmap;
 	uint8 font, nglyphs;
@@ -1121,7 +1121,7 @@ process_fontcache(STREAM s)
 	in_uint8(s, font);
 	in_uint8(s, nglyphs);
 
-	logger(Graphics, Debug, "process_fontcache(), font=%d, n=%d", font, nglyphs);
+	logger(Graphics, Debug, "process_cache_glyph(), font=%d, n=%d", font, nglyphs);
 
 	for (i = 0; i < nglyphs; i++)
 	{
@@ -1174,7 +1174,7 @@ process_compressed_8x8_brush_data(uint8 * in, uint8 * out, int Bpp)
 
 /* Process a brush cache order */
 static void
-process_brushcache(STREAM s, uint16 flags)
+process_cache_brush(STREAM s, uint16 flags)
 {
 	UNUSED(flags);
 	BRUSHDATA brush_data;
@@ -1190,7 +1190,7 @@ process_brushcache(STREAM s, uint16 flags)
 	in_uint8(s, type);	/* type, 0x8x = cached */
 	in_uint8(s, size);
 
-	logger(Graphics, Debug, "process_brushcache(), idx=%d, wd=%d, ht=%d, type=0x%x sz=%d",
+	logger(Graphics, Debug, "process_cache_brush(), idx=%d, wd=%d, ht=%d, type=0x%x sz=%d",
 	       cache_idx, width, height, type, size);
 
 	if ((width == 8) && (height == 8))
@@ -1211,7 +1211,7 @@ process_brushcache(STREAM s, uint16 flags)
 			else
 			{
 				logger(Graphics, Warning,
-				       "process_brushcache(), incompatible brush, colour_code %d size %d",
+				       "process_cache_brush(), incompatible brush, colour_code %d size %d",
 				       colour_code, size);
 			}
 			cache_put_brush_data(1, cache_idx, &brush_data);
@@ -1236,14 +1236,14 @@ process_brushcache(STREAM s, uint16 flags)
 		else
 		{
 			logger(Graphics, Warning,
-			       "process_brushcache(), incompatible brush, colour_code %d size %d",
+			       "process_cache_brush(), incompatible brush, colour_code %d size %d",
 			       colour_code, size);
 		}
 	}
 	else
 	{
 		logger(Graphics, Warning,
-		       "process_brushcache(), incompatible brush, width height %d %d", width,
+		       "process_cache_brush(), incompatible brush, width height %d %d", width,
 		       height);
 	}
 }
@@ -1265,40 +1265,40 @@ process_secondary_order(STREAM s)
 	uint8 type;
 	uint8 *next_order;
 
-	in_uint16_le(s, length);
-	in_uint16_le(s, flags);	/* used by bmpcache2 */
-	in_uint8(s, type);
+	in_uint16_le(s, length);	/* orderLength */
+	in_uint16_le(s, flags);		/* extraFlags */
+	in_uint8(s, type);		/* orderType */
 
 	next_order = s->p + (sint16) length + 7;
 
 	switch (type)
 	{
 		case TS_CACHE_BITMAP_UNCOMPRESSED:
-			process_raw_bmpcache(s);
+			process_cache_bitmap_uncompressed(s);
 			break;
 
 		case TS_CACHE_COLOR_TABLE:
-			process_colcache(s);
+			process_cache_color_table(s);
 			break;
 
 		case TS_CACHE_BITMAP_COMPRESSED:
-			process_bmpcache(s);
+			process_cache_bitmap_compressed(s);
 			break;
 
 		case TS_CACHE_GLYPH:
-			process_fontcache(s);
+			process_cache_glyph(s);
 			break;
 
 		case TS_CACHE_BITMAP_UNCOMPRESSED_REV2:
-			process_bmpcache2(s, flags, False);	/* uncompressed */
+			process_cache_bitmap_rev2(s, flags, False);	/* uncompressed */
 			break;
 
 		case TS_CACHE_BITMAP_COMPRESSED_REV2:
-			process_bmpcache2(s, flags, True);	/* compressed */
+			process_cache_bitmap_rev2(s, flags, True);	/* compressed */
 			break;
 
 		case TS_CACHE_BRUSH:
-			process_brushcache(s, flags);
+			process_cache_brush(s, flags);
 			break;
 
 		default:
