@@ -1319,16 +1319,16 @@ process_primary_order(STREAM s, uint8 order_flags)
 
 	switch (os->order_type)
 	{
-		case RDP_ORDER_TRIBLT:
-		case RDP_ORDER_TEXT2:
+		case TS_ENC_MEM3BLT_ORDER:
+		case TS_ENC_INDEX_ORDER:
 			size = 3;
 			break;
 
-		case RDP_ORDER_PATBLT:
-		case RDP_ORDER_MEMBLT:
-		case RDP_ORDER_LINE:
-		case RDP_ORDER_POLYGON2:
-		case RDP_ORDER_ELLIPSE2:
+		case TS_ENC_PATBLT_ORDER:
+		case TS_ENC_MEMBLT_ORDER:
+		case TS_ENC_LINETO_ORDER:
+		case TS_ENC_POLYGON_CB_ORDER:
+		case TS_ENC_ELLIPSE_CB_ORDER:
 			size = 2;
 			break;
 
@@ -1354,59 +1354,59 @@ process_primary_order(STREAM s, uint8 order_flags)
 
 	switch (os->order_type)
 	{
-		case RDP_ORDER_DESTBLT:
+		case TS_ENC_DSTBLT_ORDER:
 			process_destblt(s, &os->destblt, present, delta);
 			break;
 
-		case RDP_ORDER_PATBLT:
+		case TS_ENC_PATBLT_ORDER:
 			process_patblt(s, &os->patblt, present, delta);
 			break;
 
-		case RDP_ORDER_SCREENBLT:
+		case TS_ENC_SCRBLT_ORDER:
 			process_screenblt(s, &os->screenblt, present, delta);
 			break;
 
-		case RDP_ORDER_LINE:
+		case TS_ENC_LINETO_ORDER:
 			process_line(s, &os->line, present, delta);
 			break;
 
-		case RDP_ORDER_RECT:
+		case TS_ENC_OPAQUERECT_ORDER:
 			process_rect(s, &os->rect, present, delta);
 			break;
 
-		case RDP_ORDER_DESKSAVE:
+		case TS_ENC_SAVEBITMAP_ORDER:
 			process_desksave(s, &os->desksave, present, delta);
 			break;
 
-		case RDP_ORDER_MEMBLT:
+		case TS_ENC_MEMBLT_ORDER:
 			process_memblt(s, &os->memblt, present, delta);
 			break;
 
-		case RDP_ORDER_TRIBLT:
+		case TS_ENC_MEM3BLT_ORDER:
 			process_triblt(s, &os->triblt, present, delta);
 			break;
 
-		case RDP_ORDER_POLYGON:
+		case TS_ENC_POLYGON_SC_ORDER:
 			process_polygon(s, &os->polygon, present, delta);
 			break;
 
-		case RDP_ORDER_POLYGON2:
+		case TS_ENC_POLYGON_CB_ORDER:
 			process_polygon2(s, &os->polygon2, present, delta);
 			break;
 
-		case RDP_ORDER_POLYLINE:
+		case TS_ENC_POLYLINE_ORDER:
 			process_polyline(s, &os->polyline, present, delta);
 			break;
 
-		case RDP_ORDER_ELLIPSE:
+		case TS_ENC_ELLIPSE_SC_ORDER:
 			process_ellipse(s, &os->ellipse, present, delta);
 			break;
 
-		case RDP_ORDER_ELLIPSE2:
+		case TS_ENC_ELLIPSE_CB_ORDER:
 			process_ellipse2(s, &os->ellipse2, present, delta);
 			break;
 
-		case RDP_ORDER_TEXT2:
+		case TS_ENC_INDEX_ORDER:
 			process_text2(s, &os->text2, present, delta);
 			break;
 
@@ -1466,5 +1466,5 @@ void
 reset_order_state(void)
 {
 	memset(&g_order_state, 0, sizeof(g_order_state));
-	g_order_state.order_type = RDP_ORDER_PATBLT;
+	g_order_state.order_type = TS_ENC_PATBLT_ORDER;
 }
