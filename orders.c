@@ -1433,21 +1433,23 @@ process_orders(STREAM s, uint16 num_orders)
 	{
 		in_uint8(s, order_flags);
 
-		if (!(order_flags & RDP_ORDER_STANDARD))
+		/* order_flags can hold more data than just the type, so we
+		   only want to look at the TS_STANDARD and TS_SECONDARY
+		   bits. */
+		switch (order_flags & (RDP_ORDER_STANDARD | RDP_ORDER_SECONDARY))
 		{
-			logger(Graphics, Error, "process_orders(), order parsing failed");
-			break;
+			case RDP_ORDER_STANDARD:
+				process_primary_order(s, order_flags);
+				break;
+			case (RDP_ORDER_STANDARD | RDP_ORDER_SECONDARY):
+				process_secondary_order(s);
+				break;
+			default:
+				/* FIXME: alternate secondary drawing orders */
+				logger(Graphics, Warning,
+				       "process_orders(), Unhandled order type 0x%x",
+				       order_flags);
 		}
-
-		if (order_flags & RDP_ORDER_SECONDARY)
-		{
-			process_secondary_order(s);
-		}
-		else
-		{
-			process_primary_order(s, order_flags);
-		}
-
 		processed++;
 	}
 #if 0
