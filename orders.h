@@ -17,14 +17,15 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#define RDP_ORDER_STANDARD   0x01
-#define RDP_ORDER_SECONDARY  0x02
-#define RDP_ORDER_BOUNDS     0x04
-#define RDP_ORDER_CHANGE     0x08
-#define RDP_ORDER_DELTA      0x10
-#define RDP_ORDER_LASTBOUNDS 0x20
-#define RDP_ORDER_SMALL      0x40
-#define RDP_ORDER_TINY       0x80
+/* DRAWING_ORDER controlFlags */
+#define TS_STANDARD		0x01
+#define TS_SECONDARY		0x02
+#define TS_BOUNDS		0x04
+#define TS_TYPE_CHANGE		0x08
+#define TS_DELTA_COORDINATES    0x10
+#define TS_ZERO_BOUNDS_DELTAS	0x20
+#define TS_ZERO_FIELD_BYTE_BIT0 0x40
+#define TS_ZERO_FIELD_BYTE_BIT1 0x80
 
 enum RDP_ORDER_TYPE
 {

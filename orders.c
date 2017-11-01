@@ -31,12 +31,12 @@ rdp_in_present(STREAM s, uint32 * present, uint8 flags, int size)
 	uint8 bits;
 	int i;
 
-	if (flags & RDP_ORDER_SMALL)
+	if (flags & TS_ZERO_FIELD_BYTE_BIT0)
 	{
 		size--;
 	}
 
-	if (flags & RDP_ORDER_TINY)
+	if (flags & TS_ZERO_FIELD_BYTE_BIT1)
 	{
 		if (size < 2)
 			size = 0;
@@ -1312,7 +1312,7 @@ process_primary_order(STREAM s, uint8 order_flags)
 	int size;
 	RD_BOOL delta;
 
-	if (order_flags & RDP_ORDER_CHANGE)
+	if (order_flags & TS_TYPE_CHANGE)
 	{
 		in_uint8(s, os->order_type);
 	}
@@ -1338,9 +1338,9 @@ process_primary_order(STREAM s, uint8 order_flags)
 
 	rdp_in_present(s, &present, order_flags, size);
 
-	if (order_flags & RDP_ORDER_BOUNDS)
+	if (order_flags & TS_BOUNDS)
 	{
-		if (!(order_flags & RDP_ORDER_LASTBOUNDS))
+		if (!(order_flags & TS_ZERO_BOUNDS_DELTAS))
 			rdp_parse_bounds(s, &os->bounds);
 
 		ui_set_clip(os->bounds.left,
@@ -1350,7 +1350,7 @@ process_primary_order(STREAM s, uint8 order_flags)
 			    os->bounds.bottom - os->bounds.top + 1);
 	}
 
-	delta = order_flags & RDP_ORDER_DELTA;
+	delta = order_flags & TS_DELTA_COORDINATES;
 
 	switch (os->order_type)
 	{
@@ -1417,7 +1417,7 @@ process_primary_order(STREAM s, uint8 order_flags)
 			return;
 	}
 
-	if (order_flags & RDP_ORDER_BOUNDS)
+	if (order_flags & TS_BOUNDS)
 		ui_reset_clip();
 }
 
@@ -1436,12 +1436,12 @@ process_orders(STREAM s, uint16 num_orders)
 		/* order_flags can hold more data than just the type, so we
 		   only want to look at the TS_STANDARD and TS_SECONDARY
 		   bits. */
-		switch (order_flags & (RDP_ORDER_STANDARD | RDP_ORDER_SECONDARY))
+		switch (order_flags & (TS_STANDARD | TS_SECONDARY))
 		{
-			case RDP_ORDER_STANDARD:
+			case TS_STANDARD:
 				process_primary_order(s, order_flags);
 				break;
-			case (RDP_ORDER_STANDARD | RDP_ORDER_SECONDARY):
+			case (TS_STANDARD | TS_SECONDARY):
 				process_secondary_order(s);
 				break;
 			default:
