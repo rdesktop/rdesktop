@@ -1268,35 +1268,36 @@ process_secondary_order(STREAM s)
 
 	switch (type)
 	{
-		case RDP_ORDER_RAW_BMPCACHE:
+		case TS_CACHE_BITMAP_UNCOMPRESSED:
 			process_raw_bmpcache(s);
 			break;
 
-		case RDP_ORDER_COLCACHE:
+		case TS_CACHE_COLOR_TABLE:
 			process_colcache(s);
 			break;
 
-		case RDP_ORDER_BMPCACHE:
+		case TS_CACHE_BITMAP_COMPRESSED:
 			process_bmpcache(s);
 			break;
 
-		case RDP_ORDER_FONTCACHE:
+		case TS_CACHE_GLYPH:
 			process_fontcache(s);
 			break;
 
-		case RDP_ORDER_RAW_BMPCACHE2:
+		case TS_CACHE_BITMAP_UNCOMPRESSED_REV2:
 			process_bmpcache2(s, flags, False);	/* uncompressed */
 			break;
 
-		case RDP_ORDER_BMPCACHE2:
+		case TS_CACHE_BITMAP_COMPRESSED_REV2:
 			process_bmpcache2(s, flags, True);	/* compressed */
 			break;
 
-		case RDP_ORDER_BRUSHCACHE:
+		case TS_CACHE_BRUSH:
 			process_brushcache(s, flags);
 			break;
 
 		default:
+			/* FIXME: TS_CACHE_BITMAP_COMPRESSED_REV3 */
 			logger(Graphics, Warning,
 			       "process_secondary_order(), unhandled secondary order %d", type);
 	}
