@@ -1252,9 +1252,14 @@ process_brushcache(STREAM s, uint16 flags)
 static void
 process_secondary_order(STREAM s)
 {
-	/* The length isn't calculated correctly by the server.
-	 * For very compact orders the length becomes negative
-	 * so a signed integer must be used. */
+	/* The length isn't calculated correctly by the server. For very
+	   compact orders the length becomes negative so the protocol specifies
+	   this as a signed integer.
+
+	   "Hence, when decoding the order, the orderLength field MUST be
+	   adjusted by adding 13 bytes. These adjustments are for historical
+	   reasons." */
+
 	uint16 length;
 	uint16 flags;
 	uint8 type;
