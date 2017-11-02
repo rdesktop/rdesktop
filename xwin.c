@@ -151,7 +151,7 @@ static RD_BOOL g_compatible_arch;
      RDP(LE) <-> host(BE) <-> X-Server(LE)
      
    ('host' is the machine running rdesktop; the host simply memcpy's
-    so its endianess doesn't matter)
+    so its endianness doesn't matter)
  */
 static RD_BOOL g_no_translate_image = False;
 
@@ -576,9 +576,9 @@ sw_configurenotify_p(Display * display, XEvent * xevent, XPointer arg)
    throwing away crucial events like DestroyNotify. 
 
    After a ConfigureWindow, according to ICCCM section 4.1.5, we
-   should recieve a ConfigureNotify, either a real or synthetic
+   should receive a ConfigureNotify, either a real or synthetic
    one. This indicates that the configure has been "completed".
-   However, some WMs such as several versions of Metacity fails to
+   However, some WMs such as several versions of Metacity fail to
    send synthetic events. See bug
    http://bugzilla.gnome.org/show_bug.cgi?id=322840. We need to use a
    timeout to avoid a hang. Tk uses the same approach. */
@@ -873,7 +873,7 @@ translate_colour(uint32 colour)
 /* *INDENT-OFF* */
 
 /* repeat and unroll, similar to bitmap.c */
-/* potentialy any of the following translate */
+/* potentially any of the following translate */
 /* functions can use repeat but just doing */
 /* the most common ones */
 
@@ -1883,8 +1883,8 @@ ui_init(void)
 	}
 
 	{
-		uint16 endianess_test = 1;
-		g_host_be = !(RD_BOOL) (*(uint8 *) (&endianess_test));
+		uint16 endianness_test = 1;
+		g_host_be = !(RD_BOOL) (*(uint8 *) (&endianness_test));
 	}
 
 	g_old_error_handler = XSetErrorHandler(error_handler);
@@ -2314,7 +2314,7 @@ handle_button_event(XEvent xevent, RD_BOOL down)
 			if (xevent.type == ButtonRelease)
 			{
 				/* Release the mouse button outside the minimize button, to prevent the
-				   actual minimazation to happen */
+				   actual minimization to happen */
 				rdp_send_input(time(NULL), input_type, button, 1, 1);
 				XIconifyWindow(g_display, g_wnd, DefaultScreen(g_display));
 				return;
@@ -2939,7 +2939,7 @@ get_pixel(uint32 idx, uint8 * andmask, uint8 * xormask, int bpp, uint8 * xor_fla
 			{
 				// If we have an xor bit is high and
 				// andmask bit is low, we should
-				// render a black pixle due to we can
+				// render a black pixel due to we can
 				// not xor blit in X11.
 				argb = 0xff000000;
 				*xor_flag = 1;
@@ -2965,7 +2965,7 @@ get_pixel(uint32 idx, uint8 * andmask, uint8 * xormask, int bpp, uint8 * xor_fla
 	return argb;
 }
 
-/* Copies the pixles from src to dest with given color and offset */
+/* Copies the pixels from src to dest with given color and offset */
 static inline void
 xcursor_stencil(XcursorImage * src, XcursorImage * dst, int dx, int dy, uint32 argb)
 {
@@ -3674,7 +3674,7 @@ ui_ellipse(uint8 opcode,
 			break;
 
 		default:
-			logger(GUI, Warning, "Unimplemented brush styke %d", brush->style);
+			logger(GUI, Warning, "Unimplemented brush style %d", brush->style);
 	}
 
 	RESET_FUNCTION(opcode);
@@ -4093,7 +4093,7 @@ ui_seamless_create_window(unsigned long id, unsigned long group, unsigned long p
 	if (parent == 0xFFFFFFFF)
 	{
 		XSetTransientForHint(g_display, wnd, RootWindowOfScreen(g_screen));
-		/* Some buggy wm:s (kwin) do not handle the above, so fake it
+		/* Some buggy WMs (kwin) do not handle the above, so fake it
 		   using some other hints. */
 		ewmh_set_window_popup(wnd);
 	}
@@ -4104,13 +4104,13 @@ ui_seamless_create_window(unsigned long id, unsigned long group, unsigned long p
 		if (sw_parent)
 			XSetTransientForHint(g_display, wnd, sw_parent->wnd);
 		else
-			logger(GUI, Warning, "ui_seamles_create_window(): no parent window 0x%lx\n",
+			logger(GUI, Warning, "ui_seamless_create_window(): no parent window 0x%lx\n",
 			       parent);
 	}
 
 	if (flags & SEAMLESSRDP_CREATE_MODAL)
 	{
-		/* We do this to support buggy wm:s (*cough* metacity *cough*)
+		/* We do this to support buggy WMs (*cough* Metacity *cough*)
 		   somewhat at least */
 		if (parent == 0x00000000)
 			XSetTransientForHint(g_display, wnd, RootWindowOfScreen(g_screen));

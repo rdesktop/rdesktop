@@ -102,7 +102,7 @@ Applied (in revision 1.29, 2002/07/14).
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/frank_fasttext.patch.txt
 Description:
-Some kind of performence improvements. 
+Some kind of performance improvements. 
 Status:
 From what I can tell, this patch is no longer necessary. 
 
@@ -115,7 +115,7 @@ Description:
 rdesktop uses gethostname to figure out the hostname, but gethostname
 under linux returns an error when the hostname is longer than the
 buffer.  This hack gives gethostname a 64 char buffer and then strips
-the first 16 chars or upto the first '.' and puts the result in
+the first 16 chars or up to the first '.' and puts the result in
 hostname[16].
 
 Status:
@@ -134,7 +134,7 @@ anymore.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/mmihalik_19-7-3-keyfix-4.patch
 Description:
-Some kind of new alternative keyboard mapping imlementation. 
+Some kind of new alternative keyboard mapping implementation. 
 Status:
 Not needed anymore, with the new keyboard mapping implementation. 
 
@@ -286,7 +286,7 @@ Not applied yet. TBD.
 URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/svenni_dis_wmkeybnds.patch
 Description:
-Commandline flag to disable keyboard grabbing. 
+Command line flag to disable keyboard grabbing. 
 Status:
 Applied. 
 
@@ -311,7 +311,7 @@ URL:
 http://bibl4.oru.se/projects/rdesktop/patch19/patches/vincent_19-7-2.secure.patch
 Description:
 Fixes a problem during the connection to a French NT4 TSE (a French
-NT4 TSE doesn't use encryptation).
+NT4 TSE doesn't use encryption).
 Status:
 Applied. 
 

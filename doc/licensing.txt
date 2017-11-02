@@ -2,7 +2,7 @@
 To be able to connect to Microsoft Windows 2000 Terminal Services (and
 probably later versions), you'll need to deal with licensing. This is
 complicated. This file is supposed to contain some information about
-how rdesktop works with Microsofts license systems.
+how rdesktop works with Microsoft's license systems.
 
 There's a lot of information on the MS web site, for example,
 http://support.microsoft.com/default.aspx?scid=kb;EN-US;287687.
@@ -19,7 +19,7 @@ Peter Åstrand <astrand@cendio.se>, 2003-02-06
 > to A was reached today, and no more connections could be made until we
 > changed the client name (by using -n).
 > 
-> We also have another similiar systems, with Linux machine C and W2K server 
+> We also have another similar systems, with Linux machine C and W2K server 
 > D. This server has 200 licenses installed of the type "Select". On this 
 > server, the issued licenses seems to be permanent: The expire date is set 
 > to "-", and we have no problem with this system. 

@@ -35,7 +35,7 @@ extern RDPDR_DEVICE g_rdpdr_device[];
 
 
 /* Enumeration of devices from rdesktop.c        */
-/* returns numer of units found and initialized. */
+/* returns number of units found and initialized. */
 /* optarg looks like ':LPT1=/dev/lp0'            */
 /* when it arrives to this function.             */
 int
@@ -60,7 +60,7 @@ parallel_enum_devices(uint32 * id, char *optarg)
 
 		g_rdpdr_device[*id].local_path = xmalloc(strlen(pos2) + 1);
 		strcpy(g_rdpdr_device[*id].local_path, pos2);
-		logger(Core, Debug, "parallell_enum_devices(), %s to %s", optarg, pos2);
+		logger(Core, Debug, "parallel_enum_devices(), %s to %s", optarg, pos2);
 
 		/* set device type */
 		g_rdpdr_device[*id].device_type = DEVICE_TYPE_PARALLEL;
@@ -88,13 +88,13 @@ parallel_create(uint32 device_id, uint32 access, uint32 share_mode, uint32 dispo
 	parallel_fd = open(g_rdpdr_device[device_id].local_path, O_RDWR);
 	if (parallel_fd == -1)
 	{
-		logger(Core, Error, "parallell_create(), open failed: %s", strerror(errno));
+		logger(Core, Error, "parallel_create(), open failed: %s", strerror(errno));
 		return RD_STATUS_ACCESS_DENIED;
 	}
 
 	/* all read and writes should be non blocking */
 	if (fcntl(parallel_fd, F_SETFL, O_NONBLOCK) == -1)
-		logger(Core, Error, "parallell_create(), fcntl failed: %s", strerror(errno));
+		logger(Core, Error, "parallel_create(), fcntl failed: %s", strerror(errno));
 
 #if defined(LPABORT)
 	/* Retry on errors */

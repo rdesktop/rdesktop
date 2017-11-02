@@ -85,7 +85,7 @@ iso_send_connection_request(char *username, uint32 neg_proto)
 
 	if (g_rdp_version >= RDP_V5 && g_negotiate_rdp_protocol)
 	{
-		/* optional rdp protocol negotiation request for RDPv5 */
+		/* optional RDP protocol negotiation request for RDPv5 */
 		out_uint8(s, RDP_NEG_REQ);
 		out_uint8(s, 0);
 		out_uint16(s, 8);
@@ -297,7 +297,7 @@ iso_connect(char *server, char *username, char *domain, char *password,
 				if (reason != NULL)
 				{
 					logger(Protocol, Warning,
-					       "Protocol negotation failed with reason: %s",
+					       "Protocol negotiation failed with reason: %s",
 					       reason);
 				}
 

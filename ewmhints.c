@@ -41,7 +41,7 @@ static Atom g_net_wm_state_maximized_vert_atom, g_net_wm_state_maximized_horz_at
 Atom g_net_wm_state_atom, g_net_wm_desktop_atom, g_net_wm_ping_atom;
 
 /* 
-   Get window property value (32 bit format) 
+   Get window property value (32-bit format) 
    Returns zero on success, -1 on error
 */
 static int
@@ -150,7 +150,7 @@ get_current_workarea(uint32 * x, uint32 * y, uint32 * width, uint32 * height)
 
 	if (nitems_return % 4)
 	{
-		logger(GUI, Error, "get_current_workare(),_NET_WORKAREA has bad length");
+		logger(GUI, Error, "get_current_workarea(),_NET_WORKAREA has bad length");
 		return (-1);
 	}
 

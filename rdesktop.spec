@@ -10,8 +10,7 @@ Packager: Peter Åstrand <astrand@cendio.se>
 
 %description
 rdesktop is a client for Remote Desktop Protocol (RDP), used in a number of
-Microsoft products including Windows NT Terminal Server, Windows 2000 Server,
-Windows XP, Windows 2003 Server and Windows 2008r2.
+Microsoft products. It is known to work with Microsoft Windows server versions ranging from NT 4 terminal server to Windows Server 2012 R2.
 
 %prep
 rm -rf $RPM_BUILD_ROOT

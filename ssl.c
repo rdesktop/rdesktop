@@ -170,7 +170,7 @@ rdssl_cert_to_rkey(RDSSL_CERT * cert, uint32 * key_len)
 	/* By some reason, Microsoft sets the OID of the Public RSA key to
 	   the oid for "MD5 with RSA Encryption" instead of "RSA Encryption"
 
-	   Kudos to Richard Levitte for the following (. intiutive .) 
+	   Kudos to Richard Levitte for the following (. intuitive .) 
 	   lines of code that resets the OID and let's us extract the key. */
 
 	X509_PUBKEY *key = NULL;

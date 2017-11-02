@@ -170,7 +170,7 @@ utils_mkdir_p(const char *path, int mask)
 	return 0;
 }
 
-/* Convert from system locale string to utf-8 */
+/* Convert from system locale string to UTF-8 */
 int
 utils_locale_to_utf8(const char *src, size_t is, char *dest, size_t os)
 {
@@ -206,7 +206,7 @@ utils_locale_to_utf8(const char *src, size_t is, char *dest, size_t os)
 		goto pass_trough_as_is;
 	}
 
-	/* Out couldn't hold the entire convertion */
+	/* Out couldn't hold the entire conversion */
 	if (is != 0)
 		return -1;
 
@@ -228,7 +228,7 @@ utils_locale_to_utf8(const char *src, size_t is, char *dest, size_t os)
 
 static char *level[] = {
 	"debug",
-	"verbose",		/* Verbose mesasge for end user, no prefixed lines */
+	"verbose",		/* Verbose message for end user, no prefixed lines */
 	"warning",
 	"error",
 	"notice"		/* Normal messages for end user, no prefixed lines */

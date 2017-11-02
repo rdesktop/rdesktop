@@ -224,7 +224,7 @@ rdpsnd_process_negotiate(STREAM in)
 	uint32 flags = TSSNDCAPS_VOLUME;
 
 	/* if sound is enabled, set snd caps to alive to enable
-	   transmision of audio from server */
+	   transmission of audio from server */
 	if (g_rdpsnd)
 	{
 		flags |= TSSNDCAPS_ALIVE;
