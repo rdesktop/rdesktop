@@ -119,6 +119,7 @@ process_ts_fp_updates(STREAM s)
 			ns->p = ns->data;
 			ns->rdp_hdr = ns->p;
 
+			length = rlen;
 			ts = ns;
 		}
 		else
