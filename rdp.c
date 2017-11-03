@@ -538,7 +538,7 @@ void
 rdp_send_suppress_output_pdu(enum RDP_SUPPRESS_STATUS allowupdates)
 {
 	STREAM s;
-	static int current_status = 1;
+	static enum RDP_SUPPRESS_STATUS current_status = ALLOW_DISPLAY_UPDATES;
 
 	if (current_status == allowupdates)
 		return;
