@@ -327,6 +327,15 @@ void ui_seamless_syncbegin(unsigned long flags);
 void ui_seamless_ack(unsigned int serial);
 /* lspci.c */
 RD_BOOL lspci_init(void);
+/* rdpedisp.c */
+void rdpedisp_init(void);
+void rdpedisp_set_session_size(uint32 width, uint32 height);
+/* dvc.c */
+typedef void (*dvc_channel_process_fn) (STREAM s);
+RD_BOOL dvc_init(void);
+RD_BOOL dvc_channels_register(const char *name, dvc_channel_process_fn handler);
+RD_BOOL dvc_channels_is_available(const char *name);
+void dvc_send(const char *name, STREAM s);
 /* seamless.c */
 RD_BOOL seamless_init(void);
 void seamless_reset_state(void);

@@ -28,7 +28,26 @@
 #include "utils.h"
 
 extern char g_codepage[16];
+extern int g_dpi;
+extern int g_width;
+extern int g_height;
+
 static RD_BOOL g_iconv_works = True;
+
+uint32
+utils_djb2_hash(const char *str)
+{
+	uint8 c;
+	uint8 *pstr;
+	uint32 hash = 5381;
+
+	pstr = (uint8*)str;
+	while ((c = *pstr++))
+	{
+		hash = ((hash << 5) + hash) + c;
+	}
+	return hash;
+}
 
 char *
 utils_string_escape(const char *str)
@@ -217,6 +236,29 @@ utils_locale_to_utf8(const char *src, size_t is, char *dest, size_t os)
 
 	memcpy(dest, src, strlen(src) + 1);
 	return 0;
+}
+
+
+void
+utils_calculate_dpi_scale_factors(uint32 *physwidth, uint32 *physheight,
+				  uint32 *desktopscale, uint32 *devicescale)
+{
+	*physwidth = *physheight = *desktopscale = *devicescale = 0;
+
+	if (g_dpi > 0)
+	{
+		*physwidth = g_width * 254 / (g_dpi * 10);
+		*physheight = g_height * 254 / (g_dpi * 10);
+
+		/* the spec calls this out as being valid for range
+		   100-500 but I doubt the upper range is accurate */
+		*desktopscale = g_dpi < 96 ? 100 : (g_dpi * 100 + 48) / 96;
+
+		/* the only allowed values for device scale factor are
+		   100, 140, and 180. */
+		*devicescale = g_dpi < 134 ? 100 : (g_dpi < 173 ? 140 : 180);
+
+	}
 }
 
 

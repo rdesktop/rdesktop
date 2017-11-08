@@ -47,6 +47,9 @@ void out_utf16s(STREAM s, const char *string);
 void out_utf16s_padded(STREAM s, const char *string, size_t width, unsigned char pad);
 void out_utf16s_no_eos(STREAM s, const char *string);
 
+size_t in_ansi_string(STREAM s, char *string, size_t len);
+
+
 #define s_push_layer(s,h,n)	{ (s)->h = (s)->p; (s)->p += n; }
 #define s_pop_layer(s,h)	(s)->p = (s)->h;
 #define s_mark_end(s)		(s)->end = (s)->p;
@@ -100,6 +103,7 @@ void out_utf16s_no_eos(STREAM s, const char *string);
 #define in_uint8p(s,v,n)	{ v = (s)->p; (s)->p += n; }
 #define in_uint8a(s,v,n)	{ memcpy(v,(s)->p,n); (s)->p += n; }
 #define in_uint8s(s,n)		(s)->p += n;
+#define in_skip(s,n)		in_uint8s(s,n)
 #define out_uint8(s,v)		*((s)->p++) = v;
 #define out_uint8p(s,v,n)	{ memcpy((s)->p,v,n); (s)->p += n; }
 #define out_uint8a(s,v,n)	out_uint8p(s,v,n);

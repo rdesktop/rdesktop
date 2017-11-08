@@ -153,3 +153,30 @@ out_utf16s_no_eos(STREAM s, const char *string)
 {
   _out_utf16s(s, 0, string);
 }
+
+/* Read bytes from STREAM s into *string until a null terminator is
+   found, or len bytes are read from the stream. Returns the number of
+   bytes read. */
+size_t
+in_ansi_string(STREAM s, char *string, size_t len)
+{
+  char *ps;
+  size_t left;
+  ps = string;
+
+  left = len;
+  while(left--)
+  {
+    if (left == 0)
+      break;
+
+    in_uint8(s, *ps);
+
+    if (*ps == '\0')
+      break;
+
+    ps++;
+  }
+
+  return len - left;
+}

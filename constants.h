@@ -17,6 +17,9 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef _CONSTANTS_H
+#define _CONSTANTS_H
+
 /* TCP port for Remote Desktop Protocol */
 #define TCP_PORT_RDP 3389
 
@@ -800,3 +803,5 @@ enum RDP_SUPPRESS_STATUS
 	SUPPRESS_DISPLAY_UPDATES = 0x00,
 	ALLOW_DISPLAY_UPDATES = 0x01
 };
+
+#endif /* _CONSTANTS_H */

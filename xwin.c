@@ -45,6 +45,8 @@
 extern int g_sizeopt;
 extern int g_width;
 extern int g_height;
+extern uint32 g_windowed_width;
+extern uint32 g_windowed_height;
 extern int g_xpos;
 extern int g_ypos;
 extern int g_pos;
@@ -2058,12 +2060,21 @@ ui_create_window(void)
 	XSetWindowAttributes attribs;
 	XClassHint *classhints;
 	XSizeHints *sizehints;
-	int wndwidth, wndheight;
 	long input_mask, ic_input_mask;
 	XEvent xevent;
 
-	wndwidth = g_fullscreen ? WidthOfScreen(g_screen) : g_width;
-	wndheight = g_fullscreen ? HeightOfScreen(g_screen) : g_height;
+	if (g_fullscreen)
+	{
+		g_width = WidthOfScreen(g_screen);
+		g_height = HeightOfScreen(g_screen);
+	}
+	else
+	{
+		g_width = g_windowed_width;
+		g_height = g_windowed_height;
+	}
+
+	logger(GUI, Debug, "ui_create_window() width = %d, height = %d", g_width, g_height);
 
 	/* Handle -x-y portion of geometry string */
 	if (g_xpos < 0 || (g_xpos == 0 && (g_pos & 2)))
@@ -2073,8 +2084,8 @@ ui_create_window(void)
 
 	get_window_attribs(&attribs);
 
-	g_wnd = XCreateWindow(g_display, RootWindowOfScreen(g_screen), g_xpos, g_ypos, wndwidth,
-			      wndheight, 0, g_depth, InputOutput, g_visual,
+	g_wnd = XCreateWindow(g_display, RootWindowOfScreen(g_screen), g_xpos, g_ypos, g_width,
+			      g_height, 0, g_depth, InputOutput, g_visual,
 			      CWBackPixel | CWBackingStore | CWOverrideRedirect | CWColormap |
 			      CWBorderPixel, &attribs);
 	ewmh_set_wm_pid(g_wnd, getpid());
@@ -2179,6 +2190,8 @@ ui_create_window(void)
 		seamless_reset_state();
 		seamless_restack_test();
 	}
+
+	rdpedisp_set_session_size(g_width, g_height);
 
 	return True;
 }

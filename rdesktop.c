@@ -74,6 +74,8 @@ int g_sizeopt = 0;		/* If non-zero, a special size has been
 int g_dpi = 0;			/* device DPI: default not set */
 int g_width = 800;
 int g_height = 600;
+uint32 g_windowed_width = 800;
+uint32 g_windowed_height = 600;
 int g_xpos = 0;
 int g_ypos = 0;
 int g_pos = 0;			/* 0 position unspecified,
@@ -766,6 +768,9 @@ main(int argc, char *argv[])
 					g_ypos = strtol(p, NULL, 10);
 				}
 
+				g_windowed_height = g_height;
+				g_windowed_width = g_width;
+
 				break;
 
 			case 'f':
@@ -1208,6 +1213,10 @@ main(int argc, char *argv[])
 		lspci_init();
 
 	rdpdr_init();
+
+	dvc_init();
+	rdpedisp_init();
+
 	g_reconnect_loop = False;
 	while (1)
 	{

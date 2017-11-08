@@ -19,6 +19,12 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef _TYPES_H
+#define _TYPES_H
+
+#include "constants.h"
+#include "stream.h"
+
 typedef int RD_BOOL;
 
 #ifndef True
@@ -300,4 +306,16 @@ typedef struct fileinfo
 }
 FILEINFO;
 
+
+typedef union dvc_hdr_t {
+    uint8 data;
+    struct {
+      uint8 cbid:2;
+      uint8 sp:2;
+      uint8 cmd:4;
+    } hdr;
+} dvc_hdr_t;
+
 typedef RD_BOOL(*str_handle_lines_t) (const char *line, void *data);
+
+#endif /* _TYPES_H */
