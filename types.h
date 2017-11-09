@@ -306,16 +306,6 @@ typedef struct fileinfo
 }
 FILEINFO;
 
-
-typedef union dvc_hdr_t {
-    uint8 data;
-    struct {
-      uint8 cbid:2;
-      uint8 sp:2;
-      uint8 cmd:4;
-    } hdr;
-} dvc_hdr_t;
-
 typedef RD_BOOL(*str_handle_lines_t) (const char *line, void *data);
 
 #endif /* _TYPES_H */

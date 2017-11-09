@@ -33,9 +33,14 @@
 #define DYNVC_SOFT_SYNC_REQUEST		0x08
 #define DYNVC_SOFT_SYNC_RESPONSE	0x09
 
-static VCHANNEL *dvc_channel;
-
-static uint32 dvc_in_channelid(STREAM s, dvc_hdr_t hdr);
+typedef union dvc_hdr_t {
+    uint8 data;
+    struct {
+      uint8 cbid:2;
+      uint8 sp:2;
+      uint8 cmd:4;
+    } hdr;
+} dvc_hdr_t;
 
 typedef struct dvc_channel_t
 {
@@ -44,7 +49,10 @@ typedef struct dvc_channel_t
 	dvc_channel_process_fn handler;
 } dvc_channel_t;
 
-dvc_channel_t channels[MAX_DVC_CHANNELS];
+static VCHANNEL *dvc_channel;
+static dvc_channel_t channels[MAX_DVC_CHANNELS];
+
+static uint32 dvc_in_channelid(STREAM s, dvc_hdr_t hdr);
 
 static RD_BOOL
 dvc_channels_exists(const char *name)
