@@ -22,7 +22,7 @@
 
 #include "types.h"
 
-unsigned int utils_djb2_hash(const char *str);
+uint32 utils_djb2_hash(const char *str);
 char *utils_string_escape(const char *str);
 char *utils_string_unescape(const char *str);
 int utils_locale_to_utf8(const char *src, size_t is, char *dest, size_t os);
