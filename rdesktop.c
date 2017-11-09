@@ -72,10 +72,10 @@ int g_sizeopt = 0;		/* If non-zero, a special size has been
 				   from _NET_WORKAREA. If negative, absolute value
 				   specifies the percent of the whole screen. */
 int g_dpi = 0;			/* device DPI: default not set */
-int g_width = 800;
-int g_height = 600;
-uint32 g_windowed_width = 800;
-uint32 g_windowed_height = 600;
+int g_width = 1024;
+int g_height = 768;
+uint32 g_windowed_width = 1024;
+uint32 g_windowed_height = 768;
 int g_xpos = 0;
 int g_ypos = 0;
 int g_pos = 0;			/* 0 position unspecified,
@@ -114,8 +114,7 @@ char g_seamless_spawn_cmd[512];
 RD_BOOL g_seamless_persistent_mode = True;
 RD_BOOL g_user_quit = False;
 uint32 g_embed_wnd;
-uint32 g_rdp5_performanceflags = (PERF_DISABLE_WALLPAPER |
-				  PERF_DISABLE_FULLWINDOWDRAG |
+uint32 g_rdp5_performanceflags = (PERF_DISABLE_FULLWINDOWDRAG |
 				  PERF_DISABLE_MENUANIMATIONS |
 				  PERF_ENABLE_FONT_SMOOTHING);
 /* Session Directory redirection */

@@ -665,8 +665,8 @@ rdp_out_ts_bitmap_capabilityset(STREAM s)
 	out_uint16_le(s, 1);			/* receive1BitPerPixel (ignored, should be 1) */
 	out_uint16_le(s, 1);			/* receive4BitPerPixel (ignored, should be 1) */
 	out_uint16_le(s, 1);			/* receive8BitPerPixel (ignored, should be 1) */
-	out_uint16_le(s, 800);			/* desktopWidth */
-	out_uint16_le(s, 600);			/* desktopHeight */
+	out_uint16_le(s, g_width);		/* desktopWidth */
+	out_uint16_le(s, g_height);		/* desktopHeight */
 	out_uint16_le(s, 0);			/* pad2Octets */
 	out_uint16_le(s, 1);			/* desktopResizeFlag */
 	out_uint16_le(s, 1);			/* bitmapCompressionFlag (must be 1) */
