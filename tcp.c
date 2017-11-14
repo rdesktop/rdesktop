@@ -66,7 +66,8 @@ static RD_BOOL g_run_ui = False;
 static struct stream g_in;
 static struct stream g_out[STREAM_COUNT];
 int g_tcp_port_rdp = TCP_PORT_RDP;
-extern RD_BOOL g_user_quit;
+
+extern RD_BOOL g_exit_mainloop;
 extern RD_BOOL g_network_error;
 extern RD_BOOL g_reconnect_loop;
 
@@ -220,12 +221,12 @@ tcp_recv(STREAM s, uint32 length)
 	{
 		if ((!g_ssl || SSL_pending(g_ssl) <= 0) && g_run_ui)
 		{
-			if (!ui_select(g_sock))
-			{
-				/* User quit */
-				g_user_quit = True;
+			ui_select(g_sock);
+
+			/* break out of recv, if request of exiting
+			   main loop has been done */
+			if (g_exit_mainloop == True)
 				return NULL;
-			}
 		}
 
 		if (g_ssl)
