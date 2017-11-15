@@ -41,6 +41,10 @@ void libao_play(void);
 void
 libao_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv)
 {
+	UNUSED(n);
+	UNUSED(rfds);
+	UNUSED(tv);
+
 	/* We need to be called rather often... */
 	if (o_device != NULL && !rdpsnd_queue_empty())
 		FD_SET(0, wfds);
@@ -49,6 +53,9 @@ libao_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv)
 void
 libao_check_fds(fd_set * rfds, fd_set * wfds)
 {
+	UNUSED(rfds);
+	UNUSED(wfds);
+
 	if (o_device == NULL)
 		return;
 
@@ -143,7 +150,7 @@ libao_play(void)
 	STREAM out;
 	int len;
 	static long prev_s, prev_us;
-	unsigned int duration;
+	int duration;
 	struct timeval tv;
 	int next_tick;
 
