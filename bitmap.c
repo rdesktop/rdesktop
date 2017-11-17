@@ -135,6 +135,8 @@ bitmap_decompress1(uint8 * output, int width, int height, uint8 * input, int siz
 				break;
 			case 8:	/* Bicolour */
 				colour1 = CVAL(input);
+				colour2 = CVAL(input);
+				break;
 			case 3:	/* Colour */
 				colour2 = CVAL(input);
 				break;
@@ -333,6 +335,8 @@ bitmap_decompress2(uint8 * output, int width, int height, uint8 * input, int siz
 				break;
 			case 8:	/* Bicolour */
 				CVAL2(input, colour1);
+				CVAL2(input, colour2);
+				break;
 			case 3:	/* Colour */
 				CVAL2(input, colour2);
 				break;
@@ -535,6 +539,10 @@ bitmap_decompress3(uint8 * output, int width, int height, uint8 * input, int siz
 				colour1[0] = CVAL(input);
 				colour1[1] = CVAL(input);
 				colour1[2] = CVAL(input);
+				colour2[0] = CVAL(input);
+				colour2[1] = CVAL(input);
+				colour2[2] = CVAL(input);
+				break;
 			case 3:	/* Colour */
 				colour2[0] = CVAL(input);
 				colour2[1] = CVAL(input);
