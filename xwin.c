@@ -101,7 +101,7 @@ typedef struct _seamless_window
 static seamless_window *g_seamless_windows = NULL;
 static unsigned long g_seamless_focused = 0;
 static RD_BOOL g_seamless_started = False;	/* Server end is up and running */
-static RD_BOOL g_seamless_active = False;	/* We are currently in seamless mode */
+RD_BOOL g_seamless_active = False;	/* We are currently in seamless mode */
 static RD_BOOL g_seamless_hidden = False;	/* Desktop is hidden on server */
 static RD_BOOL g_seamless_broken_restack = False;	/* WM does not properly restack */
 extern RD_BOOL g_seamless_rdp;
@@ -2257,9 +2257,9 @@ xwin_toggle_fullscreen(void)
 {
 	Pixmap contents = 0;
 
-	if (g_seamless_active)
-		/* Turn off SeamlessRDP mode */
-		ui_seamless_toggle();
+	/* When running rdesktop in seamless mode, toggling of fullscreen is not allowed */
+	if (g_seamless_rdp)
+		return;
 
 	if (!g_ownbackstore)
 	{
