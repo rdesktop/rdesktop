@@ -52,6 +52,7 @@ struct audio_driver
 };
 
 /* Driver register functions */
+struct audio_driver *pulse_register(char *options);
 struct audio_driver *alsa_register(char *options);
 struct audio_driver *libao_register(char *options);
 struct audio_driver *oss_register(char *options);

@@ -3,6 +3,7 @@
    Sound Channel Process Functions
    Copyright 2006-2010 Pierre Ossman <ossman@cendio.se> for Cendio AB
    Copyright 2009-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
+   Copyright 2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 2003-2008
    Copyright (C) GuoJunBo <guojunbo@ict.ac.cn> 2003
    Copyright 2017 Karl Mikaelsson <derfian@cendio.se> for Cendio AB
@@ -462,6 +463,11 @@ rdpsnd_register_drivers(char *options)
 	/* The order of registrations define the probe-order
 	   when opening the device for the first time */
 	reg = &drivers;
+#if defined(RDPSND_PULSE)
+	*reg = pulse_register(options);
+	assert(*reg);
+	reg = &((*reg)->next);
+#endif
 #if defined(RDPSND_ALSA)
 	*reg = alsa_register(options);
 	assert(*reg);
