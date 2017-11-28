@@ -505,8 +505,8 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 	if (handle >= MAX_OPEN_FILES)
 	{
 		logger(Disk, Error,
-		       "disk_create(), maximum number of open files (%s) reached, increase MAX_OPEN_FILES!",
-		       handle);
+		       "disk_create(), handle (%d) is greater than or equal to MAX_OPEN_FILES (%d)!",
+		       handle, MAX_OPEN_FILES);
 		exit(EX_SOFTWARE);
 	}
 
