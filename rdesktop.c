@@ -674,7 +674,7 @@ main(int argc, char *argv[])
 				break;
 
 			case 'p':
-				if ((optarg[0] != '-') && (optarg[1] != 0))
+				if (!((optarg[0] == '-') && (optarg[1] == 0)))
 				{
 					STRNCPY(g_password, optarg, sizeof(g_password));
 					flags |= RDP_INFO_AUTOLOGON;
