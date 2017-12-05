@@ -2811,13 +2811,14 @@ xwin_process_events(void)
 							       "xwin_process_events(), ConfigureNotify: Root window changed to %dx%d",
 							       xevent.xconfigure.width,
 							       xevent.xconfigure.height);
-							XRRUpdateConfiguration(&xevent);
-							XSync(g_display, False);
 
 							gettimeofday(&g_resize_timer, NULL);
 							g_pending_resize = True;
 						}
 					}
+
+					XRRUpdateConfiguration(&xevent);
+					XSync(g_display, False);
 
 				} else
 #endif
