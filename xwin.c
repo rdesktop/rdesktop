@@ -2032,14 +2032,26 @@ ui_deinit(void)
 }
 
 
-static void
+static unsigned long
 get_window_attribs(XSetWindowAttributes * attribs)
 {
+	unsigned long vmask = 0;
+
+	vmask = CWBackPixel | CWBorderPixel | CWBackingStore | CWOverrideRedirect | CWColormap;
+
 	attribs->background_pixel = BlackPixelOfScreen(g_screen);
 	attribs->border_pixel = WhitePixelOfScreen(g_screen);
 	attribs->backing_store = g_ownbackstore ? NotUseful : Always;
 	attribs->override_redirect = g_fullscreen;
 	attribs->colormap = g_xcolmap;
+
+	return vmask;
+}
+
+static unsigned long
+get_window_attribs_seamless(XSetWindowAttributes * attribs)
+{
+	return (get_window_attribs(attribs) & ~CWOverrideRedirect);
 }
 
 static void
@@ -2097,6 +2109,7 @@ ui_create_window(uint32 width, uint32 height)
 	XSetWindowAttributes attribs;
 	XClassHint *classhints;
 	XSizeHints *sizehints;
+	unsigned long value_mask;
 	long input_mask, ic_input_mask;
 	XEvent xevent;
 
@@ -2112,12 +2125,11 @@ ui_create_window(uint32 width, uint32 height)
 	if (g_ypos < 0 || (g_ypos == 0 && (g_pos & 4)))
 		g_ypos = HeightOfScreen(g_screen) + g_ypos - height;
 
-	get_window_attribs(&attribs);
+	value_mask = get_window_attribs(&attribs);
 
 	g_wnd = XCreateWindow(g_display, RootWindowOfScreen(g_screen), g_xpos, g_ypos, width,
-			      height, 0, g_depth, InputOutput, g_visual,
-			      CWBackPixel | CWBackingStore | CWOverrideRedirect | CWColormap |
-			      CWBorderPixel, &attribs);
+			      height, 0, g_depth, InputOutput, g_visual, value_mask, &attribs);
+
 	ewmh_set_wm_pid(g_wnd, getpid());
 	set_wm_client_machine(g_display, g_wnd);
 
@@ -2290,9 +2302,15 @@ ui_destroy_window(void)
 void
 xwin_toggle_fullscreen(void)
 {
-	uint32 width, height;
+	uint32 x, y, width, height;
 	XWindowAttributes attr;
+	XSetWindowAttributes setattr;
+	unsigned long value_mask;
 	Pixmap contents = 0;
+	Window unused;
+	int dest_x, dest_y;
+	static uint32 windowed_x = 0;
+	static uint32 windowed_y = 0;
 	static uint32 windowed_height = 0;
 	static uint32 windowed_width = 0;
 
@@ -2310,6 +2328,13 @@ xwin_toggle_fullscreen(void)
 		/* only stored if we toggle from windowed -> fullscreen or when
 		 * going from fullscreen -> windowed when started in fullscreen mode.
 		 */
+
+		XTranslateCoordinates(g_display, g_wnd,
+				      DefaultRootWindow(g_display),
+				      0, 0, &dest_x, &dest_y, &unused );
+
+		windowed_x = dest_x;
+		windowed_y = dest_y;
 		windowed_width = attr.width;
 		windowed_height = attr.height;
 	}
@@ -2323,20 +2348,30 @@ xwin_toggle_fullscreen(void)
 
 	g_fullscreen = !g_fullscreen;
 
-	/* recreate new rdesktop window using new window size and fullscreen flag */
-	ui_destroy_window();
-
 	if (g_fullscreen)
 	{
+		x = 0;
+		y = 0,
 		width = WidthOfScreen(g_screen);
 		height = HeightOfScreen(g_screen);
 	}
 	else
 	{
+		x = windowed_x;
+		y = windowed_y;
 		width = windowed_width;
 		height = windowed_height;
 	}
-	ui_create_window(width, height);
+
+	/* Resize rdesktop window using new size and window attributes */
+	XUnmapWindow(g_display, g_wnd);
+
+	XMoveResizeWindow(g_display, g_wnd, x, y, width, height);
+
+	value_mask = get_window_attribs(&setattr);
+	XChangeWindowAttributes(g_display, g_wnd, value_mask, &setattr);
+
+	XMapWindow(g_display, g_wnd);
 
 	/* Change session size to match new window size */
 	if (rdpedisp_is_available() == False)
@@ -4337,6 +4372,7 @@ ui_seamless_create_window(unsigned long id, unsigned long group, unsigned long p
 	XSizeHints *sizehints;
 	XWMHints *wmhints;
 	long input_mask;
+	unsigned long value_mask;
 	seamless_window *sw, *sw_parent;
 
 	if (!g_seamless_active)
@@ -4347,10 +4383,10 @@ ui_seamless_create_window(unsigned long id, unsigned long group, unsigned long p
 	if (sw)
 		return;
 
-	get_window_attribs(&attribs);
+	value_mask = get_window_attribs_seamless(&attribs);
 	wnd = XCreateWindow(g_display, RootWindowOfScreen(g_screen), -1, -1, 1, 1, 0, g_depth,
-			    InputOutput, g_visual,
-			    CWBackPixel | CWBackingStore | CWColormap | CWBorderPixel, &attribs);
+			    InputOutput, g_visual, value_mask, &attribs);
+
 	ewmh_set_wm_pid(wnd, getpid());
 	set_wm_client_machine(g_display, wnd);
 
