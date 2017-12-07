@@ -1,6 +1,6 @@
 rdesktop
 autom4te.cache
-Makefile
+/Makefile
 config.log
 config.status
 configure
