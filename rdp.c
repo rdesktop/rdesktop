@@ -308,10 +308,10 @@ rdp_in_unistr(STREAM s, int in_len, char **string, uint32 * str_size)
 }
 
 
-/* Parse a logon info packet */
+/* Send a Client Info PDU */
 static void
-rdp_send_logon_info(uint32 flags, char *domain, char *user,
-		    char *password, char *program, char *directory)
+rdp_send_client_info_pdu(uint32 flags, char *domain, char *user,
+			 char *password, char *program, char *directory)
 {
 	char *ipaddr = tcp_get_address();
 	/* length of string in TS_INFO_PACKET excludes null terminator */
@@ -1878,7 +1878,7 @@ rdp_connect(char *server, uint32 flags, char *domain, char *password,
 	if (!sec_connect(server, g_username, domain, password, reconnect))
 		return False;
 
-	rdp_send_logon_info(flags, domain, g_username, password, command, directory);
+	rdp_send_client_info_pdu(flags, domain, g_username, password, command, directory);
 
 	/* run RDP loop until first licence demand active PDU */
 	while (!g_rdp_shareid)
