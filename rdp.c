@@ -43,13 +43,16 @@ extern RDP_VERSION g_rdp_version;
 extern uint16 g_server_rdp_version;
 extern uint32 g_rdp5_performanceflags;
 extern int g_server_depth;
-extern int g_width;
-extern int g_height;
+extern uint32 g_initial_width;
+extern uint32 g_initial_height;
 extern RD_BOOL g_bitmap_cache;
 extern RD_BOOL g_bitmap_cache_persist_enable;
 extern RD_BOOL g_numlock_sync;
 extern RD_BOOL g_pending_resize;
 extern RD_BOOL g_network_error;
+extern time_t g_wait_for_deactivate_ts;
+
+RD_BOOL g_exit_mainloop = False;
 
 uint8 *g_next_packet;
 uint32 g_rdp_shareid;
@@ -79,6 +82,11 @@ extern time_t g_reconnect_random_ts;
 extern RD_BOOL g_has_reconnect_random;
 extern uint8 g_client_random[SEC_RANDOM_SIZE];
 static uint32 g_packetno;
+
+
+/* holds the actual session size reported by server */
+uint16 g_session_width;
+uint16 g_session_height;
 
 static void rdp_out_unistr(STREAM s, char *string, int len);
 
@@ -553,11 +561,11 @@ rdp_send_suppress_output_pdu(enum RDP_SUPPRESS_STATUS allowupdates)
 		case SUPPRESS_DISPLAY_UPDATES:	/* shut the server up */
 			break;
 
-		case ALLOW_DISPLAY_UPDATES:	/* receive data again */
-			out_uint16_le(s, 0);		/* left */
-			out_uint16_le(s, 0);		/* top */
-			out_uint16_le(s, g_width);	/* right */
-			out_uint16_le(s, g_height);	/* bottom */
+		case ALLOW_DISPLAY_UPDATES:		/* receive data again */
+			out_uint16_le(s, 0);	/* left */
+			out_uint16_le(s, 0);	/* top */
+			out_uint16_le(s, g_session_width);	/* right */
+			out_uint16_le(s, g_session_height);	/* bottom */
 			break;
 	}
 
@@ -659,14 +667,16 @@ rdp_out_ts_general_capabilityset(STREAM s)
 static void
 rdp_out_ts_bitmap_capabilityset(STREAM s)
 {
+	logger(Protocol, Debug, "rdp_out_ts_bitmap_capabilityset(), %dx%d",
+	       g_session_width, g_session_height);
 	out_uint16_le(s, RDP_CAPSET_BITMAP);
 	out_uint16_le(s, RDP_CAPLEN_BITMAP);
 	out_uint16_le(s, g_server_depth);	/* preferredBitsPerPixel */
 	out_uint16_le(s, 1);			/* receive1BitPerPixel (ignored, should be 1) */
 	out_uint16_le(s, 1);			/* receive4BitPerPixel (ignored, should be 1) */
 	out_uint16_le(s, 1);			/* receive8BitPerPixel (ignored, should be 1) */
-	out_uint16_le(s, g_width);		/* desktopWidth */
-	out_uint16_le(s, g_height);		/* desktopHeight */
+	out_uint16_le(s, g_session_width);	/* desktopWidth */
+	out_uint16_le(s, g_session_height);	/* desktopHeight */
 	out_uint16_le(s, 0);			/* pad2Octets */
 	out_uint16_le(s, 1);			/* desktopResizeFlag */
 	out_uint16_le(s, 1);			/* bitmapCompressionFlag (must be 1) */
@@ -1051,17 +1061,17 @@ rdp_process_general_caps(STREAM s)
 static void
 rdp_process_bitmap_caps(STREAM s)
 {
-	uint16 width, height, depth;
+	uint16 depth;
 
 	in_uint16_le(s, depth);
 	in_uint8s(s, 6);
 
-	in_uint16_le(s, width);
-	in_uint16_le(s, height);
+	in_uint16_le(s, g_session_width);
+	in_uint16_le(s, g_session_height);
 
 	logger(Protocol, Debug,
-	       "rdp_process_bitmap_caps(), setting desktop size and depth to: %dx%dx%d", width,
-	       height, depth);
+	       "rdp_process_bitmap_caps(), setting desktop size and depth to: %dx%dx%d",
+	       g_session_width, g_session_height, depth);
 
 	/*
 	 * The server may limit depth and change the size of the desktop (for
@@ -1074,15 +1084,11 @@ rdp_process_bitmap_caps(STREAM s)
 		       g_server_depth, depth);
 		g_server_depth = depth;
 	}
-	if (g_width != width || g_height != height)
-	{
-		logger(Protocol, Debug,
-		       "rdp_process_bitmap_caps(), remote desktop changed from %dx%d to %dx%d.\n",
-		       g_width, g_height, width, height);
-		g_width = width;
-		g_height = height;
-		ui_resize_window();
-	}
+
+	/* resize viewport window to new session size, this is an
+	   no-op if there is no change in size between session size
+	   reported from server and the actual window size */
+	ui_resize_window(g_session_width, g_session_height);
 }
 
 /* Process server capabilities */
@@ -1790,20 +1796,23 @@ process_redirect_pdu(STREAM s, RD_BOOL enhanced_redirect /*, uint32 * ext_disc_r
 		       "process_redirect_pdu(), unhandled LB_TARGET_CERTIFICATE");
 	}
 
-	return True;
+	return g_redirect;
 }
 
 /* Process incoming packets */
 void
 rdp_main_loop(RD_BOOL * deactivated, uint32 * ext_disc_reason)
 {
-	while (rdp_loop(deactivated, ext_disc_reason))
+	do
 	{
-		if (g_pending_resize || g_redirect)
+		if (rdp_loop(deactivated, ext_disc_reason) == False)
 		{
-			return;
+			g_exit_mainloop = True;
 		}
-	}
+	} while(g_exit_mainloop == False);
+
+	/* clear the exit main loop flag */
+	g_exit_mainloop = False;
 }
 
 /* used in uiports and rdp_main_loop, processes the RDP packets waiting */
@@ -1814,7 +1823,7 @@ rdp_loop(RD_BOOL * deactivated, uint32 * ext_disc_reason)
 	RD_BOOL cont = True;
 	STREAM s;
 
-	while (cont)
+	while (g_exit_mainloop == False && cont)
 	{
 		s = rdp_recv(&type);
 		if (s == NULL)
@@ -1829,12 +1838,15 @@ rdp_loop(RD_BOOL * deactivated, uint32 * ext_disc_reason)
 				logger(Protocol, Debug,
 				       "rdp_loop(), RDP_PDU_DEACTIVATE packet received");
 				*deactivated = True;
+				g_wait_for_deactivate_ts = 0;
 				break;
 			case RDP_PDU_REDIRECT:
-				return process_redirect_pdu(s, False);
-				break;
 			case RDP_PDU_ENHANCED_REDIRECT:
-				return process_redirect_pdu(s, True);
+				if (process_redirect_pdu(s, !(type == RDP_PDU_REDIRECT)) == True)
+				{
+					g_exit_mainloop = True;
+					continue;
+				}
 				break;
 			case RDP_PDU_DATA:
 				/* If we got a data PDU, we don't need to keep the password in memory

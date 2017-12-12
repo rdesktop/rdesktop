@@ -26,6 +26,8 @@
 #define DISPLAYCONTROL_MONITOR_PRIMARY 0x1
 #define RDPEDISP_CHANNEL_NAME "Microsoft::Windows::RDS::DisplayControl"
 
+extern int g_dpi;
+
 static void rdpedisp_send(STREAM s);
 static void rdpedisp_init_packet(STREAM s, uint32 type, uint32 length);
 
@@ -89,7 +91,9 @@ rdpedisp_send_monitor_layout_pdu(uint32 width, uint32 height)
 	out_uint32_le(&s, width);	/* width */
 	out_uint32_le(&s, height);	/* height */
 
-	utils_calculate_dpi_scale_factors(&physwidth, &physheight, &desktopscale, &devicescale);
+	utils_calculate_dpi_scale_factors(width, height, g_dpi,
+					  &physwidth, &physheight, &desktopscale, &devicescale);
+
 	out_uint32_le(&s, physwidth);	/* physicalwidth */
 	out_uint32_le(&s, physheight);	/* physicalheight */
 	out_uint32_le(&s, ORIENTATION_LANDSCAPE);	/* Orientation */
@@ -116,7 +120,7 @@ rdpedisp_send(STREAM s)
 	dvc_send(RDPEDISP_CHANNEL_NAME, s);
 }
 
-static RD_BOOL
+RD_BOOL
 rdpedisp_is_available()
 {
 	return dvc_channels_is_available(RDPEDISP_CHANNEL_NAME);
@@ -127,6 +131,9 @@ rdpedisp_set_session_size(uint32 width, uint32 height)
 {
 	if (rdpedisp_is_available() == False)
 		return;
+
+	/* monitor width MUST be even number */
+	utils_apply_session_size_limitations(&width, &height);
 
 	rdpedisp_send_monitor_layout_pdu(width, height);
 }

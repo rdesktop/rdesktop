@@ -72,10 +72,13 @@ int g_sizeopt = 0;		/* If non-zero, a special size has been
 				   from _NET_WORKAREA. If negative, absolute value
 				   specifies the percent of the whole screen. */
 int g_dpi = 0;			/* device DPI: default not set */
-int g_width = 1024;
-int g_height = 768;
-uint32 g_windowed_width = 1024;
-uint32 g_windowed_height = 768;
+
+/* Following variables holds the initial width and height for a
+   rdesktop window, this is sent upon connect and tells the server
+   what size of session we want to have. Set to decent defaults. */
+uint32 g_initial_width = 1024;
+uint32 g_initial_height = 768;
+
 int g_xpos = 0;
 int g_ypos = 0;
 int g_pos = 0;			/* 0 position unspecified,
@@ -712,17 +715,17 @@ main(int argc, char *argv[])
 					break;
 				}
 
-				g_width = strtol(optarg, &p, 10);
-				if (g_width <= 0)
+				g_initial_width = strtol(optarg, &p, 10);
+				if (g_initial_width <= 0)
 				{
 					logger(Core, Error, "invalid geometry width specified");
 					return EX_USAGE;
 				}
 
 				if (*p == 'x')
-					g_height = strtol(p + 1, &p, 10);
+					g_initial_height = strtol(p + 1, &p, 10);
 
-				if (g_height <= 0)
+				if (g_initial_height <= 0)
 				{
 					logger(Core, Error, "invalid geometry height specified");
 					return EX_USAGE;
@@ -730,16 +733,16 @@ main(int argc, char *argv[])
 
 				if (*p == '%')
 				{
-					g_sizeopt = -g_width;
-					g_width = g_sizeopt;
+					g_sizeopt = -g_initial_width;
+					g_initial_width = g_sizeopt;
 
 					if (*(p + 1) == 'x')
 					{
-						g_height = -strtol(p + 2, &p, 10);
+						g_initial_height = -strtol(p + 2, &p, 10);
 					}
 					else
 					{
-						g_height = g_sizeopt;
+						g_initial_height = g_sizeopt;
 					}
 
 					p++;
@@ -766,9 +769,6 @@ main(int argc, char *argv[])
 					g_pos |= (*p == '-') ? 4 : 1;
 					g_ypos = strtol(p, NULL, 10);
 				}
-
-				g_windowed_height = g_height;
-				g_windowed_width = g_width;
 
 				break;
 
@@ -1240,6 +1240,8 @@ main(int argc, char *argv[])
 		}
 
 		ui_init_connection();
+		utils_apply_session_size_limitations(&g_initial_width, &g_initial_height);
+
 		if (!rdp_connect
 		    (server, flags, domain, g_password, shell, directory, g_reconnect_loop))
 		{
@@ -1307,6 +1309,8 @@ main(int argc, char *argv[])
 		/* Enter a reconnect loop if we have a pending resize request */
 		if (g_pending_resize)
 		{
+			logger(Core, Verbose, "Resize reconnect loop triggered, new size %dx%d",
+			       g_initial_width, g_initial_height);
 			g_pending_resize = False;
 			g_reconnect_loop = True;
 			continue;
@@ -1839,7 +1843,7 @@ rd_create_ui()
 	if (!ui_have_window())
 	{
 		/* create a window if we don't have one initialized */
-		if (!ui_create_window())
+		if (!ui_create_window(g_initial_width, g_initial_height))
 			exit(EX_OSERR);
 	}
 	else

@@ -259,12 +259,12 @@ RD_BOOL get_key_state(unsigned int state, uint32 keysym);
 RD_BOOL ui_init(void);
 void ui_init_connection(void);
 void ui_deinit(void);
-RD_BOOL ui_create_window(void);
-void ui_resize_window(void);
+RD_BOOL ui_create_window(uint32 width, uint32 height);
+void ui_resize_window(uint32 width, uint32 height);
 void ui_destroy_window(void);
 RD_BOOL ui_have_window(void);
 void xwin_toggle_fullscreen(void);
-int ui_select(int rdp_socket);
+void ui_select(int rdp_socket);
 void ui_move_pointer(int x, int y);
 RD_HBITMAP ui_create_bitmap(int width, int height, uint8 * data);
 void ui_paint_bitmap(int x, int y, int cx, int cy, int width, int height, uint8 * data);
@@ -329,6 +329,7 @@ void ui_seamless_ack(unsigned int serial);
 RD_BOOL lspci_init(void);
 /* rdpedisp.c */
 void rdpedisp_init(void);
+RD_BOOL rdpedisp_is_available();
 void rdpedisp_set_session_size(uint32 width, uint32 height);
 /* dvc.c */
 typedef void (*dvc_channel_process_fn) (STREAM s);

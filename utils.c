@@ -28,9 +28,6 @@
 #include "utils.h"
 
 extern char g_codepage[16];
-extern int g_dpi;
-extern int g_width;
-extern int g_height;
 
 static RD_BOOL g_iconv_works = True;
 
@@ -240,27 +237,45 @@ utils_locale_to_utf8(const char *src, size_t is, char *dest, size_t os)
 
 
 void
-utils_calculate_dpi_scale_factors(uint32 *physwidth, uint32 *physheight,
+utils_calculate_dpi_scale_factors(uint32 width, uint32 height, uint32 dpi,
+				  uint32 *physwidth, uint32 *physheight,
 				  uint32 *desktopscale, uint32 *devicescale)
 {
 	*physwidth = *physheight = *desktopscale = *devicescale = 0;
 
-	if (g_dpi > 0)
+	if (dpi > 0)
 	{
-		*physwidth = g_width * 254 / (g_dpi * 10);
-		*physheight = g_height * 254 / (g_dpi * 10);
+		*physwidth = width * 254 / (dpi * 10);
+		*physheight = height * 254 / (dpi * 10);
 
 		/* the spec calls this out as being valid for range
 		   100-500 but I doubt the upper range is accurate */
-		*desktopscale = g_dpi < 96 ? 100 : (g_dpi * 100 + 48) / 96;
+		*desktopscale = dpi < 96 ? 100 : (dpi * 100 + 48) / 96;
 
 		/* the only allowed values for device scale factor are
 		   100, 140, and 180. */
-		*devicescale = g_dpi < 134 ? 100 : (g_dpi < 173 ? 140 : 180);
+		*devicescale = dpi < 134 ? 100 : (dpi < 173 ? 140 : 180);
 
 	}
 }
 
+
+void
+utils_apply_session_size_limitations(uint32 *width, uint32 *height)
+{
+	/* width MUST be even number */
+	*width -= (*width) % 2;
+
+	if (*width > 8192)
+		*width = 8192;
+	else if (*width < 200)
+		*width = 200;
+
+	if (*height > 8192)
+		*height = 8192;
+	else if (*height < 200)
+		*height = 200;
+}
 
 /*
  * component logging
