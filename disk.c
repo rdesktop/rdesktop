@@ -5,6 +5,7 @@
    Copyright 2003-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
    Copyright 2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
    Copyright 2017 Karl Mikaelsson <derfian@cendio.se> for Cendio AB
+   Copyright 2017 Alexander Zakharov <uglym8@gmail.com>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -648,6 +649,7 @@ disk_write(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint3
 	return RD_STATUS_SUCCESS;
 }
 
+/* Btw, all used Flie* structures are described in [MS-FSCC] */
 RD_NTSTATUS
 disk_query_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 {
@@ -712,10 +714,9 @@ disk_query_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 
 		case FileStandardInformation:
 
-			out_uint32_le(out, filestat.st_size);	/* Allocation size */
-			out_uint32_le(out, 0);
-			out_uint32_le(out, filestat.st_size);	/* End of file */
-			out_uint32_le(out, 0);
+			out_uint64_le(out, filestat.st_size); /* Allocation size */
+			out_uint64_le(out, filestat.st_size); /* End of file */
+
 			out_uint32_le(out, filestat.st_nlink);	/* Number of links */
 			out_uint8(out, 0);	/* Delete pending */
 			out_uint8(out, S_ISDIR(filestat.st_mode) ? 1 : 0);	/* Directory */
@@ -736,6 +737,7 @@ disk_query_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 	return RD_STATUS_SUCCESS;
 }
 
+/* 2.2.3.3.9 [MS-RDPEFS] */
 RD_NTSTATUS
 disk_set_information(RD_NTHANDLE handle, uint32 info_class, STREAM in, STREAM out)
 {
@@ -761,8 +763,8 @@ disk_set_information(RD_NTHANDLE handle, uint32 info_class, STREAM in, STREAM ou
 		case FileBasicInformation:
 			write_time = change_time = access_time = 0;
 
-			in_uint8s(in, 4);	/* Handle of root dir? */
-			in_uint8s(in, 24);	/* unknown */
+			in_uint8s(in, 4);	/* length of SetBuffer */
+			in_uint8s(in, 24);	/* padding */
 
 			/* CreationTime */
 			in_uint32_le(in, ft_low);
@@ -1165,22 +1167,17 @@ disk_query_volume_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 
 		case FileFsSizeInformation:
 
-			out_uint32_le(out, stat_fs.f_blocks);	/* Total allocation units low */
-			out_uint32_le(out, 0);	/* Total allocation high units */
-			out_uint32_le(out, stat_fs.f_bfree);	/* Available allocation units */
-			out_uint32_le(out, 0);	/* Available allocation units */
+			out_uint64_le(out, stat_fs.f_blocks);	/* Total allocation units */
+			out_uint64_le(out, stat_fs.f_bfree);	/* Available allocation units */
 			out_uint32_le(out, stat_fs.f_bsize / 0x200);	/* Sectors per allocation unit */
 			out_uint32_le(out, 0x200);	/* Bytes per sector */
 			break;
 
 		case FileFsFullSizeInformation:
 
-			out_uint32_le(out, stat_fs.f_blocks);	/* Total allocation units low */
-			out_uint32_le(out, 0);	/* Total allocation units high */
-			out_uint32_le(out, stat_fs.f_bavail);	/* Caller allocation units low */
-			out_uint32_le(out, 0);	/* Caller allocation units high */
-			out_uint32_le(out, stat_fs.f_bfree);	/* Available allocation units */
-			out_uint32_le(out, 0);	/* Available allocation units */
+			out_uint64_le(out, stat_fs.f_blocks);	/* Total allocation units */
+			out_uint64_le(out, stat_fs.f_bavail);	/* Caller allocation units */
+			out_uint64_le(out, stat_fs.f_bfree);	/* Available allocation units */
 			out_uint32_le(out, stat_fs.f_bsize / 0x200);	/* Sectors per allocation unit */
 			out_uint32_le(out, 0x200);	/* Bytes per sector */
 			break;
@@ -1327,10 +1324,8 @@ disk_query_directory(RD_NTHANDLE handle, uint32 info_class, char *pattern, STREA
 			out_uint32_le(out, ft_low);	/* change_write_time */
 			out_uint32_le(out, ft_high);
 
-			out_uint32_le(out, filestat.st_size);	/* filesize low */
-			out_uint32_le(out, 0);	/* filesize high */
-			out_uint32_le(out, filestat.st_size);	/* filesize low */
-			out_uint32_le(out, 0);	/* filesize high */
+			out_uint64_le(out, filestat.st_size);	/* filesize */
+			out_uint64_le(out, filestat.st_size);	/* filesize */
 			out_uint32_le(out, file_attributes);	/* FileAttributes */
 			out_uint32_le(out, s_length(&stmp));	/* length of dir entry name string */
 			out_uint32_le(out, 0);	/* EaSize */
@@ -1359,10 +1354,8 @@ disk_query_directory(RD_NTHANDLE handle, uint32 info_class, char *pattern, STREA
 			out_uint32_le(out, ft_low);	/* change_write_time */
 			out_uint32_le(out, ft_high);
 
-			out_uint32_le(out, filestat.st_size);	/* filesize low */
-			out_uint32_le(out, 0);	/* filesize high */
-			out_uint32_le(out, filestat.st_size);	/* filesize low */
-			out_uint32_le(out, 0);	/* filesize high */
+			out_uint64_le(out, filestat.st_size);	/* filesize */
+			out_uint64_le(out, filestat.st_size);	/* filesize */
 			out_uint32_le(out, file_attributes);
 			out_uint32_le(out, s_length(&stmp));	/* dir entry name string length */
 			out_stream(out, &stmp); /* dir entry name */
@@ -1388,10 +1381,8 @@ disk_query_directory(RD_NTHANDLE handle, uint32 info_class, char *pattern, STREA
 			out_uint32_le(out, ft_low);	/* change_write_time */
 			out_uint32_le(out, ft_high);
 
-			out_uint32_le(out, filestat.st_size);	/* filesize low */
-			out_uint32_le(out, 0);	/* filesize high */
-			out_uint32_le(out, filestat.st_size);	/* filesize low */
-			out_uint32_le(out, 0);	/* filesize high */
+			out_uint64_le(out, filestat.st_size);	/* filesize */
+			out_uint64_le(out, filestat.st_size);	/* filesize */
 			out_uint32_le(out, file_attributes);
 			out_uint32_le(out, s_length(&stmp));	/* dir entry name string length */
 			out_uint32_le(out, 0);	/* EaSize */
