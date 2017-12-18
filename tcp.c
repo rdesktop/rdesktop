@@ -298,7 +298,10 @@ tcp_tls_connect(void)
 	}
 
 	/* It is recommended to use the default priorities */
-	CHECK(gnutls_set_default_priority(g_tls_session));
+	//CHECK(gnutls_set_default_priority(g_tls_session));
+	// Use compatible priority to overcome key validation error
+	// THIS IS TEMPORARY
+	CHECK(gnutls_priority_set_direct(g_tls_session, "NORMAL:%COMPAT", NULL));
 	CHECK(gnutls_certificate_allocate_credentials(&xcred));
 	CHECK(gnutls_credentials_set(g_tls_session, GNUTLS_CRD_CERTIFICATE, xcred));
 
