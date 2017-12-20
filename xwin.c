@@ -1983,14 +1983,9 @@ ui_init_connection(void)
 		if (-g_sizeopt >= 100)
 			g_using_full_workarea = True;
 
-		if (g_initial_width > 0)
-			g_initial_width = g_sizeopt;
-
-		if (g_initial_height > 0)
-			g_initial_height = g_sizeopt;
-
-		g_initial_height = HeightOfScreen(g_screen) * (-g_initial_height) / 100;
-		g_initial_width = WidthOfScreen(g_screen) * (-g_initial_width) / 100;
+		/* g_initial_width/height holds percentage of screen in each axis */
+		g_initial_height = HeightOfScreen(g_screen) * g_initial_height / 100;
+		g_initial_width = WidthOfScreen(g_screen) * g_initial_width / 100;
 	}
 	else if (g_sizeopt == 1)
 	{

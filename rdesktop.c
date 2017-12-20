@@ -592,6 +592,144 @@ parse_server_and_port(char *server)
 
 }
 
+// [WxH|P%|W%xH%][@DPI][+X[+Y]]|workarea
+int parse_geometry_string(const char *optarg)
+{
+	sint32 value;
+	const char *ps;
+	char *pe;
+
+	/* special keywords */
+	if (strcmp(optarg, "workarea") == 0)
+	{
+		g_sizeopt = 1;
+		return 0;
+	}
+
+	/* parse first integer */
+	ps = optarg;
+	value = strtol(ps, &pe, 10);
+	if (ps == pe || value <= 0)
+	{
+		logger(Core, Error, "invalid geometry, expected positive integer for width");
+		return -1;
+	}
+
+	g_initial_width = value;
+	ps = pe;
+
+	/* expect % or x */
+	if (*ps != '%' && *ps != 'x')
+	{
+		logger(Core, Error, "invalid geometry, expected '%%' or 'x' after width");
+		return -1;
+	}
+
+	if (*ps == '%')
+	{
+		g_sizeopt = -1;
+		ps++;
+		pe++;
+	}
+
+	if (*ps == 'x')
+	{
+		ps++;
+		value = strtol(ps, &pe, 10);
+		if (ps == pe || value <= 0)
+		{
+			logger(Core, Error, "invalid geometry, expected positive integer for height");
+			return -1;
+		}
+
+		g_initial_height = value;
+		ps = pe;
+
+		if (*ps == '%' && g_sizeopt == 0)
+		{
+			logger(Core, Error, "invalid geometry, unexpected '%%' after height");
+			return -1;
+		}
+
+		if (g_sizeopt == -1)
+		{
+			if (*ps != '%')
+			{
+				logger(Core, Error, "invalid geometry, expected '%%' after height");
+				return -1;
+			}
+			ps++;
+			pe++;
+		}
+	}
+	else
+        {
+		if (g_sizeopt == -1)
+		{
+			/* same percentage of screen for both width and height */
+			g_initial_height = g_initial_width;
+		}
+		else
+		{
+			logger(Core, Error, "invalid geometry, missing height (WxH)");
+			return -1;
+		}
+	}
+
+	/* parse optional dpi */
+	if (*ps == '@')
+	{
+		ps++;
+		pe++;
+		value = strtol(ps, &pe, 10);
+		if (ps == pe || value <= 0)
+		{
+			logger(Core, Error, "invalid geometry, expected positive integer for DPI");
+			return -1;
+		}
+
+		g_dpi = value;
+		ps = pe;
+	}
+
+	/* parse optional window position */
+	if (*ps == '+' || *ps == '-')
+	{
+		/* parse x position */
+		value = strtol(ps, &pe, 10);
+		if (ps == pe)
+		{
+			logger(Core, Error, "invalid geometry, expected an integer for X position");
+			return -1;
+		}
+
+		g_pos |= (value < 0) ? 2 : 1;
+		g_xpos = value;
+		ps = pe;
+	}
+
+	if (*ps == '+' || *ps == '-')
+	{
+		/* parse y position */
+		value = strtol(ps, &pe, 10);
+		if (ps == pe)
+		{
+			logger(Core, Error, "invalid geometry, expected an integer for Y position");
+			return -1;
+		}
+		g_pos |= (value < 0) ? 4 : 1;
+		g_ypos = value;
+		ps = pe;
+	}
+
+	if (*pe != '\0')
+	{
+		logger(Core, Error, "invalid geometry, unexpected characters at end of string");
+		return -1;
+	}
+	return 0;
+}
+
 /* Client program */
 int
 main(int argc, char *argv[])
@@ -709,67 +847,10 @@ main(int argc, char *argv[])
 			case 'g':
 				geometry_option = True;
 				g_fullscreen = False;
-				if (!strcmp(optarg, "workarea"))
+				if (parse_geometry_string(optarg) != 0)
 				{
-					g_sizeopt = 1;
-					break;
-				}
-
-				g_initial_width = strtol(optarg, &p, 10);
-				if (g_initial_width <= 0)
-				{
-					logger(Core, Error, "invalid geometry width specified");
 					return EX_USAGE;
 				}
-
-				if (*p == 'x')
-					g_initial_height = strtol(p + 1, &p, 10);
-
-				if (g_initial_height <= 0)
-				{
-					logger(Core, Error, "invalid geometry height specified");
-					return EX_USAGE;
-				}
-
-				if (*p == '%')
-				{
-					g_sizeopt = -g_initial_width;
-					g_initial_width = g_sizeopt;
-
-					if (*(p + 1) == 'x')
-					{
-						g_initial_height = -strtol(p + 2, &p, 10);
-					}
-					else
-					{
-						g_initial_height = g_sizeopt;
-					}
-
-					p++;
-				}
-
-				if (*p == '@')
-				{
-					g_dpi = strtol(p + 1, &p, 10);
-					if (g_dpi <= 0)
-					{
-						logger(Core, Error, "invalid DPI: expected a positive integer after @\n");
-						return EX_USAGE;
-					}
-				}
-
-				if (*p == '+' || *p == '-')
-				{
-					g_pos |= (*p == '-') ? 2 : 1;
-					g_xpos = strtol(p, &p, 10);
-
-				}
-				if (*p == '+' || *p == '-')
-				{
-					g_pos |= (*p == '-') ? 4 : 1;
-					g_ypos = strtol(p, NULL, 10);
-				}
-
 				break;
 
 			case 'f':

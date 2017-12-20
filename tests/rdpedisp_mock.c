@@ -1,6 +1,12 @@
 #include <cgreen/mocks.h>
 #include "../rdesktop.h"
 
+void
+rdpedisp_init()
+{
+  mock();
+}
+
 RD_BOOL
 rdpedisp_is_available()
 {
