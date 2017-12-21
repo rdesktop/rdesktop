@@ -67,10 +67,6 @@ unsigned int g_keylayout = 0x409;	/* Defaults to US keyboard layout */
 int g_keyboard_type = 0x4;	/* Defaults to US keyboard layout */
 int g_keyboard_subtype = 0x0;	/* Defaults to US keyboard layout */
 int g_keyboard_functionkeys = 0xc;	/* Defaults to US keyboard layout */
-int g_sizeopt = 0;		/* If non-zero, a special size has been
-				   requested. If 1, the geometry will be fetched
-				   from _NET_WORKAREA. If negative, absolute value
-				   specifies the percent of the whole screen. */
 int g_dpi = 0;			/* device DPI: default not set */
 
 /* Following variables holds the initial width and height for a
@@ -78,6 +74,9 @@ int g_dpi = 0;			/* device DPI: default not set */
    what size of session we want to have. Set to decent defaults. */
 uint32 g_initial_width = 1024;
 uint32 g_initial_height = 768;
+
+window_size_type_t g_window_size_type = Fixed;
+
 
 int g_xpos = 0;
 int g_ypos = 0;
@@ -602,7 +601,7 @@ int parse_geometry_string(const char *optarg)
 	/* special keywords */
 	if (strcmp(optarg, "workarea") == 0)
 	{
-		g_sizeopt = 1;
+		g_window_size_type = Workarea;
 		return 0;
 	}
 
@@ -627,7 +626,7 @@ int parse_geometry_string(const char *optarg)
 
 	if (*ps == '%')
 	{
-		g_sizeopt = -1;
+		g_window_size_type = PercentageOfScreen;
 		ps++;
 		pe++;
 	}
@@ -645,13 +644,13 @@ int parse_geometry_string(const char *optarg)
 		g_initial_height = value;
 		ps = pe;
 
-		if (*ps == '%' && g_sizeopt == 0)
+		if (*ps == '%' && g_window_size_type == Fixed)
 		{
 			logger(Core, Error, "invalid geometry, unexpected '%%' after height");
 			return -1;
 		}
 
-		if (g_sizeopt == -1)
+		if (g_window_size_type == PercentageOfScreen)
 		{
 			if (*ps != '%')
 			{
@@ -664,9 +663,9 @@ int parse_geometry_string(const char *optarg)
 	}
 	else
         {
-		if (g_sizeopt == -1)
+		if (g_window_size_type == PercentageOfScreen)
 		{
-			/* same percentage of screen for both width and height */
+			/* percentage of screen used for both width and height */
 			g_initial_height = g_initial_width;
 		}
 		else
@@ -1178,7 +1177,8 @@ main(int argc, char *argv[])
 			logger(Core, Error, "You cannot use -4 and -A at the same time");
 			return EX_USAGE;
 		}
-		g_sizeopt = -100;
+
+		g_window_size_type = Fullscreen;
 		g_grab_keyboard = False;
 	}
 

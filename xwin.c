@@ -45,7 +45,7 @@
 extern RD_BOOL g_user_quit;
 extern RD_BOOL g_exit_mainloop;
 
-extern int g_sizeopt;
+extern window_size_type_t g_window_size_type;
 extern uint32 g_initial_width;
 extern uint32 g_initial_height;
 extern uint16 g_session_width;
@@ -1971,25 +1971,20 @@ ui_init_connection(void)
 	/*
 	 * Determine desktop size
 	 */
-	if (g_fullscreen)
+	if (g_fullscreen || g_window_size_type == Fullscreen)
 	{
 		g_initial_width = WidthOfScreen(g_screen);
 		g_initial_height = HeightOfScreen(g_screen);
 		g_using_full_workarea = True;
 	}
-	else if (g_sizeopt < 0)
+	else if (g_window_size_type == PercentageOfScreen)
 	{
-		/* Percent of screen */
-		if (-g_sizeopt >= 100)
-			g_using_full_workarea = True;
-
 		/* g_initial_width/height holds percentage of screen in each axis */
 		g_initial_height = HeightOfScreen(g_screen) * g_initial_height / 100;
 		g_initial_width = WidthOfScreen(g_screen) * g_initial_width / 100;
 	}
-	else if (g_sizeopt == 1)
+	else if (g_window_size_type == Workarea)
 	{
-		/* Fetch geometry from _NET_WORKAREA */
 		uint32 x, y, cx, cy;
 		if (get_current_workarea(&x, &y, &cx, &cy) == 0)
 		{
@@ -2000,7 +1995,7 @@ ui_init_connection(void)
 		else
 		{
 			logger(GUI, Warning,
-			       "Failed to get workarea: probably your window manager does not support extended hints\n");
+			       "Failed to get workarea: probably your window manager does not support extended hints, using full screensize as fallback\n");
 			g_initial_width = WidthOfScreen(g_screen);
 			g_initial_height = HeightOfScreen(g_screen);
 		}
@@ -2831,7 +2826,9 @@ xwin_process_events(void)
 				if (xevent.xconfigure.window == DefaultRootWindow(g_display))
 				{
 					/* only for fullscreen or x%-of-screen-sized windows */
-					if (g_sizeopt || g_fullscreen)
+					if (g_window_size_type == PercentageOfScreen
+					    || g_window_size_type == Fullscreen
+					    || g_fullscreen)
 					{
 						if (xevent.xconfigure.width != WidthOfScreen(g_screen)
 						    || xevent.xconfigure.height != HeightOfScreen(g_screen))

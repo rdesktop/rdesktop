@@ -17,9 +17,9 @@ AfterEach(XWIN) {};
 RD_BOOL g_user_quit;
 RD_BOOL g_exit_mainloop;
 
-int g_sizeopt;
 uint32 g_initial_width;
 uint32 g_initial_height;
+window_size_type_t g_window_size_type;
 uint16 g_session_width;
 uint16 g_session_height;
 int g_xpos;
