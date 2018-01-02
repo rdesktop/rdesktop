@@ -170,6 +170,7 @@ usage(char *program)
 	fprintf(stderr, "   -s: shell / seamless application to start remotely\n");
 	fprintf(stderr, "   -c: working directory\n");
 	fprintf(stderr, "   -p: password (- to prompt)\n");
+	fprintf(stderr, "   -O: omit password prompt\n");
 	fprintf(stderr, "   -n: client hostname\n");
 	fprintf(stderr, "   -k: keyboard layout on server (en-us, de, sv, etc.)\n");
 	fprintf(stderr, "   -g: desktop geometry (WxH[@DPI][+X[+Y]])\n");
@@ -598,7 +599,7 @@ main(int argc, char *argv[])
 	char domain[256];
 	char shell[256];
 	char directory[256];
-	RD_BOOL deactivated;
+	RD_BOOL prompt_password, deactivated;
 	struct passwd *pw;
 	uint32 flags, ext_disc_reason = 0;
 	char *p;
@@ -635,13 +636,14 @@ main(int argc, char *argv[])
 	flags = RDP_INFO_MOUSE | RDP_INFO_DISABLECTRLALTDEL
 		| RDP_INFO_UNICODE | RDP_INFO_MAXIMIZESHELL | RDP_INFO_ENABLEWINDOWSKEY;
 
+	prompt_password = True;
 	g_seamless_spawn_cmd[0] = domain[0] = g_password[0] = shell[0] = directory[0] = 0;
 	g_embed_wnd = 0;
 
 	g_num_devices = 0;
 
 	while ((c = getopt(argc, argv,
-			   "A:u:L:d:s:c:p:n:k:g:o:fbBeEitmMzCDKS:T:NX:a:x:Pr:045vh?")) != -1)
+			   "A:u:L:d:s:c:p:n:k:g:o:fbBeEitmMzCDKS:T:NX:a:x:OPr:045vh?")) != -1)
 	{
 		switch (c)
 		{
@@ -684,6 +686,9 @@ main(int argc, char *argv[])
 					while (*p)
 						*(p++) = 'X';
 				}
+				break;
+			case 'O':
+				prompt_password = False;
 				break;
 #ifdef WITH_SCARD
 			case 'i':
@@ -1158,17 +1163,20 @@ main(int argc, char *argv[])
 	if (locale)
 		xfree(locale);
 
-	/* If no password provided at this point, prompt for password / pin */
-	if (!g_password[0])
+	if (prompt_password)
 	{
-		if (read_password(g_password, sizeof(g_password)))
+		/* If no password provided at this point, prompt for password / pin */
+		if (!g_password[0])
 		{
-			flags |= RDP_INFO_AUTOLOGON;
-		}
-		else
-		{
-			logger(Core, Error, "Failed to read password or pin from stdin");
-			return EX_OSERR;
+			if (read_password(g_password, sizeof(g_password)))
+			{
+				flags |= RDP_INFO_AUTOLOGON;
+			}
+			else
+			{
+				logger(Core, Error, "Failed to read password or pin from stdin");
+				return EX_OSERR;
+			}
 		}
 	}
 
