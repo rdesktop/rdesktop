@@ -159,6 +159,7 @@ enum MCS_PDU_TYPE
 #define CS_SECURITY		0xc002
 #define CS_NET			0xc003
 #define CS_CLUSTER		0xc004
+#define CS_MONITOR		0xc005
 
 #define SEC_TAG_PUBKEY		0x0006
 #define SEC_TAG_KEYSIG		0x0008

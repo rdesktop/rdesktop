@@ -74,6 +74,10 @@ static int g_x_socket;
 static Screen *g_screen;
 Window g_wnd;
 
+// MultiMonitors : external declaration - see secure.c for variables
+extern int g_num_monitors;
+extern rdp_monitors g_monitors[16];
+
 /* These are the last known window sizes. They are updated whenever the window size is changed. */
 static uint32 g_window_width;
 static uint32 g_window_height;
@@ -1971,11 +1975,35 @@ ui_init_connection(void)
 	/*
 	 * Determine desktop size
 	 */
+	// MultiMonitors : 1 by default
+	g_num_monitors =1;
 	if (g_fullscreen)
 	{
 		g_initial_width = WidthOfScreen(g_screen);
 		g_initial_height = HeightOfScreen(g_screen);
 		g_using_full_workarea = True;
+
+		// MultiMonitors : get geometry from xrand If we have
+#ifdef HAVE_XRANDR
+		XRRScreenResources *xrrr = XRRGetScreenResources(g_display, DefaultRootWindow(g_display));
+		XRRCrtcInfo *xrrci;
+		int i;
+		g_num_monitors = xrrr->ncrtc;
+		 logger(GUI, Debug,"nb crt %d\n",g_num_monitors);
+		for (i = 0; i < g_num_monitors; ++i) {
+			xrrci = XRRGetCrtcInfo(g_display, xrrr, xrrr->crtcs[i]);
+			logger(GUI, Debug,"%dx%d+%d+%d\n", xrrci->width, xrrci->height, xrrci->x, xrrci->y);
+			g_monitors[i].x =  xrrci->x;
+			g_monitors[i].y = xrrci->y;
+			g_monitors[i].width = xrrci->width;
+			g_monitors[i].width = (g_monitors[i].width + 3) & ~3; // make sure width is a multiple of 4 
+			g_monitors[i].height = xrrci->height;
+			g_monitors[i].is_primary = (i==0);
+
+			XRRFreeCrtcInfo(xrrci);
+		}
+		XRRFreeScreenResources(xrrr);
+#endif		
 	}
 	else if (g_sizeopt < 0)
 	{
@@ -2348,12 +2376,36 @@ xwin_toggle_fullscreen(void)
 
 	g_fullscreen = !g_fullscreen;
 
+	// MultiMonitors : 1 monitor by default
+	g_num_monitors =1;
 	if (g_fullscreen)
 	{
 		x = 0;
 		y = 0,
 		width = WidthOfScreen(g_screen);
 		height = HeightOfScreen(g_screen);
+		
+#ifdef HAVE_XRANDR
+		// MultiMonitors : get geometry from xrand If we have
+		XRRScreenResources *xrrr = XRRGetScreenResources(g_display, DefaultRootWindow(g_display));
+		XRRCrtcInfo *xrrci;
+		int i;
+		g_num_monitors = xrrr->ncrtc;
+		 printf("nb crt %d\n",g_num_monitors);
+		for (i = 0; i < g_num_monitors; ++i) {
+			xrrci = XRRGetCrtcInfo(g_display, xrrr, xrrr->crtcs[i]);
+			printf("%dx%d+%d+%d\n", xrrci->width, xrrci->height, xrrci->x, xrrci->y);
+			g_monitors[i].x =  xrrci->x;
+			g_monitors[i].y = xrrci->y;
+			g_monitors[i].width = xrrci->width;
+			g_monitors[i].width = (g_monitors[0].width + 3) & ~3; // make sure width is a multiple of 4 
+			g_monitors[i].height = xrrci->height;
+			g_monitors[i].is_primary = (i==0);
+
+			XRRFreeCrtcInfo(xrrci);
+		}
+		XRRFreeScreenResources(xrrr);
+#endif
 	}
 	else
 	{
