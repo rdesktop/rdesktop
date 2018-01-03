@@ -26,7 +26,7 @@ if test "$no_x" = "yes"; then
     echo
     exit 1
 fi
-    
+
 AC_PATH_TOOL(PKG_CONFIG, pkg-config)
 
 AC_SEARCH_LIBS(socket, socket)
@@ -106,9 +106,9 @@ AC_DEFINE_UNQUOTED(ssldir, "$ssldir")
 
 dnl Add OpenSSL includes and libraries
 CFLAGS="$CFLAGS -I$ssldir/include"
-AC_ARG_ENABLE(static-openssl, 
+AC_ARG_ENABLE(static-openssl,
              [  --enable-static-openssl link OpenSSL statically],
-             [static_openssl=yes], 
+             [static_openssl=yes],
              [static_openssl=no])
 if test x"$static_openssl" = "xyes"; then
     # OpenSSL generally relies on libz
@@ -251,11 +251,11 @@ int main(int argc, char **argv)
 		return 1;
 	}
 	return 0;
-}], 
- [AC_MSG_RESULT(no)], 
- [AC_MSG_RESULT(yes) 
-  AC_DEFINE(NEED_ALIGN)], 
- [AC_MSG_RESULT(assuming yes) 
+}],
+ [AC_MSG_RESULT(no)],
+ [AC_MSG_RESULT(yes)
+  AC_DEFINE(NEED_ALIGN)],
+ [AC_MSG_RESULT(assuming yes)
   AC_DEFINE(NEED_ALIGN)])
 
 
@@ -277,17 +277,17 @@ AC_DEFINE_UNQUOTED(EGD_SOCKET, "$EGD_SOCKET")
 sound="yes"
 AC_ARG_WITH(sound,
     [  --with-sound            select sound system ("oss", "sgi", "sun", "alsa", "pulse" or "libao") ],
-    [ 
-    sound="$withval" 
+    [
+    sound="$withval"
     ])
 
 AC_CHECK_HEADER(sys/soundcard.h, [HAVE_OSS=1], [HAVE_OSS=0])
 AC_CHECK_HEADER(dmedia/audio.h, [HAVE_SGI=1], [HAVE_SGI=0])
 AC_CHECK_HEADER(sys/audioio.h, [HAVE_SUN=1], [HAVE_SUN=0])
 
-AC_ARG_ENABLE(static-libsamplerate, 
-    [  --enable-static-libsamplerate link libsamplerate statically], 
-    [static_libsamplerate=yes], 
+AC_ARG_ENABLE(static-libsamplerate,
+    [  --enable-static-libsamplerate link libsamplerate statically],
+    [static_libsamplerate=yes],
     [static_libsamplerate=no])
 
 if test -n "$PKG_CONFIG"; then
@@ -879,7 +879,7 @@ AC_CHECK_FUNCS(setmntent)
 #
 AC_ARG_WITH(ipv6,
     [  --with-ipv6             enable IPv6-support],
-    [ 
+    [
         if test $withval != "no";
         then
 	    AC_DEFINE(IPv6,1)
