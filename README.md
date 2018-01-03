@@ -36,9 +36,9 @@ Connect to an RDP server with:
 
 	% rdesktop server
 
-where server is the name of the Terminal Services machine. If you receive
+where `server` is the name of the Terminal Services machine. If you receive
 "Connection refused", this probably means that the server does not have
 Terminal Services enabled, or there is a firewall blocking access.
 
 You can also specify a number of options on the command line.  These are listed
-in the rdesktop manual page (run "man rdesktop").
+in the rdesktop manual page (run `man rdesktop`).
