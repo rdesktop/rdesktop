@@ -76,7 +76,7 @@ Window g_wnd;
 
 // MultiMonitors : external declaration - see secure.c for variables
 extern int g_num_monitors;
-extern rdp_monitors g_monitors[16];
+extern rdp_monitors *g_monitors;
 
 /* These are the last known window sizes. They are updated whenever the window size is changed. */
 static uint32 g_window_width;
@@ -1965,6 +1965,37 @@ ui_init(void)
 	return True;
 }
 
+#ifdef HAVE_XRANDR
+static void
+xwin_get_monitors(void)
+{
+		XRRScreenResources *xrrr = XRRGetScreenResources(g_display, DefaultRootWindow(g_display));
+		XRRCrtcInfo *xrrci;
+		int i,iPrimary=0;
+		g_num_monitors = xrrr->ncrtc;
+		logger(GUI, Debug,"nb crt %d\n",g_num_monitors);
+		if (g_monitors != NULL)
+			xfree(g_monitors);
+		g_monitors = (rdp_monitors *) xmalloc(sizeof(rdp_monitors)*g_num_monitors);
+		memset(g_monitors, 0, sizeof(rdp_monitors)*g_num_monitors);
+		for (i = 0; i < g_num_monitors; ++i) {
+			xrrci = XRRGetCrtcInfo(g_display, xrrr, xrrr->crtcs[i]);
+			logger(GUI, Debug,"%dx%d+%d+%d\n", xrrci->width, xrrci->height, xrrci->x, xrrci->y);
+			g_monitors[i].x =  xrrci->x;
+			g_monitors[i].y = xrrci->y;
+			g_monitors[i].width = xrrci->width;
+			g_monitors[i].width = (g_monitors[i].width + 3) & ~3; // make sure width is a multiple of 4 
+			g_monitors[i].height = xrrci->height;
+			g_monitors[i].is_primary = False;
+			if ( (xrrci->x == 0) && (xrrci->y == 0)) // the origine
+				iPrimary = i;
+
+			XRRFreeCrtcInfo(xrrci);
+		}
+		g_monitors[iPrimary].is_primary = True;
+		XRRFreeScreenResources(xrrr);
+}
+#endif
 
 /* 
    Initialize connection specific data, such as initial session size.
@@ -1983,27 +2014,9 @@ ui_init_connection(void)
 		g_initial_height = HeightOfScreen(g_screen);
 		g_using_full_workarea = True;
 
-		// MultiMonitors : get geometry from xrand If we have
 #ifdef HAVE_XRANDR
-		XRRScreenResources *xrrr = XRRGetScreenResources(g_display, DefaultRootWindow(g_display));
-		XRRCrtcInfo *xrrci;
-		int i;
-		g_num_monitors = xrrr->ncrtc;
-		 logger(GUI, Debug,"nb crt %d\n",g_num_monitors);
-		for (i = 0; i < g_num_monitors; ++i) {
-			xrrci = XRRGetCrtcInfo(g_display, xrrr, xrrr->crtcs[i]);
-			logger(GUI, Debug,"%dx%d+%d+%d\n", xrrci->width, xrrci->height, xrrci->x, xrrci->y);
-			g_monitors[i].x =  xrrci->x;
-			g_monitors[i].y = xrrci->y;
-			g_monitors[i].width = xrrci->width;
-			g_monitors[i].width = (g_monitors[i].width + 3) & ~3; // make sure width is a multiple of 4 
-			g_monitors[i].height = xrrci->height;
-			g_monitors[i].is_primary = (i==0);
-
-			XRRFreeCrtcInfo(xrrci);
-		}
-		XRRFreeScreenResources(xrrr);
-#endif		
+	xwin_get_monitors(); // MultiMonitors : get geometry from xrand If we have
+#endif
 	}
 	else if (g_sizeopt < 0)
 	{
@@ -2053,6 +2066,9 @@ ui_deinit(void)
 		ui_destroy_cursor(g_null_cursor);
 
 	XFreeModifiermap(g_mod_map);
+
+	if (g_monitors != NULL)
+		xfree(g_monitors);
 
 	XFreeGC(g_display, g_gc);
 	XCloseDisplay(g_display);
@@ -2386,26 +2402,9 @@ xwin_toggle_fullscreen(void)
 		height = HeightOfScreen(g_screen);
 		
 #ifdef HAVE_XRANDR
-		// MultiMonitors : get geometry from xrand If we have
-		XRRScreenResources *xrrr = XRRGetScreenResources(g_display, DefaultRootWindow(g_display));
-		XRRCrtcInfo *xrrci;
-		int i;
-		g_num_monitors = xrrr->ncrtc;
-		 printf("nb crt %d\n",g_num_monitors);
-		for (i = 0; i < g_num_monitors; ++i) {
-			xrrci = XRRGetCrtcInfo(g_display, xrrr, xrrr->crtcs[i]);
-			printf("%dx%d+%d+%d\n", xrrci->width, xrrci->height, xrrci->x, xrrci->y);
-			g_monitors[i].x =  xrrci->x;
-			g_monitors[i].y = xrrci->y;
-			g_monitors[i].width = xrrci->width;
-			g_monitors[i].width = (g_monitors[0].width + 3) & ~3; // make sure width is a multiple of 4 
-			g_monitors[i].height = xrrci->height;
-			g_monitors[i].is_primary = (i==0);
-
-			XRRFreeCrtcInfo(xrrci);
-		}
-		XRRFreeScreenResources(xrrr);
+		xwin_get_monitors(); // MultiMonitors : get geometry from xrand If we have
 #endif
+
 	}
 	else
 	{

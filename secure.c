@@ -60,7 +60,7 @@ static int g_sec_encrypt_use_count = 0;
 static int g_sec_decrypt_use_count = 0;
 
 int g_num_monitors = 0;
-rdp_monitors g_monitors[16];
+rdp_monitors *g_monitors = NULL;
 /*
  * I believe this is based on SSLv3 with the following differences:
  *  MAC algorithm (5.2.3.1) uses only 32-bit length in place of seq_num/type/length fields
@@ -407,7 +407,7 @@ sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 	if (g_num_channels > 0)
 		length += g_num_channels * 12 + 8;
 
-	if (g_num_monitors > 1) // only if more than one monitor
+	if (g_num_monitors > 1) // MultiMonitors : only if more than one monitor
 		length += (g_num_monitors * 20) + 12;
 
 	/* Generic Conference Control (T.124) ConferenceCreateRequest */
