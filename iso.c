@@ -26,13 +26,14 @@ extern RD_BOOL g_encryption_initial;
 extern RDP_VERSION g_rdp_version;
 extern RD_BOOL g_use_password_as_pin;
 
-static RD_BOOL g_negotiate_rdp_protocol = True;
-
 extern char *g_sc_csp_name;
 extern char *g_sc_reader_name;
 extern char *g_sc_card_name;
 extern char *g_sc_container_name;
 
+// MultiMonitors : external declaration - see xwin.c for variables
+extern RD_BOOL g_monitors_supported;
+extern int g_num_monitors;
 
 /* Send a self-contained ISO PDU */
 static void
@@ -62,7 +63,7 @@ iso_send_connection_request(char *username, uint32 neg_proto)
 	STREAM s;
 	int length = 30 + strlen(username);
 
-	if (g_rdp_version >= RDP_V5 && g_negotiate_rdp_protocol)
+	if (g_rdp_version >= RDP_V5 )
 		length += 8;
 
 	s = tcp_init(length);
@@ -83,7 +84,7 @@ iso_send_connection_request(char *username, uint32 neg_proto)
 	out_uint8(s, 0x0d);	/* cookie termination string: CR+LF */
 	out_uint8(s, 0x0a);
 
-	if (g_rdp_version >= RDP_V5 && g_negotiate_rdp_protocol)
+	if (g_rdp_version >= RDP_V5)
 	{
 		/* optional RDP protocol negotiation request for RDPv5 */
 		out_uint8(s, RDP_NEG_REQ);
@@ -209,9 +210,7 @@ iso_connect(char *server, char *username, char *domain, char *password,
 	uint8 code;
 	uint32 neg_proto;
 
-	g_negotiate_rdp_protocol = True;
-
-	neg_proto = PROTOCOL_SSL;
+	neg_proto = *selected_protocol;
 
 #ifdef WITH_CREDSSP
 	if (!g_use_password_as_pin)
@@ -253,10 +252,11 @@ iso_connect(char *server, char *username, char *domain, char *password,
 		const char *reason = NULL;
 
 		uint8 type = 0;
+		uint8 flags = 0;
 		uint32 data = 0;
 
 		in_uint8(s, type);
-		in_uint8s(s, 1); /* skip flags */
+		in_uint8(s, flags); /* flags to test EXTENDED_CLIENT_DATA_SUPPORTED for multimonitor*/
 		in_uint8s(s, 2); /* skip length */
 		in_uint32(s, data);
 
@@ -302,7 +302,7 @@ iso_connect(char *server, char *username, char *domain, char *password,
 				}
 
 				logger(Core, Notice, "Retrying with plain RDP.");
-				g_negotiate_rdp_protocol = False;
+				neg_proto = PROTOCOL_RDP;
 				goto retry;
 			}
 
@@ -318,6 +318,18 @@ iso_connect(char *server, char *username, char *domain, char *password,
 			return False;
 		}
 
+		if ( flags & EXTENDED_CLIENT_DATA_SUPPORTED) { // https://msdn.microsoft.com/en-us/library/dd305336.aspx and https://msdn.microsoft.com/en-us/library/cc240506.aspx
+			g_monitors_supported = True;
+			logger(Protocol, Debug, "EXTENDED_CLIENT_DATA_SUPPORTED received for multimonitor");
+		}
+		else {
+			g_monitors_supported = False;
+			logger(Protocol, Debug, "no EXTENDED_CLIENT_DATA_SUPPORTED for multimonitor");
+		}
+		if ((g_num_monitors>1) && !g_monitors_supported) {
+			logger(Core, Verbose, "no EXTENDED_CLIENT_DATA_SUPPORTED for multimonitor");
+			g_num_monitors=1;
+		}
 		/* handle negotiation response */
 		if (data == PROTOCOL_SSL)
 		{
