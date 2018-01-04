@@ -330,6 +330,7 @@ iso_connect(char *server, char *username, char *domain, char *password,
 			logger(Protocol, Warning, "no EXTENDED_CLIENT_DATA_SUPPORTED for multimonitor");
 			g_num_monitors=1;
 		}
+
 		/* handle negotiation response */
 		if (data == PROTOCOL_SSL)
 		{
