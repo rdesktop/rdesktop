@@ -327,7 +327,7 @@ iso_connect(char *server, char *username, char *domain, char *password,
 			logger(Protocol, Debug, "no EXTENDED_CLIENT_DATA_SUPPORTED for multimonitor");
 		}
 		if ((g_num_monitors>1) && !g_monitors_supported) {
-			logger(Core, Verbose, "no EXTENDED_CLIENT_DATA_SUPPORTED for multimonitor");
+			logger(Protocol, Warning, "no EXTENDED_CLIENT_DATA_SUPPORTED for multimonitor");
 			g_num_monitors=1;
 		}
 		/* handle negotiation response */

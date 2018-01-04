@@ -74,9 +74,10 @@ static int g_x_socket;
 static Screen *g_screen;
 Window g_wnd;
 
-// MultiMonitors : external declaration - see secure.c for variables
-extern int g_num_monitors;
-extern rdp_monitors *g_monitors;
+// MultiMonitors : variables
+RD_BOOL g_monitors_supported = False;
+int g_num_monitors = 0;
+rdp_monitors *g_monitors = NULL;
 
 /* These are the last known window sizes. They are updated whenever the window size is changed. */
 static uint32 g_window_width;
@@ -1973,21 +1974,23 @@ xwin_get_monitors(void)
 		XRRCrtcInfo *xrrci;
 		int i,iPrimary=0;
 		g_num_monitors = xrrr->ncrtc;
-		logger(GUI, Debug,"nb crt %d\n",g_num_monitors);
-		if (g_monitors != NULL)
+		logger(GUI, Debug,"nb crt %d",g_num_monitors);
+		if (g_monitors != NULL) {
 			xfree(g_monitors);
+			g_monitors = NULL;
+		}
 		g_monitors = (rdp_monitors *) xmalloc(sizeof(rdp_monitors)*g_num_monitors);
 		memset(g_monitors, 0, sizeof(rdp_monitors)*g_num_monitors);
 		for (i = 0; i < g_num_monitors; ++i) {
 			xrrci = XRRGetCrtcInfo(g_display, xrrr, xrrr->crtcs[i]);
-			logger(GUI, Debug,"%dx%d+%d+%d\n", xrrci->width, xrrci->height, xrrci->x, xrrci->y);
+			logger(GUI, Debug,"%dx%d+%d+%d", xrrci->width, xrrci->height, xrrci->x, xrrci->y);
 			g_monitors[i].x =  xrrci->x;
 			g_monitors[i].y = xrrci->y;
 			g_monitors[i].width = xrrci->width;
 			g_monitors[i].width = (g_monitors[i].width + 3) & ~3; // make sure width is a multiple of 4 
 			g_monitors[i].height = xrrci->height;
 			g_monitors[i].is_primary = False;
-			if ( (xrrci->x == 0) && (xrrci->y == 0)) // the origine
+			if ( (xrrci->x == 0) && (xrrci->y == 0)) // the origin
 				iPrimary = i;
 
 			XRRFreeCrtcInfo(xrrci);
@@ -2067,9 +2070,10 @@ ui_deinit(void)
 
 	XFreeModifiermap(g_mod_map);
 
-	if (g_monitors != NULL)
+	if (g_monitors != NULL) {
 		xfree(g_monitors);
-
+		g_monitors = NULL;
+	}
 	XFreeGC(g_display, g_gc);
 	XCloseDisplay(g_display);
 	g_display = NULL;

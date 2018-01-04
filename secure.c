@@ -59,8 +59,11 @@ uint16 g_server_rdp_version = 0;
 static int g_sec_encrypt_use_count = 0;
 static int g_sec_decrypt_use_count = 0;
 
-int g_num_monitors = 0;
-rdp_monitors *g_monitors = NULL;
+// MultiMonitors : external declaration - see xwin.c for variables
+extern RD_BOOL g_monitors_supported;
+extern int g_num_monitors;
+extern rdp_monitors *g_monitors;
+
 /*
  * I believe this is based on SSLv3 with the following differences:
  *  MAC algorithm (5.2.3.1) uses only 32-bit length in place of seq_num/type/length fields
@@ -407,7 +410,7 @@ sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 	if (g_num_channels > 0)
 		length += g_num_channels * 12 + 8;
 
-	if (g_num_monitors > 1) // MultiMonitors : only if more than one monitor
+	if (g_monitors_supported && (g_num_monitors > 1)) // MultiMonitors : only if more than one monitor
 		length += (g_num_monitors * 20) + 12;
 
 	/* Generic Conference Control (T.124) ConferenceCreateRequest */
@@ -511,7 +514,7 @@ sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 	}
 
 // MultiMonitors : send configuration to rdp server
-	if (g_num_monitors > 1) { // only if more than one monitor
+	if (g_monitors_supported && (g_num_monitors > 1)) { // only if more than one monitor
 		int lengthMonitors, n;
 
 		logger(Protocol, Debug, "Setting %d monitors\n", g_num_monitors);
@@ -967,6 +970,7 @@ sec_connect(char *server, char *username, char *domain, char *password, RD_BOOL 
 	struct stream mcs_data;
 
 	/* Start a MCS connect sequence */
+	selected_proto = PROTOCOL_SSL; //prefered protocol
 	if (!mcs_connect_start(server, username, domain, password, reconnect, &selected_proto))
 		return False;
 
