@@ -308,4 +308,13 @@ FILEINFO;
 
 typedef RD_BOOL(*str_handle_lines_t) (const char *line, void *data);
 
+// MultiMonitors : Structure
+typedef struct _rdp_monitors{
+	int x;
+	int y;
+	int width;
+	int height;
+	RD_BOOL is_primary;
+} rdp_monitors;
+
 #endif /* _TYPES_H */
