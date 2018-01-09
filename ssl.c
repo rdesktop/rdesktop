@@ -329,3 +329,62 @@ rdssl_hmac_md5(const void *key, int key_len, const unsigned char *msg, int msg_l
 {
 	HMAC(EVP_md5(), key, key_len, msg, msg_len, md, NULL);
 }
+
+#if defined(OPENSSL_VERSION_NUMBER) && (OPENSSL_VERSION_NUMBER < 0x1000000fL)
+int X509_ALGOR_set0(X509_ALGOR *alg, ASN1_OBJECT *aobj, int ptype, void *pval)
+{
+    if (alg == NULL)
+        return 0;
+
+    if (ptype != V_ASN1_UNDEF) {
+        if (alg->parameter == NULL)
+            alg->parameter = ASN1_TYPE_new();
+        if (alg->parameter == NULL)
+            return 0;
+    }
+
+    ASN1_OBJECT_free(alg->algorithm);
+    alg->algorithm = aobj;
+
+    if (ptype == 0)
+        return 1;
+    if (ptype == V_ASN1_UNDEF) {
+        ASN1_TYPE_free(alg->parameter);
+        alg->parameter = NULL;
+    } else
+        ASN1_TYPE_set(alg->parameter, ptype, pval);
+    return 1;
+}
+
+int X509_PUBKEY_set0_param(X509_PUBKEY *pub, ASN1_OBJECT *aobj,
+                           int ptype, void *pval,
+                           unsigned char *penc, int penclen)
+{
+    if (!X509_ALGOR_set0(pub->algor, aobj, ptype, pval))
+        return 0;
+    if (penc) {
+        OPENSSL_free(pub->public_key->data);
+        pub->public_key->data = penc;
+        pub->public_key->length = penclen;
+        /* Set number of unused bits to zero */
+        pub->public_key->flags &= ~(ASN1_STRING_FLAG_BITS_LEFT | 0x07);
+        pub->public_key->flags |= ASN1_STRING_FLAG_BITS_LEFT;
+    }
+    return 1;
+}
+
+int X509_PUBKEY_get0_param(ASN1_OBJECT **ppkalg,
+                           const unsigned char **pk, int *ppklen,
+                           X509_ALGOR **pa, X509_PUBKEY *pub)
+{
+    if (ppkalg)
+        *ppkalg = pub->algor->algorithm;
+    if (pk) {
+        *pk = pub->public_key->data;
+        *ppklen = pub->public_key->length;
+    }
+    if (pa)
+        *pa = pub->algor;
+    return 1;
+}
+#endif
