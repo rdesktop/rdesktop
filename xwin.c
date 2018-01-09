@@ -1970,8 +1970,13 @@ ui_init(void)
 static void
 xwin_get_monitors(void)
 {
-		XRRScreenResources *xrrr = XRRGetScreenResources(g_display, DefaultRootWindow(g_display));
-		XRRCrtcInfo *xrrci;
+		XRRScreenResources *xrrr = NULL;
+		XRRCrtcInfo *xrrci = NULL;
+		xrrr = XRRGetScreenResources(g_display, DefaultRootWindow(g_display));
+		if (xrrr == NULL) {
+			logger(GUI, Warning,"XRRGetScreenResources failed");
+			return;
+		}
 		int i,iPrimary=0;
 		g_num_monitors = xrrr->ncrtc;
 		logger(GUI, Debug,"nb crt %d",g_num_monitors);
