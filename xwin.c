@@ -1973,6 +1973,11 @@ ui_init(void)
 static RD_BOOL
 xwin_get_monitors_xrandr(void)
 {
+	int event_base,error_base;
+	if (! XRRQueryExtension (g_display, &event_base, &error_base)) {
+		logger(GUI, Debug,"No Xrandr extension");
+		return False;
+	}
 	XRRScreenResources *xrrr = NULL;
 	XRRCrtcInfo *xrrci = NULL;
 	xrrr = XRRGetScreenResources(g_display, DefaultRootWindow(g_display));
