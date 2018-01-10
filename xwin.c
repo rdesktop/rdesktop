@@ -1971,7 +1971,7 @@ ui_init_connection(void)
 	/*
 	 * Determine desktop size
 	 */
-	if (g_fullscreen || g_window_size_type == Fullscreen)
+	if (g_window_size_type == Fullscreen)
 	{
 		g_initial_width = WidthOfScreen(g_screen);
 		g_initial_height = HeightOfScreen(g_screen);

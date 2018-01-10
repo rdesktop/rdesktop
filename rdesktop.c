@@ -853,6 +853,7 @@ main(int argc, char *argv[])
 				break;
 
 			case 'f':
+				g_window_size_type = Fullscreen;
 				g_fullscreen = True;
 				break;
 
@@ -1296,6 +1297,7 @@ main(int argc, char *argv[])
 
 	dvc_init();
 	rdpedisp_init();
+	ui_init_connection();
 
 	g_reconnect_loop = False;
 	while (1)
@@ -1320,7 +1322,6 @@ main(int argc, char *argv[])
 			g_network_error = False;
 		}
 
-		ui_init_connection();
 		utils_apply_session_size_limitations(&g_initial_width, &g_initial_height);
 
 		if (!rdp_connect
