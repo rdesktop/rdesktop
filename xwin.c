@@ -1674,6 +1674,16 @@ select_visual(int screen_num)
 			RD_BOOL can_translate_to_bpp = False;
 			int j;
 
+			logger(GUI, Debug, " %3d: visual 0x%lx class %d (%s) red %8d green %8d, blue %8d depth %d",
+					i,
+					visual_info->visualid,
+					visual_info->class,
+					visual_info->class == TrueColor ? "TrueColor" : "unknown",
+					visual_info->red_mask,
+					visual_info->green_mask,
+					visual_info->blue_mask,
+					visual_info->depth);
+
 			/* Try to find a no-translation visual that'll
 			   allow us to use RDP bitmaps directly as ZPixmaps. */
 			if (!g_xserver_be && (((visual_info->depth == 15) &&
