@@ -23,8 +23,8 @@
 #include "ssl.h"
 
 extern char g_hostname[16];
-extern uint32 g_initial_width;
-extern uint32 g_initial_height;
+extern uint32 g_requested_session_width;
+extern uint32 g_requested_session_height;
 extern int g_dpi;
 extern unsigned int g_keylayout;
 extern int g_keyboard_type;
@@ -426,8 +426,8 @@ sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 	out_uint16_le(s, CS_CORE);		/* type */
 	out_uint16_le(s, 216 + (g_dpi > 0 ? 18 : 0));	/* length */
 	out_uint32_le(s, rdpversion);           /* version */
-	out_uint16_le(s, g_initial_width);		/* desktopWidth */
-	out_uint16_le(s, g_initial_height);		/* desktopHeight */
+	out_uint16_le(s, g_requested_session_width);		/* desktopWidth */
+	out_uint16_le(s, g_requested_session_height);		/* desktopHeight */
 	out_uint16_le(s, RNS_UD_COLOR_8BPP);	/* colorDepth */
 	out_uint16_le(s, RNS_UD_SAS_DEL);	/* SASSequence */
 	out_uint32_le(s, g_keylayout);		/* keyboardLayout */
@@ -459,7 +459,7 @@ sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 	if (g_dpi > 0)
 	{
 		/* Extended client info describing monitor geometry */
-		utils_calculate_dpi_scale_factors(g_initial_width, g_initial_height, g_dpi,
+		utils_calculate_dpi_scale_factors(g_requested_session_width, g_requested_session_height, g_dpi,
 						  &physwidth, &physheight,
 						  &desktopscale, &devicescale);
 		out_uint32_le(s, physwidth);	/* physicalwidth */

@@ -69,11 +69,11 @@ int g_keyboard_subtype = 0x0;	/* Defaults to US keyboard layout */
 int g_keyboard_functionkeys = 0xc;	/* Defaults to US keyboard layout */
 int g_dpi = 0;			/* device DPI: default not set */
 
-/* Following variables holds the initial width and height for a
+/* Following variables holds the requested width and height for a
    rdesktop window, this is sent upon connect and tells the server
    what size of session we want to have. Set to decent defaults. */
-uint32 g_initial_width = 1024;
-uint32 g_initial_height = 768;
+uint32 g_requested_session_width = 1024;
+uint32 g_requested_session_height = 768;
 
 window_size_type_t g_window_size_type = Fixed;
 
@@ -614,7 +614,7 @@ int parse_geometry_string(const char *optarg)
 		return -1;
 	}
 
-	g_initial_width = value;
+	g_requested_session_width = value;
 	ps = pe;
 
 	/* expect % or x */
@@ -641,7 +641,7 @@ int parse_geometry_string(const char *optarg)
 			return -1;
 		}
 
-		g_initial_height = value;
+		g_requested_session_height = value;
 		ps = pe;
 
 		if (*ps == '%' && g_window_size_type == Fixed)
@@ -666,7 +666,7 @@ int parse_geometry_string(const char *optarg)
 		if (g_window_size_type == PercentageOfScreen)
 		{
 			/* percentage of screen used for both width and height */
-			g_initial_height = g_initial_width;
+			g_requested_session_height = g_requested_session_width;
 		}
 		else
 		{
@@ -1322,7 +1322,7 @@ main(int argc, char *argv[])
 			g_network_error = False;
 		}
 
-		utils_apply_session_size_limitations(&g_initial_width, &g_initial_height);
+		utils_apply_session_size_limitations(&g_requested_session_width, &g_requested_session_height);
 
 		if (!rdp_connect
 		    (server, flags, domain, g_password, shell, directory, g_reconnect_loop))
@@ -1392,7 +1392,7 @@ main(int argc, char *argv[])
 		if (g_pending_resize)
 		{
 			logger(Core, Verbose, "Resize reconnect loop triggered, new size %dx%d",
-			       g_initial_width, g_initial_height);
+			       g_requested_session_width, g_requested_session_height);
 			g_pending_resize = False;
 			g_reconnect_loop = True;
 			continue;
@@ -1925,7 +1925,7 @@ rd_create_ui()
 	if (!ui_have_window())
 	{
 		/* create a window if we don't have one initialized */
-		if (!ui_create_window(g_initial_width, g_initial_height))
+		if (!ui_create_window(g_requested_session_width, g_requested_session_height))
 			exit(EX_OSERR);
 	}
 	else

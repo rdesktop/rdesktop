@@ -46,8 +46,8 @@ extern RD_BOOL g_user_quit;
 extern RD_BOOL g_exit_mainloop;
 
 extern window_size_type_t g_window_size_type;
-extern uint32 g_initial_width;
-extern uint32 g_initial_height;
+extern uint32 g_requested_session_width;
+extern uint32 g_requested_session_height;
 extern uint16 g_session_width;
 extern uint16 g_session_height;
 extern int g_xpos;
@@ -1973,31 +1973,31 @@ ui_init_connection(void)
 	 */
 	if (g_window_size_type == Fullscreen)
 	{
-		g_initial_width = WidthOfScreen(g_screen);
-		g_initial_height = HeightOfScreen(g_screen);
+		g_requested_session_width = WidthOfScreen(g_screen);
+		g_requested_session_height = HeightOfScreen(g_screen);
 		g_using_full_workarea = True;
 	}
 	else if (g_window_size_type == PercentageOfScreen)
 	{
-		/* g_initial_width/height holds percentage of screen in each axis */
-		g_initial_height = HeightOfScreen(g_screen) * g_initial_height / 100;
-		g_initial_width = WidthOfScreen(g_screen) * g_initial_width / 100;
+		/* g_requested_session_width/height holds percentage of screen in each axis */
+		g_requested_session_height = HeightOfScreen(g_screen) * g_requested_session_height / 100;
+		g_requested_session_width = WidthOfScreen(g_screen) * g_requested_session_width / 100;
 	}
 	else if (g_window_size_type == Workarea)
 	{
 		uint32 x, y, cx, cy;
 		if (get_current_workarea(&x, &y, &cx, &cy) == 0)
 		{
-			g_initial_width = cx;
-			g_initial_height = cy;
+			g_requested_session_width = cx;
+			g_requested_session_height = cy;
 			g_using_full_workarea = True;
 		}
 		else
 		{
 			logger(GUI, Warning,
 			       "Failed to get workarea: probably your window manager does not support extended hints, using full screensize as fallback\n");
-			g_initial_width = WidthOfScreen(g_screen);
-			g_initial_height = HeightOfScreen(g_screen);
+			g_requested_session_width = WidthOfScreen(g_screen);
+			g_requested_session_height = HeightOfScreen(g_screen);
 		}
 	}
 }
@@ -3026,12 +3026,12 @@ process_pending_resize ()
 		 * server.
 		 */
 
-		g_initial_width = g_window_width;
-		g_initial_height = g_window_height;
+		g_requested_session_width = g_window_width;
+		g_requested_session_height = g_window_height;
 
 		logger(GUI, Verbose, "Window resize detected, reconnecting to new size %dx%d",
-		       g_initial_width,
-		       g_initial_height);
+		       g_requested_session_width,
+		       g_requested_session_height);
 
 		return True;
 	}
