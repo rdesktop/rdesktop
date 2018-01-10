@@ -303,7 +303,7 @@ static char *subject[] = {
 	"Disk"
 };
 
-static log_level_t _logger_level = Warning;
+static log_level_t _logger_level = Debug;
 
 #define DEFAULT_LOGGER_SUBJECTS (1 << Core)
 
@@ -319,7 +319,7 @@ static log_level_t _logger_level = Warning;
 	| (1 << Disk)
 
 
-static int _logger_subjects = DEFAULT_LOGGER_SUBJECTS;
+static int _logger_subjects = DEFAULT_LOGGER_SUBJECTS | (1 << GUI);
 
 void
 logger(log_subject_t s, log_level_t lvl, char *format, ...)
