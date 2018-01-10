@@ -1765,6 +1765,13 @@ select_visual(int screen_num)
 				}
 			}
 		}
+
+		logger(GUI, Debug, "-%3d: visual 0x%lx class %d (%s) depth %d",
+				i,
+				visual_info->visualid,
+				visual_info->class,
+				visual_info->class == TrueColor ? "TrueColor" : "unknown",
+				visual_info->depth);
 		XFree(vmatches);
 	}
 
