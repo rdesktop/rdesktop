@@ -1706,9 +1706,11 @@ select_visual(int screen_num)
 				g_depth = visual_info->depth;
 				g_compatible_arch = !g_host_be;
 				g_no_translate_image = (visual_info->depth == g_server_depth);
-				if (g_no_translate_image)
+				if (g_no_translate_image) {
 					/* We found the best visual */
+					logger(GUI, Debug, "Break in g_no_translate_image");
 					break;
+				}
 			}
 			else
 			{
