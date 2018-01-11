@@ -2287,8 +2287,6 @@ xwin_toggle_fullscreen(void)
 {
 	uint32 x, y, width, height;
 	XWindowAttributes attr;
-	XSetWindowAttributes setattr;
-	unsigned long value_mask;
 	Pixmap contents = 0;
 	Window unused;
 	int dest_x, dest_y;
@@ -2347,14 +2345,10 @@ xwin_toggle_fullscreen(void)
 	}
 
 	/* Resize rdesktop window using new size and window attributes */
-	XUnmapWindow(g_display, g_wnd);
-
-	XMoveResizeWindow(g_display, g_wnd, x, y, width, height);
-
-	value_mask = get_window_attribs(&setattr);
-	XChangeWindowAttributes(g_display, g_wnd, value_mask, &setattr);
-
-	XMapWindow(g_display, g_wnd);
+	g_xpos = x;
+	g_ypos = y;
+	ui_destroy_window();
+	ui_create_window(width, height);
 
 	/* Change session size to match new window size */
 	if (rdpedisp_is_available() == False)
