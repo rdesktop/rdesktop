@@ -2368,6 +2368,8 @@ xwin_toggle_fullscreen(void)
 	{
 		/* Change session size using disconnect / reconnect mechanism */
 		g_pending_resize = True;
+		g_window_width = width;
+		g_window_height = height;
 		return;
 	}
 	else
