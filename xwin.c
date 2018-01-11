@@ -1961,44 +1961,37 @@ ui_init(void)
 	return True;
 }
 
-
-/* 
-   Initialize connection specific data, such as initial session size.
- */
 void
-ui_init_connection(void)
+ui_get_screen_size(uint32 *width, uint32 *height)
 {
-	/*
-	 * Determine desktop size
-	 */
-	if (g_window_size_type == Fullscreen)
+	*width =  WidthOfScreen(g_screen);
+	*height =  HeightOfScreen(g_screen);
+}
+
+void
+ui_get_screen_size_from_percentage(uint32 pw, uint32 ph, uint32 *width, uint32 *height)
+{
+	uint32 sw,sh;
+	ui_get_screen_size(&sw, &sh);
+	*width = sw * pw / 100;
+	*height = sh * ph / 100;
+}
+
+void
+ui_get_workarea_size(uint32 *width, uint32 *height)
+{
+	uint32 x, y, w, h;
+	if (get_current_workarea(&x, &y, &w, &h) == 0)
 	{
-		g_requested_session_width = WidthOfScreen(g_screen);
-		g_requested_session_height = HeightOfScreen(g_screen);
+		*width = w;
+		*height = h;
 		g_using_full_workarea = True;
 	}
-	else if (g_window_size_type == PercentageOfScreen)
+	else
 	{
-		/* g_requested_session_width/height holds percentage of screen in each axis */
-		g_requested_session_height = HeightOfScreen(g_screen) * g_requested_session_height / 100;
-		g_requested_session_width = WidthOfScreen(g_screen) * g_requested_session_width / 100;
-	}
-	else if (g_window_size_type == Workarea)
-	{
-		uint32 x, y, cx, cy;
-		if (get_current_workarea(&x, &y, &cx, &cy) == 0)
-		{
-			g_requested_session_width = cx;
-			g_requested_session_height = cy;
-			g_using_full_workarea = True;
-		}
-		else
-		{
-			logger(GUI, Warning,
-			       "Failed to get workarea: probably your window manager does not support extended hints, using full screensize as fallback\n");
-			g_requested_session_width = WidthOfScreen(g_screen);
-			g_requested_session_height = HeightOfScreen(g_screen);
-		}
+		logger(GUI, Warning,
+		       "Failed to get workarea: probably your window manager does not support extended hints, using full screensize as fallback\n");
+		ui_get_screen_size(width, height);
 	}
 }
 

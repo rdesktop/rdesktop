@@ -729,6 +729,32 @@ int parse_geometry_string(const char *optarg)
 	return 0;
 }
 
+static void
+setup_user_requested_session_size()
+{
+	switch(g_window_size_type)
+	{
+	case Fullscreen:
+		ui_get_screen_size(&g_requested_session_width, &g_requested_session_height);
+		break;
+
+	case Workarea:
+		ui_get_workarea_size(&g_requested_session_width, &g_requested_session_height);
+		break;
+
+	case Fixed:
+		break;
+
+	case PercentageOfScreen:
+		ui_get_screen_size_from_percentage(g_requested_session_width,
+						   g_requested_session_height,
+						   &g_requested_session_width,
+						   &g_requested_session_height);
+		break;
+	}
+}
+
+
 /* Client program */
 int
 main(int argc, char *argv[])
@@ -1297,7 +1323,8 @@ main(int argc, char *argv[])
 
 	dvc_init();
 	rdpedisp_init();
-	ui_init_connection();
+
+	setup_user_requested_session_size();
 
 	g_reconnect_loop = False;
 	while (1)
