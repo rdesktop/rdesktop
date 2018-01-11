@@ -70,3 +70,51 @@ void ui_set_clip(int x,int y, int cx, int cy)
 {
   mock(x,y,cx,cy);
 }
+
+RD_BOOL
+ui_create_window(uint32 width, uint32 height)
+{
+  return mock(width, height);
+}
+
+void
+ui_deinit()
+{
+  mock();
+}
+
+void
+ui_destroy_window()
+{
+  mock();
+}
+
+void
+ui_init_connection()
+{
+  mock();
+}
+
+RD_BOOL
+ui_have_window()
+{
+  return mock();
+}
+
+RD_BOOL
+ui_init()
+{
+  return mock();
+}
+
+void
+ui_reset_clip()
+{
+  mock();
+}
+
+void
+ui_seamless_end()
+{
+  mock();
+}

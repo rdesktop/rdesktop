@@ -45,9 +45,9 @@
 extern RD_BOOL g_user_quit;
 extern RD_BOOL g_exit_mainloop;
 
-extern int g_sizeopt;
-extern uint32 g_initial_width;
-extern uint32 g_initial_height;
+extern window_size_type_t g_window_size_type;
+extern uint32 g_requested_session_width;
+extern uint32 g_requested_session_height;
 extern uint16 g_session_width;
 extern uint16 g_session_height;
 extern int g_xpos;
@@ -1961,54 +1961,37 @@ ui_init(void)
 	return True;
 }
 
-
-/* 
-   Initialize connection specific data, such as initial session size.
- */
 void
-ui_init_connection(void)
+ui_get_screen_size(uint32 *width, uint32 *height)
 {
-	/*
-	 * Determine desktop size
-	 */
-	if (g_fullscreen)
+	*width =  WidthOfScreen(g_screen);
+	*height =  HeightOfScreen(g_screen);
+}
+
+void
+ui_get_screen_size_from_percentage(uint32 pw, uint32 ph, uint32 *width, uint32 *height)
+{
+	uint32 sw,sh;
+	ui_get_screen_size(&sw, &sh);
+	*width = sw * pw / 100;
+	*height = sh * ph / 100;
+}
+
+void
+ui_get_workarea_size(uint32 *width, uint32 *height)
+{
+	uint32 x, y, w, h;
+	if (get_current_workarea(&x, &y, &w, &h) == 0)
 	{
-		g_initial_width = WidthOfScreen(g_screen);
-		g_initial_height = HeightOfScreen(g_screen);
+		*width = w;
+		*height = h;
 		g_using_full_workarea = True;
 	}
-	else if (g_sizeopt < 0)
+	else
 	{
-		/* Percent of screen */
-		if (-g_sizeopt >= 100)
-			g_using_full_workarea = True;
-
-		if (g_initial_width > 0)
-			g_initial_width = g_sizeopt;
-
-		if (g_initial_height > 0)
-			g_initial_height = g_sizeopt;
-
-		g_initial_height = HeightOfScreen(g_screen) * (-g_initial_height) / 100;
-		g_initial_width = WidthOfScreen(g_screen) * (-g_initial_width) / 100;
-	}
-	else if (g_sizeopt == 1)
-	{
-		/* Fetch geometry from _NET_WORKAREA */
-		uint32 x, y, cx, cy;
-		if (get_current_workarea(&x, &y, &cx, &cy) == 0)
-		{
-			g_initial_width = cx;
-			g_initial_height = cy;
-			g_using_full_workarea = True;
-		}
-		else
-		{
-			logger(GUI, Warning,
-			       "Failed to get workarea: probably your window manager does not support extended hints\n");
-			g_initial_width = WidthOfScreen(g_screen);
-			g_initial_height = HeightOfScreen(g_screen);
-		}
+		logger(GUI, Warning,
+		       "Failed to get workarea: probably your window manager does not support extended hints, using full screensize as fallback\n");
+		ui_get_screen_size(width, height);
 	}
 }
 
@@ -2304,8 +2287,6 @@ xwin_toggle_fullscreen(void)
 {
 	uint32 x, y, width, height;
 	XWindowAttributes attr;
-	XSetWindowAttributes setattr;
-	unsigned long value_mask;
 	Pixmap contents = 0;
 	Window unused;
 	int dest_x, dest_y;
@@ -2364,20 +2345,18 @@ xwin_toggle_fullscreen(void)
 	}
 
 	/* Resize rdesktop window using new size and window attributes */
-	XUnmapWindow(g_display, g_wnd);
-
-	XMoveResizeWindow(g_display, g_wnd, x, y, width, height);
-
-	value_mask = get_window_attribs(&setattr);
-	XChangeWindowAttributes(g_display, g_wnd, value_mask, &setattr);
-
-	XMapWindow(g_display, g_wnd);
+	g_xpos = x;
+	g_ypos = y;
+	ui_destroy_window();
+	ui_create_window(width, height);
 
 	/* Change session size to match new window size */
 	if (rdpedisp_is_available() == False)
 	{
 		/* Change session size using disconnect / reconnect mechanism */
 		g_pending_resize = True;
+		g_window_width = width;
+		g_window_height = height;
 		return;
 	}
 	else
@@ -2836,7 +2815,9 @@ xwin_process_events(void)
 				if (xevent.xconfigure.window == DefaultRootWindow(g_display))
 				{
 					/* only for fullscreen or x%-of-screen-sized windows */
-					if (g_sizeopt || g_fullscreen)
+					if (g_window_size_type == PercentageOfScreen
+					    || g_window_size_type == Fullscreen
+					    || g_fullscreen)
 					{
 						if (xevent.xconfigure.width != WidthOfScreen(g_screen)
 						    || xevent.xconfigure.height != HeightOfScreen(g_screen))
@@ -3034,12 +3015,12 @@ process_pending_resize ()
 		 * server.
 		 */
 
-		g_initial_width = g_window_width;
-		g_initial_height = g_window_height;
+		g_requested_session_width = g_window_width;
+		g_requested_session_height = g_window_height;
 
 		logger(GUI, Verbose, "Window resize detected, reconnecting to new size %dx%d",
-		       g_initial_width,
-		       g_initial_height);
+		       g_requested_session_width,
+		       g_requested_session_height);
 
 		return True;
 	}

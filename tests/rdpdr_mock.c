@@ -12,3 +12,9 @@ rdpdr_check_fds(fd_set * rfds, fd_set * wfds, RD_BOOL timed_out)
 {
   mock(rfds, wfds, timed_out);
 }
+
+RD_BOOL
+rdpdr_init()
+{
+  return mock();
+}

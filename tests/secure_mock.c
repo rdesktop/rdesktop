@@ -30,3 +30,15 @@ void sec_send(STREAM s, uint32 flags)
 {
   mock(s, flags);
 }
+
+void
+sec_hash_sha1_16(uint8 * out, uint8 * in, uint8 * salt1)
+{
+  mock(out, in, salt1);
+}
+
+void
+sec_hash_to_string(char *out, int out_size, uint8 * in, int in_size)
+{
+  mock(out, out_size, in, in_size);
+}

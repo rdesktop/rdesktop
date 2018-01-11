@@ -61,3 +61,9 @@ uint16 ui_get_numlock_state(unsigned int state)
 {
   return mock(state);
 }
+
+RD_BOOL
+xkeymap_from_locale(const char *locale)
+{
+  return mock(locale);
+}

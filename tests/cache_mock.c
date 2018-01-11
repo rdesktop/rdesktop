@@ -44,3 +44,9 @@ cache_put_desktop(uint32 offset, int cx, int cy, int scanline,
 {
   mock(offset, cx, cy, scanline, bytes_per_pixel, data);
 }
+
+void
+cache_save_state()
+{
+  mock();
+}

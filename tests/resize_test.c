@@ -11,9 +11,9 @@ AfterEach(Resize) {};
 /* globals driven by xwin.c */
 RD_BOOL g_user_quit;
 RD_BOOL g_exit_mainloop;
-int g_sizeopt;
-uint32 g_initial_width;
-uint32 g_initial_height;
+uint32 g_requested_session_width;
+uint32 g_requested_session_height;
+window_size_type_t g_window_size_type;
 uint16 g_session_width;
 uint16 g_session_height;
 int g_xpos;
@@ -56,8 +56,8 @@ RDP_VERSION g_rdp_version;
 uint16 g_server_rdp_version;
 uint32 g_rdp5_performanceflags;
 int g_server_depth;
-uint32 g_initial_width;
-uint32 g_initial_height;
+uint32 g_requested_session_width;
+uint32 g_requested_session_height;
 RD_BOOL g_bitmap_cache;
 RD_BOOL g_bitmap_cache_persist_enable;
 RD_BOOL g_numlock_sync;
@@ -87,8 +87,8 @@ RD_BOOL g_local_cursor;
 
 /* globals from secure.c */
 char g_hostname[16];
-uint32 g_initial_width;
-uint32 g_initial_height;
+uint32 g_requested_session_width;
+uint32 g_requested_session_height;
 int g_dpi;
 unsigned int g_keylayout;
 int g_keyboard_type;

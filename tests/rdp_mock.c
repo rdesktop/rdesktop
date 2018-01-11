@@ -13,3 +13,27 @@ rdp_send_suppress_output_pdu(enum RDP_SUPPRESS_STATUS allowupdates)
   mock(allowupdates);
 }
 
+RD_BOOL
+rdp_connect(char *server, uint32 flags, char *domain, char *password, char *command,
+	    char *directory, RD_BOOL reconnect)
+{
+  return mock(server, flags, domain, password, command, directory, reconnect);
+}
+
+void
+rdp_disconnect()
+{
+  mock();
+}
+
+void
+rdp_main_loop(RD_BOOL * deactivated, uint32 * ext_disc_reason)
+{
+  mock(deactivated, ext_disc_reason);
+}
+
+void
+rdp_reset_state()
+{
+  mock();
+}
