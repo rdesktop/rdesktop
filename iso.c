@@ -32,7 +32,7 @@ extern char *g_sc_card_name;
 extern char *g_sc_container_name;
 
 // MultiMonitors : external declaration - see xwin.c for variables
-extern RD_BOOL g_monitors_supported;
+extern RD_BOOL g_extended_data_supported;
 extern int g_num_monitors;
 
 /* Send a self-contained ISO PDU */
@@ -210,7 +210,7 @@ iso_connect(char *server, char *username, char *domain, char *password,
 	uint8 code;
 	uint32 neg_proto;
 
-	neg_proto = *selected_protocol;
+	neg_proto = PROTOCOL_SSL;
 
 #ifdef WITH_CREDSSP
 	if (!g_use_password_as_pin)
@@ -319,14 +319,14 @@ iso_connect(char *server, char *username, char *domain, char *password,
 		}
 
 		if ( flags & EXTENDED_CLIENT_DATA_SUPPORTED) { // https://msdn.microsoft.com/en-us/library/dd305336.aspx and https://msdn.microsoft.com/en-us/library/cc240506.aspx
-			g_monitors_supported = True;
+			g_extended_data_supported = True;
 			logger(Protocol, Debug, "EXTENDED_CLIENT_DATA_SUPPORTED received for multimonitor");
 		}
 		else {
-			g_monitors_supported = False;
+			g_extended_data_supported = False;
 			logger(Protocol, Debug, "no EXTENDED_CLIENT_DATA_SUPPORTED for multimonitor");
 		}
-		if ((g_num_monitors>1) && !g_monitors_supported) {
+		if ((g_num_monitors>1) && !g_extended_data_supported) {
 			logger(Protocol, Warning, "no EXTENDED_CLIENT_DATA_SUPPORTED for multimonitor");
 			g_num_monitors=1;
 		}
