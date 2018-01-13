@@ -970,7 +970,6 @@ sec_connect(char *server, char *username, char *domain, char *password, RD_BOOL 
 	struct stream mcs_data;
 
 	/* Start a MCS connect sequence */
-	selected_proto = PROTOCOL_SSL; //prefered protocol
 	if (!mcs_connect_start(server, username, domain, password, reconnect, &selected_proto))
 		return False;
 
