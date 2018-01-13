@@ -67,17 +67,16 @@ unsigned int g_keylayout = 0x409;	/* Defaults to US keyboard layout */
 int g_keyboard_type = 0x4;	/* Defaults to US keyboard layout */
 int g_keyboard_subtype = 0x0;	/* Defaults to US keyboard layout */
 int g_keyboard_functionkeys = 0xc;	/* Defaults to US keyboard layout */
-int g_sizeopt = 0;		/* If non-zero, a special size has been
-				   requested. If 1, the geometry will be fetched
-				   from _NET_WORKAREA. If negative, absolute value
-				   specifies the percent of the whole screen. */
 int g_dpi = 0;			/* device DPI: default not set */
 
-/* Following variables holds the initial width and height for a
+/* Following variables holds the requested width and height for a
    rdesktop window, this is sent upon connect and tells the server
    what size of session we want to have. Set to decent defaults. */
-uint32 g_initial_width = 1024;
-uint32 g_initial_height = 768;
+uint32 g_requested_session_width = 1024;
+uint32 g_requested_session_height = 768;
+
+window_size_type_t g_window_size_type = Fixed;
+
 
 int g_xpos = 0;
 int g_ypos = 0;
@@ -592,6 +591,170 @@ parse_server_and_port(char *server)
 
 }
 
+// [WxH|P%|W%xH%][@DPI][+X[+Y]]|workarea
+int parse_geometry_string(const char *optarg)
+{
+	sint32 value;
+	const char *ps;
+	char *pe;
+
+	/* special keywords */
+	if (strcmp(optarg, "workarea") == 0)
+	{
+		g_window_size_type = Workarea;
+		return 0;
+	}
+
+	/* parse first integer */
+	ps = optarg;
+	value = strtol(ps, &pe, 10);
+	if (ps == pe || value <= 0)
+	{
+		logger(Core, Error, "invalid geometry, expected positive integer for width");
+		return -1;
+	}
+
+	g_requested_session_width = value;
+	ps = pe;
+
+	/* expect % or x */
+	if (*ps != '%' && *ps != 'x')
+	{
+		logger(Core, Error, "invalid geometry, expected '%%' or 'x' after width");
+		return -1;
+	}
+
+	if (*ps == '%')
+	{
+		g_window_size_type = PercentageOfScreen;
+		ps++;
+		pe++;
+	}
+
+	if (*ps == 'x')
+	{
+		ps++;
+		value = strtol(ps, &pe, 10);
+		if (ps == pe || value <= 0)
+		{
+			logger(Core, Error, "invalid geometry, expected positive integer for height");
+			return -1;
+		}
+
+		g_requested_session_height = value;
+		ps = pe;
+
+		if (*ps == '%' && g_window_size_type == Fixed)
+		{
+			logger(Core, Error, "invalid geometry, unexpected '%%' after height");
+			return -1;
+		}
+
+		if (g_window_size_type == PercentageOfScreen)
+		{
+			if (*ps != '%')
+			{
+				logger(Core, Error, "invalid geometry, expected '%%' after height");
+				return -1;
+			}
+			ps++;
+			pe++;
+		}
+	}
+	else
+        {
+		if (g_window_size_type == PercentageOfScreen)
+		{
+			/* percentage of screen used for both width and height */
+			g_requested_session_height = g_requested_session_width;
+		}
+		else
+		{
+			logger(Core, Error, "invalid geometry, missing height (WxH)");
+			return -1;
+		}
+	}
+
+	/* parse optional dpi */
+	if (*ps == '@')
+	{
+		ps++;
+		pe++;
+		value = strtol(ps, &pe, 10);
+		if (ps == pe || value <= 0)
+		{
+			logger(Core, Error, "invalid geometry, expected positive integer for DPI");
+			return -1;
+		}
+
+		g_dpi = value;
+		ps = pe;
+	}
+
+	/* parse optional window position */
+	if (*ps == '+' || *ps == '-')
+	{
+		/* parse x position */
+		value = strtol(ps, &pe, 10);
+		if (ps == pe)
+		{
+			logger(Core, Error, "invalid geometry, expected an integer for X position");
+			return -1;
+		}
+
+		g_pos |= (value < 0) ? 2 : 1;
+		g_xpos = value;
+		ps = pe;
+	}
+
+	if (*ps == '+' || *ps == '-')
+	{
+		/* parse y position */
+		value = strtol(ps, &pe, 10);
+		if (ps == pe)
+		{
+			logger(Core, Error, "invalid geometry, expected an integer for Y position");
+			return -1;
+		}
+		g_pos |= (value < 0) ? 4 : 1;
+		g_ypos = value;
+		ps = pe;
+	}
+
+	if (*pe != '\0')
+	{
+		logger(Core, Error, "invalid geometry, unexpected characters at end of string");
+		return -1;
+	}
+	return 0;
+}
+
+static void
+setup_user_requested_session_size()
+{
+	switch(g_window_size_type)
+	{
+	case Fullscreen:
+		ui_get_screen_size(&g_requested_session_width, &g_requested_session_height);
+		break;
+
+	case Workarea:
+		ui_get_workarea_size(&g_requested_session_width, &g_requested_session_height);
+		break;
+
+	case Fixed:
+		break;
+
+	case PercentageOfScreen:
+		ui_get_screen_size_from_percentage(g_requested_session_width,
+						   g_requested_session_height,
+						   &g_requested_session_width,
+						   &g_requested_session_height);
+		break;
+	}
+}
+
+
 /* Client program */
 int
 main(int argc, char *argv[])
@@ -709,70 +872,14 @@ main(int argc, char *argv[])
 			case 'g':
 				geometry_option = True;
 				g_fullscreen = False;
-				if (!strcmp(optarg, "workarea"))
+				if (parse_geometry_string(optarg) != 0)
 				{
-					g_sizeopt = 1;
-					break;
-				}
-
-				g_initial_width = strtol(optarg, &p, 10);
-				if (g_initial_width <= 0)
-				{
-					logger(Core, Error, "invalid geometry width specified");
 					return EX_USAGE;
 				}
-
-				if (*p == 'x')
-					g_initial_height = strtol(p + 1, &p, 10);
-
-				if (g_initial_height <= 0)
-				{
-					logger(Core, Error, "invalid geometry height specified");
-					return EX_USAGE;
-				}
-
-				if (*p == '%')
-				{
-					g_sizeopt = -g_initial_width;
-					g_initial_width = g_sizeopt;
-
-					if (*(p + 1) == 'x')
-					{
-						g_initial_height = -strtol(p + 2, &p, 10);
-					}
-					else
-					{
-						g_initial_height = g_sizeopt;
-					}
-
-					p++;
-				}
-
-				if (*p == '@')
-				{
-					g_dpi = strtol(p + 1, &p, 10);
-					if (g_dpi <= 0)
-					{
-						logger(Core, Error, "invalid DPI: expected a positive integer after @\n");
-						return EX_USAGE;
-					}
-				}
-
-				if (*p == '+' || *p == '-')
-				{
-					g_pos |= (*p == '-') ? 2 : 1;
-					g_xpos = strtol(p, &p, 10);
-
-				}
-				if (*p == '+' || *p == '-')
-				{
-					g_pos |= (*p == '-') ? 4 : 1;
-					g_ypos = strtol(p, NULL, 10);
-				}
-
 				break;
 
 			case 'f':
+				g_window_size_type = Fullscreen;
 				g_fullscreen = True;
 				break;
 
@@ -1097,7 +1204,8 @@ main(int argc, char *argv[])
 			logger(Core, Error, "You cannot use -4 and -A at the same time");
 			return EX_USAGE;
 		}
-		g_sizeopt = -100;
+
+		g_window_size_type = Fullscreen;
 		g_grab_keyboard = False;
 	}
 
@@ -1216,6 +1324,8 @@ main(int argc, char *argv[])
 	dvc_init();
 	rdpedisp_init();
 
+	setup_user_requested_session_size();
+
 	g_reconnect_loop = False;
 	while (1)
 	{
@@ -1239,8 +1349,7 @@ main(int argc, char *argv[])
 			g_network_error = False;
 		}
 
-		ui_init_connection();
-		utils_apply_session_size_limitations(&g_initial_width, &g_initial_height);
+		utils_apply_session_size_limitations(&g_requested_session_width, &g_requested_session_height);
 
 		if (!rdp_connect
 		    (server, flags, domain, g_password, shell, directory, g_reconnect_loop))
@@ -1310,7 +1419,7 @@ main(int argc, char *argv[])
 		if (g_pending_resize)
 		{
 			logger(Core, Verbose, "Resize reconnect loop triggered, new size %dx%d",
-			       g_initial_width, g_initial_height);
+			       g_requested_session_width, g_requested_session_height);
 			g_pending_resize = False;
 			g_reconnect_loop = True;
 			continue;
@@ -1843,7 +1952,7 @@ rd_create_ui()
 	if (!ui_have_window())
 	{
 		/* create a window if we don't have one initialized */
-		if (!ui_create_window(g_initial_width, g_initial_height))
+		if (!ui_create_window(g_requested_session_width, g_requested_session_height))
 			exit(EX_OSERR);
 	}
 	else

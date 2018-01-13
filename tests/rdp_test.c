@@ -21,8 +21,6 @@ RDP_VERSION g_rdp_version;
 uint16 g_server_rdp_version;
 uint32 g_rdp5_performanceflags;
 int g_server_depth;
-uint32 g_initial_width;
-uint32 g_initial_height;
 RD_BOOL g_bitmap_cache;
 RD_BOOL g_bitmap_cache_persist_enable;
 RD_BOOL g_numlock_sync;
