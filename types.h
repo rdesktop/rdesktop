@@ -317,4 +317,11 @@ typedef struct _rdp_monitors{
 	RD_BOOL is_primary;
 } rdp_monitors;
 
+typedef enum {
+	Fixed,
+	PercentageOfScreen,
+	Workarea,
+	Fullscreen,
+} window_size_type_t;
+
 #endif /* _TYPES_H */
