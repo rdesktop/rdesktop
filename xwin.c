@@ -77,10 +77,9 @@ static int g_x_socket;
 static Screen *g_screen;
 Window g_wnd;
 
-// MultiMonitors : variables
 RD_BOOL g_extended_data_supported = False;
 int g_num_monitors = 0;
-rdp_monitors *g_monitors = NULL;
+rdp_monitors g_monitors[16];
 
 /* These are the last known window sizes. They are updated whenever the window size is changed. */
 static uint32 g_window_width;
@@ -1973,43 +1972,49 @@ ui_init(void)
 static RD_BOOL
 xwin_get_monitors_xrandr(void)
 {
-	int event_base,error_base;
-	if (! XRRQueryExtension (g_display, &event_base, &error_base)) {
-		logger(GUI, Debug,"No Xrandr extension");
-		return False;
-	}
+	int event_base, error_base;
 	XRRScreenResources *xrrr = NULL;
 	XRRCrtcInfo *xrrci = NULL;
-	xrrr = XRRGetScreenResources(g_display, DefaultRootWindow(g_display));
-	if (xrrr == NULL) {
-		logger(GUI, Warning,"XRRGetScreenResources failed");
+	int i, isPrimary;
+
+	if (!XRRQueryExtension (g_display, &event_base, &error_base)) {
+		logger(GUI, Debug, "XRandR is not supported");
 		return False;
 	}
-	int i,iPrimary=0;
-	g_num_monitors = xrrr->ncrtc;
-	logger(GUI, Debug,"nb crt %d",g_num_monitors);
-	if (g_monitors != NULL) {
-		xfree(g_monitors);
-		g_monitors = NULL;
+
+	xrrr = XRRGetScreenResources(g_display, DefaultRootWindow(g_display));
+	if (xrrr == NULL) {
+		logger(GUI, Warning, "XRRGetScreenResources failed");
+		return False;
 	}
-	g_monitors = (rdp_monitors *) xmalloc(sizeof(rdp_monitors)*g_num_monitors);
-	memset(g_monitors, 0, sizeof(rdp_monitors)*g_num_monitors);
+
+	g_num_monitors = xrrr->ncrtc;
+	logger(GUI, Debug, "Number of monitors = %d", g_num_monitors);
+
+	memset(g_monitors, 0, sizeof(rdp_monitors) * g_num_monitors);
+
+	isPrimary = 0;
+
 	for (i = 0; i < g_num_monitors; ++i) {
 		xrrci = XRRGetCrtcInfo(g_display, xrrr, xrrr->crtcs[i]);
-		logger(GUI, Debug,"%dx%d+%d+%d", xrrci->width, xrrci->height, xrrci->x, xrrci->y);
+		logger(GUI, Debug, "%dx%d+%d+%d", xrrci->width, xrrci->height, xrrci->x, xrrci->y);
 		g_monitors[i].x =  xrrci->x;
 		g_monitors[i].y = xrrci->y;
 		g_monitors[i].width = xrrci->width;
-		g_monitors[i].width = (g_monitors[i].width + 3) & ~3; // make sure width is a multiple of 4 
+		g_monitors[i].width = (g_monitors[i].width + 3) & ~3; // make sure width is a multiple of 4
 		g_monitors[i].height = xrrci->height;
 		g_monitors[i].is_primary = False;
-		if ( (xrrci->x == 0) && (xrrci->y == 0)) // the origin
-			iPrimary = i;
+
+		if ( (xrrci->x == 0) && (xrrci->y == 0))
+			isPrimary = i;
 
 		XRRFreeCrtcInfo(xrrci);
 	}
-	g_monitors[iPrimary].is_primary = True;
+
+	g_monitors[isPrimary].is_primary = True;
+
 	XRRFreeScreenResources(xrrr);
+
 	return True;
 }
 #endif
@@ -2018,42 +2023,50 @@ xwin_get_monitors_xrandr(void)
 static RD_BOOL
 xwin_get_monitors_xinerama(void)
 {
-	int major_version,minor_version,ncrtc;
-	if (! XineramaQueryExtension(g_display, &major_version, &minor_version)) {
-		logger(GUI, Debug,"No Xinerama extension");
+	int i, isPrimary;
+	int major_version, minor_version, ncrtc;
+
+	if (!XineramaQueryExtension(g_display, &major_version, &minor_version)) {
+		logger(GUI, Debug, "Xinerama is not supported");
 		return False;
 	}
 	if (!XineramaIsActive(g_display)) {
-		logger(GUI, Debug,"Xinerama not active");
+		logger(GUI, Debug, "Xinerama is not active");
 		return False;
 	}
-	XineramaScreenInfo *p=XineramaQueryScreens(g_display, &ncrtc);
-	if ((p==NULL) || (ncrtc<=0)) {
-		logger(GUI, Debug,"Xinerama has not screen");
+
+	XineramaScreenInfo *p = XineramaQueryScreens(g_display, &ncrtc);
+
+	if ((p == NULL) || (ncrtc <= 0)) {
+		logger(GUI, Debug, "XineramaQueryScreens failed to get screen info");
 		return False;
 	}
-	int i,iPrimary=0;
+
 	g_num_monitors = ncrtc;
-	logger(GUI, Debug,"nb crt %d",g_num_monitors);
-	if (g_monitors != NULL) {
-		xfree(g_monitors);
-		g_monitors = NULL;
-	}
-	g_monitors = (rdp_monitors *) xmalloc(sizeof(rdp_monitors)*g_num_monitors);
-	memset(g_monitors, 0, sizeof(rdp_monitors)*g_num_monitors);
+
+	logger(GUI, Debug, "Number of monitors = %d", g_num_monitors);
+
+	memset(g_monitors, 0, sizeof(rdp_monitors) * g_num_monitors);
+
+	isPrimary = 0;
+
 	for (i = 0; i < g_num_monitors; ++i) {
-		logger(GUI, Debug,"%dx%d+%d+%d", p[i].width, p[i].height, p[i].x_org, p[i].y_org);
+		logger(GUI, Debug, "%dx%d+%d+%d", p[i].width, p[i].height, p[i].x_org, p[i].y_org);
 		g_monitors[i].x =  p[i].x_org;
 		g_monitors[i].y = p[i].y_org;
 		g_monitors[i].width = p[i].width;
-		g_monitors[i].width = (g_monitors[i].width + 3) & ~3; // make sure width is a multiple of 4 
+		g_monitors[i].width = (g_monitors[i].width + 3) & ~3; // make sure width is a multiple of 4
 		g_monitors[i].height = p[i].height;
 		g_monitors[i].is_primary = False;
-		if ( (p[i].x_org == 0) && (p[i].y_org == 0)) // the origin
-			iPrimary = i;
+
+		if ( (p[i].x_org == 0) && (p[i].y_org == 0))
+			isPrimary = i;
 	}
-	g_monitors[iPrimary].is_primary = True;
+
+	g_monitors[isPrimary].is_primary = True;
+
 	XFree(p);
+
 	return True;
 }
 #endif
@@ -2062,14 +2075,17 @@ static RD_BOOL
 xwin_get_monitors(void)
 {
 	RD_BOOL bMonitorFound = False;
+
 #ifdef HAVE_XRANDR
 	bMonitorFound = xwin_get_monitors_xrandr();
 #endif
-// if xrand not avaible try xinerama if enabled
+
+/* if XRandR is not avaible try Xinerama */
 #ifdef HAVE_XINERAMA
 	if(!bMonitorFound)
 		bMonitorFound = xwin_get_monitors_xinerama();
 #endif
+
 	return bMonitorFound;
 }
 
@@ -2093,14 +2109,14 @@ void
 ui_get_workarea_size(uint32 *width, uint32 *height)
 {
 	uint32 x, y, w, h;
-	// MultiMonitors : 1 by default
-	g_num_monitors =1;
+	g_num_monitors = 1;
+
 	if (get_current_workarea(&x, &y, &w, &h) == 0)
 	{
 		*width = w;
 		*height = h;
 		g_using_full_workarea = True;
-		xwin_get_monitors(); // MultiMonitors : get geometry from xrand or Xinerama If we have
+		xwin_get_monitors();
 	}
 	else
 	{
@@ -2124,10 +2140,6 @@ ui_deinit(void)
 
 	XFreeModifiermap(g_mod_map);
 
-	if (g_monitors != NULL) {
-		xfree(g_monitors);
-		g_monitors = NULL;
-	}
 	XFreeGC(g_display, g_gc);
 	XCloseDisplay(g_display);
 	g_display = NULL;
@@ -2447,16 +2459,15 @@ xwin_toggle_fullscreen(void)
 	}
 
 	g_fullscreen = !g_fullscreen;
+	g_num_monitors = 1;
 
-	// MultiMonitors : 1 monitor by default
-	g_num_monitors =1;
 	if (g_fullscreen)
 	{
 		x = 0;
 		y = 0,
 		width = WidthOfScreen(g_screen);
 		height = HeightOfScreen(g_screen);
-		xwin_get_monitors(); // MultiMonitors : get geometry from xrand or Xinerama If we have
+		xwin_get_monitors();
 	}
 	else
 	{

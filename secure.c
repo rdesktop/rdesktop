@@ -41,6 +41,11 @@ extern VCHANNEL g_channels[];
 extern unsigned int g_num_channels;
 extern uint8 g_client_random[SEC_RANDOM_SIZE];
 
+extern RD_BOOL g_extended_data_supported;
+extern int g_num_monitors;
+/* According to MS-RDPBCGR 2.2.1.3.6 max value for monitorCount is 16 */
+extern rdp_monitors g_monitors[16];
+
 static int g_rc4_key_len;
 static RDSSL_RC4 g_rc4_decrypt_key;
 static RDSSL_RC4 g_rc4_encrypt_key;
@@ -58,11 +63,6 @@ uint16 g_server_rdp_version = 0;
 /* These values must be available to reset state - Session Directory */
 static int g_sec_encrypt_use_count = 0;
 static int g_sec_decrypt_use_count = 0;
-
-// MultiMonitors : external declaration - see xwin.c for variables
-extern RD_BOOL g_extended_data_supported;
-extern int g_num_monitors;
-extern rdp_monitors *g_monitors;
 
 /*
  * I believe this is based on SSLv3 with the following differences:
@@ -410,8 +410,9 @@ sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 	if (g_num_channels > 0)
 		length += g_num_channels * 12 + 8;
 
-	if (g_extended_data_supported && (g_num_monitors > 1)) // MultiMonitors : only if more than one monitor
+	if ((g_num_monitors > 1) && g_extended_data_supported) {
 		length += (g_num_monitors * 20) + 12;
+	}
 
 	/* Generic Conference Control (T.124) ConferenceCreateRequest */
 	out_uint16_be(s, 5);
@@ -513,12 +514,11 @@ sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 		}
 	}
 
-// MultiMonitors : send configuration to rdp server
-	if (g_extended_data_supported && (g_num_monitors > 1)) { // only if more than one monitor
+	/* 2.2.1.3.6 Client Monitor Data (TS_UD_CS_MONITOR) */
+	if ((g_num_monitors > 1) && g_extended_data_supported) {
 		int lengthMonitors, n;
 
-		logger(Protocol, Debug, "Setting %d monitors\n", g_num_monitors);
-		logger(Protocol, Debug,"Setting monitor data...\n");
+		logger(Protocol, Debug, "Informing server about %d monitors\n", g_num_monitors);
 		out_uint16_le(s, CS_MONITOR);	/* User Data Header type */
 
 		lengthMonitors = 12 + (20 * g_num_monitors);
@@ -528,18 +528,19 @@ sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 		for (n = 0; n < g_num_monitors; n++) {
 			out_uint32_le(s, g_monitors[n].x); /* left */
 			out_uint32_le(s, g_monitors[n].y); /* top */
-			out_uint32_le(s, g_monitors[n].x + 
-							 g_monitors[n].width-1); /* right */
+			out_uint32_le(s, g_monitors[n].x +
+					g_monitors[n].width-1); /* right */
 			out_uint32_le(s, g_monitors[n].y +
-							 g_monitors[n].height-1); /* bottom */
+					g_monitors[n].height-1); /* bottom */
 			out_uint32_le(s, g_monitors[n].is_primary ? 1 : 0); /* isPrimary */
-			logger(Protocol, Debug, "Setting monitors %d %dx%d at %d,%d rect(l:%d,t:%d,r:%d,b:%d)\n", 
-				n,g_monitors[n].width,g_monitors[n].height,g_monitors[n].x,g_monitors[n].y,
-				g_monitors[n].x, g_monitors[n].y,
-				g_monitors[n].x + g_monitors[n].width-1, g_monitors[n].y +g_monitors[n].height-1
-			);
+			logger(Protocol, Debug, "Setting monitors %d %dx%d at %d,%d rect(l:%d,t:%d,r:%d,b:%d)\n",
+					n,g_monitors[n].width,g_monitors[n].height,g_monitors[n].x,g_monitors[n].y,
+					g_monitors[n].x, g_monitors[n].y,
+					g_monitors[n].x + g_monitors[n].width-1, g_monitors[n].y +g_monitors[n].height-1
+				  );
 		}
 	}
+
 	s_mark_end(s);
 }
 

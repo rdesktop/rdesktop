@@ -308,7 +308,13 @@ FILEINFO;
 
 typedef RD_BOOL(*str_handle_lines_t) (const char *line, void *data);
 
-// MultiMonitors : Structure
+typedef enum {
+	Fixed,
+	PercentageOfScreen,
+	Workarea,
+	Fullscreen,
+} window_size_type_t;
+
 typedef struct _rdp_monitors{
 	int x;
 	int y;
@@ -316,12 +322,5 @@ typedef struct _rdp_monitors{
 	int height;
 	RD_BOOL is_primary;
 } rdp_monitors;
-
-typedef enum {
-	Fixed,
-	PercentageOfScreen,
-	Workarea,
-	Fullscreen,
-} window_size_type_t;
 
 #endif /* _TYPES_H */

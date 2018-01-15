@@ -31,7 +31,6 @@ extern char *g_sc_reader_name;
 extern char *g_sc_card_name;
 extern char *g_sc_container_name;
 
-// MultiMonitors : external declaration - see xwin.c for variables
 extern RD_BOOL g_extended_data_supported;
 extern int g_num_monitors;
 
@@ -256,7 +255,7 @@ iso_connect(char *server, char *username, char *domain, char *password,
 		uint32 data = 0;
 
 		in_uint8(s, type);
-		in_uint8(s, flags); /* flags to test EXTENDED_CLIENT_DATA_SUPPORTED for multimonitor*/
+		in_uint8(s, flags); /* flags */
 		in_uint8s(s, 2); /* skip length */
 		in_uint32(s, data);
 
@@ -318,17 +317,17 @@ iso_connect(char *server, char *username, char *domain, char *password,
 			return False;
 		}
 
-		if ( flags & EXTENDED_CLIENT_DATA_SUPPORTED) { // https://msdn.microsoft.com/en-us/library/dd305336.aspx and https://msdn.microsoft.com/en-us/library/cc240506.aspx
+		if (flags & EXTENDED_CLIENT_DATA_SUPPORTED) {
 			g_extended_data_supported = True;
-			logger(Protocol, Debug, "EXTENDED_CLIENT_DATA_SUPPORTED received for multimonitor");
+			logger(Protocol, Debug, "Server supports Extended Client Data");
 		}
 		else {
 			g_extended_data_supported = False;
-			logger(Protocol, Debug, "no EXTENDED_CLIENT_DATA_SUPPORTED for multimonitor");
+			logger(Protocol, Debug, "Server does not support Extended Client Data");
 		}
-		if ((g_num_monitors>1) && !g_extended_data_supported) {
-			logger(Protocol, Warning, "no EXTENDED_CLIENT_DATA_SUPPORTED for multimonitor");
-			g_num_monitors=1;
+		if ((g_num_monitors > 1) && !g_extended_data_supported) {
+			logger(Protocol, Warning, "Got more than 1 monitor but server does not support Extended Client Data");
+			g_num_monitors = 1;
 		}
 
 		/* handle negotiation response */
