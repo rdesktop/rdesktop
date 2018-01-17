@@ -56,6 +56,17 @@ ber_parse_header(STREAM s, int tagval, int *length)
 	return s_check(s);
 }
 
+void
+ber_out_sequence(STREAM out, STREAM content)
+{
+	size_t length;
+	length = (content ? s_length(content) : 0);
+	ber_out_header(out, BER_TAG_SEQUENCE | BER_TAG_CONSTRUCTED, length);
+	if (content)
+		out_stream(out, content);
+}
+
+
 /* Output an ASN.1 BER header */
 void
 ber_out_header(STREAM s, int tagval, int length)

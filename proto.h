@@ -226,6 +226,7 @@ RD_BOOL ber_in_header(STREAM s, int *tagval, int *length);
 void ber_out_header(STREAM s, int tagval, int length);
 RD_BOOL ber_parse_header(STREAM s, int tagval, int *length);
 void ber_out_integer(STREAM s, int value);
+void ber_out_sequence(STREAM s, STREAM contents);
 
 /* xclip.c */
 void ui_clip_format_announce(uint8 * data, uint32 length);
