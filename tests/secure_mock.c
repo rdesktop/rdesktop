@@ -42,3 +42,10 @@ sec_hash_to_string(char *out, int out_size, uint8 * in, int in_size)
 {
   mock(out, out_size, in, in_size);
 }
+
+
+void
+sec_process_mcs_data(STREAM s)
+{
+  mock(s);
+}
