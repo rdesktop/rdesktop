@@ -1593,7 +1593,7 @@ process_data_pdu(STREAM s, uint32 * ext_disc_reason)
 			process_pdu_logon(s);
 			break;
 
-		case RDP_DATA_PDU_DISCONNECT:
+		case RDP_DATA_PDU_SET_ERROR_INFO:
 			process_ts_set_error_info_pdu(s, ext_disc_reason);
 
 			/* We used to return true and disconnect immediately here, but
