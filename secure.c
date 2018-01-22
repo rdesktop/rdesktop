@@ -958,7 +958,9 @@ sec_connect(char *server, char *username, char *domain, char *password, RD_BOOL 
 void
 sec_disconnect(void)
 {
-	mcs_disconnect();
+	/* Perform a User-initiated disconnect sequence, see
+	   [MS-RDPBCGR] 1.3.1.4 Disconnect Sequences */
+	mcs_disconnect(RN_USER_REQUESTED);
 }
 
 /* reset the state of the sec layer */

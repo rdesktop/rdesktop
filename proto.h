@@ -99,7 +99,7 @@ STREAM mcs_recv(uint16 * channel, uint8 * rdpver);
 RD_BOOL mcs_connect_start(char *server, char *username, char *domain, char *password,
 			  RD_BOOL reconnect, uint32 * selected_protocol);
 RD_BOOL mcs_connect_finalize(STREAM s);
-void mcs_disconnect(void);
+void mcs_disconnect(int reason);
 void mcs_reset_state(void);
 /* orders.c */
 void process_orders(STREAM s, uint16 num_orders);

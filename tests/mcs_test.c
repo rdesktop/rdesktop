@@ -81,3 +81,21 @@ Ensure(MCS, should_produce_valid_packet_for_McsSendCJrq)
   mcs_send_cjrq(chan_id);
   s_free(s);
 }
+
+/* Test function */
+Ensure(MCS, should_produce_valid_packet_for_McsSendDPU)
+{
+  int reason = 1;
+  struct stream *s;
+  uint8_t content[] = {0x30, 0x06, 0x02, 0x02, 0x00, reason, 0x30, 0x00};
+
+  s = stream_new(8);
+
+  expect(logger);
+  expect(iso_init, will_return(s));
+
+  expect(iso_send, when(stream->data, is_equal_to_contents_of(content, sizeof(content))));
+
+  mcs_send_dpu(reason);
+  s_free(s);
+}

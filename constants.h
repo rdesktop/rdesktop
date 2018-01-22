@@ -126,6 +126,17 @@ enum MCS_PDU_TYPE
 #define MCS_GLOBAL_CHANNEL	1003
 #define MCS_USERCHANNEL_BASE    1001
 
+/* ITU-T Rec. T.125, Reason enumeration used with Disconnect Provider
+   Ultimatum, see mcs_send_dpu(reason) */
+enum MCS_DPU_REASON
+{
+  RN_DOMAIN_DISCONNECTED = 0,
+  RN_PROVIDER_INITIATED,
+  RN_TOKEN_PURGED,
+  RN_USER_REQUESTED,
+  RN_CHANNEL_PURGED,
+};
+
 /* RDP secure transport constants */
 #define SEC_RANDOM_SIZE		32
 #define SEC_MODULUS_SIZE	64
