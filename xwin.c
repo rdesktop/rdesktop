@@ -58,6 +58,9 @@ extern RD_BOOL g_fullscreen;
 extern RD_BOOL g_grab_keyboard;
 extern RD_BOOL g_hide_decorations;
 extern RD_BOOL g_pending_resize;
+extern RD_BOOL g_pending_resize_defer;
+extern struct timeval g_pending_resize_defer_timer;
+
 extern char g_title[];
 extern char g_seamless_spawn_cmd[];
 /* Color depth of the RDP session.
@@ -2994,6 +2997,21 @@ process_ui()
 }
 
 static RD_BOOL
+timeval_is_set(struct timeval *time)
+{
+	return (time->tv_sec == 0 && time->tv_usec == 0) ? False : True;
+}
+
+/* Handle a pending resize. Resize is handled by either a disconnect/reconnect
+   sequence or online using RDPEDISP messages. Windows 2008 requires the use of
+   disconnect/reconnect and to do that without user login credentials the
+   auto-reconnect cookie is used. Windows 2008 seems sensitive to disconnects
+   to early in the login sequence so we defer to resize until we get the cookie.
+
+   Windows 2016 on the other hand does not seem to send cookies but uses
+   RDPEDISP so in this case we defer until the RDPEDISP channel is established.
+ */
+static RD_BOOL
 process_pending_resize ()
 {
 	uint32 width, height;
@@ -3007,6 +3025,41 @@ process_pending_resize ()
 	if (time_difference_in_ms(g_resize_timer, now) <= 500)
 		return False;
 
+	/* There is a race problem when using disconnect / reconnect
+	   sequence were one sometimes would be presented with
+	   unexpected login window. Waiting a little bit extra after
+	   getting the reconnect cookie solves this problem. */
+	if (timeval_is_set(&g_pending_resize_defer_timer) &&
+	    time_difference_in_ms(g_pending_resize_defer_timer, now) >= 100)
+	{
+		g_pending_resize_defer_timer.tv_sec = g_pending_resize_defer_timer.tv_usec = 0;
+		g_pending_resize_defer = False;
+	}
+
+	if (g_pending_resize_defer == True)
+		return False;
+
+	/* only for fullscreen or x%-of-screen-sized windows */
+	if (g_window_size_type == PercentageOfScreen
+	    || g_window_size_type == Fullscreen
+	    || g_fullscreen)
+	{
+		/* follow root window size */
+		width = WidthOfScreen(g_screen);
+		height = HeightOfScreen(g_screen);
+		if (g_window_size_type == PercentageOfScreen)
+		{
+			/* TODO: Implement percentage of screen */
+		}
+	}
+	else
+	{
+		/* Follow window size */
+		width = g_window_width;
+		height = g_window_height;
+	}
+
+
 	/* carry out a resize to desired size */
 	if (rdpedisp_is_available() == False)
 	{
@@ -3015,8 +3068,8 @@ process_pending_resize ()
 		 * server.
 		 */
 
-		g_requested_session_width = g_window_width;
-		g_requested_session_height = g_window_height;
+		g_requested_session_width = width;
+		g_requested_session_height = height;
 
 		logger(GUI, Verbose, "Window resize detected, reconnecting to new size %dx%d",
 		       g_requested_session_width,

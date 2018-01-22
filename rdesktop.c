@@ -141,6 +141,8 @@ RD_BOOL g_has_reconnect_random = False;
 RD_BOOL g_reconnect_loop = False;
 uint8 g_client_random[SEC_RANDOM_SIZE];
 RD_BOOL g_pending_resize = False;
+RD_BOOL g_pending_resize_defer = True;
+struct timeval g_pending_resize_defer_timer = {0};
 
 #ifdef WITH_RDPSND
 RD_BOOL g_rdpsnd = False;
@@ -487,6 +489,8 @@ handle_disconnect_reason(RD_BOOL deactivated, uint16 reason)
 static void
 rdesktop_reset_state(void)
 {
+	g_pending_resize_defer = True;
+
 	rdp_reset_state();
 #ifdef WITH_SCARD
 	scard_reset_state();

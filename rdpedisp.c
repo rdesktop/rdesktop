@@ -27,6 +27,7 @@
 #define RDPEDISP_CHANNEL_NAME "Microsoft::Windows::RDS::DisplayControl"
 
 extern int g_dpi;
+extern RD_BOOL g_pending_resize_defer;
 
 static void rdpedisp_send(STREAM s);
 static void rdpedisp_init_packet(STREAM s, uint32 type, uint32 length);
@@ -43,6 +44,9 @@ rdpedisp_process_caps_pdu(STREAM s)
 	logger(Protocol, Debug,
 	       "rdpedisp_process_caps_pdu(), Max supported monitor area (square pixels) is %d",
 	       tmp[0] * tmp[1] * tmp[2]);
+
+	/* Start allowing session resizes */
+	g_pending_resize_defer = False;
 }
 
 static void

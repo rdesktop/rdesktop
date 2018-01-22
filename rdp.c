@@ -49,6 +49,8 @@ extern RD_BOOL g_bitmap_cache;
 extern RD_BOOL g_bitmap_cache_persist_enable;
 extern RD_BOOL g_numlock_sync;
 extern RD_BOOL g_pending_resize;
+extern RD_BOOL g_pending_resize_defer;
+extern struct timeval g_pending_resize_defer_timer;
 extern RD_BOOL g_network_error;
 extern time_t g_wait_for_deactivate_ts;
 
@@ -1484,6 +1486,8 @@ process_ts_logon_info_extended(STREAM s)
 		logger(Protocol, Debug,
 		       "process_ts_logon_info_extended(), saving Auto-Reconnect cookie, id=%u",
 		       g_reconnect_logonid);
+
+		gettimeofday(&g_pending_resize_defer_timer, NULL);
 	}
 }
 
