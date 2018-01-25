@@ -344,6 +344,8 @@ logger(log_subject_t s, log_level_t lvl, char *format, ...)
 	else
 		fprintf(stderr, "%s(%s): %s\n", subject[s], level[lvl], buf);
 
+	fflush(stdout);
+
 	va_end(ap);
 }
 
