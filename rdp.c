@@ -308,10 +308,10 @@ rdp_in_unistr(STREAM s, int in_len, char **string, uint32 * str_size)
 }
 
 
-/* Parse a logon info packet */
+/* Send a Client Info PDU */
 static void
-rdp_send_logon_info(uint32 flags, char *domain, char *user,
-		    char *password, char *program, char *directory)
+rdp_send_client_info_pdu(uint32 flags, char *domain, char *user,
+			 char *password, char *program, char *directory)
 {
 	char *ipaddr = tcp_get_address();
 	/* length of string in TS_INFO_PACKET excludes null terminator */
@@ -1512,13 +1512,13 @@ process_pdu_logon(STREAM s)
 }
 
 
-/* Process a disconnect PDU */
-void
-process_disconnect_pdu(STREAM s, uint32 * ext_disc_reason)
+/* Process a Set Error Info PDU */
+static void
+process_ts_set_error_info_pdu(STREAM s, uint32 * ext_disc_reason)
 {
 	in_uint32_le(s, *ext_disc_reason);
 
-	logger(Protocol, Debug, "process_disconnect_pdu(), reason = %d", ext_disc_reason);
+	logger(Protocol, Debug, "process_ts_set_error_info_pdu(), error info = %d", *ext_disc_reason);
 }
 
 /* Process data PDU */
@@ -1594,7 +1594,7 @@ process_data_pdu(STREAM s, uint32 * ext_disc_reason)
 			break;
 
 		case RDP_DATA_PDU_DISCONNECT:
-			process_disconnect_pdu(s, ext_disc_reason);
+			process_ts_set_error_info_pdu(s, ext_disc_reason);
 
 			/* We used to return true and disconnect immediately here, but
 			 * Windows Vista sends a disconnect PDU with reason 0 when
@@ -1878,7 +1878,7 @@ rdp_connect(char *server, uint32 flags, char *domain, char *password,
 	if (!sec_connect(server, g_username, domain, password, reconnect))
 		return False;
 
-	rdp_send_logon_info(flags, domain, g_username, password, command, directory);
+	rdp_send_client_info_pdu(flags, domain, g_username, password, command, directory);
 
 	/* run RDP loop until first licence demand active PDU */
 	while (!g_rdp_shareid)
