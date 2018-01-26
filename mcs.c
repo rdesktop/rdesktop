@@ -3,6 +3,7 @@
    Protocol services - Multipoint Communications Service
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2005-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
+   Copyright 2018 Henrik Andersson <hean01@cendio.com> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -90,8 +91,12 @@ mcs_recv_connect_response(STREAM mcs_data)
 	uint8 result;
 	int length;
 	STREAM s;
+	RD_BOOL is_fastpath;
+	uint8 fastpath_hdr;
+
 	logger(Protocol, Debug, "%s()", __func__);
-	s = iso_recv(NULL);
+	s = iso_recv(&is_fastpath, &fastpath_hdr);
+
 	if (s == NULL)
 		return False;
 
@@ -160,10 +165,14 @@ mcs_send_aurq(void)
 static RD_BOOL
 mcs_recv_aucf(uint16 * mcs_userid)
 {
+	RD_BOOL is_fastpath;
+	uint8 fastpath_hdr;
 	uint8 opcode, result;
 	STREAM s;
+
 	logger(Protocol, Debug, "%s()", __func__);
-	s = iso_recv(NULL);
+	s = iso_recv(&is_fastpath, &fastpath_hdr);
+
 	if (s == NULL)
 		return False;
 
@@ -209,10 +218,14 @@ mcs_send_cjrq(uint16 chanid)
 static RD_BOOL
 mcs_recv_cjcf(void)
 {
+	RD_BOOL is_fastpath;
+	uint8 fastpath_hdr;
 	uint8 opcode, result;
 	STREAM s;
+
 	logger(Protocol, Debug, "%s()", __func__);
-	s = iso_recv(NULL);
+	s = iso_recv(&is_fastpath, &fastpath_hdr);
+
 	if (s == NULL)
 		return False;
 
@@ -303,17 +316,18 @@ mcs_send(STREAM s)
 
 /* Receive an MCS transport data packet */
 STREAM
-mcs_recv(uint16 * channel, uint8 * rdpver)
+mcs_recv(uint16 * channel, RD_BOOL *is_fastpath, uint8 *fastpath_hdr)
 {
 	uint8 opcode, appid, length;
 	STREAM s;
 
-	s = iso_recv(rdpver);
+	s = iso_recv(is_fastpath, fastpath_hdr);
 	if (s == NULL)
 		return NULL;
-	if (rdpver != NULL)
-		if (*rdpver != 3)
-			return s;
+
+	if (*is_fastpath == True)
+		return s;
+
 	in_uint8(s, opcode);
 	appid = opcode >> 2;
 	if (appid != MCS_SDIN)

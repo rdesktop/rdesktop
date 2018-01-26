@@ -3,7 +3,7 @@
    Protocol services - RDP encryption and licensing
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2005-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
-   Copyright 2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2017-2018 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -842,26 +842,27 @@ sec_process_mcs_data(STREAM s)
 
 /* Receive secure transport packet */
 STREAM
-sec_recv(uint8 * rdpver)
+sec_recv(RD_BOOL *is_fastpath)
 {
+	uint8 fastpath_hdr;
 	uint16 sec_flags;
 	uint16 channel;
 	STREAM s;
 
-	while ((s = mcs_recv(&channel, rdpver)) != NULL)
+	while ((s = mcs_recv(&channel, is_fastpath, &fastpath_hdr)) != NULL)
 	{
-		if (rdpver != NULL)
+		if (*is_fastpath == True)
 		{
-			if (*rdpver != 3)
+			/* If fastpath packet is encrypted, read data
+			   signature and decrypt */
+			if (fastpath_hdr & FASTPATH_OUTPUT_ENCRYPTED)
 			{
-				if (*rdpver & 0x80)
-				{
-					in_uint8s(s, 8);	/* signature */
-					sec_decrypt(s->p, s->end - s->p);
-				}
-				return s;
+				in_uint8s(s, 8);	/* signature */
+				sec_decrypt(s->p, s->end - s->p);
 			}
+			return s;
 		}
+
 		if (g_encryption || (!g_licence_issued && !g_licence_error_result))
 		{
 			/* TS_SECURITY_HEADER */
@@ -926,9 +927,7 @@ sec_recv(uint8 * rdpver)
 		if (channel != MCS_GLOBAL_CHANNEL)
 		{
 			channel_process(s, channel);
-			if (rdpver != NULL)
-				*rdpver = 0xff;
-			return s;
+			continue;
 		}
 
 		return s;

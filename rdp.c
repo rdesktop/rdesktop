@@ -3,7 +3,7 @@
    Protocol services - RDP layer
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2003-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
-   Copyright 2011-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2011-2018 Henrik Andersson <hean01@cendio.se> for Cendio AB
    Copyright 2017 Karl Mikaelsson <derfian@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
@@ -96,22 +96,17 @@ static void rdp_out_unistr(STREAM s, char *string, int len);
 static STREAM
 rdp_recv(uint8 * type)
 {
+	RD_BOOL is_fastpath;
 	static STREAM rdp_s;
 	uint16 length, pdu_type;
-	uint8 rdpver;
 
 	if ((rdp_s == NULL) || (g_next_packet >= rdp_s->end) || (g_next_packet == NULL))
 	{
-		rdp_s = sec_recv(&rdpver);
+		rdp_s = sec_recv(&is_fastpath);
 		if (rdp_s == NULL)
 			return NULL;
-		if (rdpver == 0xff)
-		{
-			g_next_packet = rdp_s->end;
-			*type = 0;
-			return rdp_s;
-		}
-		else if (rdpver != 3)
+
+		if (is_fastpath == True)
 		{
 			/* process_ts_fp_updates moves g_next_packet */
 			process_ts_fp_updates(rdp_s);

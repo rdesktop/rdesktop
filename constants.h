@@ -2,6 +2,7 @@
    rdesktop: A Remote Desktop Protocol client.
    Miscellaneous protocol constants
    Copyright (C) Matthew Chapman 1999-2008
+   Copyright 2017-2018 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -35,9 +36,6 @@
 
 #define FASTPATH_OUTPUT_SECURE_CHECKSUM 0x1
 #define FASTPATH_OUTPUT_ENCRYPTED       0x2
-
-#define IS_FASTPATH(hdr) ((hdr & 0x03) == FASTPATH_OUTPUT_ACTION_FASTPATH)
-#define IS_SLOWPATH(hdr) ((hdr) == FASTPATH_OUTPUT_ACTION_X224)
 
 /* [MS-RDPBCGR] 2.2.9.1.2.1 */
 /* adjusted for position in updateHeader */
