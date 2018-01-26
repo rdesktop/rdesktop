@@ -92,46 +92,76 @@ uint16 g_session_height;
 
 static void rdp_out_unistr(STREAM s, char *string, int len);
 
+/* reads a TS_SHARECONTROLHEADER from stream, returns True of there is
+   a PDU available otherwise False */
+static RD_BOOL
+rdp_ts_in_share_control_header(STREAM s, uint8 *type, uint16 *length)
+{
+	uint16 pdu_type;
+	uint16 pdu_source;
+
+	UNUSED(pdu_source);
+
+	in_uint16_le(s, *length);	/* totalLength */
+
+	/* If the totalLength field equals 0x8000, then the Share
+	   Control Header and any data that follows MAY be interpreted
+	   as a T.128 FlowPDU as described in [T128] section 8.5 (the
+	   ASN.1 structure definition is detailed in [T128] section
+	   9.1) and MUST be ignored.
+	*/
+	if (*length == 0x8000)
+	{
+		/* skip over this message in stream */
+		g_next_packet += 8;
+		return False;
+	}
+
+	in_uint16_le(s, pdu_type);	/* pduType */
+	in_uint16(s, pdu_source);	        /* pduSource */
+
+	*type = pdu_type & 0xf;
+
+	return True;
+}
+
 /* Receive an RDP packet */
 static STREAM
 rdp_recv(uint8 * type)
 {
 	RD_BOOL is_fastpath;
 	static STREAM rdp_s;
-	uint16 length, pdu_type;
+	uint16 length;
 
-	if ((rdp_s == NULL) || (g_next_packet >= rdp_s->end) || (g_next_packet == NULL))
+	while (1)
 	{
-		rdp_s = sec_recv(&is_fastpath);
-		if (rdp_s == NULL)
-			return NULL;
-
-		if (is_fastpath == True)
+		/* fill stream with data if needed for parsing a new packet */
+		if ((rdp_s == NULL) || (g_next_packet >= rdp_s->end) || (g_next_packet == NULL))
 		{
-			/* process_ts_fp_updates moves g_next_packet */
-			process_ts_fp_updates(rdp_s);
-			*type = 0;
-			return rdp_s;
+			rdp_s = sec_recv(&is_fastpath);
+			if (rdp_s == NULL)
+				return NULL;
+
+			if (is_fastpath == True)
+			{
+				/* process_ts_fp_updates moves g_next_packet */
+				process_ts_fp_updates(rdp_s);
+				continue;
+			}
+
+			g_next_packet = rdp_s->p;
+		}
+		else
+		{
+			rdp_s->p = g_next_packet;
 		}
 
-		g_next_packet = rdp_s->p;
-	}
-	else
-	{
-		rdp_s->p = g_next_packet;
-	}
+		/* parse a TS_SHARECONTROLHEADER */
+		if (rdp_ts_in_share_control_header(rdp_s, type, &length) == False)
+			continue;
 
-	in_uint16_le(rdp_s, length);
-	/* 32k packets are really 8, keepalive fix */
-	if (length == 0x8000)
-	{
-		g_next_packet += 8;
-		*type = 0;
-		return rdp_s;
+		break;
 	}
-	in_uint16_le(rdp_s, pdu_type);
-	in_uint8s(rdp_s, 2);	/* userid */
-	*type = pdu_type & 0xf;
 
 	logger(Protocol, Debug, "rdp_recv(), RDP packet #%d, type 0x%x", ++g_packetno, *type);
 
@@ -1893,8 +1923,6 @@ rdp_loop(RD_BOOL * deactivated, uint32 * ext_disc_reason)
 					memset(g_password, 0, sizeof(g_password));
 
 				process_data_pdu(s, ext_disc_reason);
-				break;
-			case 0:
 				break;
 			default:
 				logger(Protocol, Warning,
