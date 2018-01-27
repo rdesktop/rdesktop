@@ -5,6 +5,7 @@
    Copyright 2010-2013 Pierre Ossman <ossman@cendio.se> for Cendio AB
    Copyright 2011-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
    Copyright 2017 Karl Mikaelsson <derfian@cendio.se> for Cendio AB
+   Copyright 2018 Alexander Zakharov <uglym8@gmail.com>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -2185,6 +2186,7 @@ TS_SCardControl(STREAM in, STREAM out)
 	       (int) nOutBufferSize);
 
 	/* Is this a proper Windows smart card ioctl? */
+	/* FILE_DEVICE_SMARTCARD defined as 0x000031 in Winsmcrd.h  */
 	if ((dwControlCode & 0xffff0000) == (49 << 16))
 	{
 		/* Translate to local encoding */
@@ -2193,8 +2195,26 @@ TS_SCardControl(STREAM in, STREAM out)
 	}
 	else
 	{
-		logger(SmartCard, Warning,
-		       "TS_SCardControl(), bogus smart card control code 0x%08x", dwControlCode);
+		/*
+		 * According to "Interoperability Specification for ICCs and Personal Computer Systems.
+		 * Part 10 IFDs with Secure PIN Entry Capabilities Supplement - IFDs with Feature Capabilities"
+		 * you have to issue GET_FEATURE_REQUEST to get codes for supported features.
+		 *
+		 * You have to use only those codes not some hardcoded values.
+		 *
+		 * So the correct way to do fix this would be to parse received TLV from
+		 * CM_IOCTL_GET_FEATURE_REQUEST and get all codes for the corresponding features for
+		 * the particular reader as these values are defined by the driver itself and not
+		 * by pcsclite.
+		 *
+		 */
+
+		/* ATM, I removed features code transformations */
+		/* You know what to do if any problem arises in the future. */
+		if ((dwControlCode & 0xff000000) != SCARD_CTL_CODE(0)) {
+			logger(SmartCard, Warning,
+					"TS_SCardControl(), bogus smart card control code 0x%08x", dwControlCode);
+		}
 	}
 
 #if 0
@@ -2235,24 +2255,6 @@ TS_SCardControl(STREAM in, STREAM out)
 		logger(SmartCard, Debug, "TS_SCardControl(), success, out: %d bytes",
 		       (int) nBytesReturned);
 	}
-
-#ifdef PCSCLITE_VERSION_NUMBER
-	if (dwControlCode == SCARD_CTL_CODE(3400))
-	{
-		unsigned int i;
-		SERVER_DWORD cc;
-
-		for (i = 0; i < nBytesReturned / 6; i++)
-		{
-			memcpy(&cc, pOutBuffer + 2 + i * 6, 4);
-			cc = ntohl(cc);
-			cc = cc - 0x42000000;
-			cc = (49 << 16) | (cc << 2);
-			cc = htonl(cc);
-			memcpy(pOutBuffer + 2 + i * 6, &cc, 4);
-		}
-	}
-#endif
 
 	out_uint32_le(out, nBytesReturned);
 	out_uint32_le(out, 0x00000004);
