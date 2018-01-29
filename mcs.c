@@ -59,7 +59,7 @@ mcs_send_connect_initial(STREAM mcs_data)
 	int datalen = mcs_data->end - mcs_data->data;
 	int length = 9 + 3 * 34 + 4 + datalen;
 	STREAM s;
-
+	logger(Protocol, Debug, "%s()", __func__);
 	s = iso_init(length + 5);
 
 	ber_out_header(s, MCS_CONNECT_INITIAL, length);
@@ -90,7 +90,7 @@ mcs_recv_connect_response(STREAM mcs_data)
 	uint8 result;
 	int length;
 	STREAM s;
-
+	logger(Protocol, Debug, "%s()", __func__);
 	s = iso_recv(NULL);
 	if (s == NULL)
 		return False;
@@ -131,7 +131,7 @@ static void
 mcs_send_edrq(void)
 {
 	STREAM s;
-
+	logger(Protocol, Debug, "%s()", __func__);
 	s = iso_init(5);
 
 	out_uint8(s, (MCS_EDRQ << 2));
@@ -147,7 +147,7 @@ static void
 mcs_send_aurq(void)
 {
 	STREAM s;
-
+	logger(Protocol, Debug, "%s()", __func__);
 	s = iso_init(1);
 
 	out_uint8(s, (MCS_AURQ << 2));
@@ -162,7 +162,7 @@ mcs_recv_aucf(uint16 * mcs_userid)
 {
 	uint8 opcode, result;
 	STREAM s;
-
+	logger(Protocol, Debug, "%s()", __func__);
 	s = iso_recv(NULL);
 	if (s == NULL)
 		return False;
@@ -211,7 +211,7 @@ mcs_recv_cjcf(void)
 {
 	uint8 opcode, result;
 	STREAM s;
-
+	logger(Protocol, Debug, "%s()", __func__);
 	s = iso_recv(NULL);
 	if (s == NULL)
 		return False;
@@ -337,6 +337,7 @@ RD_BOOL
 mcs_connect_start(char *server, char *username, char *domain, char *password,
 		  RD_BOOL reconnect, uint32 * selected_protocol)
 {
+	logger(Protocol, Debug, "%s()", __func__);
 	return iso_connect(server, username, domain, password, reconnect, selected_protocol);
 }
 
@@ -345,6 +346,7 @@ mcs_connect_finalize(STREAM mcs_data)
 {
 	unsigned int i;
 
+	logger(Protocol, Debug, "%s()", __func__);
 	mcs_send_connect_initial(mcs_data);
 	if (!mcs_recv_connect_response(mcs_data))
 		goto error;

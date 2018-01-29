@@ -399,6 +399,8 @@ sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 	uint16 colorsupport = RNS_UD_24BPP_SUPPORT | RNS_UD_16BPP_SUPPORT | RNS_UD_32BPP_SUPPORT;
 	uint32 physwidth, physheight, desktopscale, devicescale;
 
+	logger(Protocol, Debug, "%s()", __func__);
+
 	if (g_rdp_version >= RDP_V5)
 		rdpversion = RDP_50;
 
@@ -570,6 +572,8 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 	RDSSL_RKEY *server_public_key;
 	uint16 tag, length;
 	uint8 *next_tag, *end;
+
+	logger(Protocol, Debug, "%s()", __func__);
 
 	in_uint32_le(s, *rc4_key_size);	/* 1 = 40-bit, 2 = 128-bit */
 	in_uint32_le(s, crypt_level);	/* 1 = low, 2 = medium, 3 = high */
@@ -755,6 +759,8 @@ sec_process_crypt_info(STREAM s)
 	uint8 exponent[SEC_EXPONENT_SIZE];
 	uint32 rc4_key_size;
 
+	logger(Protocol, Debug, "%s()", __func__);
+
 	memset(modulus, 0, sizeof(modulus));
 	memset(exponent, 0, sizeof(exponent));
 	if (!sec_parse_crypt_info(s, &rc4_key_size, &server_random, modulus, exponent))
@@ -795,6 +801,7 @@ sec_process_mcs_data(STREAM s)
 	in_uint8(s, len);
 	if (len & 0x80)
 		in_uint8(s, len);
+	logger(Protocol, Debug, "%s()", __func__);
 
 	while (s->p < s->end)
 	{
@@ -809,14 +816,17 @@ sec_process_mcs_data(STREAM s)
 		switch (tag)
 		{
 			case SEC_TAG_SRV_INFO:
+				logger(Protocol, Debug, "%s(), SEC_TAG_SRV_INFO", __func__);
 				sec_process_srv_info(s);
 				break;
 
 			case SEC_TAG_SRV_CRYPT:
+				logger(Protocol, Debug, "%s(), SEC_TAG_SRV_CRYPT", __func__);
 				sec_process_crypt_info(s);
 				break;
 
 			case SEC_TAG_SRV_CHANNELS:
+				logger(Protocol, Debug, "%s(), SEC_TAG_SRV_CHANNELS", __func__);
 				/* FIXME: We should parse this information and
 				   use it to map RDP5 channels to MCS 
 				   channels */

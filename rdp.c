@@ -513,6 +513,8 @@ rdp_send_synchronise(void)
 {
 	STREAM s;
 
+	logger(Protocol, Debug, "%s()", __func__);
+
 	s = rdp_init_data(4);
 
 	out_uint16_le(s, 1);	/* type */
@@ -527,6 +529,8 @@ void
 rdp_send_input(uint32 time, uint16 message_type, uint16 device_flags, uint16 param1, uint16 param2)
 {
 	STREAM s;
+
+	logger(Protocol, Debug, "%s()", __func__);
 
 	s = rdp_init_data(16);
 
@@ -549,6 +553,8 @@ rdp_send_suppress_output_pdu(enum RDP_SUPPRESS_STATUS allowupdates)
 {
 	STREAM s;
 	static enum RDP_SUPPRESS_STATUS current_status = ALLOW_DISPLAY_UPDATES;
+
+	logger(Protocol, Debug, "%s()", __func__);
 
 	if (current_status == allowupdates)
 		return;
@@ -583,6 +589,8 @@ rdp_enum_bmpcache2(void)
 	STREAM s;
 	HASH_KEY keylist[BMPCACHE2_NUM_PSTCELLS];
 	uint32 num_keys, offset, count, flags;
+
+	logger(Protocol, Debug, "%s()", __func__);
 
 	offset = 0;
 	num_keys = pstcache_enumerate(2, keylist);
@@ -625,6 +633,8 @@ static void
 rdp_send_fonts(uint16 seq)
 {
 	STREAM s;
+
+	logger(Protocol, Debug, "%s()", __func__);
 
 	s = rdp_init_data(8);
 
@@ -752,6 +762,9 @@ static void
 rdp_out_bmpcache_caps(STREAM s)
 {
 	int Bpp;
+
+	logger(Protocol, Debug, "%s()", __func__);
+
 	out_uint16_le(s, RDP_CAPSET_BMPCACHE);
 	out_uint16_le(s, RDP_CAPLEN_BMPCACHE);
 
@@ -990,6 +1003,8 @@ rdp_send_confirm_active(void)
 		RDP_CAPLEN_LARGE_POINTER +
 		4 /* w2k fix, sessionid */ ;
 
+	logger(Protocol, Debug, "%s()", __func__);
+
 	if (g_rdp_version >= RDP_V5)
 	{
 		caplen += RDP_CAPLEN_BMPCACHE2;
@@ -1052,6 +1067,8 @@ rdp_process_general_caps(STREAM s)
 {
 	uint16 pad2octetsB;	/* rdp5 flags? */
 
+	logger(Protocol, Debug, "%s()", __func__);
+
 	in_uint8s(s, 10);
 	in_uint16_le(s, pad2octetsB);
 
@@ -1064,6 +1081,8 @@ static void
 rdp_process_bitmap_caps(STREAM s)
 {
 	uint16 depth;
+
+	logger(Protocol, Debug, "%s()", __func__);
 
 	in_uint16_le(s, depth);
 	in_uint8s(s, 6);
@@ -1100,6 +1119,8 @@ rdp_process_server_caps(STREAM s, uint16 length)
 	int n;
 	uint8 *next, *start;
 	uint16 ncapsets, capset_type, capset_length;
+
+	logger(Protocol, Debug, "%s()", __func__);
 
 	start = s->p;
 
@@ -1213,6 +1234,8 @@ process_colour_pointer_common(STREAM s, int bpp)
 void
 process_colour_pointer_pdu(STREAM s)
 {
+	logger(Protocol, Debug, "%s()", __func__);
+
 	process_colour_pointer_common(s, 24);
 }
 
@@ -1221,6 +1244,8 @@ void
 process_new_pointer_pdu(STREAM s)
 {
 	int xor_bpp;
+	logger(Protocol, Debug, "%s()", __func__);
+
 
 	in_uint16_le(s, xor_bpp);
 	process_colour_pointer_common(s, xor_bpp);
@@ -1231,6 +1256,8 @@ void
 process_cached_pointer_pdu(STREAM s)
 {
 	uint16 cache_idx;
+	logger(Protocol, Debug, "%s()", __func__);
+
 
 	in_uint16_le(s, cache_idx);
 	ui_set_cursor(cache_get_cursor(cache_idx));
@@ -1241,6 +1268,8 @@ void
 process_system_pointer_pdu(STREAM s)
 {
 	uint32 system_pointer_type;
+	logger(Protocol, Debug, "%s()", __func__);
+
 	in_uint32_le(s, system_pointer_type);
 
 	set_system_pointer(system_pointer_type);
@@ -1271,6 +1300,8 @@ process_pointer_pdu(STREAM s)
 {
 	uint16 message_type;
 	uint16 x, y;
+
+	logger(Protocol, Debug, "%s()", __func__);
 
 	in_uint16_le(s, message_type);
 	in_uint8s(s, 2);	/* pad */
@@ -1315,6 +1346,8 @@ process_bitmap_updates(STREAM s)
 	uint16 cx, cy, bpp, Bpp, compress, bufsize, size;
 	uint8 *data, *bmpdata;
 	int i;
+
+	logger(Protocol, Debug, "%s()", __func__);
 
 	in_uint16_le(s, num_updates);
 
@@ -1422,6 +1455,8 @@ process_update_pdu(STREAM s)
 	switch (update_type)
 	{
 		case RDP_UPDATE_ORDERS:
+			logger(Protocol, Debug, "%s(), RDP_UPDATE_ORDERS", __func__);
+
 			in_uint8s(s, 2);	/* pad */
 			in_uint16_le(s, count);
 			in_uint8s(s, 2);	/* pad */
@@ -1429,14 +1464,17 @@ process_update_pdu(STREAM s)
 			break;
 
 		case RDP_UPDATE_BITMAP:
+			logger(Protocol, Debug, "%s(), RDP_UPDATE_BITMAP", __func__);
 			process_bitmap_updates(s);
 			break;
 
 		case RDP_UPDATE_PALETTE:
+			logger(Protocol, Debug, "%s(), RDP_UPDATE_PALETTE", __func__);
 			process_palette(s);
 			break;
 
 		case RDP_UPDATE_SYNCHRONIZE:
+			logger(Protocol, Debug, "%s(), RDP_UPDATE_SYNCHRONIZE", __func__);
 			break;
 
 		default:
@@ -1454,6 +1492,8 @@ process_ts_logon_info_extended(STREAM s)
 	uint32 fieldspresent;
 	uint32 len;
 	uint32 version;
+
+	logger(Protocol, Debug, "%s()", __func__);
 
 	in_uint8s(s, 2);	/* Length */
 	in_uint32_le(s, fieldspresent);
@@ -1625,6 +1665,8 @@ process_redirect_pdu(STREAM s, RD_BOOL enhanced_redirect /*, uint32 * ext_disc_r
 {
 	uint32 len;
 	uint16 redirect_identifier;
+
+	logger(Protocol, Debug, "%s()", __func__);
 
 	/* reset any previous redirection information */
 	g_redirect = True;
@@ -1900,6 +1942,7 @@ rdp_connect(char *server, uint32 flags, char *domain, char *password,
 void
 rdp_reset_state(void)
 {
+	logger(Protocol, Debug, "%s()", __func__);
 	g_next_packet = NULL;	/* reset the packet information */
 	g_rdp_shareid = 0;
 	g_exit_mainloop = False;
@@ -1910,5 +1953,6 @@ rdp_reset_state(void)
 void
 rdp_disconnect(void)
 {
+	logger(Protocol, Debug, "%s()", __func__);
 	sec_disconnect();
 }
