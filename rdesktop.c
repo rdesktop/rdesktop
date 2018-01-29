@@ -517,7 +517,7 @@ read_password(char *password, int size)
 
 	if (tcgetattr(STDIN_FILENO, &tios) == 0)
 	{
-		fprintf(stderr, prompt);
+		fputs(prompt, stderr);
 		tios.c_lflag &= ~ECHO;
 		tcsetattr(STDIN_FILENO, TCSANOW, &tios);
 		istty = 1;
