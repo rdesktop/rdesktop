@@ -1810,9 +1810,6 @@ rdp_main_loop(RD_BOOL * deactivated, uint32 * ext_disc_reason)
 			g_exit_mainloop = True;
 		}
 	} while(g_exit_mainloop == False);
-
-	/* clear the exit main loop flag */
-	g_exit_mainloop = False;
 }
 
 /* used in uiports and rdp_main_loop, processes the RDP packets waiting */
@@ -1901,6 +1898,7 @@ rdp_reset_state(void)
 {
 	g_next_packet = NULL;	/* reset the packet information */
 	g_rdp_shareid = 0;
+	g_exit_mainloop = False;
 	sec_reset_state();
 }
 
