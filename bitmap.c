@@ -34,7 +34,7 @@
 #define CVAL2(p, v) { v = (*(p++)) << 8; v |= (*(p++)); }
 #endif /* L_ENDIAN */
 #else
-#define CVAL2(p, v) { v = (*((uint16*)p)); p += 2; }
+#define CVAL2(p, v) { v = (*((uint16*)p)); p += 2; } // FALLTHRU
 #endif /* NEED_ALIGN */
 
 #define UNROLL8(exp) { exp exp exp exp exp exp exp exp }
@@ -134,8 +134,8 @@ bitmap_decompress1(uint8 * output, int width, int height, uint8 * input, int siz
 					insertmix = True;
 				break;
 			case 8:	/* Bicolour */
-				colour1 = CVAL(input);
-			case 3:	/* Colour */
+				colour1 = CVAL(input); // FALLTHRU
+			case 3:	/* Colour FALLTHRU */
 				colour2 = CVAL(input);
 				break;
 			case 6:	/* SetMix/Mix */
@@ -332,8 +332,8 @@ bitmap_decompress2(uint8 * output, int width, int height, uint8 * input, int siz
 					insertmix = True;
 				break;
 			case 8:	/* Bicolour */
-				CVAL2(input, colour1);
-			case 3:	/* Colour */
+				CVAL2(input, colour1); // FALLTHRU
+			case 3:	/* Colour FALLTHRU */
 				CVAL2(input, colour2);
 				break;
 			case 6:	/* SetMix/Mix */
@@ -534,8 +534,8 @@ bitmap_decompress3(uint8 * output, int width, int height, uint8 * input, int siz
 			case 8:	/* Bicolour */
 				colour1[0] = CVAL(input);
 				colour1[1] = CVAL(input);
-				colour1[2] = CVAL(input);
-			case 3:	/* Colour */
+				colour1[2] = CVAL(input); // FALLTHRU
+			case 3:	/* Colour FALLTHRU */
 				colour2[0] = CVAL(input);
 				colour2[1] = CVAL(input);
 				colour2[2] = CVAL(input);
