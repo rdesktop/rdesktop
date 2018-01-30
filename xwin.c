@@ -2332,40 +2332,46 @@ xwin_toggle_fullscreen(void)
 
 	g_fullscreen = !g_fullscreen;
 
+
+	/* What size should the new window have? */
 	if (g_fullscreen)
 	{
+		/* Since we need to create a fullscreen window we need to know screen size */
 		x = 0;
-		y = 0,
+		y = 0;
 		width = WidthOfScreen(g_screen);
 		height = HeightOfScreen(g_screen);
 	}
 	else
 	{
+		/* Restore "old" window size */
 		x = windowed_x;
 		y = windowed_y;
 		width = windowed_width;
 		height = windowed_height;
 	}
 
-	/* Resize rdesktop window using new size and window attributes */
+	logger(GUI, Debug, "xwin_toggle_fullscreen(), new window: %dx%d+%d+%d, last window: %dx%d",
+	       width, height, x, y, windowed_width, windowed_height);
+
+	/* Re-create the rdesktop window using new size and window
+	   attributes. */
 	g_xpos = x;
 	g_ypos = y;
 	ui_destroy_window();
 	ui_create_window(width, height);
 
-	/* Change session size to match new window size */
-	if (rdpedisp_is_available() == False)
+	/* If the window manager overrides our window size request, we trust
+	   the normal window resize mechanism to take care of resizing the
+	   session. When window is configured as override-redirect
+	   (i.e. fullscreen), this disables the normal window resize
+	   mechanism. In that case, we have to take care of the resize
+	   ourselves setting g_pending_resize. */
+	if (g_fullscreen)
 	{
-		/* Change session size using disconnect / reconnect mechanism */
 		g_pending_resize = True;
 		g_window_width = width;
 		g_window_height = height;
-		return;
-	}
-	else
-	{
-		/* Change session size using DisplayControl extension (RDPEDISP) */
-		rdpedisp_set_session_size(width, height);
 	}
 
 	XDefineCursor(g_display, g_wnd, g_current_cursor);
@@ -3039,10 +3045,8 @@ process_pending_resize ()
 	if (g_pending_resize_defer == True)
 		return False;
 
-	/* only for fullscreen or x%-of-screen-sized windows */
-	if (g_window_size_type == PercentageOfScreen
-	    || g_window_size_type == Fullscreen
-	    || g_fullscreen)
+	/* Set up width and height for new session */
+	if (g_fullscreen || g_seamless_rdp)
 	{
 		/* follow root window size */
 		width = WidthOfScreen(g_screen);
@@ -3060,12 +3064,12 @@ process_pending_resize ()
 	}
 
 
-	/* carry out a resize to desired size */
+	/* Carry out a resize to desired size */
 	if (rdpedisp_is_available() == False)
 	{
 		/* resize session using disconnect reconnect
-		 * sequence if RDPEDISP is not support by
-		 * server.
+		 * sequence when RDPEDISP is not supported by
+		 * server by returning to outer loop.
 		 */
 
 		g_requested_session_width = width;
@@ -3082,18 +3086,6 @@ process_pending_resize ()
 		now_ts = time(NULL);
 		if (now_ts - g_wait_for_deactivate_ts <= 5)
 			return False;
-
-		/* size of current window */
-		width = g_window_width;
-		height = g_window_height;
-
-		/* resize session using RDPEDISP */
-		if (g_fullscreen || g_seamless_rdp)
-		{
-			/* size of screen */
-			width = WidthOfScreen(g_screen);
-			height = HeightOfScreen(g_screen);
-		}
 
 		logger(GUI, Verbose, "Window resize detected, requesting matching session size %dx%d",
 		       width, height);
