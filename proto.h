@@ -82,7 +82,7 @@ void ewmh_init(void);
 /* iso.c */
 STREAM iso_init(int length);
 void iso_send(STREAM s);
-STREAM iso_recv(uint8 * rdpver);
+STREAM iso_recv(RD_BOOL *is_fastpath, uint8 *fastpath_hdr);
 RD_BOOL iso_connect(char *server, char *username, char *domain, char *password, RD_BOOL reconnect,
 		    uint32 * selected_protocol);
 void iso_disconnect(void);
@@ -95,7 +95,7 @@ void licence_process(STREAM s);
 STREAM mcs_init(int length);
 void mcs_send_to_channel(STREAM s, uint16 channel);
 void mcs_send(STREAM s);
-STREAM mcs_recv(uint16 * channel, uint8 * rdpver);
+STREAM mcs_recv(uint16 * channel, RD_BOOL *is_fastpath, uint8 *fastpath_hdr);
 RD_BOOL mcs_connect_start(char *server, char *username, char *domain, char *password,
 			  RD_BOOL reconnect, uint32 * selected_protocol);
 RD_BOOL mcs_connect_finalize(STREAM s);
@@ -199,7 +199,7 @@ STREAM sec_init(uint32 flags, int maxlen);
 void sec_send_to_channel(STREAM s, uint32 flags, uint16 channel);
 void sec_send(STREAM s, uint32 flags);
 void sec_process_mcs_data(STREAM s);
-STREAM sec_recv(uint8 * rdpver);
+STREAM sec_recv(RD_BOOL * is_fastpath);
 RD_BOOL sec_connect(char *server, char *username, char *domain, char *password, RD_BOOL reconnect);
 void sec_disconnect(void);
 void sec_reset_state(void);
