@@ -144,12 +144,16 @@ parallel_write(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, u
 		{
 			case EAGAIN:
 				rc = RD_STATUS_DEVICE_OFF_LINE;
+				break;
 			case ENOSPC:
 				rc = RD_STATUS_DEVICE_PAPER_EMPTY;
+				break;
 			case EIO:
 				rc = RD_STATUS_DEVICE_OFF_LINE;
+				break;
 			default:
 				rc = RD_STATUS_DEVICE_POWERED_OFF;
+				break;
 		}
 #if defined(LPGETSTATUS)
 		if (ioctl(handle, LPGETSTATUS, &status) == 0)
