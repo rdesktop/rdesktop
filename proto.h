@@ -82,7 +82,7 @@ void ewmh_init(void);
 /* iso.c */
 STREAM iso_init(int length);
 void iso_send(STREAM s);
-STREAM iso_recv(RD_BOOL *is_fastpath, uint8 *fastpath_hdr);
+STREAM iso_recv(RD_BOOL *is_fastpath, fastpath_hdr_t *fastpath_hdr);
 RD_BOOL iso_connect(char *server, char *username, char *domain, char *password, RD_BOOL reconnect,
 		    uint32 * selected_protocol);
 void iso_disconnect(void);
@@ -95,7 +95,7 @@ void licence_process(STREAM s);
 STREAM mcs_init(int length);
 void mcs_send_to_channel(STREAM s, uint16 channel);
 void mcs_send(STREAM s);
-STREAM mcs_recv(uint16 * channel, RD_BOOL *is_fastpath, uint8 *fastpath_hdr);
+STREAM mcs_recv(uint16 * channel, RD_BOOL *is_fastpath, fastpath_hdr_t *fastpath_hdr);
 RD_BOOL mcs_connect_start(char *server, char *username, char *domain, char *password,
 			  RD_BOOL reconnect, uint32 * selected_protocol);
 RD_BOOL mcs_connect_finalize(STREAM s);

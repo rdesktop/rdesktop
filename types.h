@@ -315,4 +315,13 @@ typedef enum {
 	Fullscreen,
 } window_size_type_t;
 
+typedef union fastpath_hdr_t {
+    uint8 raw;
+    struct {
+	uint8 action:2;
+	uint8 reserved:4;
+	uint8 flags:2;
+    } fields;
+} fastpath_hdr_t;
+
 #endif /* _TYPES_H */
