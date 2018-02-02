@@ -844,7 +844,7 @@ sec_process_mcs_data(STREAM s)
 STREAM
 sec_recv(RD_BOOL *is_fastpath)
 {
-	uint8 fastpath_hdr;
+	uint8 fastpath_hdr, fastpath_flags;
 	uint16 sec_flags;
 	uint16 channel;
 	STREAM s;
@@ -855,7 +855,9 @@ sec_recv(RD_BOOL *is_fastpath)
 		{
 			/* If fastpath packet is encrypted, read data
 			   signature and decrypt */
-			if (fastpath_hdr & FASTPATH_OUTPUT_ENCRYPTED)
+			/* FIXME: extracting flags from hdr could be made less obscure */
+			fastpath_flags = (fastpath_hdr & 0xC0) >> 6;
+			if (fastpath_flags & FASTPATH_OUTPUT_ENCRYPTED)
 			{
 				in_uint8s(s, 8);	/* signature */
 				sec_decrypt(s->p, s->end - s->p);
