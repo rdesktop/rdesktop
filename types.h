@@ -315,4 +315,12 @@ typedef enum {
 	Fullscreen,
 } window_size_type_t;
 
+typedef struct _rdp_monitors{
+	int x;
+	int y;
+	int width;
+	int height;
+	RD_BOOL is_primary;
+} rdp_monitors;
+
 #endif /* _TYPES_H */

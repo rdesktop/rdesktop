@@ -173,6 +173,16 @@ if test x"$HAVE_XRANDR" = "x1"; then
     AC_DEFINE(HAVE_XRANDR)
 fi
 
+# xinerama
+if test -n "$PKG_CONFIG"; then
+    PKG_CHECK_MODULES(XINERAMA, xinerama, [HAVE_XINERAMA=1], [HAVE_XINERAMA=0])
+fi
+if test x"$HAVE_XINERAMA" = "x1"; then
+    CFLAGS="$CFLAGS $XINERAMA_CFLAGS"
+    LIBS="$LIBS $XINERAMA_LIBS"
+    AC_DEFINE(HAVE_XINERAMA)
+fi
+
 # Xcursor
 if test -n "$PKG_CONFIG"; then
     PKG_CHECK_MODULES(XCURSOR, xcursor, [HAVE_XCURSOR=1], [HAVE_XCURSOR=0])
