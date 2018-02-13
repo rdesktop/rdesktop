@@ -264,6 +264,7 @@ void ui_deinit(void);
 RD_BOOL ui_create_window(uint32 width, uint32 height);
 void ui_resize_window(uint32 width, uint32 height);
 void ui_destroy_window(void);
+void ui_update_window_sizehints(uint32 width, uint32 height);
 RD_BOOL ui_have_window(void);
 void xwin_toggle_fullscreen(void);
 void ui_select(int rdp_socket);

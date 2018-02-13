@@ -77,6 +77,8 @@ static int g_x_socket;
 static Screen *g_screen;
 Window g_wnd;
 
+RD_BOOL g_dynamic_session_resize = True;
+
 /* These are the last known window sizes. They are updated whenever the window size is changed. */
 static uint32 g_window_width;
 static uint32 g_window_height;
@@ -2076,13 +2078,26 @@ get_sizehints(XSizeHints *sizehints, uint32 width, uint32 height)
 	sizehints->width_inc = 2; /* session width must be divisible by two */
 	sizehints->height_inc = 1;
 
-	if (g_seamless_rdp)
+	if (g_seamless_rdp || !g_dynamic_session_resize)
 	{
 		/* disable dynamic session resize based on window size for
 		   rdesktop main window when seamless is enabled */
 		sizehints->flags |= PMaxSize;
 		sizehints->min_width = sizehints->max_width = width;
 		sizehints->min_height = sizehints->max_height = height;
+	}
+}
+
+void
+ui_update_window_sizehints(uint32 width, uint32 height)
+{
+	XSizeHints *sizehints;
+	sizehints = XAllocSizeHints();
+	if (sizehints)
+	{
+		get_sizehints(sizehints, width, height);
+		XSetWMNormalHints(g_display, g_wnd, sizehints);
+		XFree(sizehints);
 	}
 }
 
@@ -3124,7 +3139,7 @@ ui_select(int rdp_socket)
 			continue;
 		}
 
-		if (g_pending_resize == True)
+		if (g_pending_resize == True && g_dynamic_session_resize)
 		{
 			/* returns True on disconnect-reconnect resize */
 			if (process_pending_resize() == True)

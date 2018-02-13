@@ -54,6 +54,8 @@ extern struct timeval g_pending_resize_defer_timer;
 extern RD_BOOL g_network_error;
 extern time_t g_wait_for_deactivate_ts;
 
+extern RD_BOOL g_dynamic_session_resize;
+
 RD_BOOL g_exit_mainloop = False;
 
 uint8 *g_next_packet;
@@ -1102,10 +1104,13 @@ rdp_process_general_caps(STREAM s)
 		g_rdp_version = RDP_V4;
 }
 
+static RD_BOOL g_first_bitmap_caps = True;
+
 /* Process a bitmap capability set */
 static void
 rdp_process_bitmap_caps(STREAM s)
 {
+
 	uint16 depth;
 
 	logger(Protocol, Debug, "%s()", __func__);
@@ -1119,6 +1124,15 @@ rdp_process_bitmap_caps(STREAM s)
 	logger(Protocol, Debug,
 	       "rdp_process_bitmap_caps(), setting desktop size and depth to: %dx%dx%d",
 	       g_session_width, g_session_height, depth);
+
+	/* Detect if we can have dynamic session resize enabled, only once. */
+	if (g_first_bitmap_caps == True && !(g_session_width == g_requested_session_width
+			      && g_session_height == g_requested_session_height))
+	{
+		logger(Core, Notice, "Disabling dynamic session resize");
+		g_dynamic_session_resize = False;
+	}
+	g_first_bitmap_caps = False;
 
 	/*
 	 * The server may limit depth and change the size of the desktop (for
@@ -1138,6 +1152,14 @@ rdp_process_bitmap_caps(STREAM s)
 
 	if (g_fullscreen == True)
 		return;
+
+	/* If dynamic session resize is disabled, set window size hints to
+	   fixed session size */
+	if (g_dynamic_session_resize == False)
+	{
+		ui_update_window_sizehints(g_session_width, g_session_height);
+		return;
+	}
 
 	ui_resize_window(g_session_width, g_session_height);
 }
@@ -1974,6 +1996,7 @@ rdp_reset_state(void)
 	g_next_packet = NULL;	/* reset the packet information */
 	g_rdp_shareid = 0;
 	g_exit_mainloop = False;
+	g_first_bitmap_caps = True;
 	sec_reset_state();
 }
 
