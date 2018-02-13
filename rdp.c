@@ -85,6 +85,7 @@ extern RD_BOOL g_has_reconnect_random;
 extern uint8 g_client_random[SEC_RANDOM_SIZE];
 static uint32 g_packetno;
 
+extern RD_BOOL g_fullscreen;
 
 /* holds the actual session size reported by server */
 uint16 g_session_width;
@@ -1131,9 +1132,13 @@ rdp_process_bitmap_caps(STREAM s)
 		g_server_depth = depth;
 	}
 
-	/* resize viewport window to new session size, this is an
-	   no-op if there is no change in size between session size
-	   reported from server and the actual window size */
+	/* Resize window size to match session size, except when we're in
+	   fullscreen, where we want the window to always cover the entire
+	   screen. */
+
+	if (g_fullscreen == True)
+		return;
+
 	ui_resize_window(g_session_width, g_session_height);
 }
 

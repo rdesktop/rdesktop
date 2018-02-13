@@ -2838,6 +2838,11 @@ xwin_process_events(void)
 							       xevent.xconfigure.height);
 
 							gettimeofday(&g_resize_timer, NULL);
+
+							/* Resize fullscreen window to match root window size */
+							/* TODO: Handle percentage of screen */
+							if (g_fullscreen)
+								ui_resize_window(xevent.xconfigure.width, xevent.xconfigure.height);
 							g_pending_resize = True;
 						}
 					}
