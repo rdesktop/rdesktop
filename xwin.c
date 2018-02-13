@@ -2359,11 +2359,22 @@ xwin_toggle_fullscreen(void)
 	}
 	else
 	{
-		/* Restore "old" window size */
+		/* Switch from fullscreen to window mode */
 		x = windowed_x;
 		y = windowed_y;
-		width = windowed_width;
-		height = windowed_height;
+
+		if (g_dynamic_session_resize)
+		{
+			/* Restore "old" window size, resize session to fit */
+			width = windowed_width;
+			height = windowed_height;
+		}
+		else
+		{
+			/* Resize window to fit session size */
+			width = g_session_width;
+			height = g_session_height;
+		}
 	}
 
 	logger(GUI, Debug, "xwin_toggle_fullscreen(), new window: %dx%d+%d+%d, last window: %dx%d",
