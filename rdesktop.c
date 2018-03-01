@@ -1395,12 +1395,23 @@ main(int argc, char *argv[])
 
 		deactivated = False;
 		g_reconnect_loop = False;
+		ext_disc_reason = 0;
 		rdp_main_loop(&deactivated, &ext_disc_reason);
 
 		tcp_run_ui(False);
 
 		logger(Core, Verbose, "Disconnecting...");
 		rdp_disconnect();
+
+		/* If error info is set we do want to exit rdesktop
+		   connect loop. We do this by clearing flags that
+		   triggers a reconnect that could be set elsewere */
+		if (ext_disc_reason != 0)
+		{
+			g_redirect = False;
+			g_network_error = False;
+			g_pending_resize = False;
+		}
 
 		if (g_redirect)
 			continue;
@@ -1428,6 +1439,8 @@ main(int argc, char *argv[])
 			g_reconnect_loop = True;
 			continue;
 		}
+
+		/* exit main reconnect loop */
 		break;
 	}
 
