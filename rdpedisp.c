@@ -28,6 +28,7 @@
 
 extern int g_dpi;
 extern RD_BOOL g_pending_resize_defer;
+extern struct timeval g_pending_resize_defer_timer;
 
 static void rdpedisp_send(STREAM s);
 static void rdpedisp_init_packet(STREAM s, uint32 type, uint32 length);
@@ -45,8 +46,15 @@ rdpedisp_process_caps_pdu(STREAM s)
 	       "rdpedisp_process_caps_pdu(), Max supported monitor area (square pixels) is %d",
 	       tmp[0] * tmp[1] * tmp[2]);
 
-	/* Start allowing session resizes */
+	/* When the RDPEDISP channel is established, we allow dynamic
+	   session resize straight away by clearing the defer flag and
+	   the defer timer. This lets process_pending_resize() start
+	   processing pending resizes immediately. We expect that
+	   process_pending_resize will prefer RDPEDISP resizes over
+	   disconnect/reconnect resizes. */
 	g_pending_resize_defer = False;
+	g_pending_resize_defer_timer.tv_sec = 0;
+	g_pending_resize_defer_timer.tv_usec = 0;
 }
 
 static void

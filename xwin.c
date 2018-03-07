@@ -3065,9 +3065,22 @@ process_pending_resize ()
 	/* There is a race problem when using disconnect / reconnect
 	   sequence were one sometimes would be presented with
 	   unexpected login window. Waiting a little bit extra after
-	   getting the reconnect cookie solves this problem. */
+	   getting the reconnect cookie solves this problem.
+
+	   In addition to that delay, we also want to wait for
+	   RDPEDISP to become available. In scenarios where we can use
+	   both online and reconnect-based resizes, we prefer
+	   online. Our brief investigation shows that RDPEDISP support
+	   is established about 100-300 ms after the login info packet
+	   was received. Thus, we want to wait a bit so we can avoid
+	   resizes using reconnect. Once RDPEDISP is established, the
+	   defer timer is cleared, so there will be no delay before
+	   the first resize for servers that support RDPEDISP. Other
+	   servers will get the initial resize delayed with 2 seconds.
+	*/
+
 	if (timeval_is_set(&g_pending_resize_defer_timer) &&
-	    time_difference_in_ms(g_pending_resize_defer_timer, now) >= 100)
+	    time_difference_in_ms(g_pending_resize_defer_timer, now) >= 2000)
 	{
 		g_pending_resize_defer_timer.tv_sec = g_pending_resize_defer_timer.tv_usec = 0;
 		g_pending_resize_defer = False;
