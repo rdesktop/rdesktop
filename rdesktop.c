@@ -1395,54 +1395,55 @@ main(int argc, char *argv[])
 
 		deactivated = False;
 		g_reconnect_loop = False;
-		ext_disc_reason = 0;
 		rdp_main_loop(&deactivated, &ext_disc_reason);
 
 		tcp_run_ui(False);
-
-		logger(Core, Verbose, "Disconnecting...");
 		rdp_disconnect();
 
-		/* If error info is set we do want to exit rdesktop
-		   connect loop. We do this by clearing flags that
-		   triggers a reconnect that could be set elsewere */
-		if (ext_disc_reason != 0)
+		if (deactivated)
 		{
-			g_redirect = False;
-			g_network_error = False;
-			g_pending_resize = False;
+			/* Server disconnected while deactivated */
+			logger(Core, Notice, "Disconnecting...");
+			break;
 		}
-
-		if (g_redirect)
-			continue;
-
-		/* handle network error and start autoreconnect */
-		if (g_network_error && !deactivated)
+		else
 		{
-			logger(Core, Notice,
-			       "Disconnected due to network error, retrying to reconnect for %d minutes.",
-			       RECONNECT_TIMEOUT / 60);
-			g_network_error = False;
-			g_reconnect_loop = True;
+			/* Unexpected disconnect or rdesktop-initiated loop exit */
+
+			if (g_user_quit)
+			{
+				/* User closed window */
+				break;
+			}
+			else if (g_redirect)
+			{
+				/* see beginning of loop */
+			}
+			else if (g_network_error)
+			{
+				logger(Core, Notice,
+				       "Disconnected due to network error, retrying to reconnect for %d minutes.",
+				       RECONNECT_TIMEOUT / 60);
+				g_network_error = False;
+				g_reconnect_loop = True;
+			}
+			else if (g_pending_resize)
+			{
+				/* Prepare to re-create rdesktop window */
+				ui_seamless_end();
+				ui_destroy_window();
+
+				logger(Core, Verbose, "Resize reconnect loop triggered, new size %dx%d",
+				       g_requested_session_width, g_requested_session_height);
+				g_pending_resize = False;
+				g_reconnect_loop = True;
+			}
 			continue;
 		}
-
-		ui_seamless_end();
-		ui_destroy_window();
-
-		/* Enter a reconnect loop if we have a pending resize request */
-		if (g_pending_resize)
-		{
-			logger(Core, Verbose, "Resize reconnect loop triggered, new size %dx%d",
-			       g_requested_session_width, g_requested_session_height);
-			g_pending_resize = False;
-			g_reconnect_loop = True;
-			continue;
-		}
-
-		/* exit main reconnect loop */
-		break;
 	}
+
+	ui_seamless_end();
+	ui_destroy_window();
 
 	cache_save_state();
 	ui_deinit();
