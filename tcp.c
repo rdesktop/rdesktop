@@ -58,6 +58,13 @@
 #define STREAM_COUNT 1
 #endif
 
+#ifdef IPv6
+static struct addrinfo *g_server_address = NULL;
+#else
+struct sockaddr_in *g_server_address = NULL;
+#endif
+
+static char *g_last_server_name = NULL;
 static RD_BOOL g_ssl_initialized = False;
 static SSL *g_ssl = NULL;
 static SSL_CTX *g_ssl_ctx = NULL;
@@ -416,47 +423,85 @@ tcp_tls_get_server_pubkey(STREAM s)
 	return (s->size != 0);
 }
 
-/* Establish a connection on the TCP layer */
+/* Helper function to determine if rdesktop should resolve hostnames again or not */
+static RD_BOOL
+tcp_connect_resolve_hostname(const char *server)
+{
+	return (g_server_address == NULL ||
+		g_last_server_name == NULL ||
+		strcmp(g_last_server_name, server) != 0);
+}
+
+/* Establish a connection on the TCP layer
+
+   This function tries to avoid resolving any server address twice. The
+   official Windows 2008 documentation states that the windows farm name
+   should be a round-robin DNS entry containing all the terminal servers
+   in the farm. When connected to the farm address, if we look up the
+   address again when reconnecting (for any reason) we risk reconnecting
+   to a different server in the farm.
+*/
+
 RD_BOOL
 tcp_connect(char *server)
 {
 	socklen_t option_len;
 	uint32 option_value;
 	int i;
+	char buf[NI_MAXHOST];
 
 #ifdef IPv6
 
 	int n;
-	struct addrinfo hints, *res, *ressave;
+	struct addrinfo hints, *res, *addr;
+	struct sockaddr *oldaddr;
 	char tcp_port_rdp_s[10];
 
-	snprintf(tcp_port_rdp_s, 10, "%d", g_tcp_port_rdp);
-
-	memset(&hints, 0, sizeof(struct addrinfo));
-	hints.ai_family = AF_UNSPEC;
-	hints.ai_socktype = SOCK_STREAM;
-
-	if ((n = getaddrinfo(server, tcp_port_rdp_s, &hints, &res)))
+	if (tcp_connect_resolve_hostname(server))
 	{
-		logger(Core, Error, "tcp_connect(), getaddrinfo() failed: %s", gai_strerror(n));
-		return False;
-	}
+		snprintf(tcp_port_rdp_s, 10, "%d", g_tcp_port_rdp);
 
-	ressave = res;
-	g_sock = -1;
-	while (res)
-	{
-		g_sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-		if (!(g_sock < 0))
+		memset(&hints, 0, sizeof(struct addrinfo));
+		hints.ai_family = AF_UNSPEC;
+		hints.ai_socktype = SOCK_STREAM;
+
+		if ((n = getaddrinfo(server, tcp_port_rdp_s, &hints, &res)))
 		{
-			if (connect(g_sock, res->ai_addr, res->ai_addrlen) == 0)
-				break;
-			TCP_CLOSE(g_sock);
-			g_sock = -1;
+			logger(Core, Error, "tcp_connect(), getaddrinfo() failed: %s", gai_strerror(n));
+			return False;
 		}
-		res = res->ai_next;
 	}
-	freeaddrinfo(ressave);
+	else
+	{
+		res = g_server_address;
+	}
+
+	g_sock = -1;
+
+	for (addr = res; addr != NULL; addr = addr->ai_next)
+	{
+		g_sock = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
+		if (g_sock < 0)
+		{
+			logger(Core, Debug, "tcp_connect(), socket() failed: %s", TCP_STRERROR);
+			continue;
+		}
+
+		n = getnameinfo(addr->ai_addr, addr->ai_addrlen, buf, sizeof(buf), NULL, 0, NI_NUMERICHOST);
+		if (n != 0)
+		{
+			logger(Core, Error, "tcp_connect(), getnameinfo() failed: %s", gai_strerror(n));
+			return False;
+		}
+
+		logger(Core, Debug, "tcp_connect(), trying %s (%s)", server, buf);
+
+		if (connect(g_sock, addr->ai_addr, addr->ai_addrlen) == 0)
+			break;
+
+		TCP_CLOSE(g_sock);
+		g_sock = -1;
+	}
 
 	if (g_sock == -1)
 	{
@@ -464,19 +509,50 @@ tcp_connect(char *server)
 		return False;
 	}
 
-#else /* no IPv6 support */
+	/* Save server address for later use, if we haven't already. */
 
-	struct hostent *nslookup;
-	struct sockaddr_in servaddr;
-
-	if ((nslookup = gethostbyname(server)) != NULL)
+	if (g_server_address == NULL)
 	{
-		memcpy(&servaddr.sin_addr, nslookup->h_addr, sizeof(servaddr.sin_addr));
+		g_server_address = xmalloc(sizeof(struct addrinfo));
+		g_server_address->ai_addr = xmalloc(sizeof(struct sockaddr_storage));
 	}
-	else if ((servaddr.sin_addr.s_addr = inet_addr(server)) == INADDR_NONE)
+
+	if (g_server_address != addr)
 	{
-		logger(Core, Error, "tcp_connect(), unable to resolve host '%s'", server);
-		return False;
+		/* don't overwrite ptr to allocated sockaddr */
+		oldaddr = g_server_address->ai_addr;
+		memcpy(g_server_address, addr, sizeof(struct addrinfo));
+		g_server_address->ai_addr = oldaddr;
+
+		memcpy(g_server_address->ai_addr, addr->ai_addr, addr->ai_addrlen);
+
+		g_server_address->ai_canonname = NULL;
+		g_server_address->ai_next = NULL;
+
+		freeaddrinfo(res);
+	}
+
+#else /* no IPv6 support */
+	struct hostent *nslookup = NULL;
+
+	if (tcp_connect_resolve_hostname(server))
+	{
+		if (g_server_address != NULL)
+			xfree(g_server_address);
+		g_server_address = xmalloc(sizeof(struct sockaddr_in));
+		g_server_address->sin_family = AF_INET;
+		g_server_address->sin_port = htons((uint16) g_tcp_port_rdp);
+
+		if ((nslookup = gethostbyname(server)) != NULL)
+		{
+			memcpy(&g_server_address->sin_addr, nslookup->h_addr,
+			       sizeof(g_server_address->sin_addr));
+		}
+		else if ((g_server_address->sin_addr.s_addr = inet_addr(server)) == INADDR_NONE)
+		{
+			logger(Core, Error, "tcp_connect(), unable to resolve host '%s'", server);
+			return False;
+		}
 	}
 
 	if ((g_sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
@@ -485,10 +561,12 @@ tcp_connect(char *server)
 		return False;
 	}
 
-	servaddr.sin_family = AF_INET;
-	servaddr.sin_port = htons((uint16) g_tcp_port_rdp);
+	logger(Core, Debug, "tcp_connect(), trying %s (%s)",
+	       server, inet_ntop(g_server_address->sin_family,
+				 &g_server_address->sin_addr,
+				 buf, sizeof(buf)));
 
-	if (connect(g_sock, (struct sockaddr *) &servaddr, sizeof(struct sockaddr)) < 0)
+	if (connect(g_sock, (struct sockaddr *) g_server_address, sizeof(struct sockaddr)) < 0)
 	{
 		if (!g_reconnect_loop)
 			logger(Core, Error, "tcp_connect(), connect() failed: %s", TCP_STRERROR);
@@ -524,6 +602,10 @@ tcp_connect(char *server)
 		g_out[i].data = (uint8 *) xmalloc(g_out[i].size);
 	}
 
+	/* After successful connect: update the last server name */
+	if (g_last_server_name)
+		xfree(g_last_server_name);
+	g_last_server_name = strdup(server);
 	return True;
 }
 
