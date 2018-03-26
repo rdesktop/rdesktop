@@ -551,16 +551,15 @@ static void
 parse_server_and_port(char *server)
 {
 	char *p;
-#ifdef IPv6
 	int addr_colons;
-#endif
 
-#ifdef IPv6
 	p = server;
+
 	addr_colons = 0;
 	while (*p)
 		if (*p++ == ':')
 			addr_colons++;
+
 	if (addr_colons >= 2)
 	{
 		/* numeric IPv6 style address format - [1:2:3::4]:port */
@@ -584,15 +583,6 @@ parse_server_and_port(char *server)
 			*p = 0;
 		}
 	}
-#else /* no IPv6 support */
-	p = strchr(server, ':');
-	if (p != NULL)
-	{
-		g_tcp_port_rdp = strtol(p + 1, NULL, 10);
-		*p = 0;
-	}
-#endif /* IPv6 */
-
 }
 
 // [WxH|P%|W%xH%][@DPI][+X[+Y]]|workarea
@@ -763,6 +753,7 @@ setup_user_requested_session_size()
 int
 main(int argc, char *argv[])
 {
+	struct addrinfo *ai = NULL;
 	char server[256];
 	char fullhostname[64];
 	char domain[256];
@@ -1169,6 +1160,10 @@ main(int argc, char *argv[])
 
 	STRNCPY(server, argv[optind], sizeof(server));
 	parse_server_and_port(server);
+	if (tcp_resolve_address(server, g_tcp_port_rdp, &ai) != 0)
+	{
+		return EX_OSERR;
+	}
 
 	if (g_seamless_rdp)
 	{
@@ -1341,8 +1336,13 @@ main(int argc, char *argv[])
 			xfree(g_username);
 			g_username = (char *) xmalloc(strlen(g_redirect_username) + 1);
 			STRNCPY(g_username, g_redirect_username, strlen(g_redirect_username) + 1);
-			STRNCPY(server, g_redirect_server, sizeof(server));
 			flags |= RDP_INFO_AUTOLOGON;
+
+			/* resolve new host */
+			if (tcp_resolve_address(g_redirect_server, g_tcp_port_rdp, &ai) != 0)
+			{
+				return EX_OSERR;
+			}
 
 			logger(Core, Notice, "Redirected to %s@%s session %d.",
 			       g_redirect_username, g_redirect_server, g_redirect_session_id);
@@ -1356,7 +1356,7 @@ main(int argc, char *argv[])
 		utils_apply_session_size_limitations(&g_requested_session_width, &g_requested_session_height);
 
 		if (!rdp_connect
-		    (server, flags, domain, g_password, shell, directory, g_reconnect_loop))
+		    (ai, flags, domain, g_password, shell, directory, g_reconnect_loop))
 		{
 
 			g_network_error = False;

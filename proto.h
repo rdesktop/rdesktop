@@ -23,6 +23,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+struct addrinfo;
 /* *INDENT-ON* */
 #define UNUSED(param) ((void)param)
 /* bitmap.c */
@@ -83,12 +84,12 @@ void ewmh_init(void);
 STREAM iso_init(int length);
 void iso_send(STREAM s);
 STREAM iso_recv(RD_BOOL *is_fastpath, uint8 *fastpath_hdr);
-RD_BOOL iso_connect(char *server, char *username, char *domain, char *password, RD_BOOL reconnect,
+RD_BOOL iso_connect(struct addrinfo *ai, char *username, char *domain, char *password, RD_BOOL reconnect,
 		    uint32 * selected_protocol);
 void iso_disconnect(void);
 void iso_reset_state(void);
 /* cssp.c */
-RD_BOOL cssp_connect(char *server, char *user, char *domain, char *password, STREAM s);
+RD_BOOL cssp_connect(struct addrinfo *ai, char *user, char *domain, char *password, STREAM s);
 /* licence.c */
 void licence_process(STREAM s);
 /* mcs.c */
@@ -96,7 +97,7 @@ STREAM mcs_init(int length);
 void mcs_send_to_channel(STREAM s, uint16 channel);
 void mcs_send(STREAM s);
 STREAM mcs_recv(uint16 * channel, RD_BOOL *is_fastpath, uint8 *fastpath_hdr);
-RD_BOOL mcs_connect_start(char *server, char *username, char *domain, char *password,
+RD_BOOL mcs_connect_start(struct addrinfo *ai, char *username, char *domain, char *password,
 			  RD_BOOL reconnect, uint32 * selected_protocol);
 RD_BOOL mcs_connect_finalize(STREAM s);
 void mcs_disconnect(int reason);
@@ -160,7 +161,7 @@ void process_bitmap_updates(STREAM s);
 void process_palette(STREAM s);
 void rdp_main_loop(RD_BOOL * deactivated, uint32 * ext_disc_reason);
 RD_BOOL rdp_loop(RD_BOOL * deactivated, uint32 * ext_disc_reason);
-RD_BOOL rdp_connect(char *server, uint32 flags, char *domain, char *password, char *command,
+RD_BOOL rdp_connect(struct addrinfo *ai, uint32 flags, char *domain, char *password, char *command,
 		    char *directory, RD_BOOL reconnect);
 void rdp_reset_state(void);
 void rdp_disconnect(void);
@@ -200,7 +201,7 @@ void sec_send_to_channel(STREAM s, uint32 flags, uint16 channel);
 void sec_send(STREAM s, uint32 flags);
 void sec_process_mcs_data(STREAM s);
 STREAM sec_recv(RD_BOOL * is_fastpath);
-RD_BOOL sec_connect(char *server, char *username, char *domain, char *password, RD_BOOL reconnect);
+RD_BOOL sec_connect(struct addrinfo *ai, char *username, char *domain, char *password, RD_BOOL reconnect);
 void sec_disconnect(void);
 void sec_reset_state(void);
 /* serial.c */
@@ -212,14 +213,16 @@ RD_BOOL serial_get_timeout(RD_NTHANDLE handle, uint32 length, uint32 * timeout,
 STREAM tcp_init(uint32 maxlen);
 void tcp_send(STREAM s);
 STREAM tcp_recv(STREAM s, uint32 length);
-RD_BOOL tcp_connect(char *server);
+RD_BOOL tcp_connect(struct addrinfo *ai);
 void tcp_disconnect(void);
 char *tcp_get_address(void);
+struct addrinfo *tcp_get_addrinfo(void);
 RD_BOOL tcp_is_connected(void);
 void tcp_reset_state(void);
 RD_BOOL tcp_tls_connect(void);
 RD_BOOL tcp_tls_get_server_pubkey(STREAM s);
 void tcp_run_ui(RD_BOOL run);
+int tcp_resolve_address(char *address, uint16 port, struct addrinfo **res);
 
 /* asn.c */
 RD_BOOL ber_in_header(STREAM s, int *tagval, int *length);

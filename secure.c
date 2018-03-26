@@ -940,13 +940,13 @@ sec_recv(RD_BOOL *is_fastpath)
 
 /* Establish a secure connection */
 RD_BOOL
-sec_connect(char *server, char *username, char *domain, char *password, RD_BOOL reconnect)
+sec_connect(struct addrinfo *ai, char *username, char *domain, char *password, RD_BOOL reconnect)
 {
 	uint32 selected_proto;
 	struct stream mcs_data;
 
 	/* Start a MCS connect sequence */
-	if (!mcs_connect_start(server, username, domain, password, reconnect, &selected_proto))
+	if (!mcs_connect_start(ai, username, domain, password, reconnect, &selected_proto))
 		return False;
 
 	/* We exchange some RDP data during the MCS-Connect */

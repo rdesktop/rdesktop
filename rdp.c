@@ -1962,13 +1962,13 @@ rdp_loop(RD_BOOL * deactivated, uint32 * ext_disc_reason)
 
 /* Establish a connection up to the RDP layer */
 RD_BOOL
-rdp_connect(char *server, uint32 flags, char *domain, char *password,
+rdp_connect(struct addrinfo *ai, uint32 flags, char *domain, char *password,
 	    char *command, char *directory, RD_BOOL reconnect)
 {
 	RD_BOOL deactivated = False;
 	uint32 ext_disc_reason = 0;
 
-	if (!sec_connect(server, g_username, domain, password, reconnect))
+	if (!sec_connect(ai, g_username, domain, password, reconnect))
 		return False;
 
 	rdp_send_client_info_pdu(flags, domain, g_username, password, command, directory);
