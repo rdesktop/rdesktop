@@ -3,7 +3,7 @@
    Entrypoint and utility functions
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2002-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
-   Copyright 2010-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2010-2018 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -1395,7 +1395,7 @@ main(int argc, char *argv[])
 
 		deactivated = False;
 		g_reconnect_loop = False;
-		ext_disc_reason = 0;
+		ext_disc_reason = ERRINFO_UNSET;
 		rdp_main_loop(&deactivated, &ext_disc_reason);
 
 		tcp_run_ui(False);
@@ -1403,46 +1403,76 @@ main(int argc, char *argv[])
 		logger(Core, Verbose, "Disconnecting...");
 		rdp_disconnect();
 
-		/* If error info is set we do want to exit rdesktop
-		   connect loop. We do this by clearing flags that
-		   triggers a reconnect that could be set elsewere */
-		if (ext_disc_reason != 0)
+		/* Version <= Windows 2008 server have a different behaviour for
+		   user initiated disconnected. Lets translate this specific
+		   behaviour into the same as for later versions for proper
+		   handling.
+		*/
+		if (deactivated == True && ext_disc_reason == ERRINFO_NO_INFO)
 		{
-			g_redirect = False;
-			g_network_error = False;
-			g_pending_resize = False;
+			deactivated = 0;
+			ext_disc_reason = ERRINFO_LOGOFF_BYUSER;
+		}
+		else if (ext_disc_reason == 0)
+		{
+			/* We do not know how to handle error info value of 0 */
+			ext_disc_reason = ERRINFO_UNSET;
 		}
 
-		if (g_redirect)
-			continue;
-
-		/* handle network error and start autoreconnect */
-		if (g_network_error && !deactivated)
+		/* Handler disconnect */
+		if (g_user_quit || deactivated == True || ext_disc_reason != ERRINFO_UNSET)
 		{
-			logger(Core, Notice,
-			       "Disconnected due to network error, retrying to reconnect for %d minutes.",
-			       RECONNECT_TIMEOUT / 60);
-			g_network_error = False;
-			g_reconnect_loop = True;
-			continue;
+			/* We should exit the rdesktop instance */
+			break;
 		}
-
-		ui_seamless_end();
-		ui_destroy_window();
-
-		/* Enter a reconnect loop if we have a pending resize request */
-		if (g_pending_resize)
+		else
 		{
-			logger(Core, Verbose, "Resize reconnect loop triggered, new size %dx%d",
-			       g_requested_session_width, g_requested_session_height);
-			g_pending_resize = False;
-			g_reconnect_loop = True;
-			continue;
-		}
+			/* We should handle a reconnect for any reason */
+			if (g_redirect)
+			{
+				logger(Core, Verbose, "Redirect reconnect loop triggered.");
+			}
+			else if (g_network_error)
+			{
+				if (g_reconnect_random_ts == 0)
+				{
+					/* If there is no auto reconnect cookie available
+					   for reconnect, do not enter reconnect loop. Windows
+					   2016 server does not send any for unknown reasons.
+					*/
+					logger(Core, Notice,
+					       "Disconnected due to network error, exiting...");
+					break;
+				}
 
-		/* exit main reconnect loop */
-		break;
+				/* handle network error and start autoreconnect */
+				logger(Core, Notice,
+				       "Disconnected due to network error, retrying to reconnect for %d minutes.",
+				       RECONNECT_TIMEOUT / 60);
+				g_network_error = False;
+				g_reconnect_loop = True;
+			}
+			else if (g_pending_resize)
+			{
+				/* Enter a reconnect loop if we have a pending resize request */
+				logger(Core, Verbose, "Resize reconnect loop triggered, new size %dx%d",
+				       g_requested_session_width, g_requested_session_height);
+				g_pending_resize = False;
+				g_reconnect_loop = True;
+
+				ui_seamless_end();
+				ui_destroy_window();
+			}
+			else
+			{
+				logger(Core, Debug, "Unhandled reconnect reason, exiting...");
+				break;
+			}
+		}
 	}
+
+	ui_seamless_end();
+	ui_destroy_window();
 
 	cache_save_state();
 	ui_deinit();
