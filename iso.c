@@ -213,7 +213,7 @@ iso_recv(RD_BOOL *is_fastpath, uint8 *fastpath_hdr)
 
 /* Establish a connection up to the ISO layer */
 RD_BOOL
-iso_connect(char *server, char *username, char *domain, char *password,
+iso_connect(struct addrinfo *ai, char *username, char *domain, char *password,
 	    RD_BOOL reconnect, uint32 * selected_protocol)
 {
 	UNUSED(reconnect);
@@ -245,7 +245,7 @@ iso_connect(char *server, char *username, char *domain, char *password,
 	*selected_protocol = PROTOCOL_RDP;
 	code = 0;
 
-	if (!tcp_connect(server))
+	if (!tcp_connect(ai))
 		return False;
 
 	iso_send_connection_request(username, neg_proto);
@@ -351,7 +351,8 @@ iso_connect(char *server, char *username, char *domain, char *password,
 #ifdef WITH_CREDSSP
 		else if (data == PROTOCOL_HYBRID)
 		{
-			if (!cssp_connect(server, username, domain, password, s))
+			struct addrinfo *pai = tcp_get_addrinfo();
+			if (!cssp_connect(pai, username, domain, password, s))
 			{
 				/* failed to connect using cssp, let retry with plain TLS */
 				logger(Core, Verbose,

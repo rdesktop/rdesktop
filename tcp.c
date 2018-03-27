@@ -3,7 +3,7 @@
    Protocol services - TCP layer
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2005-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
-   Copyright 2012-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2012-2018 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -65,6 +65,7 @@ static int g_sock;
 static RD_BOOL g_run_ui = False;
 static struct stream g_in;
 static struct stream g_out[STREAM_COUNT];
+static struct addrinfo *connection_pai;
 int g_tcp_port_rdp = TCP_PORT_RDP;
 
 extern RD_BOOL g_exit_mainloop;
@@ -418,91 +419,71 @@ tcp_tls_get_server_pubkey(STREAM s)
 
 /* Establish a connection on the TCP layer */
 RD_BOOL
-tcp_connect(char *server)
+tcp_connect(struct addrinfo *ai)
 {
-	socklen_t option_len;
+	int i, res;
 	uint32 option_value;
-	int i;
+	char hostname[64];
+	struct addrinfo *pai;
+	socklen_t option_len;
 
-#ifdef IPv6
+	/* connect to host */
+	pai = ai;
 
-	int n;
-	struct addrinfo hints, *res, *ressave;
-	char tcp_port_rdp_s[10];
+	/* if we have a previous used address, then only try
+	   connecting to this specific address. */
+	if (connection_pai != NULL)
+		pai = connection_pai;
 
-	snprintf(tcp_port_rdp_s, 10, "%d", g_tcp_port_rdp);
-
-	memset(&hints, 0, sizeof(struct addrinfo));
-	hints.ai_family = AF_UNSPEC;
-	hints.ai_socktype = SOCK_STREAM;
-
-	if ((n = getaddrinfo(server, tcp_port_rdp_s, &hints, &res)))
-	{
-		logger(Core, Error, "tcp_connect(), getaddrinfo() failed: %s", gai_strerror(n));
-		return False;
-	}
-
-	ressave = res;
 	g_sock = -1;
-	while (res)
+	while (pai)
 	{
-		g_sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-		if (!(g_sock < 0))
+		g_sock = socket(pai->ai_family, pai->ai_socktype, pai->ai_protocol);
+		if (g_sock > 0)
 		{
-			if (connect(g_sock, res->ai_addr, res->ai_addrlen) == 0)
+			/* try connect to server */
+			getnameinfo(pai->ai_addr,  pai->ai_addrlen, hostname, sizeof(hostname), NULL, 0, NI_NUMERICHOST);
+
+			if (connection_pai == pai)
+				logger(Core, Debug, "tcp_connect(), reconnecting to %s", hostname);
+			else
+				logger(Core, Debug, "tcp_connect(), connecting to %s", hostname);
+
+			res = connect(g_sock, pai->ai_addr, pai->ai_addrlen);
+			if (res == 0)
+			{
+				/* We are connected, lets store addrinfo pointer of
+				   connection and break out of connect loop */
+				connection_pai = pai;
 				break;
+			}
+
+			/* Failed to reconnect to previous connected host, lets fail */
+			if (connection_pai == pai)
+			{
+				pai = NULL;
+				break;
+			}
+
+			/* connection failed, lets try next */
 			TCP_CLOSE(g_sock);
 			g_sock = -1;
 		}
-		res = res->ai_next;
-	}
-	freeaddrinfo(ressave);
 
-	if (g_sock == -1)
+		pai = pai->ai_next;
+	}
+
+	if (pai == NULL || g_sock == -1)
 	{
-		logger(Core, Error, "tcp_connect(), unable to connect to %s", server);
+		logger(Core, Error, "tcp_connect(), unable to connect to %s", hostname);
 		return False;
 	}
 
-#else /* no IPv6 support */
-
-	struct hostent *nslookup;
-	struct sockaddr_in servaddr;
-
-	if ((nslookup = gethostbyname(server)) != NULL)
-	{
-		memcpy(&servaddr.sin_addr, nslookup->h_addr, sizeof(servaddr.sin_addr));
-	}
-	else if ((servaddr.sin_addr.s_addr = inet_addr(server)) == INADDR_NONE)
-	{
-		logger(Core, Error, "tcp_connect(), unable to resolve host '%s'", server);
-		return False;
-	}
-
-	if ((g_sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-	{
-		logger(Core, Error, "tcp_connect(), socket() failed: %s", TCP_STRERROR);
-		return False;
-	}
-
-	servaddr.sin_family = AF_INET;
-	servaddr.sin_port = htons((uint16) g_tcp_port_rdp);
-
-	if (connect(g_sock, (struct sockaddr *) &servaddr, sizeof(struct sockaddr)) < 0)
-	{
-		if (!g_reconnect_loop)
-			logger(Core, Error, "tcp_connect(), connect() failed: %s", TCP_STRERROR);
-
-		TCP_CLOSE(g_sock);
-		g_sock = -1;
-		return False;
-	}
-
-#endif /* IPv6 */
-
+	/* setup socket */
 	option_value = 1;
 	option_len = sizeof(option_value);
 	setsockopt(g_sock, IPPROTO_TCP, TCP_NODELAY, (void *) &option_value, option_len);
+
 	/* receive buffer must be a least 16 K */
 	if (getsockopt(g_sock, SOL_SOCKET, SO_RCVBUF, (void *) &option_value, &option_len) == 0)
 	{
@@ -559,6 +540,40 @@ tcp_get_address()
 	else
 		strcpy(ipaddr, "127.0.0.1");
 	return ipaddr;
+}
+
+struct addrinfo *
+tcp_get_addrinfo()
+{
+	return connection_pai;
+}
+
+int
+tcp_resolve_address(char *address, uint16 port, struct addrinfo **result)
+{
+	int res;
+	char service[16];
+	struct addrinfo hints={0};
+
+	if (*result != NULL)
+	{
+		connection_pai = NULL;
+		freeaddrinfo(*result);
+	}
+
+	snprintf(service, sizeof(service), "%d", port);
+
+	hints.ai_flags = AI_NUMERICSERV | AI_CANONNAME;
+	hints.ai_socktype = SOCK_STREAM;
+
+	res = getaddrinfo(address, service, &hints, result);
+	if (res != 0)
+	{
+		logger(Core, Error, "Failed to resolve address: %s",
+		       gai_strerror(res));
+	}
+
+	return res;
 }
 
 RD_BOOL

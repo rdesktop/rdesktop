@@ -875,18 +875,6 @@ AC_CHECK_HEADER(mntent.h, AC_DEFINE(HAVE_MNTENT_H))
 AC_CHECK_FUNCS(setmntent)
 
 #
-# IPv6
-#
-AC_ARG_WITH(ipv6,
-    [  --with-ipv6             enable IPv6-support],
-    [
-        if test $withval != "no";
-        then
-	    AC_DEFINE(IPv6,1)
-	fi
-    ])
-
-#
 # target-specific stuff
 #
 case "$host" in

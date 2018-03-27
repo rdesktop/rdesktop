@@ -17,6 +17,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <netdb.h>
 #include <gssapi/gssapi.h>
 #include "rdesktop.h"
 
@@ -115,18 +116,25 @@ cssp_gss_mech_available(gss_OID mech)
 }
 
 static RD_BOOL
-cssp_gss_get_service_name(char *server, gss_name_t * name)
+cssp_gss_get_service_name(struct addrinfo *ai, gss_name_t * name)
 {
 	gss_buffer_desc output;
 	OM_uint32 major_status, minor_status;
-
+	char fqdn[64];
+	int size;
 	const char service_name[] = "TERMSRV";
-
 	gss_OID type = (gss_OID) GSS_C_NT_HOSTBASED_SERVICE;
-	int size = (strlen(service_name) + 1 + strlen(server) + 1);
+
+	if (ai == NULL)
+	{
+		logger(Core, Error, "cssp_gss_get_service_name(), failed to get service server name for building SPN");
+		return False;
+	}
+	getnameinfo(ai->ai_addr, ai->ai_addrlen, fqdn, sizeof(fqdn), NULL, 0, 0);
+	size = (strlen(service_name) + 1 + strlen(fqdn) + 1);
 
 	output.value = malloc(size);
-	snprintf(output.value, size, "%s@%s", service_name, server);
+	snprintf(output.value, size, "%s@%s", service_name, fqdn);
 	output.length = strlen(output.value) + 1;
 
 	major_status = gss_import_name(&minor_status, &output, type, name);
@@ -678,7 +686,7 @@ cssp_read_tsrequest(STREAM token, STREAM pubkey)
 }
 
 RD_BOOL
-cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
+cssp_connect(struct addrinfo *ai, char *user, char *domain, char *password, STREAM s)
 {
 	UNUSED(s);
 	OM_uint32 actual_time;
@@ -704,7 +712,7 @@ cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 	}
 
 	// Get service name
-	if (!cssp_gss_get_service_name(server, &target_name))
+	if (!cssp_gss_get_service_name(ai, &target_name))
 	{
 		logger(Core, Debug, "cssp_connect(), failed to get target service name");
 		return False;

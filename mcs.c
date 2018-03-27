@@ -348,11 +348,11 @@ mcs_recv(uint16 * channel, RD_BOOL *is_fastpath, uint8 *fastpath_hdr)
 }
 
 RD_BOOL
-mcs_connect_start(char *server, char *username, char *domain, char *password,
+mcs_connect_start(struct addrinfo *ai, char *username, char *domain, char *password,
 		  RD_BOOL reconnect, uint32 * selected_protocol)
 {
 	logger(Protocol, Debug, "%s()", __func__);
-	return iso_connect(server, username, domain, password, reconnect, selected_protocol);
+	return iso_connect(ai, username, domain, password, reconnect, selected_protocol);
 }
 
 RD_BOOL

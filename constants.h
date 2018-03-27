@@ -612,6 +612,7 @@ enum RDP_INPUT_DEVICE
  * Named after the corresponding names on the server side:
  * https://msdn.microsoft.com/en-us/library/cc240544.aspx
  */
+#define ERRINFO_UNSET                                   (unsigned)(-1)
 #define ERRINFO_NO_INFO					0x0000
 #define ERRINFO_RPC_INITIATED_DISCONNECT		0x0001
 #define ERRINFO_RPC_INITIATED_LOGOFF			0x0002
