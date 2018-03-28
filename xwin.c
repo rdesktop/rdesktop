@@ -3051,7 +3051,6 @@ timeval_is_set(struct timeval *time)
 static RD_BOOL
 process_pending_resize ()
 {
-	uint32 width, height;
 	time_t now_ts;
 	struct timeval now;
 
@@ -3093,8 +3092,8 @@ process_pending_resize ()
 	if (g_fullscreen || g_seamless_rdp)
 	{
 		/* follow root window size */
-		width = WidthOfScreen(g_screen);
-		height = HeightOfScreen(g_screen);
+		g_requested_session_width = WidthOfScreen(g_screen);
+		g_requested_session_height = HeightOfScreen(g_screen);
 		if (g_window_size_type == PercentageOfScreen)
 		{
 			/* TODO: Implement percentage of screen */
@@ -3103,8 +3102,8 @@ process_pending_resize ()
 	else
 	{
 		/* Follow window size */
-		width = g_window_width;
-		height = g_window_height;
+		g_requested_session_width = g_window_width;
+		g_requested_session_height = g_window_height;
 	}
 
 
@@ -3115,9 +3114,6 @@ process_pending_resize ()
 		 * sequence when RDPEDISP is not supported by
 		 * server by returning to outer loop.
 		 */
-
-		g_requested_session_width = width;
-		g_requested_session_height = height;
 
 		logger(GUI, Verbose, "Window resize detected, reconnecting to new size %dx%d",
 		       g_requested_session_width,
@@ -3132,9 +3128,11 @@ process_pending_resize ()
 			return False;
 
 		logger(GUI, Verbose, "Window resize detected, requesting matching session size %dx%d",
-		       width, height);
+		       g_requested_session_width,
+		       g_requested_session_height);
 
-		rdpedisp_set_session_size(width, height);
+		rdpedisp_set_session_size(g_requested_session_width,
+		                          g_requested_session_height);
 
 		g_pending_resize = False;
 		g_wait_for_deactivate_ts = now_ts;
