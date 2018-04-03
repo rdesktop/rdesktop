@@ -879,6 +879,30 @@ rdpdr_process(STREAM s)
 					g_client_id = 0x815ed39d;	/* IP address (use 127.0.0.1) 0x815ed39d */
 				g_epoch++;
 
+#if WITH_SCARD
+				/*
+				 * We need to release all SCARD contexts to end all
+				 * current transactions and pending calls
+				 */
+				scard_release_all_contexts();
+
+				/*
+				 * According to [MS-RDPEFS] 3.2.5.1.2:
+				 *
+				 * If this packet appears after a sequence of other packets,
+				 * it is a signal that the server has reconnected to a new session
+				 * and the whole sequence has been reset. The client MUST treat
+				 * this packet as the beginning of a new sequence.
+				 * The client MUST also cancel all outstanding requests and release
+				 * previous references to all devices.
+				 *
+				 * If any problem arises in the future, please, pay attention to the
+				 * "If this packet appears after a sequence of other packets" part
+				 *
+				 */
+
+#endif
+
 				rdpdr_send_client_announce_reply();
 				rdpdr_send_client_name_request();
 				break;

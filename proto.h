@@ -360,6 +360,7 @@ void scard_unlock(int lock);
 int scard_enum_devices(uint32 * id, char *optarg);
 void scardSetInfo(uint32 epoch, uint32 device, uint32 id, uint32 bytes_out);
 void scard_reset_state();
+void scard_release_all_contexts(void);
 
 /* *INDENT-OFF* */
 #ifdef __cplusplus

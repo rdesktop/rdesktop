@@ -4,6 +4,7 @@
    Copyright (C) Alexi Volkov <alexi@myrealbox.com> 2006
    Copyright 2010-2013 Pierre Ossman <ossman@cendio.se> for Cendio AB
    Copyright 2011-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2015 Rostislav Kondratenko <r.kondratenk@wwpass.com>
    Copyright 2017 Karl Mikaelsson <derfian@cendio.se> for Cendio AB
    Copyright 2018 Alexander Zakharov <uglym8@gmail.com>
 
@@ -2752,3 +2753,25 @@ scard_reset_state()
 
 	queueFirst = queueLast = NULL;
 }
+
+void scard_release_all_contexts(void)
+{
+	_scard_handle_list_t *item, *next;
+
+	item = g_scard_handle_list;
+
+	while (item)
+	{
+		/* Cancelling ScardGetStatusChange calls */
+		SCardCancel(item->handle);
+		/* releasing context to end all transactions on it */
+		SCardReleaseContext(item->handle);
+
+		next = item->next;
+		xfree(item);
+		item = next;
+	}
+
+	g_scard_handle_list = NULL;
+}
+
