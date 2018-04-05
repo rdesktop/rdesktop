@@ -1232,8 +1232,10 @@ TS_SCardGetStatusChange(STREAM in, STREAM out, RD_BOOL wide)
 					inString(&lcHandle, in, (char **) &(cur->szReader),
 						 dataLength, wide));
 
+#if !WITH_PNP_NOTIFICATIONS
 				if (strcmp(cur->szReader, "\\\\?PnP?\\Notification") == 0)
 					cur->dwCurrentState |= SCARD_STATE_IGNORE;
+#endif
 			}
 
 			logger(SmartCard, Debug,
