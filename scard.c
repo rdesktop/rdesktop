@@ -684,8 +684,6 @@ TS_SCardEstablishContext(STREAM in, STREAM out)
 	MYPCSC_DWORD rv;
 	MYPCSC_SCARDCONTEXT myHContext;
 	SERVER_SCARDCONTEXT hContext;
-	char *readers = NULL;
-	DWORD readerCount = 1024;
 
 	hContext = 0;
 
@@ -705,21 +703,6 @@ TS_SCardEstablishContext(STREAM in, STREAM out)
 		logger(SmartCard, Debug, "TS_SCardEstablishedContext(), myHContext == NULL");
 		goto bail_out;
 	}
-
-	/* This is a workaround where windows application generally
-	   behaves better with polling of smartcard subsystem
-	   availability than were there are no readers available. */
-	rv = SCardListReaders(myHContext, NULL, readers, &readerCount);
-	if (rv != SCARD_S_SUCCESS)
-	{
-		logger(SmartCard, Debug,
-		       "TS_SCardEstablishContext(), No readers connected, return no service to client.");
-		rv = SCARD_E_NO_SERVICE;
-		SCardReleaseContext(myHContext);
-		goto bail_out;
-	}
-
-
 
 	/* add context to list of handle and get server handle */
 	_scard_handle_list_add(myHContext);
@@ -780,9 +763,6 @@ TS_SCardIsValidContext(STREAM in, STREAM out)
 	MYPCSC_DWORD rv;
 	SERVER_SCARDCONTEXT hContext;
 	MYPCSC_SCARDCONTEXT myHContext;
-	char *readers;
-	DWORD readerCount = 1024;
-	PMEM_HANDLE lcHandle = NULL;
 
 	in->p += 0x1C;
 	in_uint32_le(in, hContext);
@@ -792,13 +772,7 @@ TS_SCardIsValidContext(STREAM in, STREAM out)
 	logger(SmartCard, Debug, "TS_SCardIsValidContext(), context: 0x%08x [0x%lx]",
 	       (unsigned) hContext, myHContext);
 
-	/* There is no realization of SCardIsValidContext in PC/SC Lite so we call SCardListReaders */
-
-	readers = SC_xmalloc(&lcHandle, 1024);
-	if (!readers)
-		return SC_returnNoMemoryError(&lcHandle, in, out);
-
-	rv = SCardListReaders(myHContext, NULL, readers, &readerCount);
+	rv = SCardIsValidContext(myHContext);
 
 	if (rv)
 	{
@@ -814,7 +788,6 @@ TS_SCardIsValidContext(STREAM in, STREAM out)
 	}
 
 	outForceAlignment(out, 8);
-	SC_xfreeallmemory(&lcHandle);
 	return rv;
 }
 
