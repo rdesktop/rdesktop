@@ -390,6 +390,7 @@ rdp_send_client_info_pdu(uint32 flags, char *domain, char *user,
 
 		if (g_redirect == True && g_redirect_cookie_len > 0)
 		{
+			flags &= ~RDP_INFO_PASSWORD_IS_SC_PIN;
 			flags |= RDP_INFO_AUTOLOGON;
 			len_password = g_redirect_cookie_len;
 			len_password -= 2;	/* subtract 2 bytes which is added below */
