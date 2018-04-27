@@ -4,6 +4,7 @@
    Copyright (C) Alexi Volkov <alexi@myrealbox.com> 2006
    Copyright 2010-2013 Pierre Ossman <ossman@cendio.se> for Cendio AB
    Copyright 2011-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2015 Rostislav Kondratenko <r.kondratenk@wwpass.com>
    Copyright 2017 Karl Mikaelsson <derfian@cendio.se> for Cendio AB
    Copyright 2018 Alexander Zakharov <uglym8@gmail.com>
 
@@ -683,8 +684,6 @@ TS_SCardEstablishContext(STREAM in, STREAM out)
 	MYPCSC_DWORD rv;
 	MYPCSC_SCARDCONTEXT myHContext;
 	SERVER_SCARDCONTEXT hContext;
-	char *readers = NULL;
-	DWORD readerCount = 1024;
 
 	hContext = 0;
 
@@ -704,21 +703,6 @@ TS_SCardEstablishContext(STREAM in, STREAM out)
 		logger(SmartCard, Debug, "TS_SCardEstablishedContext(), myHContext == NULL");
 		goto bail_out;
 	}
-
-	/* This is a workaround where windows application generally
-	   behaves better with polling of smartcard subsystem
-	   availability than were there are no readers available. */
-	rv = SCardListReaders(myHContext, NULL, readers, &readerCount);
-	if (rv != SCARD_S_SUCCESS)
-	{
-		logger(SmartCard, Debug,
-		       "TS_SCardEstablishContext(), No readers connected, return no service to client.");
-		rv = SCARD_E_NO_SERVICE;
-		SCardReleaseContext(myHContext);
-		goto bail_out;
-	}
-
-
 
 	/* add context to list of handle and get server handle */
 	_scard_handle_list_add(myHContext);
@@ -779,9 +763,6 @@ TS_SCardIsValidContext(STREAM in, STREAM out)
 	MYPCSC_DWORD rv;
 	SERVER_SCARDCONTEXT hContext;
 	MYPCSC_SCARDCONTEXT myHContext;
-	char *readers;
-	DWORD readerCount = 1024;
-	PMEM_HANDLE lcHandle = NULL;
 
 	in->p += 0x1C;
 	in_uint32_le(in, hContext);
@@ -791,13 +772,7 @@ TS_SCardIsValidContext(STREAM in, STREAM out)
 	logger(SmartCard, Debug, "TS_SCardIsValidContext(), context: 0x%08x [0x%lx]",
 	       (unsigned) hContext, myHContext);
 
-	/* There is no realization of SCardIsValidContext in PC/SC Lite so we call SCardListReaders */
-
-	readers = SC_xmalloc(&lcHandle, 1024);
-	if (!readers)
-		return SC_returnNoMemoryError(&lcHandle, in, out);
-
-	rv = SCardListReaders(myHContext, NULL, readers, &readerCount);
+	rv = SCardIsValidContext(myHContext);
 
 	if (rv)
 	{
@@ -813,7 +788,6 @@ TS_SCardIsValidContext(STREAM in, STREAM out)
 	}
 
 	outForceAlignment(out, 8);
-	SC_xfreeallmemory(&lcHandle);
 	return rv;
 }
 
@@ -1231,8 +1205,10 @@ TS_SCardGetStatusChange(STREAM in, STREAM out, RD_BOOL wide)
 					inString(&lcHandle, in, (char **) &(cur->szReader),
 						 dataLength, wide));
 
+#if !WITH_PNP_NOTIFICATIONS
 				if (strcmp(cur->szReader, "\\\\?PnP?\\Notification") == 0)
 					cur->dwCurrentState |= SCARD_STATE_IGNORE;
+#endif
 			}
 
 			logger(SmartCard, Debug,
@@ -2752,3 +2728,25 @@ scard_reset_state()
 
 	queueFirst = queueLast = NULL;
 }
+
+void scard_release_all_contexts(void)
+{
+	_scard_handle_list_t *item, *next;
+
+	item = g_scard_handle_list;
+
+	while (item)
+	{
+		/* Cancelling ScardGetStatusChange calls */
+		SCardCancel(item->handle);
+		/* releasing context to end all transactions on it */
+		SCardReleaseContext(item->handle);
+
+		next = item->next;
+		xfree(item);
+		item = next;
+	}
+
+	g_scard_handle_list = NULL;
+}
+

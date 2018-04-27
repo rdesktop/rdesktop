@@ -218,6 +218,10 @@ AS_IF([test "x$enable_smartcard" != "xno"], [
 	   exit 1
 	fi
 
+	AC_MSG_CHECKING([for PCSC-lite >= 1.6.0 (PnP/Notifications support)])
+	PKG_CHECK_MODULES(PNP_NOTIFICATIONS, libpcsclite >= 1.6.0, [WITH_PNP_NOTIFICATIONS=1], [WITH_PNP_NOTIFICATIONS=0])
+	AC_DEFINE(WITH_PNP_NOTIFICATIONS)
+
 	AC_MSG_CHECKING([for old version of PCSC])
 	AC_TRY_LINK([
 		#include <stdlib.h>
