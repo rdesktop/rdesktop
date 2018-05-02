@@ -44,6 +44,9 @@
 
 extern RD_BOOL g_user_quit;
 extern RD_BOOL g_exit_mainloop;
+extern RD_BOOL g_wm_class_set;
+
+extern char g_wm_class[];
 
 extern window_size_type_t g_window_size_type;
 extern uint32 g_requested_session_width;
@@ -2162,6 +2165,9 @@ ui_create_window(uint32 width, uint32 height)
 	if (classhints != NULL)
 	{
 		classhints->res_name = classhints->res_class = "rdesktop";
+		if (g_wm_class_set) {
+			classhints->res_class = g_wm_class;
+		}
 		XSetClassHint(g_display, g_wnd, classhints);
 		XFree(classhints);
 	}
@@ -4468,6 +4474,9 @@ ui_seamless_create_window(unsigned long id, unsigned long group, unsigned long p
 	{
 		classhints->res_name = "rdesktop";
 		classhints->res_class = "SeamlessRDP";
+		if (g_wm_class_set) {
+			classhints->res_class = g_wm_class;
+		}
 		XSetClassHint(g_display, wnd, classhints);
 		XFree(classhints);
 	}

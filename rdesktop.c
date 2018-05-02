@@ -111,6 +111,8 @@ RD_BOOL g_owncolmap = False;
 RD_BOOL g_ownbackstore = True;	/* We can't rely on external BackingStore */
 RD_BOOL g_seamless_rdp = False;
 RD_BOOL g_use_password_as_pin = False;
+RD_BOOL g_wm_class_set = False;
+char g_wm_class[512];
 char g_seamless_shell[512];
 char g_seamless_spawn_cmd[512];
 RD_BOOL g_seamless_persistent_mode = True;
@@ -201,6 +203,7 @@ usage(char *program)
 	fprintf(stderr, "   -z: enable rdp compression\n");
 	fprintf(stderr, "   -x: RDP5 experience (m[odem 28.8], b[roadband], l[an] or hex nr.)\n");
 	fprintf(stderr, "   -P: use persistent bitmap caching\n");
+	fprintf(stderr, "   -w: set WM_CLASS for the window\n");
 	fprintf(stderr, "   -r: enable specified device redirection (this flag can be repeated)\n");
 	fprintf(stderr,
 		"         '-r comport:COM1=/dev/ttyS0': enable serial redirection of /dev/ttyS0 to COM1\n");
@@ -811,7 +814,7 @@ main(int argc, char *argv[])
 	g_num_devices = 0;
 
 	while ((c = getopt(argc, argv,
-			   "A:u:L:d:s:c:p:n:k:g:o:fbBeEitmMzCDKS:T:NX:a:x:Pr:045vh?")) != -1)
+			   "A:u:L:d:s:c:p:n:k:g:o:fbBeEitmMzCDKS:T:NX:a:x:Pr:w:045vh?")) != -1)
 	{
 		switch (c)
 		{
@@ -828,6 +831,11 @@ main(int argc, char *argv[])
 
 			case 'L':
 				STRNCPY(g_codepage, optarg, sizeof(g_codepage));
+				break;
+
+			case 'w':
+				STRNCPY(g_wm_class, optarg, sizeof(g_wm_class));
+				g_wm_class_set = True;
 				break;
 
 			case 'd':
