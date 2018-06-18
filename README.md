@@ -11,6 +11,7 @@ and 5 protocols.
 rdesktop uses a GNU-style build procedure.  Typically all that is necessary
 to install rdesktop is the following:
 
+	% sudo apt install autoconf
 	% ./configure
 	% make
 	% make install
