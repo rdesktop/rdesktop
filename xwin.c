@@ -3314,6 +3314,7 @@ get_pixel(uint32 idx, uint8 * andmask, uint8 * xormask, int bpp, uint8 * xor_fla
 	uint32 argb;
 	uint8 alpha;
 	uint8 *pxor;
+	PixelColour pc;
 
 	*xor_flag = 0;
 
@@ -3336,6 +3337,14 @@ get_pixel(uint32 idx, uint8 * andmask, uint8 * xormask, int bpp, uint8 * xor_fla
 			}
 			else
 				argb = (alpha << 24) | (argb ? 0xffffff : 0x000000);
+			break;
+
+	        case 16:
+			offs = idx * 2;
+			pxor = xormask + offs;
+			SPLITCOLOUR16(*((uint16*)pxor), pc);
+			alpha = GET_BIT(andmask, idx) ? 0x00 : 0xff;
+			argb = (alpha << 24) | (pc.red << 16) | (pc.green << 8) | pc.blue;
 			break;
 
 		case 24:
@@ -3408,7 +3417,7 @@ ui_create_cursor(unsigned int xhot, unsigned int yhot, uint32 width,
 	logger(GUI, Debug, "ui_create_cursor(): xhot=%d, yhot=%d, width=%d, height=%d, bpp=%d",
 	       xhot, yhot, width, height, bpp);
 
-	if (bpp != 1 && bpp != 24 && bpp != 32)
+	if (bpp != 1 && bpp != 16 && bpp != 24 && bpp != 32)
 	{
 		logger(GUI, Warning, "ui_create_xcursor_cursor(): Unhandled cursor bit depth %d",
 		       bpp);
