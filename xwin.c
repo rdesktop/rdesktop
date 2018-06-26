@@ -4,7 +4,7 @@
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2007-2008 Pierre Ossman <ossman@cendio.se> for Cendio AB
    Copyright 2002-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
-   Copyright 2012-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2012-2018 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -2010,7 +2010,7 @@ ui_deinit(void)
 		XCloseIM(g_IM);
 
 	if (g_null_cursor != NULL)
-		ui_destroy_cursor(g_null_cursor);
+		XFreeCursor(g_display, (Cursor)g_null_cursor);
 
 	XFreeModifiermap(g_mod_map);
 
@@ -3491,6 +3491,10 @@ ui_set_cursor(RD_HCURSOR cursor)
 void
 ui_destroy_cursor(RD_HCURSOR cursor)
 {
+	// Do not destroy fallback null cursor
+	if (cursor == g_null_cursor)
+		return;
+
 	XFreeCursor(g_display, (Cursor) cursor);
 }
 
