@@ -3022,18 +3022,6 @@ process_fds(int rdp_socket, int ms)
 }
 
 static RD_BOOL
-process_ui()
-{
-	if (!xwin_process_events())
-	{
-		/* User quit */
-		g_pending_resize = False;
-		return True;
-	}
-	return False;
-}
-
-static RD_BOOL
 timeval_is_set(struct timeval *time)
 {
 	return (time->tv_sec == 0 && time->tv_usec == 0) ? False : True;
@@ -3141,23 +3129,30 @@ process_pending_resize ()
 	return False;
 }
 
-/* Breaks out of loop if g_exit_mainloop is set or if there is data available on rdp socket for
-   processing. */
+/* This function is the heart of the mainloop pump in
+   rdekstop. Handles processing of pending X11 events and data on all
+   file descriptors used by rdesktop except for rdp_socket.
+   Processing of data on rdp_socket is done by returning from this
+   function to the calling tcp_recv().
+
+   This function will return if there is data available for reading on
+   rdp_socket or if g_exit_mainloop flag is set.
+*/
 void
 ui_select(int rdp_socket)
 {
+	int timeout;
 	RD_BOOL rdp_socket_has_data = False;
 
 	while (g_exit_mainloop == False && rdp_socket_has_data == False)
 	{
-
-		/* Process any events already waiting */
-
-		/* returns True on user quit */
-		if (process_ui() == True)
+		/* Process a limited amount of pending x11 events */
+		if (!xwin_process_events())
 		{
-			g_exit_mainloop = True;
+			/* User quit */
 			g_user_quit = True;
+			g_exit_mainloop = True;
+			g_pending_resize = False;
 			continue;
 		}
 
@@ -3174,14 +3169,27 @@ ui_select(int rdp_socket)
 		if (g_seamless_active)
 			sw_check_timers();
 
-		/* We end up here when we are waiting for a resize timer to expire before attempting
-		   to resize the session. We don't want to sleep in the select for up to 60 seconds
-		   if there are no RDP packets if the resize timer is 0.5 seconds. */
-		if (g_pending_resize == True)
-			rdp_socket_has_data = process_fds(rdp_socket, 100);
-		else
-			rdp_socket_has_data = process_fds(rdp_socket, 60000);
+		/* process_fds() is a little special, it does two
+		   things in one. It will perform a select() on all
+		   filedescriptors; rdpsnd / rdpdr / ctrl and
+		   rdp_socket passed as argument. If data is available
+		   on any filedescriptor except rdp_socket, it will be processed.
 
+		   If data is available on rdp_socket, the call return
+		   true and we exit from ui_select() to let tcp_recv()
+		   read data from rdp_socket.
+
+		   Use 60 seconds as default timeout for select. If
+		   there is more X11 events on queue or g_pend is set,
+		   use a low timeout.
+		*/
+
+		timeout = 60000;
+
+		if (XPending(g_display) > 0 || g_pending_resize == True)
+			timeout = 100;
+
+		rdp_socket_has_data = process_fds(rdp_socket, timeout);
 	}
 }
 
