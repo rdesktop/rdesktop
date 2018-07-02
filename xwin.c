@@ -3186,7 +3186,9 @@ ui_select(int rdp_socket)
 
 		timeout = 60000;
 
-		if (XPending(g_display) > 0 || g_pending_resize == True)
+		if (XPending(g_display) > 0)
+			timeout = 0;
+		else if (g_pending_resize == True)
 			timeout = 100;
 
 		rdp_socket_has_data = process_fds(rdp_socket, timeout);
