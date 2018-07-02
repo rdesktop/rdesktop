@@ -613,6 +613,8 @@ tcp_connect(char *server)
 void
 tcp_disconnect(void)
 {
+	int i;
+
 	if (g_ssl)
 	{
 		if (!g_network_error)
@@ -625,6 +627,17 @@ tcp_disconnect(void)
 
 	TCP_CLOSE(g_sock);
 	g_sock = -1;
+
+	g_in.size = 0;
+	xfree(g_in.data);
+	g_in.data = NULL;
+
+	for (i = 0; i < STREAM_COUNT; i++)
+	{
+		g_out[i].size = 0;
+		xfree(g_out[i].data);
+		g_out[i].data = NULL;
+	}
 }
 
 char *
