@@ -1518,7 +1518,7 @@ copyIORequest_ServerToMyPCSC(SERVER_LPSCARD_IO_REQUEST src, MYPCSC_LPSCARD_IO_RE
 
 
 static DWORD
-TS_SCardTransmit(STREAM in, STREAM out)
+TS_SCardTransmit(STREAM in, STREAM out, uint32 srv_buf_len)
 {
 	MYPCSC_DWORD rv;
 	SERVER_DWORD map[7], linkedLen;
@@ -1531,6 +1531,7 @@ TS_SCardTransmit(STREAM in, STREAM out)
 	SERVER_DWORD cbSendLength, cbRecvLength;
 	MYPCSC_DWORD myCbRecvLength;
 	PMEM_HANDLE lcHandle = NULL;
+
 
 	in->p += 0x14;
 	in_uint32_le(in, map[0]);
@@ -1548,6 +1549,9 @@ TS_SCardTransmit(STREAM in, STREAM out)
 	in_uint32_le(in, cbRecvLength);
 	if (map[0] & INPUT_LINKED)
 		inSkipLinked(in);
+
+	if (srv_buf_len <= cbRecvLength)
+		cbRecvLength = srv_buf_len;
 
 	in->p += 0x04;
 	in_uint32_le(in, hCard);
@@ -1646,6 +1650,7 @@ TS_SCardTransmit(STREAM in, STREAM out)
 	rv = SCardTransmit(myHCard, myPioSendPci, sendBuf, (MYPCSC_DWORD) cbSendLength,
 			   myPioRecvPci, recvBuf, &myCbRecvLength);
 	cbRecvLength = myCbRecvLength;
+
 
 	if (pioRecvPci)
 	{
@@ -2253,7 +2258,7 @@ TS_SCardAccessStartedEvent(STREAM in, STREAM out)
 
 
 static RD_NTSTATUS
-scard_device_control(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
+scard_device_control(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out, uint32 srv_buf_len)
 {
 	UNUSED(handle);
 	SERVER_DWORD Result = 0x00000000;
@@ -2359,7 +2364,7 @@ scard_device_control(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 			/* ScardTransmit */
 		case SC_TRANSMIT:
 			{
-				Result = (SERVER_DWORD) TS_SCardTransmit(in, out);
+				Result = (SERVER_DWORD) TS_SCardTransmit(in, out, srv_buf_len);
 				break;
 			}
 			/* SCardControl */
@@ -2424,6 +2429,8 @@ scard_device_control(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 	{
 		out_uint8s(out, addToEnd);
 	}
+
+	if (Result == SCARD_E_INSUFFICIENT_BUFFER) return RD_STATUS_BUFFER_TOO_SMALL;
 
 	return RD_STATUS_SUCCESS;
 }
@@ -2565,16 +2572,16 @@ SC_getNextInQueue()
 static void
 SC_deviceControl(PSCThreadData data)
 {
+	RD_NTSTATUS status;
 	size_t buffer_len = 0;
-	scard_device_control(data->handle, data->request, data->in, data->out);
+	status = scard_device_control(data->handle, data->request, data->in, data->out, data->srv_buf_len);
 	buffer_len = (size_t) data->out->p - (size_t) data->out->data;
 
 	/* if iorequest belongs to another epoch, don't send response
 	   back to server due to it's considered as abandoned.
 	 */
 	if (data->epoch == curEpoch)
-		rdpdr_send_scard_io_completion(data->device, data->id, 0, buffer_len, data->out->data,
-				      data->srv_buf_len);
+		rdpdr_send_completion(data->device, data->id, status, buffer_len, data->out->data, buffer_len);
 
 	SC_destroyThreadData(data);
 }
