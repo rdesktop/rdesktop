@@ -138,6 +138,7 @@ int load_licence(unsigned char **data);
 void save_licence(unsigned char *data, int length);
 void rd_create_ui(void);
 RD_BOOL rd_pstcache_mkdir(void);
+RD_BOOL rd_certcache_mkdir(void);
 int rd_open_file(char *filename);
 void rd_close_file(int fd);
 int rd_read_file(int fd, void *ptr, int len);

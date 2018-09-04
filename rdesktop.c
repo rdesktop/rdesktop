@@ -2025,6 +2025,52 @@ rd_create_ui()
 	}
 }
 
+/* TODO: Replace with recursive mkdir */
+RD_BOOL rd_certcache_mkdir(void)
+{
+	char *home;
+	char certcache_dir[PATH_MAX];
+
+	home = getenv("HOME");
+
+	if (home == NULL)
+		return False;
+
+	snprintf(certcache_dir, sizeof(certcache_dir) - 1, "%s/%s", home, ".local");
+
+	if ((mkdir(certcache_dir, S_IRWXU) == -1) && errno != EEXIST)
+	{
+		logger(Core, Error, "%s: mkdir() failed: %s", __func__, strerror(errno));
+		return False;
+	}
+
+	snprintf(certcache_dir, sizeof(certcache_dir) - 1, "%s/%s", home, ".local/share");
+
+	if ((mkdir(certcache_dir, S_IRWXU) == -1) && errno != EEXIST)
+	{
+		logger(Core, Error, "%s: mkdir() failed: %s", __func__, strerror(errno));
+		return False;
+	}
+
+	snprintf(certcache_dir, sizeof(certcache_dir) - 1, "%s/%s", home, ".local/share/rdesktop");
+
+	if ((mkdir(certcache_dir, S_IRWXU) == -1) && errno != EEXIST)
+	{
+		logger(Core, Error, "%s: mkdir() failed: %s", __func__, strerror(errno));
+		return False;
+	}
+
+	snprintf(certcache_dir, sizeof(certcache_dir) - 1, "%s/%s", home, ".local/share/rdesktop/certs");
+
+	if ((mkdir(certcache_dir, S_IRWXU) == -1) && errno != EEXIST)
+	{
+		logger(Core, Error, "%s: mkdir() failed: %s", __func__, strerror(errno));
+		return False;
+	}
+
+	return True;
+}
+
 /* Create the bitmap cache directory */
 RD_BOOL
 rd_pstcache_mkdir(void)
