@@ -24,6 +24,7 @@
 #include <unistd.h>		/* select read write close */
 #include <sys/socket.h>		/* socket connect setsockopt */
 #include <sys/time.h>		/* timeval */
+#include <sys/stat.h>
 #include <netdb.h>		/* gethostbyname */
 #include <netinet/in.h>		/* sockaddr_in */
 #include <netinet/tcp.h>	/* TCP_NODELAY */
@@ -278,6 +279,160 @@ tcp_recv(STREAM s, uint32 length)
 	return s;
 }
 
+int check_cert(gnutls_session_t session)
+{
+	int rv;
+	char *home;
+	char certcache_dir[PATH_MAX];
+	char certcache_fn[PATH_MAX];
+
+	struct stat sb;
+
+	int type;
+	int c;
+	time_t exp_time;
+	gnutls_x509_crt_t cert;
+	gnutls_datum_t cinfo;
+	const gnutls_datum_t *cert_list;
+	unsigned int cert_list_size = 0;
+
+	size_t size;
+	char dn[256];
+	char *name;
+
+	home = getenv("HOME");
+
+	if (home == NULL)
+		return False;
+
+	snprintf(certcache_dir, sizeof(certcache_dir) - 1, "%s/%s", home, ".local/share/rdesktop/certs/");
+
+	if ((rv = stat(certcache_dir, &sb)) == -1) {
+
+		if (errno == ENOENT) {
+			if (rd_certcache_mkdir() == False) {
+				goto bail;
+			}
+		}
+	} else {
+		if ((sb.st_mode & S_IFMT) != S_IFDIR) {
+			logger(Core, Error, "%s: %s exists but it's not a directory", __func__, certcache_dir);
+			goto bail;
+		}
+	}
+
+	snprintf(certcache_fn, sizeof(certcache_fn) - 1, "%s/%s", certcache_dir, "known_certs");
+
+	type = gnutls_certificate_type_get(session);
+
+	if (type == GNUTLS_CRT_X509) {
+
+		cert_list = gnutls_certificate_get_peers(session, &cert_list_size);
+
+		if (cert_list_size > 0) {
+			gnutls_x509_crt_init(&cert);
+			gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER);
+
+			size = sizeof(dn);
+			gnutls_x509_crt_get_dn(cert, dn, &size);
+
+			if (size > 0) {
+				name = strstr(dn, "CN=");
+
+				if (!name) {
+					logger(Core, Error, "%s: Failed to find CN in Distinguished Name part of certificate", __func__);
+					goto bail;
+				}
+
+				name += 3;
+
+				if (!strlen(name)) {
+					logger(Core, Error, "%s: DN length is 0", __func__);
+					goto bail;
+				}
+
+			} else {
+				logger(Core, Error, "%s: Failed to get DN from certificate", __func__);
+				goto bail;
+			}
+
+			/*
+			 * uglym8: we can't rely on hostname being consistent here as we can connect
+			 * to tunneled host (e.g. via ssh) so we're going to use DN as a hostname
+			 *
+			 */
+			rv = gnutls_verify_stored_pubkey(certcache_fn, NULL, name, "rdesktop", type, &cert_list[0], 0);
+
+			if (rv == GNUTLS_E_NO_CERTIFICATE_FOUND) {
+				logger(Core, Debug, "%s: %s: No previous stored certificate for the host '%s'. Storing it into the cache", __func__, name);
+
+				exp_time = gnutls_x509_crt_get_expiration_time(cert);
+				rv = gnutls_store_pubkey(certcache_fn, NULL, name, "rdesktop", type, &cert_list[0], exp_time, 0);
+
+				if (rv != GNUTLS_E_SUCCESS) {
+					logger(Core, Error, "%s: Failed to store certificate. error = 0x%x (%s)", __func__, rv, gnutls_strerror(rv));
+					goto bail;
+				}
+
+			} else if (rv == GNUTLS_E_CERTIFICATE_KEY_MISMATCH) {
+				//logger(Core, Debug, "%s: Host '%s' is known but has another key associated with it", __func__, name);
+				fprintf(stdout, "Host '%s' is known but has another key associated with it\nPlease review the certificate info:\n", name);
+
+				rv = gnutls_x509_crt_print(cert, GNUTLS_CRT_PRINT_ONELINE, &cinfo);
+
+				if (rv == 0) {
+					fprintf(stdout, "\t%s\n", cinfo.data);
+					gnutls_free(cinfo.data);
+				} else {
+					logger(Core, Error, "%s: Failed to print the certificate. error = 0x%x (%s)", __func__, rv, gnutls_strerror(rv));
+				}
+
+				fprintf(stdout, "Do you trust this certificate (y/n)? ");
+
+				/* TODO: PoC: will be replaced with proper handling */
+				while (1) {
+					c = getchar();
+
+					if (c == 'n' || c == 'N') {
+						goto bail;
+					} else if (c == 'y' || c == 'Y') {
+						break;
+					} else if (c == 0xa) {
+						continue;
+					} else {
+						fprintf(stdout, "\nPlease enter either 'y' or 'n'\n");
+						fprintf(stdout, "Do you trust this certificate (y/n)? ");
+					}
+				}
+
+				//logger(Core, Debug, "%s: %s: Replacing certificate for the host '%s'.", __func__, name);
+				/* TODO: PoC: Replace instead of just adding the new certificate */
+				logger(Core, Debug, "%s: %s: Adding a new certificate for the host '%s'.", __func__, name);
+
+				exp_time = gnutls_x509_crt_get_expiration_time(cert);
+				rv = gnutls_store_pubkey(certcache_fn, NULL, name, "rdesktop", type, &cert_list[0], exp_time, 0);
+
+				if (rv != GNUTLS_E_SUCCESS) {
+					logger(Core, Error, "%s: Failed to store certificate. error = 0x%x (%s)", __func__, rv, gnutls_strerror(rv));
+					goto bail;
+				}
+
+			} else if (rv < 0) {
+				fprintf(stderr, "%s: gnutls_verify_stored_pubkey: %s\n", __func__, gnutls_strerror(rv));
+				logger(Core, Error, "%s: Verification for host '%s' certificate failed. Error = 0x%x (%s)", __func__, name, rv, gnutls_strerror(rv));
+				goto bail;
+			} else {
+				logger(Core, Debug, "%s: %s: Host %s is known and the key is OK.", __func__, name);
+			}
+		}
+	}
+
+	return 0;
+
+bail:
+	return 1;
+}
+
 /* Establish a SSL/TLS 1.0 connection */
 RD_BOOL
 tcp_tls_connect(void)
@@ -341,6 +496,12 @@ tcp_tls_connect(void)
 		logger(Core, Verbose, "TLS  Session info: %s\n", desc);
 		gnutls_free(desc);
 #endif
+	}
+
+	//if (check_cert(g_tls_session) != 0) goto fail;
+	if (check_cert(g_tls_session) != 0) {
+		fprintf(stdout, "%s: Failed to check certificate. Bailing out\n", __func__);
+		exit (1);
 	}
 
 	return True;
