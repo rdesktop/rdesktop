@@ -77,6 +77,7 @@ int g_tcp_port_rdp = TCP_PORT_RDP;
 extern RD_BOOL g_exit_mainloop;
 extern RD_BOOL g_network_error;
 extern RD_BOOL g_reconnect_loop;
+extern char g_tls_version[];
 
 /* wait till socket is ready to write or timeout */
 static RD_BOOL
@@ -316,11 +317,28 @@ tcp_tls_connect(void)
 	/* create process context */
 	if (g_ssl_ctx == NULL)
 	{
-		g_ssl_ctx = SSL_CTX_new(TLSv1_client_method());
+
+		const SSL_METHOD *(*tlsmeth) (void) = NULL;
+		if (g_tls_version[0] == 0)
+			tlsmeth = TLSv1_method;
+		else if (!strcmp(g_tls_version, "1.0"))
+			tlsmeth = TLSv1_method;
+		else if (!strcmp(g_tls_version, "1.1"))
+			tlsmeth = TLSv1_1_method;
+		else if (!strcmp(g_tls_version, "1.2"))
+			tlsmeth = TLSv1_2_method;
+		if (tlsmeth == NULL)
+		{
+			logger(Core, Error,
+			       "tcp_tls_connect(), TLS method should be 1.0, 1.1, or 1.2\n");
+			goto fail;
+		}
+
+		g_ssl_ctx = SSL_CTX_new(tlsmeth());
 		if (g_ssl_ctx == NULL)
 		{
 			logger(Core, Error,
-			       "tcp_tls_connect(), SSL_CTX_new() failed to create TLS v1.0 context\n");
+			       "tcp_tls_connect(), SSL_CTX_new() failed to create TLS v1.x context\n");
 			goto fail;
 		}
 
