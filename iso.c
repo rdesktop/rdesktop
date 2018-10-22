@@ -32,6 +32,7 @@ extern char *g_sc_csp_name;
 extern char *g_sc_reader_name;
 extern char *g_sc_card_name;
 extern char *g_sc_container_name;
+extern char g_tls_version[];
 
 
 /* Send a self-contained ISO PDU */
@@ -211,6 +212,20 @@ iso_recv(RD_BOOL *is_fastpath, uint8 *fastpath_hdr)
 	return s;
 }
 
+
+/* try to setup a more helpful error message about TLS */
+char *get_credSSP_reason(uint32 neg_proto)
+{
+static char msg[256];
+
+strcat(msg, "CredSSP required by server");
+if ((neg_proto & PROTOCOL_SSL) &&
+    ( (g_tls_version[0] == 0) ||
+         (strcmp(g_tls_version, "1.2") < 0)))
+    strcat(msg, " (check if server has disabled old TLS versions, if yes use -V option)");
+return msg;
+}
+
 /* Establish a connection up to the ISO layer */
 RD_BOOL
 iso_connect(char *server, char *username, char *domain, char *password,
@@ -298,7 +313,7 @@ iso_connect(char *server, char *username, char *domain, char *password,
 					reason = "SSL required by server";
 					break;
 				case HYBRID_REQUIRED_BY_SERVER:
-					reason = "CredSSP required by server";
+					reason = get_credSSP_reason(neg_proto);
 					break;
 				default:
 					reason = "unknown reason";
