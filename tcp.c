@@ -300,7 +300,7 @@ tcp_recv(STREAM s, uint32 length)
 	return s;
 }
 
-/* Establish a SSL/TLS 1.0 connection */
+/* Establish a SSL/TLS 1.0-1-2 connection */
 RD_BOOL
 tcp_tls_connect(void)
 {
@@ -393,7 +393,7 @@ tcp_tls_connect(void)
 	return False;
 }
 
-/* Get public key from server of TLS 1.0 connection */
+/* Get public key from server of TLS 1.x connection */
 RD_BOOL
 tcp_tls_get_server_pubkey(STREAM s)
 {
