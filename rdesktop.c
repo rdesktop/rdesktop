@@ -113,6 +113,7 @@ RD_BOOL g_seamless_rdp = False;
 RD_BOOL g_use_password_as_pin = False;
 char g_seamless_shell[512];
 char g_seamless_spawn_cmd[512];
+char g_tls_version[4];
 RD_BOOL g_seamless_persistent_mode = True;
 RD_BOOL g_user_quit = False;
 uint32 g_embed_wnd;
@@ -184,6 +185,7 @@ usage(char *program)
 	fprintf(stderr, "   -b: force bitmap updates\n");
 	fprintf(stderr, "   -L: local codepage\n");
 	fprintf(stderr, "   -A: path to SeamlessRDP shell, this enables SeamlessRDP mode\n");
+	fprintf(stderr, "   -V: tls version (1.0, 1.1, 1.2, defaults to 1.0)\n");
 	fprintf(stderr, "   -B: use BackingStore of X-server (if available)\n");
 	fprintf(stderr, "   -e: disable encryption (French TS)\n");
 	fprintf(stderr, "   -E: disable encryption from client to server\n");
@@ -805,19 +807,23 @@ main(int argc, char *argv[])
 	flags = RDP_INFO_MOUSE | RDP_INFO_DISABLECTRLALTDEL
 		| RDP_INFO_UNICODE | RDP_INFO_MAXIMIZESHELL | RDP_INFO_ENABLEWINDOWSKEY;
 
-	g_seamless_spawn_cmd[0] = domain[0] = g_password[0] = shell[0] = directory[0] = 0;
+	g_seamless_spawn_cmd[0] = g_tls_version[0] = domain[0] = g_password[0] = shell[0] = directory[0] = 0;
 	g_embed_wnd = 0;
 
 	g_num_devices = 0;
 
 	while ((c = getopt(argc, argv,
-			   "A:u:L:d:s:c:p:n:k:g:o:fbBeEitmMzCDKS:T:NX:a:x:Pr:045vh?")) != -1)
+			   "A:V:u:L:d:s:c:p:n:k:g:o:fbBeEitmMzCDKS:T:NX:a:x:Pr:045vh?")) != -1)
 	{
 		switch (c)
 		{
 			case 'A':
 				g_seamless_rdp = True;
 				STRNCPY(g_seamless_shell, optarg, sizeof(g_seamless_shell));
+				break;
+
+			case 'V':
+				STRNCPY(g_tls_version, optarg, sizeof(g_tls_version));
 				break;
 
 			case 'u':
