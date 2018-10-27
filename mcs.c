@@ -92,7 +92,7 @@ mcs_recv_connect_response(STREAM mcs_data)
 	int length;
 	STREAM s;
 	RD_BOOL is_fastpath;
-	uint8 fastpath_hdr;
+	fastpath_hdr_t fastpath_hdr;
 
 	logger(Protocol, Debug, "%s()", __func__);
 	s = iso_recv(&is_fastpath, &fastpath_hdr);
@@ -166,7 +166,7 @@ static RD_BOOL
 mcs_recv_aucf(uint16 * mcs_userid)
 {
 	RD_BOOL is_fastpath;
-	uint8 fastpath_hdr;
+	fastpath_hdr_t fastpath_hdr;
 	uint8 opcode, result;
 	STREAM s;
 
@@ -219,7 +219,7 @@ static RD_BOOL
 mcs_recv_cjcf(void)
 {
 	RD_BOOL is_fastpath;
-	uint8 fastpath_hdr;
+	fastpath_hdr_t fastpath_hdr;
 	uint8 opcode, result;
 	STREAM s;
 
@@ -316,7 +316,7 @@ mcs_send(STREAM s)
 
 /* Receive an MCS transport data packet */
 STREAM
-mcs_recv(uint16 * channel, RD_BOOL *is_fastpath, uint8 *fastpath_hdr)
+mcs_recv(uint16 * channel, RD_BOOL *is_fastpath, fastpath_hdr_t *fastpath_hdr)
 {
 	uint8 opcode, appid, length;
 	STREAM s;
