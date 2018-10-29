@@ -316,7 +316,7 @@ mcs_send(STREAM s)
 
 /* Receive an MCS transport data packet */
 STREAM
-mcs_recv(uint16 * channel, RD_BOOL *is_fastpath, uint8 *fastpath_hdr)
+mcs_recv(uint16 * channel, RD_BOOL * is_fastpath, uint8 * fastpath_hdr)
 {
 	uint8 opcode, appid, length;
 	STREAM s;

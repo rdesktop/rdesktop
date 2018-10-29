@@ -82,7 +82,7 @@ void ewmh_init(void);
 /* iso.c */
 STREAM iso_init(int length);
 void iso_send(STREAM s);
-STREAM iso_recv(RD_BOOL *is_fastpath, uint8 *fastpath_hdr);
+STREAM iso_recv(RD_BOOL * is_fastpath, uint8 * fastpath_hdr);
 RD_BOOL iso_connect(char *server, char *username, char *domain, char *password, RD_BOOL reconnect,
 		    uint32 * selected_protocol);
 void iso_disconnect(void);
@@ -95,7 +95,7 @@ void licence_process(STREAM s);
 STREAM mcs_init(int length);
 void mcs_send_to_channel(STREAM s, uint16 channel);
 void mcs_send(STREAM s);
-STREAM mcs_recv(uint16 * channel, RD_BOOL *is_fastpath, uint8 *fastpath_hdr);
+STREAM mcs_recv(uint16 * channel, RD_BOOL * is_fastpath, uint8 * fastpath_hdr);
 RD_BOOL mcs_connect_start(char *server, char *username, char *domain, char *password,
 			  RD_BOOL reconnect, uint32 * selected_protocol);
 RD_BOOL mcs_connect_finalize(STREAM s);
@@ -257,9 +257,9 @@ void rdp_send_scancode(uint32 time, uint16 flags, uint8 scancode);
 /* xwin.c */
 RD_BOOL get_key_state(unsigned int state, uint32 keysym);
 RD_BOOL ui_init(void);
-void ui_get_screen_size(uint32 *width, uint32 *height);
-void ui_get_screen_size_from_percentage(uint32 pw, uint32 ph, uint32 *width, uint32 *height);
-void ui_get_workarea_size(uint32 *width, uint32 *height);
+void ui_get_screen_size(uint32 * width, uint32 * height);
+void ui_get_screen_size_from_percentage(uint32 pw, uint32 ph, uint32 * width, uint32 * height);
+void ui_get_workarea_size(uint32 * width, uint32 * height);
 void ui_deinit(void);
 RD_BOOL ui_create_window(uint32 width, uint32 height);
 void ui_resize_window(uint32 width, uint32 height);
@@ -274,8 +274,8 @@ void ui_paint_bitmap(int x, int y, int cx, int cy, int width, int height, uint8 
 void ui_destroy_bitmap(RD_HBITMAP bmp);
 RD_HGLYPH ui_create_glyph(int width, int height, uint8 * data);
 void ui_destroy_glyph(RD_HGLYPH glyph);
-RD_HCURSOR ui_create_cursor(unsigned int x, unsigned int y, uint32 width, uint32 height, uint8 * andmask,
-			    uint8 * xormask, int bpp);
+RD_HCURSOR ui_create_cursor(unsigned int x, unsigned int y, uint32 width, uint32 height,
+			    uint8 * andmask, uint8 * xormask, int bpp);
 void ui_set_cursor(RD_HCURSOR cursor);
 void ui_destroy_cursor(RD_HCURSOR cursor);
 void ui_set_null_cursor(void);

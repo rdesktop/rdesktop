@@ -29,9 +29,9 @@ int utils_locale_to_utf8(const char *src, size_t is, char *dest, size_t os);
 int utils_mkdir_safe(const char *path, int mask);
 int utils_mkdir_p(const char *path, int mask);
 void utils_calculate_dpi_scale_factors(uint32 width, uint32 height, uint32 dpi,
-				       uint32 *physwidth, uint32 *physheight,
-				       uint32 *desktopscale, uint32 *devicescale);
-void utils_apply_session_size_limitations(uint32 *width, uint32 *height);
+				       uint32 * physwidth, uint32 * physheight,
+				       uint32 * desktopscale, uint32 * devicescale);
+void utils_apply_session_size_limitations(uint32 * width, uint32 * height);
 
 
 typedef enum log_level_t

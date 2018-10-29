@@ -64,7 +64,7 @@ rdpedisp_process_pdu(STREAM s)
 
 	/* Read DISPLAYCONTROL_HEADER */
 	in_uint32_le(s, type);	/* type */
-	in_skip(s, 4);          /* length */
+	in_skip(s, 4);		/* length */
 
 	logger(Protocol, Debug, "rdpedisp_process_pdu(), Got PDU type %d", type);
 
@@ -89,8 +89,8 @@ rdpedisp_send_monitor_layout_pdu(uint32 width, uint32 height)
 
 	memset(&s, 0, sizeof(s));
 
-	logger(Protocol, Debug, "rdpedisp_send_monitor_layout_pdu(), width = %d, height = %d", width,
-	       height);
+	logger(Protocol, Debug, "rdpedisp_send_monitor_layout_pdu(), width = %d, height = %d",
+	       width, height);
 
 	rdpedisp_init_packet(&s, DISPLAYCONTROL_PDU_TYPE_MONITOR_LAYOUT, 16 + 1 * 40);
 

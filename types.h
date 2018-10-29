@@ -308,7 +308,8 @@ FILEINFO;
 
 typedef RD_BOOL(*str_handle_lines_t) (const char *line, void *data);
 
-typedef enum {
+typedef enum
+{
 	Fixed,
 	PercentageOfScreen,
 	Workarea,

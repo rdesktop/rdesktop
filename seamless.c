@@ -68,7 +68,7 @@ seamless_process_line(const char *line, void *data)
 	logger(Core, Debug, "seamless_process_line(), got '%s'", p);
 
 	tok1 = seamless_get_token(&p);
-	(void)seamless_get_token(&p);
+	(void) seamless_get_token(&p);
 	tok3 = seamless_get_token(&p);
 	tok4 = seamless_get_token(&p);
 	tok5 = seamless_get_token(&p);

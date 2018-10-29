@@ -313,7 +313,7 @@ licence_process_error_alert(STREAM s)
 
 	in_uint32(s, error_code);
 	in_uint32(s, state_transition);
-	in_uint8s(s, 4);                     /* Skip error_info */
+	in_uint8s(s, 4);	/* Skip error_info */
 
 	/* There is a special case in the error alert handling, when licensing is all good
 	   and the server is not sending a license to client, a "Server License Error PDU -

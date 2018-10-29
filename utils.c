@@ -38,7 +38,7 @@ utils_djb2_hash(const char *str)
 	uint8 *pstr;
 	uint32 hash = 5381;
 
-	pstr = (uint8*)str;
+	pstr = (uint8 *) str;
 	while ((c = *pstr++))
 	{
 		hash = ((hash << 5) + hash) + c;
@@ -107,7 +107,7 @@ utils_string_unescape(const char *str)
 		{
 			if (sscanf(ps, "%%%2hhX", &c) == 1)
 			{
-				pd[0] = (char)c;
+				pd[0] = (char) c;
 				ps += 3;
 				pd++;
 				continue;
@@ -238,8 +238,8 @@ utils_locale_to_utf8(const char *src, size_t is, char *dest, size_t os)
 
 void
 utils_calculate_dpi_scale_factors(uint32 width, uint32 height, uint32 dpi,
-				  uint32 *physwidth, uint32 *physheight,
-				  uint32 *desktopscale, uint32 *devicescale)
+				  uint32 * physwidth, uint32 * physheight,
+				  uint32 * desktopscale, uint32 * devicescale)
 {
 	*physwidth = *physheight = *desktopscale = *devicescale = 0;
 
@@ -261,7 +261,7 @@ utils_calculate_dpi_scale_factors(uint32 width, uint32 height, uint32 dpi,
 
 
 void
-utils_apply_session_size_limitations(uint32 *width, uint32 *height)
+utils_apply_session_size_limitations(uint32 * width, uint32 * height)
 {
 	/* width MUST be even number */
 	*width -= (*width) % 2;

@@ -714,8 +714,8 @@ disk_query_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 
 		case FileStandardInformation:
 
-			out_uint64_le(out, filestat.st_size); /* Allocation size */
-			out_uint64_le(out, filestat.st_size); /* End of file */
+			out_uint64_le(out, filestat.st_size);	/* Allocation size */
+			out_uint64_le(out, filestat.st_size);	/* End of file */
 
 			out_uint32_le(out, filestat.st_nlink);	/* Number of links */
 			out_uint8(out, 0);	/* Delete pending */
@@ -1162,7 +1162,7 @@ disk_query_volume_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 			out_uint32_le(out, fsinfo->serial);	/* serial */
 			out_uint32_le(out, s_length(&stmp));	/* length of string */
 			out_uint8(out, 0);	/* support objects? */
-			out_stream(out, &stmp);  /* fsinfo->label string*/
+			out_stream(out, &stmp);	/* fsinfo->label string */
 			break;
 
 		case FileFsSizeInformation:
@@ -1191,7 +1191,7 @@ disk_query_volume_information(RD_NTHANDLE handle, uint32 info_class, STREAM out)
 			out_uint32_le(out, F_NAMELEN(stat_fs));	/* max length of filename */
 
 			out_uint32_le(out, s_length(&stmp));	/* length of fsinfo->type string */
-			out_stream(out, &stmp); /* fsinfo->typ string */
+			out_stream(out, &stmp);	/* fsinfo->typ string */
 			break;
 
 		case FileFsLabelInformation:
@@ -1331,7 +1331,7 @@ disk_query_directory(RD_NTHANDLE handle, uint32 info_class, char *pattern, STREA
 			out_uint32_le(out, 0);	/* EaSize */
 			out_uint8(out, 0);	/* ShortNameLength */
 			out_uint8s(out, 24);	/* ShortName (8.3 name) */
-			out_stream(out, &stmp); /* dir entry name string */
+			out_stream(out, &stmp);	/* dir entry name string */
 			break;
 
 
@@ -1358,7 +1358,7 @@ disk_query_directory(RD_NTHANDLE handle, uint32 info_class, char *pattern, STREA
 			out_uint64_le(out, filestat.st_size);	/* filesize */
 			out_uint32_le(out, file_attributes);
 			out_uint32_le(out, s_length(&stmp));	/* dir entry name string length */
-			out_stream(out, &stmp); /* dir entry name */
+			out_stream(out, &stmp);	/* dir entry name */
 			break;
 
 
@@ -1386,14 +1386,14 @@ disk_query_directory(RD_NTHANDLE handle, uint32 info_class, char *pattern, STREA
 			out_uint32_le(out, file_attributes);
 			out_uint32_le(out, s_length(&stmp));	/* dir entry name string length */
 			out_uint32_le(out, 0);	/* EaSize */
-			out_stream(out, &stmp); /* dir entry name */
+			out_stream(out, &stmp);	/* dir entry name */
 			break;
 
 
 		case FileNamesInformation:
 
 			out_uint32_le(out, s_length(&stmp));	/* dir entry name string length */
-			out_stream(out, &stmp); /* dir entry name */
+			out_stream(out, &stmp);	/* dir entry name */
 			break;
 
 

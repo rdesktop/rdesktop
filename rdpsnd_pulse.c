@@ -48,10 +48,10 @@
 /* Messages that may be sent from the PulseAudio thread */
 enum RDPSND_PULSE_MSG_TYPE
 {
-	RDPSND_PULSE_OUT_AVAIL,			// Output space available in output stream
-	RDPSND_PULSE_IN_AVAIL,			// Input data available in input stream
-	RDPSND_PULSE_OUT_ERR,			// An error occured in the output stream
-	RDPSND_PULSE_IN_ERR			// An error occured in the input strem
+	RDPSND_PULSE_OUT_AVAIL,	// Output space available in output stream
+	RDPSND_PULSE_IN_AVAIL,	// Input data available in input stream
+	RDPSND_PULSE_OUT_ERR,	// An error occured in the output stream
+	RDPSND_PULSE_IN_ERR	// An error occured in the input strem
 };
 
 static pa_threaded_mainloop *mainloop;
@@ -61,7 +61,7 @@ static pa_proplist *proplist;
 static pa_context *context;
 static pa_stream *playback_stream;
 static pa_stream *capture_stream;
-static int pulse_ctl[2] = { -1, -1 };		// Pipe for comminicating with main thread
+static int pulse_ctl[2] = { -1, -1 };	// Pipe for comminicating with main thread
 
 /* Streams states for the possibility of the proper reinitialization */
 static RD_BOOL playback_started = False;
@@ -88,7 +88,8 @@ static RD_BOOL pulse_init(void);
 static void pulse_deinit(void);
 static RD_BOOL pulse_context_init(void);
 static void pulse_context_deinit(void);
-static RD_BOOL pulse_stream_open(pa_stream ** stream, int channels, int samplerate, int samplewidth, pa_stream_flags_t flags);
+static RD_BOOL pulse_stream_open(pa_stream ** stream, int channels, int samplerate, int samplewidth,
+				 pa_stream_flags_t flags);
 static void pulse_stream_close(pa_stream ** stream);
 
 static void pulse_send_msg(int fd, char message);
@@ -106,14 +107,14 @@ static RD_BOOL pulse_record(void);
 static RD_BOOL pulse_recover(pa_stream ** stream);
 
 /* Callbacks for the PulseAudio events */
-static void pulse_context_state_cb(pa_context * c, void * userdata);
-static void pulse_stream_state_cb(pa_stream * p, void * userdata);
-static void pulse_write_cb(pa_stream * , size_t nbytes, void * userdata);
-static void pulse_read_cb(pa_stream * p, size_t nbytes, void * userdata);
+static void pulse_context_state_cb(pa_context * c, void *userdata);
+static void pulse_stream_state_cb(pa_stream * p, void *userdata);
+static void pulse_write_cb(pa_stream *, size_t nbytes, void *userdata);
+static void pulse_read_cb(pa_stream * p, size_t nbytes, void *userdata);
 
-static void pulse_cork_cb(pa_stream * p, int success, void * userdata);
-static void pulse_flush_cb(pa_stream * p, int success, void * userdata);
-static void pulse_update_timing_cb(pa_stream * p, int success, void * userdata);
+static void pulse_cork_cb(pa_stream * p, int success, void *userdata);
+static void pulse_flush_cb(pa_stream * p, int success, void *userdata);
+static void pulse_update_timing_cb(pa_stream * p, int success, void *userdata);
 
 static RD_BOOL
 pulse_init(void)
@@ -127,15 +128,17 @@ pulse_init(void)
 		mainloop = pa_threaded_mainloop_new();
 		if (mainloop == NULL)
 		{
-			logger(Sound, Error, "pulse_init(), Error creating PulseAudio threaded mainloop");
+			logger(Sound, Error,
+			       "pulse_init(), Error creating PulseAudio threaded mainloop");
 			break;
 		}
 		if (pa_threaded_mainloop_start(mainloop) != 0)
 		{
-			logger(Sound, Error, "pulse_init(), Error starting PulseAudio threaded mainloop");
+			logger(Sound, Error,
+			       "pulse_init(), Error starting PulseAudio threaded mainloop");
 			break;
 		}
-		#if PA_CHECK_VERSION(0,9,11)
+#if PA_CHECK_VERSION(0,9,11)
 		/* PulseAudio proplist initialization */
 		proplist = pa_proplist_new();
 		if (proplist == NULL)
@@ -145,10 +148,11 @@ pulse_init(void)
 		}
 		if (pa_proplist_sets(proplist, PA_PROP_APPLICATION_NAME, "rdesktop") != 0)
 		{
-			logger(Sound, Error, "pulse_init(), Error setting option to PulseAudio proplist");
+			logger(Sound, Error,
+			       "pulse_init(), Error setting option to PulseAudio proplist");
 			break;
 		}
-		#endif
+#endif
 
 		if (pulse_context_init() != True)
 			break;
@@ -169,13 +173,13 @@ pulse_deinit(void)
 	pulse_stream_close(&capture_stream);
 	pulse_stream_close(&playback_stream);
 	pulse_context_deinit();
-	#if PA_CHECK_VERSION(0,9,11)
+#if PA_CHECK_VERSION(0,9,11)
 	if (proplist != NULL)
 	{
 		pa_proplist_free(proplist);
 		proplist = NULL;
 	}
-	#endif
+#endif
 	if (mainloop != NULL)
 	{
 		pa_threaded_mainloop_stop(mainloop);
@@ -209,27 +213,30 @@ pulse_context_init(void)
 			logger(Sound, Error, "pulse_context_init(), fcntl: %s", strerror(errno));
 			break;
 		}
-		#if PA_CHECK_VERSION(0,9,11)
-		context = pa_context_new_with_proplist(pa_threaded_mainloop_get_api(mainloop), NULL, proplist);
-		#else
+#if PA_CHECK_VERSION(0,9,11)
+		context =
+			pa_context_new_with_proplist(pa_threaded_mainloop_get_api(mainloop), NULL,
+						     proplist);
+#else
 		context = pa_context_new(pa_threaded_mainloop_get_api(mainloop), "rdesktop");
-		#endif
+#endif
 		if (context == NULL)
 		{
-			logger(Sound, Error, "pulse_context_init(), error creating PulseAudio context");
+			logger(Sound, Error,
+			       "pulse_context_init(), error creating PulseAudio context");
 			break;
 		}
 		pa_context_set_state_callback(context, pulse_context_state_cb, mainloop);
 		/* PulseAudio context connection */
-		#if PA_CHECK_VERSION(0,9,15)
+#if PA_CHECK_VERSION(0,9,15)
 		flags = PA_CONTEXT_NOFAIL;
-		#else
+#else
 		flags = 0;
-		#endif
+#endif
 		if (pa_context_connect(context, NULL, flags, NULL) != 0)
 		{
 			err = pa_context_errno(context);
-			logger(Sound, Error ,"pulse_context_init(), %s", pa_strerror(err));
+			logger(Sound, Error, "pulse_context_init(), %s", pa_strerror(err));
 			break;
 		}
 		do
@@ -244,7 +251,7 @@ pulse_context_init(void)
 		if (context_state != PA_CONTEXT_READY)
 		{
 			err = pa_context_errno(context);
-			logger(Sound, Error ,"pulse_context_init(), %s", pa_strerror(err));
+			logger(Sound, Error, "pulse_context_init(), %s", pa_strerror(err));
 			break;
 		}
 
@@ -295,7 +302,8 @@ pulse_context_deinit(void)
 }
 
 static RD_BOOL
-pulse_stream_open(pa_stream ** stream, int channels, int samplerate, int samplewidth, pa_stream_flags_t flags)
+pulse_stream_open(pa_stream ** stream, int channels, int samplerate, int samplewidth,
+		  pa_stream_flags_t flags)
 {
 	pa_sample_spec samples;
 	pa_buffer_attr buffer_attr;
@@ -315,88 +323,106 @@ pulse_stream_open(pa_stream ** stream, int channels, int samplerate, int samplew
 	do
 	{
 		/* PulseAudio sample format initialization */
-		#if PA_CHECK_VERSION(0,9,13)
+#if PA_CHECK_VERSION(0,9,13)
 		if (pa_sample_spec_init(&samples) == NULL)
 		{
-			logger(Sound, Error, "pulse_stream_open(), error initializing PulseAudio sample format");
+			logger(Sound, Error,
+			       "pulse_stream_open(), error initializing PulseAudio sample format");
 			break;
 		}
-		#endif
+#endif
 		if (samplewidth == 2)
 			samples.format = PA_SAMPLE_S16LE;
 		else if (samplewidth == 1)
 			samples.format = PA_SAMPLE_U8;
 		else
 		{
-			logger(Sound, Error, "pulse_stream_open(), wrong samplewidth for the PulseAudio stream: %d", samplewidth);
+			logger(Sound, Error,
+			       "pulse_stream_open(), wrong samplewidth for the PulseAudio stream: %d",
+			       samplewidth);
 			break;
 		}
 		samples.rate = samplerate;
 		samples.channels = channels;
 		if (!pa_sample_spec_valid(&samples))
 		{
-			logger(Sound, Error, "pulse_stream_open(), Invalid PulseAudio sample format");
+			logger(Sound, Error,
+			       "pulse_stream_open(), Invalid PulseAudio sample format");
 			break;
 		}
 		/* PulseAudio stream creation */
-		#if PA_CHECK_VERSION(0,9,11)
+#if PA_CHECK_VERSION(0,9,11)
 		if (stream == &playback_stream)
-			*stream = pa_stream_new_with_proplist(context, "Playback Stream", &samples, NULL, proplist);
+			*stream =
+				pa_stream_new_with_proplist(context, "Playback Stream", &samples,
+							    NULL, proplist);
 		else
-			*stream = pa_stream_new_with_proplist(context, "Capture Stream", &samples, NULL, proplist);
-		#else
+			*stream =
+				pa_stream_new_with_proplist(context, "Capture Stream", &samples,
+							    NULL, proplist);
+#else
 		if (stream == &playback_stream)
 			*stream = pa_stream_new(context, "Playback Stream", &samples, NULL);
 		else
 			*stream = pa_stream_new(context, "Capture Stream", &samples, NULL);
-		#endif
+#endif
 		if (*stream == NULL)
 		{
 			err = pa_context_errno(context);
-			logger(Sound, Error, "pulse_stream_open(), pa_stream_new: %s", pa_strerror(err));
+			logger(Sound, Error, "pulse_stream_open(), pa_stream_new: %s",
+			       pa_strerror(err));
 			break;
 		}
 		pa_stream_set_state_callback(*stream, pulse_stream_state_cb, mainloop);
 
-		buffer_attr.maxlength = (uint32_t) -1;
-		buffer_attr.minreq = (uint32_t) -1;
-		buffer_attr.prebuf = (uint32_t) -1;
-		buffer_attr.tlength = (uint32_t) -1;
-		buffer_attr.fragsize = (uint32_t) -1;
+		buffer_attr.maxlength = (uint32_t) - 1;
+		buffer_attr.minreq = (uint32_t) - 1;
+		buffer_attr.prebuf = (uint32_t) - 1;
+		buffer_attr.tlength = (uint32_t) - 1;
+		buffer_attr.fragsize = (uint32_t) - 1;
 
 		/* PulseAudio stream connection */
 		if (stream == &playback_stream)
 		{
-			#if PA_CHECK_VERSION(0,9,0)
-			buffer_attr.tlength = pa_usec_to_bytes(1000000/playback_latency_part, &samples);
-			#else
-			buffer_attr.tlength = (samples.rate/playback_latency_part) * samples.channels * (samples.format == PA_SAMPLE_S16LE ? 2 : 1);
-			#endif
+#if PA_CHECK_VERSION(0,9,0)
+			buffer_attr.tlength =
+				pa_usec_to_bytes(1000000 / playback_latency_part, &samples);
+#else
+			buffer_attr.tlength =
+				(samples.rate / playback_latency_part) * samples.channels *
+				(samples.format == PA_SAMPLE_S16LE ? 2 : 1);
+#endif
 			buffer_attr.prebuf = 0;
 			buffer_attr.maxlength = buffer_attr.tlength;
 		}
 		else
 		{
-			#if PA_CHECK_VERSION(0,9,0)
-			buffer_attr.fragsize = pa_usec_to_bytes(1000000/capture_latency_part, &samples);
-			#else
-			buffer_attr.fragsize = (samples.rate/capture_latency_part) * samples.channels * (samples.format == PA_SAMPLE_S16LE ? 2 : 1);
-			#endif
+#if PA_CHECK_VERSION(0,9,0)
+			buffer_attr.fragsize =
+				pa_usec_to_bytes(1000000 / capture_latency_part, &samples);
+#else
+			buffer_attr.fragsize =
+				(samples.rate / capture_latency_part) * samples.channels *
+				(samples.format == PA_SAMPLE_S16LE ? 2 : 1);
+#endif
 			buffer_attr.maxlength = buffer_attr.fragsize;
 		}
 
-		#if !PA_CHECK_VERSION(0,9,16)
-		buffer_attr.minreq = (samples.rate/50) * samples.channels * (samples.format == PA_SAMPLE_S16LE ? 2 : 1);	// 20 ms
-		#endif
+#if !PA_CHECK_VERSION(0,9,16)
+		buffer_attr.minreq = (samples.rate / 50) * samples.channels * (samples.format == PA_SAMPLE_S16LE ? 2 : 1);	// 20 ms
+#endif
 
 		if (stream == &playback_stream)
-			err = pa_stream_connect_playback(*stream, device, &buffer_attr, flags, NULL, NULL);
+			err = pa_stream_connect_playback(*stream, device, &buffer_attr, flags, NULL,
+							 NULL);
 		else
 			err = pa_stream_connect_record(*stream, device, &buffer_attr, flags);
 		if (err)
 		{
 			err = pa_context_errno(context);
-			logger(Sound, Error, "pulse_stream_open(), error connecting PulseAudio stream: %s", pa_strerror(err));
+			logger(Sound, Error,
+			       "pulse_stream_open(), error connecting PulseAudio stream: %s",
+			       pa_strerror(err));
 			break;
 		}
 		do
@@ -411,20 +437,24 @@ pulse_stream_open(pa_stream ** stream, int channels, int samplerate, int samplew
 		if (state != PA_STREAM_READY)
 		{
 			err = pa_context_errno(context);
-			logger(Sound, Error, "pulse_stream_open(), error connecting PulseAudio stream: %s", pa_strerror(err));
+			logger(Sound, Error,
+			       "pulse_stream_open(), error connecting PulseAudio stream: %s",
+			       pa_strerror(err));
 			break;
 		}
 
-		#if PA_CHECK_VERSION(0,9,8)
+#if PA_CHECK_VERSION(0,9,8)
 		logger(Sound, Debug, "pulse_stream_open(), opened PulseAudio stream on device %s",
 		       pa_stream_get_device_name(*stream));
-		#endif
-		#if PA_CHECK_VERSION(0,9,0)
+#endif
+#if PA_CHECK_VERSION(0,9,0)
 		const pa_buffer_attr *res_ba;
 		res_ba = pa_stream_get_buffer_attr(*stream);
-		logger(Sound, Debug, "pulse_stream_open(), PulseAudio stream buffer metrics: maxlength %u, minreq %u, prebuf %u, tlength %u, fragsize %u",
-		       res_ba->maxlength, res_ba->minreq, res_ba->prebuf, res_ba->tlength, res_ba->fragsize);
-		#endif
+		logger(Sound, Debug,
+		       "pulse_stream_open(), PulseAudio stream buffer metrics: maxlength %u, minreq %u, prebuf %u, tlength %u, fragsize %u",
+		       res_ba->maxlength, res_ba->minreq, res_ba->prebuf, res_ba->tlength,
+		       res_ba->fragsize);
+#endif
 
 		/* Set the data callbacks for the PulseAudio stream */
 		if (stream == &playback_stream)
@@ -460,7 +490,9 @@ pulse_stream_close(pa_stream ** stream)
 			if (pa_stream_disconnect(*stream) != 0)
 			{
 				err = pa_context_errno(context);
-				logger(Sound, Error, "pulse_stream_close(), pa_stream_disconnect: %s\n", pa_strerror(err));
+				logger(Sound, Error,
+				       "pulse_stream_close(), pa_stream_disconnect: %s\n",
+				       pa_strerror(err));
 			}
 		}
 		pa_stream_unref(*stream);
@@ -480,7 +512,8 @@ pulse_send_msg(int fd, char message)
 		ret = write(fd, &message, sizeof message);
 	while (ret == -1 && errno == EINTR);
 	if (ret == -1)
-		logger(Sound, Error, "pulse_send_msg(), error writing message to the pipe: %s\n", strerror(errno));
+		logger(Sound, Error, "pulse_send_msg(), error writing message to the pipe: %s\n",
+		       strerror(errno));
 }
 
 static RD_BOOL
@@ -494,7 +527,8 @@ pulse_playback_start(void)
 
 	if (playback_stream == NULL)
 	{
-		logger(Sound, Warning, "pulse_playback_start(), trying to start PulseAudio stream while it's not exists");
+		logger(Sound, Warning,
+		       "pulse_playback_start(), trying to start PulseAudio stream while it's not exists");
 		return True;
 	}
 
@@ -504,18 +538,20 @@ pulse_playback_start(void)
 	{
 		if (pa_stream_get_state(playback_stream) != PA_STREAM_READY)
 		{
-			logger(Sound, Warning, "pulse_playback_start(), trying to start PulseAudio stream while it's not ready");
+			logger(Sound, Warning,
+			       "pulse_playback_start(), trying to start PulseAudio stream while it's not ready");
 			break;
 		}
-		#if PA_CHECK_VERSION(0,9,11)
+#if PA_CHECK_VERSION(0,9,11)
 		ret = pa_stream_is_corked(playback_stream);
-		#else
+#else
 		ret = 1;
-		#endif
+#endif
 		if (ret < 0)
 		{
 			err = pa_context_errno(context);
-			logger(Sound, Error, "pulse_playback_start(), pa_stream_is_corked: %s", pa_strerror(err));
+			logger(Sound, Error, "pulse_playback_start(), pa_stream_is_corked: %s",
+			       pa_strerror(err));
 			break;
 		}
 		else if (ret != 0)
@@ -524,7 +560,8 @@ pulse_playback_start(void)
 			if (po == NULL)
 			{
 				err = pa_context_errno(context);
-				logger(Sound, Error, "pulse_playback_start(), pa_stream_corked: %s", pa_strerror(err));
+				logger(Sound, Error, "pulse_playback_start(), pa_stream_corked: %s",
+				       pa_strerror(err));
 				break;
 			}
 			while (pa_operation_get_state(po) == PA_OPERATION_RUNNING)
@@ -552,7 +589,8 @@ pulse_playback_stop(void)
 
 	if (playback_stream == NULL)
 	{
-		logger(Sound, Debug, "pulse_playback_stop(), trying to stop PulseAudio stream while it's not exists");
+		logger(Sound, Debug,
+		       "pulse_playback_stop(), trying to stop PulseAudio stream while it's not exists");
 		return True;
 	}
 
@@ -562,18 +600,20 @@ pulse_playback_stop(void)
 	{
 		if (pa_stream_get_state(playback_stream) != PA_STREAM_READY)
 		{
-			logger(Sound, Error, "pulse_playback_stop(), trying to stop PulseAudio stream while it's not ready");
+			logger(Sound, Error,
+			       "pulse_playback_stop(), trying to stop PulseAudio stream while it's not ready");
 			break;
 		}
-		#if PA_CHECK_VERSION(0,9,11)
+#if PA_CHECK_VERSION(0,9,11)
 		ret = pa_stream_is_corked(playback_stream);
-		#else
+#else
 		ret = 0;
-		#endif
+#endif
 		if (ret < 0)
 		{
 			err = pa_context_errno(context);
-			logger(Sound, Error, "pulse_playback_stop(), pa_stream_is_corked: %s", pa_strerror(err));
+			logger(Sound, Error, "pulse_playback_stop(), pa_stream_is_corked: %s",
+			       pa_strerror(err));
 			break;
 		}
 		else if (ret == 0)
@@ -582,7 +622,8 @@ pulse_playback_stop(void)
 			if (po == NULL)
 			{
 				err = pa_context_errno(context);
-				logger(Sound, Error, "pulse_playback_stop(), pa_stream_cork: %s", pa_strerror(err));
+				logger(Sound, Error, "pulse_playback_stop(), pa_stream_cork: %s",
+				       pa_strerror(err));
 				break;
 			}
 			while (pa_operation_get_state(po) == PA_OPERATION_RUNNING)
@@ -593,7 +634,8 @@ pulse_playback_stop(void)
 		if (po == NULL)
 		{
 			err = pa_context_errno(context);
-			logger(Sound, Error, "pulse_playback_stop(), pa_stream_flush: %s", pa_strerror(err));
+			logger(Sound, Error, "pulse_playback_stop(), pa_stream_flush: %s",
+			       pa_strerror(err));
 			break;
 		}
 		while (pa_operation_get_state(po) == PA_OPERATION_RUNNING)
@@ -617,10 +659,11 @@ pulse_playback_set_audio(int channels, int samplerate, int samplewidth)
 
 	pulse_stream_close(&playback_stream);
 
-	flags = PA_STREAM_START_CORKED | PA_STREAM_INTERPOLATE_TIMING | PA_STREAM_AUTO_TIMING_UPDATE;
-	#if PA_CHECK_VERSION(0,9,11)
+	flags = PA_STREAM_START_CORKED | PA_STREAM_INTERPOLATE_TIMING |
+		PA_STREAM_AUTO_TIMING_UPDATE;
+#if PA_CHECK_VERSION(0,9,11)
 	flags |= PA_STREAM_ADJUST_LATENCY;
-	#endif
+#endif
 	if (pulse_stream_open(&playback_stream, channels, samplerate, samplewidth, flags) != True)
 		return False;
 
@@ -638,7 +681,8 @@ pulse_capture_start(void)
 
 	if (capture_stream == NULL)
 	{
-		logger(Sound, Warning, "pulse_capture_start(), trying to start PulseAudio stream while it's not exists");
+		logger(Sound, Warning,
+		       "pulse_capture_start(), trying to start PulseAudio stream while it's not exists");
 		return True;
 	}
 
@@ -648,18 +692,20 @@ pulse_capture_start(void)
 	{
 		if (pa_stream_get_state(capture_stream) != PA_STREAM_READY)
 		{
-			logger(Sound, Error, "pulse_capture_start(), trying to start PulseAudio stream while it's not exists");
+			logger(Sound, Error,
+			       "pulse_capture_start(), trying to start PulseAudio stream while it's not exists");
 			break;
 		}
-		#if PA_CHECK_VERSION(0,9,11)
+#if PA_CHECK_VERSION(0,9,11)
 		ret = pa_stream_is_corked(capture_stream);
-		#else
+#else
 		ret = 1;
-		#endif
+#endif
 		if (ret < 0)
 		{
 			err = pa_context_errno(context);
-			logger(Sound, Error, "pulse_capture_start(), pa_stream_is_corked: %s", pa_strerror(err));
+			logger(Sound, Error, "pulse_capture_start(), pa_stream_is_corked: %s",
+			       pa_strerror(err));
 			break;
 		}
 		else if (ret != 0)
@@ -668,7 +714,8 @@ pulse_capture_start(void)
 			if (po == NULL)
 			{
 				err = pa_context_errno(context);
-				logger(Sound, Error, "pulse_capture_start(), pa_stream_cork: %s\n", pa_strerror(err));
+				logger(Sound, Error, "pulse_capture_start(), pa_stream_cork: %s\n",
+				       pa_strerror(err));
 				break;
 			}
 			while (pa_operation_get_state(po) == PA_OPERATION_RUNNING)
@@ -696,7 +743,8 @@ pulse_capture_stop(void)
 
 	if (capture_stream == NULL)
 	{
-		logger(Sound, Debug, "pulse_capture_stop(), trying to stop PulseAudio stream while it's not exists");
+		logger(Sound, Debug,
+		       "pulse_capture_stop(), trying to stop PulseAudio stream while it's not exists");
 		return True;
 	}
 
@@ -706,18 +754,20 @@ pulse_capture_stop(void)
 	{
 		if (pa_stream_get_state(capture_stream) != PA_STREAM_READY)
 		{
-			logger(Sound, Error, "pulse_capture_stop(), trying to stop PulseAudio stream while it's not exists");
+			logger(Sound, Error,
+			       "pulse_capture_stop(), trying to stop PulseAudio stream while it's not exists");
 			break;
 		}
-		#if PA_CHECK_VERSION(0,9,11)
+#if PA_CHECK_VERSION(0,9,11)
 		ret = pa_stream_is_corked(capture_stream);
-		#else
+#else
 		ret = 0;
-		#endif
+#endif
 		if (ret < 0)
 		{
 			err = pa_context_errno(context);
-			logger(Sound, Error, "pulse_capture_stop(), pa_stream_is_corked: %s\n", pa_strerror(err));
+			logger(Sound, Error, "pulse_capture_stop(), pa_stream_is_corked: %s\n",
+			       pa_strerror(err));
 			break;
 		}
 		else if (ret == 0)
@@ -726,7 +776,8 @@ pulse_capture_stop(void)
 			if (po == NULL)
 			{
 				err = pa_context_errno(context);
-				logger(Sound, Error, "pulse_capture_stop(), pa_stream_cork: %s\n", pa_strerror(err));
+				logger(Sound, Error, "pulse_capture_stop(), pa_stream_cork: %s\n",
+				       pa_strerror(err));
 				break;
 			}
 			while (pa_operation_get_state(po) == PA_OPERATION_RUNNING)
@@ -753,9 +804,9 @@ pulse_capture_set_audio(int channels, int samplerate, int samplewidth)
 
 
 	flags = PA_STREAM_START_CORKED;
-	#if PA_CHECK_VERSION(0,9,11)
+#if PA_CHECK_VERSION(0,9,11)
 	flags |= PA_STREAM_ADJUST_LATENCY;
-	#endif
+#endif
 
 	if (capture_stream != NULL)
 	{
@@ -763,18 +814,20 @@ pulse_capture_set_audio(int channels, int samplerate, int samplewidth)
 		state = pa_stream_get_state(capture_stream);
 		if (state == PA_STREAM_READY)
 		{
-			#if PA_CHECK_VERSION(0,9,11)
+#if PA_CHECK_VERSION(0,9,11)
 			ret = pa_stream_is_corked(capture_stream);
-			#else
+#else
 			ret = (capture_started == False);
-			#endif
+#endif
 			if (ret == 0)
 				flags &= ~PA_STREAM_START_CORKED;
 			else if (ret < 0)
 			{
 				err = pa_context_errno(context);
 				pa_threaded_mainloop_unlock(mainloop);
-				logger(Sound, Error, "pulse_capture_set_audio(), pa_stream_is_corked: %s\n", pa_strerror(err));
+				logger(Sound, Error,
+				       "pulse_capture_set_audio(), pa_stream_is_corked: %s\n",
+				       pa_strerror(err));
 				return False;
 			}
 		}
@@ -790,7 +843,7 @@ pulse_capture_set_audio(int channels, int samplerate, int samplewidth)
 }
 
 static void
-pulse_context_state_cb(pa_context * c, void * userdata)
+pulse_context_state_cb(pa_context * c, void *userdata)
 {
 	pa_context_state_t state;
 
@@ -803,7 +856,7 @@ pulse_context_state_cb(pa_context * c, void * userdata)
 }
 
 static void
-pulse_stream_state_cb(pa_stream * p, void * userdata)
+pulse_stream_state_cb(pa_stream * p, void *userdata)
 {
 	pa_stream_state_t state;
 
@@ -815,12 +868,14 @@ pulse_stream_state_cb(pa_stream * p, void * userdata)
 	{
 		if (p == playback_stream)
 		{
-			logger(Sound, Debug, "pulse_stream_state_cb(), PulseAudio playback stream is in a fail state");
+			logger(Sound, Debug,
+			       "pulse_stream_state_cb(), PulseAudio playback stream is in a fail state");
 			pulse_send_msg(pulse_ctl[1], RDPSND_PULSE_OUT_ERR);
 		}
 		else
 		{
-			logger(Sound, Debug, "pulse_stream_state_cb(), PulseAudio capture stream is in a fail state");
+			logger(Sound, Debug,
+			       "pulse_stream_state_cb(), PulseAudio capture stream is in a fail state");
 			pulse_send_msg(pulse_ctl[1], RDPSND_PULSE_IN_ERR);
 		}
 	}
@@ -829,7 +884,7 @@ pulse_stream_state_cb(pa_stream * p, void * userdata)
 }
 
 static void
-pulse_read_cb(pa_stream * p, size_t nbytes, void * userdata)
+pulse_read_cb(pa_stream * p, size_t nbytes, void *userdata)
 {
 	assert(userdata != NULL);
 
@@ -837,7 +892,7 @@ pulse_read_cb(pa_stream * p, size_t nbytes, void * userdata)
 }
 
 static void
-pulse_write_cb(pa_stream * p, size_t nbytes, void * userdata)
+pulse_write_cb(pa_stream * p, size_t nbytes, void *userdata)
 {
 	assert(userdata != NULL);
 
@@ -845,7 +900,7 @@ pulse_write_cb(pa_stream * p, size_t nbytes, void * userdata)
 }
 
 static void
-pulse_cork_cb(pa_stream * p, int success, void * userdata)
+pulse_cork_cb(pa_stream * p, int success, void *userdata)
 {
 	assert(userdata != NULL);
 
@@ -853,13 +908,15 @@ pulse_cork_cb(pa_stream * p, int success, void * userdata)
 	{
 		if (p == playback_stream)
 		{
-			logger(Sound, Warning, "pulse_cork_cb(), fail to cork/uncork the PulseAudio playback stream: %s",
+			logger(Sound, Warning,
+			       "pulse_cork_cb(), fail to cork/uncork the PulseAudio playback stream: %s",
 			       pa_strerror(pa_context_errno(context)));
 			pulse_send_msg(pulse_ctl[1], RDPSND_PULSE_OUT_ERR);
 		}
 		else
 		{
-			logger(Sound, Warning, "pulse_cork_cb(), fail to cork/uncork the PulseAudio capture stream: %s",
+			logger(Sound, Warning,
+			       "pulse_cork_cb(), fail to cork/uncork the PulseAudio capture stream: %s",
 			       pa_strerror(pa_context_errno(context)));
 			pulse_send_msg(pulse_ctl[1], RDPSND_PULSE_IN_ERR);
 		}
@@ -869,7 +926,7 @@ pulse_cork_cb(pa_stream * p, int success, void * userdata)
 }
 
 static void
-pulse_flush_cb(pa_stream * p, int success, void * userdata)
+pulse_flush_cb(pa_stream * p, int success, void *userdata)
 {
 	assert(userdata != NULL);
 
@@ -884,13 +941,14 @@ pulse_flush_cb(pa_stream * p, int success, void * userdata)
 }
 
 static void
-pulse_update_timing_cb(pa_stream * p, int success, void * userdata)
+pulse_update_timing_cb(pa_stream * p, int success, void *userdata)
 {
 	assert(userdata != NULL);
 
 	if (!success)
 	{
-		logger(Sound, Warning, "pulse_update_timing_cb(), fail to update timing info of the PulseAudio stream: %s",
+		logger(Sound, Warning,
+		       "pulse_update_timing_cb(), fail to update timing info of the PulseAudio stream: %s",
 		       pa_strerror(pa_context_errno(context)));
 		pulse_send_msg(pulse_ctl[1], RDPSND_PULSE_OUT_ERR);
 	}
@@ -933,13 +991,15 @@ pulse_check_fds(fd_set * rfds, fd_set * wfds)
 					break;
 				else
 				{
-					logger(Sound, Error, "pulse_check_fds(), read: %s\n", strerror(errno));
+					logger(Sound, Error, "pulse_check_fds(), read: %s\n",
+					       strerror(errno));
 					return;
 				}
 			}
 			else if (n == 0)
 			{
-				logger(Sound, Warning, "pulse_check_fds(), audio control pipe was closed");
+				logger(Sound, Warning,
+				       "pulse_check_fds(), audio control pipe was closed");
 				break;
 			}
 			else
@@ -949,7 +1009,8 @@ pulse_check_fds(fd_set * rfds, fd_set * wfds)
 						if (pulse_play() != True)
 							if (pulse_recover(&playback_stream) != True)
 							{
-								logger(Sound, Error, "pulse_check_fds(), PulseAudio playback error");
+								logger(Sound, Error,
+								       "pulse_check_fds(), PulseAudio playback error");
 								return;
 							}
 						break;
@@ -957,26 +1018,31 @@ pulse_check_fds(fd_set * rfds, fd_set * wfds)
 						if (pulse_record() != True)
 							if (pulse_recover(&capture_stream) != True)
 							{
-								logger(Sound, Error, "pulse_check_fds(), PulseAudio capture error");
+								logger(Sound, Error,
+								       "pulse_check_fds(), PulseAudio capture error");
 								return;
 							}
 						break;
 					case RDPSND_PULSE_OUT_ERR:
 						if (pulse_recover(&playback_stream) != True)
 						{
-							logger(Sound, Error, "pulse_check_fds(), an error occured in audio thread with PulseAudio playback stream");
+							logger(Sound, Error,
+							       "pulse_check_fds(), an error occured in audio thread with PulseAudio playback stream");
 							return;
 						}
 						break;
 					case RDPSND_PULSE_IN_ERR:
 						if (pulse_recover(&capture_stream) != True)
 						{
-							logger(Sound, Error, "pulse_check_fds(), an error occured in audio thread with PulseAudio capture stream");
+							logger(Sound, Error,
+							       "pulse_check_fds(), an error occured in audio thread with PulseAudio capture stream");
 							return;
 						}
 						break;
 					default:
-						logger(Sound, Error, "pulse_check_fds(), wrong command from the audio thread: %d", audio_cmd);
+						logger(Sound, Error,
+						       "pulse_check_fds(), wrong command from the audio thread: %d",
+						       audio_cmd);
 						break;
 				}
 		}
@@ -1008,7 +1074,8 @@ pulse_close_out(void)
 	if (playback_stream && pulse_playback_stop() != True)
 		if (pulse_recover(&playback_stream) != True)
 		{
-			logger(Sound, Error ,"pulse_close_out(), fail to close the PulseAudio playback stream");
+			logger(Sound, Error,
+			       "pulse_close_out(), fail to close the PulseAudio playback stream");
 			return;
 		}
 }
@@ -1030,18 +1097,20 @@ RD_BOOL
 pulse_set_format_out(RD_WAVEFORMATEX * pwfx)
 {
 	if (playback_stream == NULL
-		|| playback_channels != pwfx->nChannels
-		|| playback_samplerate != pwfx->nSamplesPerSec
-		|| playback_samplewidth != pwfx->wBitsPerSample / 8)
+	    || playback_channels != pwfx->nChannels
+	    || playback_samplerate != pwfx->nSamplesPerSec
+	    || playback_samplewidth != pwfx->wBitsPerSample / 8)
 	{
 		playback_channels = pwfx->nChannels;
 		playback_samplerate = pwfx->nSamplesPerSec;
 		playback_samplewidth = pwfx->wBitsPerSample / 8;
 
-		if (pulse_playback_set_audio(pwfx->nChannels, pwfx->nSamplesPerSec, pwfx->wBitsPerSample / 8) != True)
+		if (pulse_playback_set_audio
+		    (pwfx->nChannels, pwfx->nSamplesPerSec, pwfx->wBitsPerSample / 8) != True)
 			if (pulse_recover(&playback_stream) != True)
 			{
-				logger(Sound, Error ,"pulse_set_format_out(), fail to open the PulseAudio playback stream");
+				logger(Sound, Error,
+				       "pulse_set_format_out(), fail to open the PulseAudio playback stream");
 				return False;
 			}
 	}
@@ -1051,7 +1120,8 @@ pulse_set_format_out(RD_WAVEFORMATEX * pwfx)
 	if (pulse_playback_start() != True)
 		if (pulse_recover(&playback_stream) != True)
 		{
-			logger(Sound, Error, "pulse_set_format_out(), fail to start the PulseAudio playback stream");
+			logger(Sound, Error,
+			       "pulse_set_format_out(), fail to start the PulseAudio playback stream");
 			return False;
 		}
 
@@ -1090,17 +1160,21 @@ pulse_play(void)
 		if (ti == NULL)
 		{
 			err = pa_context_errno(context);
-			logger(Sound, Error, "pulse_play(), pa_stream_get_timing_info: %s", pa_strerror(err));
+			logger(Sound, Error, "pulse_play(), pa_stream_get_timing_info: %s",
+			       pa_strerror(err));
 			break;
 		}
 
 		if (ti->read_index_corrupt || ti->write_index_corrupt)
 		{
-			po = pa_stream_update_timing_info(playback_stream, pulse_update_timing_cb, mainloop);
+			po = pa_stream_update_timing_info(playback_stream, pulse_update_timing_cb,
+							  mainloop);
 			if (po == NULL)
 			{
 				err = pa_context_errno(context);
-				logger(Sound, Error, "pulse_play(), pa_stream_update_timing_info: %s", pa_strerror(err));
+				logger(Sound, Error,
+				       "pulse_play(), pa_stream_update_timing_info: %s",
+				       pa_strerror(err));
 				break;
 			}
 			while (pa_operation_get_state(po) == PA_OPERATION_RUNNING)
@@ -1121,10 +1195,12 @@ pulse_play(void)
 		audio_size = out->end - out->p <= avail_space ? out->end - out->p : avail_space;
 		if (audio_size)
 		{
-			if (pa_stream_write(playback_stream, out->p, audio_size, NULL, 0, playback_seek) != 0)
+			if (pa_stream_write
+			    (playback_stream, out->p, audio_size, NULL, 0, playback_seek) != 0)
 			{
 				err = pa_context_errno(context);
-				logger(Sound, Error, "pulse_play(), pa_stream_write: %s", pa_strerror(err));
+				logger(Sound, Error, "pulse_play(), pa_stream_write: %s",
+				       pa_strerror(err));
 				break;
 			}
 			else if (playback_seek == PA_SEEK_RELATIVE_ON_READ)
@@ -1138,12 +1214,15 @@ pulse_play(void)
 			ret = pa_stream_get_latency(playback_stream, &delay, NULL);
 			if (ret != 0 && (err = pa_context_errno(context)) == PA_ERR_NODATA)
 			{
-				po = pa_stream_update_timing_info(playback_stream, pulse_update_timing_cb, mainloop);
+				po = pa_stream_update_timing_info(playback_stream,
+								  pulse_update_timing_cb, mainloop);
 				if (po == NULL)
 				{
 					delay = 0;
 					err = pa_context_errno(context);
-					logger(Sound, Error, "pulse_play(), pa_stream_update_timing_info: %s", pa_strerror(err));
+					logger(Sound, Error,
+					       "pulse_play(), pa_stream_update_timing_info: %s",
+					       pa_strerror(err));
 					break;
 				}
 				while (pa_operation_get_state(po) == PA_OPERATION_RUNNING)
@@ -1156,11 +1235,14 @@ pulse_play(void)
 			{
 				delay = 0;
 				err = pa_context_errno(context);
-				logger(Sound, Error, "pulse_play(), pa_stream_get_latency: %s", pa_strerror(err));
+				logger(Sound, Error, "pulse_play(), pa_stream_get_latency: %s",
+				       pa_strerror(err));
 				break;
 			}
 
-			logger(Sound, Debug, "pulse_play(), PulseAudio playback stream latency %lu usec", (long) delay);
+			logger(Sound, Debug,
+			       "pulse_play(), PulseAudio playback stream latency %lu usec",
+			       (long) delay);
 		}
 
 		result = True;
@@ -1193,7 +1275,8 @@ pulse_close_in(void)
 	if (capture_stream && pulse_capture_stop() != True)
 		if (pulse_recover(&capture_stream) != True)
 		{
-			logger(Sound, Error, "pulse_close_in(), fail to close the PulseAudio capture stream");
+			logger(Sound, Error,
+			       "pulse_close_in(), fail to close the PulseAudio capture stream");
 			return;
 		}
 }
@@ -1202,18 +1285,20 @@ RD_BOOL
 pulse_set_format_in(RD_WAVEFORMATEX * pwfx)
 {
 	if (capture_stream == NULL
-		|| capture_channels != pwfx->nChannels
-		|| capture_samplerate != pwfx->nSamplesPerSec
-		|| capture_samplewidth != pwfx->wBitsPerSample / 8)
+	    || capture_channels != pwfx->nChannels
+	    || capture_samplerate != pwfx->nSamplesPerSec
+	    || capture_samplewidth != pwfx->wBitsPerSample / 8)
 	{
 		capture_channels = pwfx->nChannels;
 		capture_samplerate = pwfx->nSamplesPerSec;
 		capture_samplewidth = pwfx->wBitsPerSample / 8;
 
-		if (pulse_capture_set_audio(pwfx->nChannels, pwfx->nSamplesPerSec, pwfx->wBitsPerSample / 8) != True)
+		if (pulse_capture_set_audio
+		    (pwfx->nChannels, pwfx->nSamplesPerSec, pwfx->wBitsPerSample / 8) != True)
 			if (pulse_recover(&capture_stream) != True)
 			{
-				logger(Sound, Error, "pulse_set_format_in(), fail to open the PulseAudio capture stream");
+				logger(Sound, Error,
+				       "pulse_set_format_in(), fail to open the PulseAudio capture stream");
 				return False;
 			}
 	}
@@ -1223,7 +1308,8 @@ pulse_set_format_in(RD_WAVEFORMATEX * pwfx)
 	if (pulse_capture_start() != True)
 		if (pulse_recover(&capture_stream) != True)
 		{
-			logger(Sound, Error, "pulse_set_format_in(), fail to start the PulseAudio capture stream");
+			logger(Sound, Error,
+			       "pulse_set_format_in(), fail to start the PulseAudio capture stream");
 			return False;
 		}
 
@@ -1247,7 +1333,8 @@ pulse_record(void)
 	{
 		if (pa_stream_peek(capture_stream, &pulse_buf, &audio_size) != 0)
 		{
-			logger(Sound, Error, "pulse_record(), pa_stream_peek: %s", pa_strerror(pa_context_errno(context)));
+			logger(Sound, Error, "pulse_record(), pa_stream_peek: %s",
+			       pa_strerror(pa_context_errno(context)));
 			break;
 		}
 
@@ -1270,7 +1357,8 @@ pulse_record(void)
 
 		if (pa_stream_drop(capture_stream) != 0)
 		{
-			logger(Sound, Error, "pulse_record(), pa_stream_drop: %s", pa_strerror(pa_context_errno(context)));
+			logger(Sound, Error, "pulse_record(), pa_stream_drop: %s",
+			       pa_strerror(pa_context_errno(context)));
 			break;
 		}
 
@@ -1301,13 +1389,15 @@ pulse_recover(pa_stream ** stream)
 
 	if (stream == &playback_stream)
 	{
-		if (pulse_playback_set_audio(playback_channels, playback_samplerate, playback_samplewidth) == True)
+		if (pulse_playback_set_audio
+		    (playback_channels, playback_samplerate, playback_samplewidth) == True)
 			if (playback_started != True || pulse_playback_start() == True)
 				return True;
 	}
 	else if (stream == &capture_stream)
 	{
-		if (pulse_capture_set_audio(capture_channels, capture_samplerate, capture_samplewidth) == True)
+		if (pulse_capture_set_audio
+		    (capture_channels, capture_samplerate, capture_samplewidth) == True)
 			if (capture_started != True || pulse_capture_start() == True)
 				return True;
 	}
@@ -1321,14 +1411,16 @@ pulse_recover(pa_stream ** stream)
 	{
 		if (playback == True)
 		{
-			if (pulse_playback_set_audio(playback_channels, playback_samplerate, playback_samplewidth) != True
-				|| (playback_started == True && pulse_playback_start() != True))
-					break;
+			if (pulse_playback_set_audio
+			    (playback_channels, playback_samplerate, playback_samplewidth) != True
+			    || (playback_started == True && pulse_playback_start() != True))
+				break;
 		}
 		if (capture == True)
 		{
-			if (pulse_capture_set_audio(capture_channels, capture_samplerate, capture_samplewidth) != True
-				|| (capture_started == True && pulse_capture_start() != True))
+			if (pulse_capture_set_audio
+			    (capture_channels, capture_samplerate, capture_samplewidth) != True
+			    || (capture_started == True && pulse_capture_start() != True))
 				break;
 		}
 

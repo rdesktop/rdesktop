@@ -99,7 +99,7 @@ iso_send_connection_request(char *username, uint32 neg_proto)
 
 /* Receive a message on the ISO layer, return code */
 static STREAM
-iso_recv_msg(uint8 * code, RD_BOOL *is_fastpath, uint8 *fastpath_hdr)
+iso_recv_msg(uint8 * code, RD_BOOL * is_fastpath, uint8 * fastpath_hdr)
 {
 	STREAM s;
 	uint16 length;
@@ -109,14 +109,14 @@ iso_recv_msg(uint8 * code, RD_BOOL *is_fastpath, uint8 *fastpath_hdr)
 	if (s == NULL)
 		return NULL;
 
-	in_uint8(s, version); /* T.123 version or Fastpath output header */
+	in_uint8(s, version);	/* T.123 version or Fastpath output header */
 
 	/* detect if this is a slow or fast path PDU */
 	*fastpath_hdr = 0x00;
 	*is_fastpath = False;
 	if (version == T123_HEADER_VERSION)
 	{
-		in_uint8s(s, 1);		/* reserved */
+		in_uint8s(s, 1);	/* reserved */
 		in_uint16_be(s, length);	/* length */
 	}
 	else
@@ -125,7 +125,7 @@ iso_recv_msg(uint8 * code, RD_BOOL *is_fastpath, uint8 *fastpath_hdr)
 		   stream is a fast path pdu */
 		*is_fastpath = True;
 		*fastpath_hdr = version;
-		in_uint8(s, length); /* length1 */
+		in_uint8(s, length);	/* length1 */
 		if (length & 0x80)
 		{
 			/* length2 is only present if the most significant bit of length1 is set */
@@ -192,7 +192,7 @@ iso_send(STREAM s)
 
 /* Receive ISO transport data packet */
 STREAM
-iso_recv(RD_BOOL *is_fastpath, uint8 *fastpath_hdr)
+iso_recv(RD_BOOL * is_fastpath, uint8 * fastpath_hdr)
 {
 	STREAM s;
 	uint8 code = 0;
@@ -285,8 +285,8 @@ iso_connect(char *server, char *username, char *domain, char *password,
 		uint32 data = 0;
 
 		in_uint8(s, type);
-		in_uint8s(s, 1); /* skip flags */
-		in_uint8s(s, 2); /* skip length */
+		in_uint8s(s, 1);	/* skip flags */
+		in_uint8s(s, 2);	/* skip length */
 		in_uint32(s, data);
 
 		if (type == RDP_NEG_FAILURE)

@@ -210,14 +210,14 @@ rdpdr_send_client_name_request(void)
 {
 	/* DR_CORE_CLIENT_NAME_REQ */
 	STREAM s;
-	struct stream name = {0};
+	struct stream name = { 0 };
 
 	if (NULL == g_rdpdr_clientname)
 	{
 		g_rdpdr_clientname = g_hostname;
 	}
 
-	s_realloc(&name, 512*4);
+	s_realloc(&name, 512 * 4);
 	s_reset(&name);
 	out_utf16s(&name, g_rdpdr_clientname);
 	s_mark_end(&name);
@@ -284,7 +284,9 @@ rdpdr_send_client_device_list_announce(void)
 	STREAM s;
 	PRINTER *printerinfo;
 	DISK_DEVICE *diskinfo;
-	struct stream drv = {0}, prt = {0};
+	struct stream drv = { 0 }, prt =
+	{
+	0};
 
 	s = channel_init(rdpdr_channel, announcedata_size());
 	out_uint16_le(s, RDPDR_CTYP_CORE);
@@ -316,12 +318,12 @@ rdpdr_send_client_device_list_announce(void)
 			case DEVICE_TYPE_PRINTER:
 				printerinfo = (PRINTER *) g_rdpdr_device[i].pdevice_data;
 
-				s_realloc(&prt, 512*4);
+				s_realloc(&prt, 512 * 4);
 				s_reset(&prt);
 				out_utf16s(&prt, printerinfo->printer);
 				s_mark_end(&prt);
 
-				s_realloc(&drv, 512*4);
+				s_realloc(&drv, 512 * 4);
 				s_reset(&drv);
 				out_utf16s(&drv, printerinfo->driver);
 				s_mark_end(&drv);
@@ -476,7 +478,7 @@ rdpdr_process_irp(STREAM s)
 
 			in_uint32_be(s, desired_access);
 			in_uint8s(s, 0x08);	/* unknown */
-			in_uint8s(s, 4);       /* skip error_mode*/
+			in_uint8s(s, 4);	/* skip error_mode */
 			in_uint32_le(s, share_mode);
 			in_uint32_le(s, disposition);
 			in_uint32_le(s, flags_and_attributes);
@@ -729,7 +731,7 @@ rdpdr_process_irp(STREAM s)
 			}
 
 			in_uint32_le(s, bytes_out);
-			in_uint8s(s,4);                  /* skip  bytes_in */
+			in_uint8s(s, 4);	/* skip  bytes_in */
 			in_uint32_le(s, request);
 			in_uint8s(s, 0x14);
 
@@ -971,7 +973,7 @@ rdpdr_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv, RD_BOOL 
 					   support for reconnects. */
 
 					FD_SET(iorq->fd, rfds);
-					*n = MAX(*n, (int)iorq->fd);
+					*n = MAX(*n, (int) iorq->fd);
 
 					/* Check if io request timeout is smaller than current (but not 0). */
 					if (iorq->timeout
@@ -1006,7 +1008,7 @@ rdpdr_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv, RD_BOOL 
 						break;
 
 					FD_SET(iorq->fd, wfds);
-					*n = MAX(*n, (int)iorq->fd);
+					*n = MAX(*n, (int) iorq->fd);
 					break;
 
 				case IRP_MJ_DEVICE_CONTROL:

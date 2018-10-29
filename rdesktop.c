@@ -118,8 +118,7 @@ RD_BOOL g_seamless_persistent_mode = True;
 RD_BOOL g_user_quit = False;
 uint32 g_embed_wnd;
 uint32 g_rdp5_performanceflags = (PERF_DISABLE_FULLWINDOWDRAG |
-				  PERF_DISABLE_MENUANIMATIONS |
-				  PERF_ENABLE_FONT_SMOOTHING);
+				  PERF_DISABLE_MENUANIMATIONS | PERF_ENABLE_FONT_SMOOTHING);
 /* Session Directory redirection */
 RD_BOOL g_redirect = False;
 char *g_redirect_server;
@@ -143,7 +142,7 @@ RD_BOOL g_reconnect_loop = False;
 uint8 g_client_random[SEC_RANDOM_SIZE];
 RD_BOOL g_pending_resize = False;
 RD_BOOL g_pending_resize_defer = True;
-struct timeval g_pending_resize_defer_timer = {0};
+struct timeval g_pending_resize_defer_timer = { 0 };
 
 #ifdef WITH_RDPSND
 RD_BOOL g_rdpsnd = False;
@@ -479,9 +478,12 @@ handle_disconnect_reason(RD_BOOL deactivated, uint16 reason)
 			retval = EXRD_UNKNOWN;
 	}
 
-	if (reason > 0x1000 && reason < 0x7fff && retval == EXRD_UNKNOWN) {
+	if (reason > 0x1000 && reason < 0x7fff && retval == EXRD_UNKNOWN)
+	{
 		fprintf(stderr, "Internal protocol error: %x", reason);
-	} else if (reason != ERRINFO_NO_INFO) {
+	}
+	else if (reason != ERRINFO_NO_INFO)
+	{
 		fprintf(stderr, "disconnect: %s.\n", text);
 	}
 
@@ -598,7 +600,8 @@ parse_server_and_port(char *server)
 }
 
 // [WxH|P%|W%xH%][@DPI][+X[+Y]]|workarea
-int parse_geometry_string(const char *optarg)
+int
+parse_geometry_string(const char *optarg)
 {
 	sint32 value;
 	const char *ps;
@@ -643,7 +646,8 @@ int parse_geometry_string(const char *optarg)
 		value = strtol(ps, &pe, 10);
 		if (ps == pe || value <= 0)
 		{
-			logger(Core, Error, "invalid geometry, expected positive integer for height");
+			logger(Core, Error,
+			       "invalid geometry, expected positive integer for height");
 			return -1;
 		}
 
@@ -668,7 +672,7 @@ int parse_geometry_string(const char *optarg)
 		}
 	}
 	else
-        {
+	{
 		if (g_window_size_type == PercentageOfScreen)
 		{
 			/* percentage of screen used for both width and height */
@@ -738,25 +742,26 @@ int parse_geometry_string(const char *optarg)
 static void
 setup_user_requested_session_size()
 {
-	switch(g_window_size_type)
+	switch (g_window_size_type)
 	{
-	case Fullscreen:
-		ui_get_screen_size(&g_requested_session_width, &g_requested_session_height);
-		break;
+		case Fullscreen:
+			ui_get_screen_size(&g_requested_session_width, &g_requested_session_height);
+			break;
 
-	case Workarea:
-		ui_get_workarea_size(&g_requested_session_width, &g_requested_session_height);
-		break;
+		case Workarea:
+			ui_get_workarea_size(&g_requested_session_width,
+					     &g_requested_session_height);
+			break;
 
-	case Fixed:
-		break;
+		case Fixed:
+			break;
 
-	case PercentageOfScreen:
-		ui_get_screen_size_from_percentage(g_requested_session_width,
-						   g_requested_session_height,
-						   &g_requested_session_width,
-						   &g_requested_session_height);
-		break;
+		case PercentageOfScreen:
+			ui_get_screen_size_from_percentage(g_requested_session_width,
+							   g_requested_session_height,
+							   &g_requested_session_width,
+							   &g_requested_session_height);
+			break;
 	}
 }
 
@@ -1169,7 +1174,7 @@ main(int argc, char *argv[])
 	if (g_local_cursor)
 	{
 		/* there is no point wasting bandwidth on cursor shadows
-                 * that we're just going to throw out anyway */
+		 * that we're just going to throw out anyway */
 		g_rdp5_performanceflags |= PERF_DISABLE_CURSOR_SHADOW;
 	}
 
@@ -1359,7 +1364,8 @@ main(int argc, char *argv[])
 			g_network_error = False;
 		}
 
-		utils_apply_session_size_limitations(&g_requested_session_width, &g_requested_session_height);
+		utils_apply_session_size_limitations(&g_requested_session_width,
+						     &g_requested_session_height);
 
 		if (!rdp_connect
 		    (server, flags, domain, g_password, shell, directory, g_reconnect_loop))
@@ -1413,7 +1419,7 @@ main(int argc, char *argv[])
 		   user initiated disconnected. Lets translate this specific
 		   behaviour into the same as for later versions for proper
 		   handling.
-		*/
+		 */
 		if (deactivated == True && ext_disc_reason == ERRINFO_NO_INFO)
 		{
 			deactivated = 0;
@@ -1445,7 +1451,7 @@ main(int argc, char *argv[])
 					/* If there is no auto reconnect cookie available
 					   for reconnect, do not enter reconnect loop. Windows
 					   2016 server does not send any for unknown reasons.
-					*/
+					 */
 					logger(Core, Notice,
 					       "Disconnected due to network error, exiting...");
 					break;
@@ -1461,7 +1467,8 @@ main(int argc, char *argv[])
 			else if (g_pending_resize)
 			{
 				/* Enter a reconnect loop if we have a pending resize request */
-				logger(Core, Verbose, "Resize reconnect loop triggered, new size %dx%d",
+				logger(Core, Verbose,
+				       "Resize reconnect loop triggered, new size %dx%d",
 				       g_requested_session_width, g_requested_session_height);
 				g_pending_resize = False;
 				g_reconnect_loop = True;

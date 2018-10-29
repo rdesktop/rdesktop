@@ -33,13 +33,15 @@
 #define DYNVC_SOFT_SYNC_REQUEST		0x08
 #define DYNVC_SOFT_SYNC_RESPONSE	0x09
 
-typedef union dvc_hdr_t {
-    uint8 data;
-    struct {
-      uint8 cbid:2;
-      uint8 sp:2;
-      uint8 cmd:4;
-    } hdr;
+typedef union dvc_hdr_t
+{
+	uint8 data;
+	struct
+	{
+		uint8 cbid:2;
+		uint8 sp:2;
+		uint8 cmd:4;
+	} hdr;
 } dvc_hdr_t;
 
 typedef struct dvc_channel_t
@@ -147,7 +149,8 @@ dvc_channels_add(const char *name, dvc_channel_process_fn handler, uint32 channe
 		}
 	}
 
-	logger(Core, Warning, "dvc_channels_add(), Failed to add channel, maximum number of channels are being used");
+	logger(Core, Warning,
+	       "dvc_channels_add(), Failed to add channel, maximum number of channels are being used");
 	return False;
 }
 
@@ -429,7 +432,7 @@ dvc_process_pdu(STREAM s)
 			dvc_process_close_pdu(s, hdr);
 			break;
 
-#if 0 /* Unimplemented */
+#if 0				/* Unimplemented */
 
 		case DYNVC_DATA_FIRST:
 			break;

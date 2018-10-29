@@ -28,53 +28,53 @@ extern char g_codepage[16];
 void
 s_realloc(STREAM s, unsigned int size)
 {
-       unsigned char *data;
+	unsigned char *data;
 
-       if (s->size >= size)
-               return;
+	if (s->size >= size)
+		return;
 
-       data = s->data;
-       s->size = size;
-       s->data = xrealloc(data, size);
-       s->p = s->data + (s->p - data);
-       s->end = s->data + (s->end - data);
-       s->iso_hdr = s->data + (s->iso_hdr - data);
-       s->mcs_hdr = s->data + (s->mcs_hdr - data);
-       s->sec_hdr = s->data + (s->sec_hdr - data);
-       s->rdp_hdr = s->data + (s->rdp_hdr - data);
-       s->channel_hdr = s->data + (s->channel_hdr - data);
+	data = s->data;
+	s->size = size;
+	s->data = xrealloc(data, size);
+	s->p = s->data + (s->p - data);
+	s->end = s->data + (s->end - data);
+	s->iso_hdr = s->data + (s->iso_hdr - data);
+	s->mcs_hdr = s->data + (s->mcs_hdr - data);
+	s->sec_hdr = s->data + (s->sec_hdr - data);
+	s->rdp_hdr = s->data + (s->rdp_hdr - data);
+	s->channel_hdr = s->data + (s->channel_hdr - data);
 }
 
 void
 s_reset(STREAM s)
 {
-  struct stream tmp;
-  tmp = *s;
-  memset(s, 0, sizeof(struct stream));
-  s->size = tmp.size;
-  s->end = s->p = s->data = tmp.data;
+	struct stream tmp;
+	tmp = *s;
+	memset(s, 0, sizeof(struct stream));
+	s->size = tmp.size;
+	s->end = s->p = s->data = tmp.data;
 }
 
 
 void
 s_free(STREAM s)
 {
-       free(s->data);
-       free(s);
+	free(s->data);
+	free(s);
 }
 
 static iconv_t
 local_to_utf16()
 {
-  iconv_t icv;
-  icv = iconv_open(WINDOWS_CODEPAGE, g_codepage);
-  if (icv == (iconv_t) - 1)
-  {
-    logger(Core, Error, "locale_to_utf16(), iconv_open[%s -> %s] fail %p",
-	   g_codepage, WINDOWS_CODEPAGE, icv);
-    abort();
-  }
-  return icv;
+	iconv_t icv;
+	icv = iconv_open(WINDOWS_CODEPAGE, g_codepage);
+	if (icv == (iconv_t) - 1)
+	{
+		logger(Core, Error, "locale_to_utf16(), iconv_open[%s -> %s] fail %p",
+		       g_codepage, WINDOWS_CODEPAGE, icv);
+		abort();
+	}
+	return icv;
 }
 
 /* Writes a utf16 encoded string into stream excluding null termination.
@@ -83,35 +83,35 @@ local_to_utf16()
 static inline size_t
 _out_utf16s(STREAM s, size_t maxlength, const char *string)
 {
-  static iconv_t icv_local_to_utf16;
-  size_t bl, ibl, obl;
-  const char *pin;
-  char *pout;
+	static iconv_t icv_local_to_utf16;
+	size_t bl, ibl, obl;
+	const char *pin;
+	char *pout;
 
-  if (string == NULL)
-    return 0;
+	if (string == NULL)
+		return 0;
 
-  if (!icv_local_to_utf16)
-    {
-      icv_local_to_utf16 = local_to_utf16();
-    }
+	if (!icv_local_to_utf16)
+	{
+		icv_local_to_utf16 = local_to_utf16();
+	}
 
-  ibl = strlen(string);
-  obl = maxlength ? maxlength : (size_t)s_left(s);
-  pin = string;
-  pout = (char *) s->p;
+	ibl = strlen(string);
+	obl = maxlength ? maxlength : (size_t) s_left(s);
+	pin = string;
+	pout = (char *) s->p;
 
-  if (iconv(icv_local_to_utf16, (char **) &pin, &ibl, &pout, &obl) == (size_t) - 1)
-    {
-      logger(Protocol, Error, "out_utf16s(), iconv(2) fail, errno %d", errno);
-      abort();
-    }
+	if (iconv(icv_local_to_utf16, (char **) &pin, &ibl, &pout, &obl) == (size_t) - 1)
+	{
+		logger(Protocol, Error, "out_utf16s(), iconv(2) fail, errno %d", errno);
+		abort();
+	}
 
-  bl = (unsigned char*)pout - s->p;
+	bl = (unsigned char *) pout - s->p;
 
-  s->p = (unsigned char *)pout;
+	s->p = (unsigned char *) pout;
 
-  return bl;
+	return bl;
 }
 
 /* Writes a utf16 encoded string into stream including a null
@@ -122,15 +122,15 @@ _out_utf16s(STREAM s, size_t maxlength, const char *string)
 void
 out_utf16s_padded(STREAM s, const char *string, size_t length, unsigned char pad)
 {
-  size_t i, bl;
-  bl = _out_utf16s(s, length - 2, string);
+	size_t i, bl;
+	bl = _out_utf16s(s, length - 2, string);
 
-  // append utf16 null termination
-  out_uint16(s, 0);
-  bl += 2;
+	// append utf16 null termination
+	out_uint16(s, 0);
+	bl += 2;
 
-  for (i = 0; i < (length - bl); i++)
-    out_uint8(s, pad);
+	for (i = 0; i < (length - bl); i++)
+		out_uint8(s, pad);
 }
 
 /* Writes a utf16 encoded string into stream including a null
@@ -139,10 +139,10 @@ out_utf16s_padded(STREAM s, const char *string, size_t length, unsigned char pad
 void
 out_utf16s(STREAM s, const char *string)
 {
-  _out_utf16s(s, 0, string);
+	_out_utf16s(s, 0, string);
 
-  // append utf16 null termination
-  out_uint16(s, 0);
+	// append utf16 null termination
+	out_uint16(s, 0);
 }
 
 
@@ -151,7 +151,7 @@ out_utf16s(STREAM s, const char *string)
 void
 out_utf16s_no_eos(STREAM s, const char *string)
 {
-  _out_utf16s(s, 0, string);
+	_out_utf16s(s, 0, string);
 }
 
 /* Read bytes from STREAM s into *string until a null terminator is
@@ -160,23 +160,23 @@ out_utf16s_no_eos(STREAM s, const char *string)
 size_t
 in_ansi_string(STREAM s, char *string, size_t len)
 {
-  char *ps;
-  size_t left;
-  ps = string;
+	char *ps;
+	size_t left;
+	ps = string;
 
-  left = len;
-  while(left--)
-  {
-    if (left == 0)
-      break;
+	left = len;
+	while (left--)
+	{
+		if (left == 0)
+			break;
 
-    in_uint8(s, *ps);
+		in_uint8(s, *ps);
 
-    if (*ps == '\0')
-      break;
+		if (*ps == '\0')
+			break;
 
-    ps++;
-  }
+		ps++;
+	}
 
-  return len - left;
+	return len - left;
 }

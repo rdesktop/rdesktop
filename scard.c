@@ -101,15 +101,15 @@ static RD_NTSTATUS
 scard_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create_disposition,
 	     uint32 flags_and_attributes, char *filename, RD_NTHANDLE * phandle)
 {
-    UNUSED(device_id);
-    UNUSED(accessmask);
-    UNUSED(sharemode);
-    UNUSED(create_disposition);
-    UNUSED(flags_and_attributes);
-    UNUSED(filename);
-    UNUSED(phandle);
+	UNUSED(device_id);
+	UNUSED(accessmask);
+	UNUSED(sharemode);
+	UNUSED(create_disposition);
+	UNUSED(flags_and_attributes);
+	UNUSED(filename);
+	UNUSED(phandle);
 
-    return RD_STATUS_SUCCESS;
+	return RD_STATUS_SUCCESS;
 }
 
 static RD_NTSTATUS
@@ -1729,9 +1729,11 @@ TS_SCardStatus(STREAM in, STREAM out, RD_BOOL wide)
 	       "TS_SCardStatus(), hcard: 0x%08x [0x%08lx], reader len: %d bytes, atr len: %d bytes",
 	       (unsigned) hCard, (unsigned long) myHCard, (int) dwReaderLen, (int) dwAtrLen);
 
-	if (dwReaderLen == 0 || dwReaderLen == (SERVER_DWORD)SCARD_AUTOALLOCATE || dwReaderLen > SCARD_MAX_MEM)
+	if (dwReaderLen == 0 || dwReaderLen == (SERVER_DWORD) SCARD_AUTOALLOCATE
+	    || dwReaderLen > SCARD_MAX_MEM)
 		dwReaderLen = SCARD_MAX_MEM;
-	if (dwAtrLen == 0 || dwAtrLen == (SERVER_DWORD)SCARD_AUTOALLOCATE || dwAtrLen > SCARD_MAX_MEM)
+	if (dwAtrLen == 0 || dwAtrLen == (SERVER_DWORD) SCARD_AUTOALLOCATE
+	    || dwAtrLen > SCARD_MAX_MEM)
 		dwAtrLen = SCARD_MAX_MEM;
 
 #if 1
@@ -1846,7 +1848,8 @@ TS_SCardState(STREAM in, STREAM out)
 	       (unsigned) hCard, (unsigned long) myHCard, (int) dwAtrLen);
 
 	dwReaderLen = SCARD_MAX_MEM;
-	if (dwAtrLen <= 0 || dwAtrLen == (SERVER_DWORD)SCARD_AUTOALLOCATE || dwAtrLen > SCARD_MAX_MEM)
+	if (dwAtrLen <= 0 || dwAtrLen == (SERVER_DWORD) SCARD_AUTOALLOCATE
+	    || dwAtrLen > SCARD_MAX_MEM)
 		dwAtrLen = SCARD_MAX_MEM;
 
 	readerName = SC_xmalloc(&lcHandle, dwReaderLen + 2);
@@ -2006,16 +2009,16 @@ TS_SCardGetAttrib(STREAM in, STREAM out)
 	       (unsigned) hCard, (unsigned long) myHCard, (unsigned) dwAttrId, (int) dwAttrLen);
 
 	pbAttr = NULL;
-	if (dwAttrLen != (SERVER_DWORD)SCARD_AUTOALLOCATE)
+	if (dwAttrLen != (SERVER_DWORD) SCARD_AUTOALLOCATE)
 	{
-	  if (dwAttrLen > MAX_BUFFER_SIZE)
-	  {
-		dwAttrLen = MAX_BUFFER_SIZE;
-	  }
+		if (dwAttrLen > MAX_BUFFER_SIZE)
+		{
+			dwAttrLen = MAX_BUFFER_SIZE;
+		}
 
-	  pbAttr = SC_xmalloc(&lcHandle, dwAttrLen);
-	  if (!pbAttr)
-	    return SC_returnNoMemoryError(&lcHandle, in, out);
+		pbAttr = SC_xmalloc(&lcHandle, dwAttrLen);
+		if (!pbAttr)
+			return SC_returnNoMemoryError(&lcHandle, in, out);
 	}
 
 	attrLen = dwAttrLen;
@@ -2187,9 +2190,11 @@ TS_SCardControl(STREAM in, STREAM out)
 
 		/* ATM, I removed features code transformations */
 		/* You know what to do if any problem arises in the future. */
-		if ((dwControlCode & 0xff000000) != SCARD_CTL_CODE(0)) {
+		if ((dwControlCode & 0xff000000) != SCARD_CTL_CODE(0))
+		{
 			logger(SmartCard, Warning,
-					"TS_SCardControl(), bogus smart card control code 0x%08x", dwControlCode);
+			       "TS_SCardControl(), bogus smart card control code 0x%08x",
+			       dwControlCode);
 		}
 	}
 
@@ -2729,7 +2734,8 @@ scard_reset_state()
 	queueFirst = queueLast = NULL;
 }
 
-void scard_release_all_contexts(void)
+void
+scard_release_all_contexts(void)
 {
 	_scard_handle_list_t *item, *next;
 
@@ -2749,4 +2755,3 @@ void scard_release_all_contexts(void)
 
 	g_scard_handle_list = NULL;
 }
-

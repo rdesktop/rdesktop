@@ -69,8 +69,8 @@ process_ts_fp_update_by_code(STREAM s, uint8 code)
 			process_new_pointer_pdu(s);
 			break;
 		default:
-			logger(Protocol, Warning, "process_ts_fp_updates_by_code(), unhandled opcode %d",
-			       code);
+			logger(Protocol, Warning,
+			       "process_ts_fp_updates_by_code(), unhandled opcode %d", code);
 	}
 }
 
@@ -129,13 +129,14 @@ process_ts_fp_updates(STREAM s)
 		{
 			process_ts_fp_update_by_code(ts, code);
 		}
-		else /* Fragmented packet, we must reassemble */
+		else		/* Fragmented packet, we must reassemble */
 		{
 			if (assembled[code] == NULL)
 			{
 				assembled[code] = xmalloc(sizeof(struct stream));
 				memset(assembled[code], 0, sizeof(struct stream));
-				s_realloc(assembled[code], RDESKTOP_FASTPATH_MULTIFRAGMENT_MAX_SIZE);
+				s_realloc(assembled[code],
+					  RDESKTOP_FASTPATH_MULTIFRAGMENT_MAX_SIZE);
 				s_reset(assembled[code]);
 			}
 

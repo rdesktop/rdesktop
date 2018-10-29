@@ -446,8 +446,7 @@ static RD_BOOL
 tcp_connect_resolve_hostname(const char *server)
 {
 	return (g_server_address == NULL ||
-		g_last_server_name == NULL ||
-		strcmp(g_last_server_name, server) != 0);
+		g_last_server_name == NULL || strcmp(g_last_server_name, server) != 0);
 }
 
 /* Establish a connection on the TCP layer
@@ -485,7 +484,8 @@ tcp_connect(char *server)
 
 		if ((n = getaddrinfo(server, tcp_port_rdp_s, &hints, &res)))
 		{
-			logger(Core, Error, "tcp_connect(), getaddrinfo() failed: %s", gai_strerror(n));
+			logger(Core, Error, "tcp_connect(), getaddrinfo() failed: %s",
+			       gai_strerror(n));
 			return False;
 		}
 	}
@@ -505,10 +505,12 @@ tcp_connect(char *server)
 			continue;
 		}
 
-		n = getnameinfo(addr->ai_addr, addr->ai_addrlen, buf, sizeof(buf), NULL, 0, NI_NUMERICHOST);
+		n = getnameinfo(addr->ai_addr, addr->ai_addrlen, buf, sizeof(buf), NULL, 0,
+				NI_NUMERICHOST);
 		if (n != 0)
 		{
-			logger(Core, Error, "tcp_connect(), getnameinfo() failed: %s", gai_strerror(n));
+			logger(Core, Error, "tcp_connect(), getnameinfo() failed: %s",
+			       gai_strerror(n));
 			return False;
 		}
 
@@ -581,8 +583,7 @@ tcp_connect(char *server)
 
 	logger(Core, Debug, "tcp_connect(), trying %s (%s)",
 	       server, inet_ntop(g_server_address->sin_family,
-				 &g_server_address->sin_addr,
-				 buf, sizeof(buf)));
+				 &g_server_address->sin_addr, buf, sizeof(buf)));
 
 	if (connect(g_sock, (struct sockaddr *) g_server_address, sizeof(struct sockaddr)) < 0)
 	{
