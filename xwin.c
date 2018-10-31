@@ -42,6 +42,11 @@
 #define HOST_NAME_MAX MAXHOSTNAMELEN
 #endif
 
+#ifdef __sun
+#include <netdb.h>
+#define HOST_NAME_MAX MAXHOSTNAMELEN
+#endif
+
 extern RD_BOOL g_user_quit;
 extern RD_BOOL g_exit_mainloop;
 
