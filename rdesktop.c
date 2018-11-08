@@ -1886,7 +1886,7 @@ l_to_a(long N, int base)
 
 	register int divrem;
 
-	if (base < 36 || 2 > base)
+	if (base > 36 || 2 > base)
 		base = 10;
 
 	if (N < 0)

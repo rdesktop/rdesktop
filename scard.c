@@ -1212,7 +1212,7 @@ TS_SCardGetStatusChange(STREAM in, STREAM out, RD_BOOL wide)
 			}
 
 			logger(SmartCard, Debug,
-			       "TS_SCardGetStatusChange(), reader='%s', user=%p, state=%x%08x, event=0x%08x",
+			       "TS_SCardGetStatusChange(), reader='%s', user=%p, state=0x%08x, event=0x%08x",
 			       cur->szReader ? cur->szReader : "NULL", cur->pvUserData,
 			       (unsigned) cur->dwCurrentState, (unsigned) cur->dwEventState);
 		}
@@ -1248,7 +1248,7 @@ TS_SCardGetStatusChange(STREAM in, STREAM out, RD_BOOL wide)
 	for (i = 0, cur = rsArray; i < dwCount; i++, cur++)
 	{
 		logger(SmartCard, Debug,
-		       "TS_SCardGetStatusChange(), reader='%s', user=%p, state=%x%08x, event=0x%08x",
+		       "TS_SCardGetStatusChange(), reader='%s', user=%p, state=0x%08x, event=0x%08x",
 		       cur->szReader ? cur->szReader : "NULL", cur->pvUserData,
 		       (unsigned) cur->dwCurrentState, (unsigned) cur->dwEventState);
 
@@ -1359,7 +1359,7 @@ TS_SCardLocateCardsByATR(STREAM in, STREAM out, RD_BOOL wide)
 		inReaderName(&lcHandle, in, (char **) &rsCur->szReader, wide);
 
 		logger(SmartCard, Debug,
-		       "TS_SCardLocateCardsByATR(), reader='%s', user=%p, state=%x%08x, event=0x%08x",
+		       "TS_SCardLocateCardsByATR(), reader='%s', user=%p, state=0x%08x, event=0x%08x",
 		       rsCur->szReader ? rsCur->szReader : "NULL", rsCur->pvUserData,
 		       (unsigned) rsCur->dwCurrentState, (unsigned) rsCur->dwEventState);
 	}
@@ -1401,7 +1401,7 @@ TS_SCardLocateCardsByATR(STREAM in, STREAM out, RD_BOOL wide)
 					memcpy(ResArray + j, rsCur, sizeof(SCARD_READERSTATE));
 
 					logger(SmartCard, Debug,
-					       "TS_SCardLocateCardsByATR(), reader='%s', user=%p, state=%x%08x, event=0x%08x",
+					       "TS_SCardLocateCardsByATR(), reader='%s', user=%p, state=0x%08x, event=0x%08x",
 					       rsCur->szReader ? rsCur->szReader : "NULL",
 					       rsCur->pvUserData, (unsigned) rsCur->dwCurrentState,
 					       (unsigned) rsCur->dwEventState);
