@@ -4,6 +4,7 @@
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2002-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
    Copyright 2010-2018 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2018 Alexander Zakharov <uglym8@gmail.com>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -202,6 +203,26 @@ usage(char *program)
 	fprintf(stderr, "   -z: enable rdp compression\n");
 	fprintf(stderr, "   -x: RDP5 experience (m[odem 28.8], b[roadband], l[an] or hex nr.)\n");
 	fprintf(stderr, "   -P: use persistent bitmap caching\n");
+	fprintf(stderr, "   -J set specific key combination to ungrab keyboard\n");
+	fprintf(stderr, "     Supported modifiers (format: a_b, default: ctrl_alt):\n");
+	fprintf(stderr, "\talts - both Alts\n");
+	fprintf(stderr, "\tsupers - both Supers\n");
+	fprintf(stderr, "\tctrls - both Controls\n");
+	fprintf(stderr, "\tshifts - both Shifts\n");
+	fprintf(stderr, "\talt - any of two Alts\n");
+	fprintf(stderr, "\tsuper - any of two Supers\n");
+	fprintf(stderr, "\tctrl - any of two Controls\n");
+	fprintf(stderr, "\tshift - any of two Shifts\n");
+	fprintf(stderr, "\t[l|r]alt - either left or right Alt\n");
+	fprintf(stderr, "\t[l|r]super - either left or right Super\n");
+	fprintf(stderr, "\t[l|r]ctrl - either left or right Control\n");
+	fprintf(stderr, "\t[l|r]shift - either left or right Shift\n");
+	fprintf(stderr, "    Examples:\n");
+	fprintf(stderr, "\talts - Pressing and releasing both Alts\n");
+	fprintf(stderr, "\talt_rctrl - Pressing and releasing any Alt and right Control\n");
+	fprintf(stderr, "\tlsuper_ralt - Pressing and releasing left Super and right Alt\n");
+
+
 	fprintf(stderr, "   -r: enable specified device redirection (this flag can be repeated)\n");
 	fprintf(stderr,
 		"         '-r comport:COM1=/dev/ttyS0': enable serial redirection of /dev/ttyS0 to COM1\n");
@@ -818,7 +839,7 @@ main(int argc, char *argv[])
 	g_num_devices = 0;
 
 	while ((c = getopt(argc, argv,
-			   "A:V:u:L:d:s:c:p:n:k:g:o:fbBeEitmMzCDKS:T:NX:a:x:Pr:045vh?")) != -1)
+			   "A:V:u:L:d:s:c:p:n:k:g:o:fbBeEitmMzCDKS:T:NX:a:x:Pr:J:045vh?")) != -1)
 	{
 		switch (c)
 		{
@@ -958,6 +979,10 @@ main(int argc, char *argv[])
 
 			case 'X':
 				g_embed_wnd = strtol(optarg, NULL, 0);
+				break;
+
+			case 'J':
+				(void)xwin_parse_grab_combo(optarg);
 				break;
 
 			case 'a':
