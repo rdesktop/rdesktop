@@ -86,6 +86,8 @@ static int g_x_socket;
 static Screen *g_screen;
 Window g_wnd;
 
+static RD_BOOL g_has_wm = False;
+
 RD_BOOL g_dynamic_session_resize = True;
 
 /* These are the last known window sizes. They are updated whenever the window size is changed. */
@@ -1897,6 +1899,67 @@ set_wm_client_machine(Display * dpy, Window win)
 	XSetWMClientMachine(dpy, win, &tp);
 }
 
+RD_BOOL is_wm_active(void)
+{
+	Atom prop, actual_type;
+	int actual_fmt;
+	unsigned long nitems, bytes_left;
+	unsigned char *data;
+	Window wid;
+
+	prop = XInternAtom(g_display, "_NET_SUPPORTING_WM_CHECK", True);
+
+	if (prop == None) return False;
+
+	if (XGetWindowProperty(g_display, DefaultRootWindow(g_display), prop, 0, 1, False,
+				XA_WINDOW, &actual_type, &actual_fmt, &nitems, &bytes_left, &data) != Success) {
+		return False;
+	}
+
+	if (!nitems) {
+		XFree(data);
+		return False;
+	}
+
+	wid = ((Window *)data)[0];
+	XFree(data);
+
+	if (XGetWindowProperty(g_display, wid, prop, 0, 1, False,
+				XA_WINDOW, &actual_type, &actual_fmt, &nitems, &bytes_left, &data) != Success) {
+		return False;
+	}
+
+	if (!nitems) {
+		XFree(data);
+		return False;
+	}
+
+	if (wid != ((Window *)data)[0]) {
+		XFree(data);
+		return False;
+	}
+
+	XFree(data);
+
+	/* Just for the curious minds */
+	prop = XInternAtom(g_display, "_NET_WM_NAME", True);
+
+	if (prop == None) return False;
+
+
+	if (XGetWindowProperty(g_display, wid, prop, 0, 1, False,
+				AnyPropertyType, &actual_type, &actual_fmt, &nitems, &bytes_left, &data) == Success) {
+		if (nitems) {
+			logger(GUI, Verbose, "%s(): WM name: %s", __func__, data);
+		}
+
+		XFree(data);
+	}
+
+	return True;
+}
+
+
 /* Initialize the UI. This is done once per process. */
 RD_BOOL
 ui_init(void)
@@ -1974,6 +2037,8 @@ ui_init(void)
 		seamless_init();
 	}
 
+	g_has_wm = is_wm_active();
+
 	return True;
 }
 
@@ -2041,7 +2106,11 @@ get_window_attribs(XSetWindowAttributes * attribs)
 	attribs->background_pixel = BlackPixelOfScreen(g_screen);
 	attribs->border_pixel = WhitePixelOfScreen(g_screen);
 	attribs->backing_store = g_ownbackstore ? NotUseful : Always;
-	attribs->override_redirect = g_fullscreen;
+	if (g_has_wm) {
+		attribs->override_redirect = 0;
+	} else {
+		attribs->override_redirect = g_fullscreen;
+	}
 	attribs->colormap = g_xcolmap;
 
 	return vmask;
@@ -2110,6 +2179,13 @@ ui_update_window_sizehints(uint32 width, uint32 height)
 		XSetWMNormalHints(g_display, g_wnd, sizehints);
 		XFree(sizehints);
 	}
+}
+
+void request_wm_fullscreen(Display *dpy, Window win)
+{
+	Atom atom = XInternAtom(dpy, "_NET_WM_STATE_FULLSCREEN", False);
+	XChangeProperty(dpy, win, XInternAtom(dpy, "_NET_WM_STATE", False), XA_ATOM, 32, PropModeReplace, (unsigned char *)&atom, 1);
+	XFlush(dpy);
 }
 
 RD_BOOL
@@ -2206,6 +2282,9 @@ ui_create_window(uint32 width, uint32 height)
 #ifdef HAVE_XRANDR
 	XSelectInput(g_display, RootWindowOfScreen(g_screen), StructureNotifyMask);
 #endif
+	if (g_fullscreen && g_has_wm) {
+		request_wm_fullscreen(g_display, g_wnd);
+	}
 	XMapWindow(g_display, g_wnd);
 
 	/* wait for VisibilityNotify */
