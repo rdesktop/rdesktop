@@ -481,6 +481,10 @@ enum RDP_INPUT_DEVICE
 #define FILE_DELETE_ON_CLOSE            0x00001000
 #define FILE_OPEN_FOR_FREE_SPACE_QUERY  0x00800000
 
+/* [MS-RDPBCGR], TS_BITMAP_DATA, flags */
+#define BITMAP_COMPRESSION              0x0001
+#define NO_BITMAP_COMPRESSION_HDR       0x0400
+
 /* RDP5 disconnect PDU */
 #define exDiscReasonNoInfo				0x0000
 #define exDiscReasonAPIInitiatedDisconnect		0x0001

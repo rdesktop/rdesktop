@@ -1260,10 +1260,16 @@ process_secondary_order(STREAM s)
 	uint16 flags;
 	uint8 type;
 	uint8 *next_order;
+	struct stream packet = *s;
 
 	in_uint16_le(s, length);
 	in_uint16_le(s, flags);	/* used by bmpcache2 */
 	in_uint8(s, type);
+
+	if (!s_check_rem(s, length + 7))
+	{
+		rdp_protocol_error("process_secondary_order(), next order pointer would overrun stream", &packet);
+	}
 
 	next_order = s->p + (sint16) length + 7;
 

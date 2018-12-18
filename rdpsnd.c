@@ -355,6 +355,12 @@ rdpsnd_process_ping(STREAM in)
 {
 	uint16 tick;
 	STREAM out;
+	struct stream packet = *in;
+
+	if (!s_check_rem(in, 4))
+	{
+		rdp_protocol_error("rdpsnd_process_training(), consume of training data from stream would overrun", &packet);
+	}
 
 	in_uint16_le(in, tick);
 
@@ -666,6 +672,11 @@ rdpsnddbg_process(STREAM s)
 	unsigned int pkglen;
 	static char *rest = NULL;
 	char *buf;
+
+	if (!s_check(s))
+	{
+		rdp_protocol_error("rdpsnddbg_process(), stream is in unstable state", s);
+	}
 
 	pkglen = s->end - s->p;
 	/* str_handle_lines requires null terminated strings */

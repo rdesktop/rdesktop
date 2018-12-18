@@ -292,6 +292,9 @@ sec_encrypt(uint8 * data, int length)
 void
 sec_decrypt(uint8 * data, int length)
 {
+	if (length <= 0)
+		return;
+
 	if (g_sec_decrypt_use_count == 4096)
 	{
 		sec_update(g_sec_decrypt_key, g_sec_decrypt_update_key);
@@ -550,6 +553,7 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 	RDSSL_RKEY *server_public_key;
 	uint16 tag, length;
 	uint8 *next_tag, *end;
+	struct stream packet = *s;
 
 	in_uint32_le(s, *rc4_key_size);	/* 1 = 40-bit, 2 = 128-bit */
 	in_uint32_le(s, crypt_level);	/* 1 = low, 2 = medium, 3 = high */
@@ -628,6 +632,13 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 			DEBUG_RDP5(("Ignored certs left: %d\n", certcount));
 			in_uint32_le(s, ignorelen);
 			DEBUG_RDP5(("Ignored Certificate length is %d\n", ignorelen));
+
+			if (!s_check_rem(s, ignorelen))
+			{
+				rdp_protocol_error("sec_parse_crypt_info(), consume ignored certificate from stream would overrun",
+						   &packet);
+			}
+
 			ignorecert = rdssl_cert_read(s->p, ignorelen);
 			in_uint8s(s, ignorelen);
 			if (ignorecert == NULL)
@@ -797,15 +808,21 @@ sec_recv(uint8 * rdpver)
 	uint32 sec_flags;
 	uint16 channel;
 	STREAM s;
+	struct stream packet;
 
 	while ((s = mcs_recv(&channel, rdpver)) != NULL)
 	{
+		packet = *s;
 		if (rdpver != NULL)
 		{
 			if (*rdpver != 3)
 			{
 				if (*rdpver & 0x80)
 				{
+					if (!s_check_rem(s, 8)) {
+						rdp_protocol_error("sec_recv(), consume fastpath signature from stream would overrun", &packet);
+					}
+
 					in_uint8s(s, 8);	/* signature */
 					sec_decrypt(s->p, s->end - s->p);
 				}
@@ -820,6 +837,10 @@ sec_recv(uint8 * rdpver)
 			{
 				if (sec_flags & SEC_ENCRYPT)
 				{
+					if (!s_check_rem(s, 8)) {
+						rdp_protocol_error("sec_recv(), consume encrypt signature from stream would overrun", &packet);
+					}
+
 					in_uint8s(s, 8);	/* signature */
 					sec_decrypt(s->p, s->end - s->p);
 				}
@@ -833,6 +854,10 @@ sec_recv(uint8 * rdpver)
 				if (sec_flags & 0x0400)	/* SEC_REDIRECT_ENCRYPT */
 				{
 					uint8 swapbyte;
+
+					if (!s_check_rem(s, 8)) {
+						rdp_protocol_error("sec_recv(), consume redirect signature from stream would overrun", &packet);
+					}
 
 					in_uint8s(s, 8);	/* signature */
 					sec_decrypt(s->p, s->end - s->p);
