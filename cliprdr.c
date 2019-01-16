@@ -118,6 +118,7 @@ cliprdr_process(STREAM s)
 	uint16 type, status;
 	uint32 length, format;
 	uint8 *data;
+	struct stream packet = *s;
 
 	in_uint16_le(s, type);
 	in_uint16_le(s, status);
@@ -126,6 +127,11 @@ cliprdr_process(STREAM s)
 
 	logger(Clipboard, Debug, "cliprdr_process(), type=%d, status=%d, length=%d", type, status,
 	       length);
+
+	if (!s_check_rem(s, length))
+	{
+		rdp_protocol_error("cliprdr_process(), consume of packet from stream would overrun", &packet);
+	}
 
 	if (status == CLIPRDR_ERROR)
 	{

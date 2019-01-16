@@ -54,7 +54,7 @@ size_t in_ansi_string(STREAM s, char *string, size_t len);
 #define s_pop_layer(s,h)	(s)->p = (s)->h;
 #define s_mark_end(s)		(s)->end = (s)->p;
 #define s_check(s)		((s)->p <= (s)->end)
-#define s_check_rem(s,n)	((s)->p + n <= (s)->end)
+#define s_check_rem(s,n) (s_check(s) && (n <= (s)->end - (s)->p))
 #define s_check_end(s)		((s)->p == (s)->end)
 #define s_length(s)		((s)->end - (s)->data)
 #define s_left(s)               ((s)->size - ((s)->p - (s)->data))

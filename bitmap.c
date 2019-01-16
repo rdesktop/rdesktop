@@ -794,7 +794,7 @@ process_plane(uint8 * in, int width, int height, uint8 * out, int size)
 					replen = revcode;
 					collen = 0;
 				}
-				while (collen > 0)
+				while (indexw < width && collen > 0)
 				{
 					color = CVAL(in);
 					*out = color;
@@ -802,7 +802,7 @@ process_plane(uint8 * in, int width, int height, uint8 * out, int size)
 					indexw++;
 					collen--;
 				}
-				while (replen > 0)
+				while (indexw < width && replen > 0)
 				{
 					*out = color;
 					out += 4;
@@ -824,7 +824,7 @@ process_plane(uint8 * in, int width, int height, uint8 * out, int size)
 					replen = revcode;
 					collen = 0;
 				}
-				while (collen > 0)
+				while (indexw < width && collen > 0)
 				{
 					x = CVAL(in);
 					if (x & 1)
@@ -844,7 +844,7 @@ process_plane(uint8 * in, int width, int height, uint8 * out, int size)
 					indexw++;
 					collen--;
 				}
-				while (replen > 0)
+				while (indexw < width && replen > 0)
 				{
 					x = last_line[indexw * 4] + color;
 					*out = x;

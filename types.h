@@ -43,6 +43,8 @@ typedef signed short sint16;
 typedef unsigned int uint32;
 typedef signed int sint32;
 
+#define RD_UINT32_MAX (uint32)(-1)
+
 typedef void *RD_HBITMAP;
 typedef void *RD_HGLYPH;
 typedef void *RD_HCOLOURMAP;

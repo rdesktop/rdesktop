@@ -164,6 +164,7 @@ RD_BOOL rdp_connect(char *server, uint32 flags, char *domain, char *password, ch
 		    char *directory, RD_BOOL reconnect);
 void rdp_reset_state(void);
 void rdp_disconnect(void);
+void rdp_protocol_error(const char *message, STREAM s);
 /* rdpdr.c */
 int get_device_index(RD_NTHANDLE handle);
 void convert_to_unix_filename(char *filename);
@@ -224,7 +225,7 @@ void tcp_run_ui(RD_BOOL run);
 /* asn.c */
 RD_BOOL ber_in_header(STREAM s, int *tagval, int *length);
 void ber_out_header(STREAM s, int tagval, int length);
-RD_BOOL ber_parse_header(STREAM s, int tagval, int *length);
+RD_BOOL ber_parse_header(STREAM s, int tagval, uint32 *length);
 void ber_out_integer(STREAM s, int value);
 void ber_out_sequence(STREAM s, STREAM contents);
 
