@@ -22,6 +22,7 @@
 #include <sys/stat.h>
 #include <errno.h>
 #include <iconv.h>
+#include <stdarg.h>
 
 #include "rdesktop.h"
 
@@ -277,11 +278,67 @@ utils_apply_session_size_limitations(uint32 * width, uint32 * height)
 		*height = 200;
 }
 
+#define MAX_CHOICES 10
+const char *
+util_dialog_choice(const char *message, ...)
+{
+	int i;
+	va_list ap;
+	char *p;
+	const char *choice;
+	char response[512];
+	const char *choices[MAX_CHOICES] = {0};
+
+	/* gather choices into array */
+	va_start(ap, message);
+	for (i = 0; i < MAX_CHOICES; i++)
+	{
+		choices[i] = va_arg(ap, const char *);
+		if (choices[i] == NULL)
+			break;
+    }
+    va_end(ap);
+
+	choice = NULL;
+	while (choice == NULL)
+	{
+		/* display message */
+		fprintf(stderr,"\n%s", message);
+
+		/* read input */
+		if (fgets(response, sizeof(response), stdin) != NULL)
+		{
+			/* strip final newline */
+			p = strchr(response, '\n');
+			if (p != NULL)
+				*p = 0;
+
+			for (i = 0; i < MAX_CHOICES; i++)
+			{
+				if (choices[i] == NULL)
+					break;
+
+				if (strcmp(response, choices[i]) == 0)
+				{
+					choice = choices[i];
+					break;
+				}
+			}
+		}
+		else
+		{
+			logger(Core, Error, "Failed to read response from stdin");
+			break;
+		}
+	}
+
+	return choice;
+}
+
 /*
  * component logging
  *
  */
-#include <stdarg.h>
 
 static char *level[] = {
 	"debug",

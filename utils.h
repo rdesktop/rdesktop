@@ -33,6 +33,7 @@ void utils_calculate_dpi_scale_factors(uint32 width, uint32 height, uint32 dpi,
 				       uint32 * desktopscale, uint32 * devicescale);
 void utils_apply_session_size_limitations(uint32 * width, uint32 * height);
 
+const char* util_dialog_choice(const char *message, ...);
 
 typedef enum log_level_t
 {
