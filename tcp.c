@@ -290,7 +290,6 @@ int check_cert(gnutls_session_t session)
 	struct stat sb;
 
 	int type;
-	int c;
 	time_t exp_time;
 	gnutls_x509_crt_t cert;
 	gnutls_datum_t cinfo;
@@ -376,35 +375,45 @@ int check_cert(gnutls_session_t session)
 				}
 
 			} else if (rv == GNUTLS_E_CERTIFICATE_KEY_MISMATCH) {
-				//logger(Core, Debug, "%s: Host '%s' is known but has another key associated with it", __func__, name);
-				fprintf(stdout, "Host '%s' is known but has another key associated with it\nPlease review the certificate info:\n", name);
+				const char *response;
+				char message[2048];
+
+				snprintf(message, sizeof(message),
+					"Host '%s' is known but has another key associated with it, \n"
+					, name);
 
 				rv = gnutls_x509_crt_print(cert, GNUTLS_CRT_PRINT_ONELINE, &cinfo);
+				if (rv == 0)
+				{
+					char *p;
+					strcat(message, "review the following certificate info:\n\n");
 
-				if (rv == 0) {
-					fprintf(stdout, "\t%s\n", cinfo.data);
-					gnutls_free(cinfo.data);
-				} else {
-					logger(Core, Error, "%s: Failed to print the certificate. error = 0x%x (%s)", __func__, rv, gnutls_strerror(rv));
-				}
-
-				fprintf(stdout, "Do you trust this certificate (y/n)? ");
-
-				/* TODO: PoC: will be replaced with proper handling */
-				while (1) {
-					c = getchar();
-
-					if (c == 'n' || c == 'N') {
-						goto bail;
-					} else if (c == 'y' || c == 'Y') {
-						break;
-					} else if (c == 0xa) {
-						continue;
-					} else {
-						fprintf(stdout, "\nPlease enter either 'y' or 'n'\n");
-						fprintf(stdout, "Do you trust this certificate (y/n)? ");
+					/* replace ',' with '\n' for simpler format */
+					p = (char *)cinfo.data;
+					while(*p != '\0')
+					{
+						if (*p == ',') *p = '\n';
+						p++;
 					}
+					strcat(message, " ");
+					strncat(message, (char *)cinfo.data, cinfo.size);
+					gnutls_free(cinfo.data);
 				}
+				else
+				{
+					logger(Core, Error, "%s: Failed to print the certificate. error = 0x%x (%s)", __func__, rv, gnutls_strerror(rv));
+
+					strcat(message,
+						"rdesktop failed to parse the certificate and there for " \
+						"we can not display certificate information for you to "  \
+						" inspect the change.\n\n");
+				}
+
+				strcat(message, "\n\nDo you trust this certificate (yes/no)? ");
+
+				response = util_dialog_choice(message, "no", "yes", NULL);
+				if (strcmp(response, "no") == 0 || response == NULL)
+					goto bail;
 
 				//logger(Core, Debug, "%s: %s: Replacing certificate for the host '%s'.", __func__, name);
 				/* TODO: PoC: Replace instead of just adding the new certificate */
