@@ -681,7 +681,7 @@ tcp_tls_get_server_pubkey(STREAM s)
 {
 	int ret;
 	unsigned int list_size;
-	gnutls_datum_t *cert_list;
+	const gnutls_datum_t *cert_list;
 	gnutls_x509_crt_t cert;
 
 	unsigned int algo, bits;
@@ -953,10 +953,9 @@ void
 tcp_disconnect(void)
 {
 	int i;
-	int rv;
 
 	if (g_ssl_initialized) {
-		rv = gnutls_bye(g_tls_session, GNUTLS_SHUT_WR);
+		(void)gnutls_bye(g_tls_session, GNUTLS_SHUT_WR);
 		gnutls_deinit(g_tls_session);
 		// Not needed since 3.3.0
 		gnutls_global_deinit();
