@@ -140,8 +140,21 @@ AS_IF([test "x$enable_credssp" != "xno"], [
 		GSSAPI_LIBS="-framework Kerberos"
 		;;
 	     *)
-		if test -n "$PKG_CONFIG"; then
-		  PKG_CHECK_MODULES(GSSAPI, krb5-gssapi, [WITH_CREDSSP=1], [WITH_CREDSSP=0])
+		#if 'OSTYPE' is not set use 'host' instead
+		if test x"$OSTYPE" = "x"; then
+			case "$host" in
+				*-*-freebsd*)
+				if test -n "$PKG_CONFIG"; then
+					PKG_CHECK_MODULES(GSSAPI, gss, [WITH_CREDSSP=1], [WITH_CREDSSP=0])
+				fi
+				;;
+			*)
+				;;
+			esac
+		else
+			if test -n "$PKG_CONFIG"; then
+				PKG_CHECK_MODULES(GSSAPI, krb5-gssapi, [WITH_CREDSSP=1], [WITH_CREDSSP=0])
+			fi
 		fi
 		;;
 	esac
