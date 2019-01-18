@@ -47,6 +47,10 @@
 #define HOST_NAME_MAX MAXHOSTNAMELEN
 #endif
 
+#ifdef __FreeBSD__
+#define HOST_NAME_MAX _POSIX_HOST_NAME_MAX
+#endif
+
 extern RD_BOOL g_user_quit;
 extern RD_BOOL g_exit_mainloop;
 
