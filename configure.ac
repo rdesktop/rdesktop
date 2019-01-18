@@ -179,8 +179,9 @@ else
 fi
 
 # GnuTLS
+
 if test -n "$PKG_CONFIG"; then
-    PKG_CHECK_MODULES(GNUTLS, gnutls, [HAVE_GNUTLS=1], [HAVE_GNUTLS=0])
+    PKG_CHECK_MODULES(GNUTLS, gnutls >= 3.0.0, [HAVE_GNUTLS=1], [HAVE_GNUTLS=0])
 fi
 if test x"$HAVE_GNUTLS" = "x1"; then
     CFLAGS="$CFLAGS $GNUTLS_CFLAGS"
