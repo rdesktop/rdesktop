@@ -5,6 +5,7 @@
    Copyright 2007-2008 Pierre Ossman <ossman@cendio.se> for Cendio AB
    Copyright 2002-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
    Copyright 2012-2018 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2018 Alexander Zakharov <uglym8@gmail.com>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -47,6 +48,69 @@
 #define HOST_NAME_MAX MAXHOSTNAMELEN
 #endif
 
+#define LALT_SET 	1 << 0
+#define RALT_SET 	1 << 1
+#define LCTRL_SET 	1 << 2
+#define RCTRL_SET 	1 << 3
+#define LSHIFT_SET 	1 << 4
+#define RSHIFT_SET 	1 << 5
+#define LSUPER_SET 	1 << 6
+#define RSUPER_SET 	1 << 7
+
+#define ALT_ANY		1 << 8
+#define CTRL_ANY	1 << 9
+#define SHIFT_ANY	1 << 10
+#define SUPER_ANY	1 << 11
+
+#define ALTS_BOTH 	(LALT_SET | RALT_SET)
+#define CTRLS_BOTH 	(LCTRL_SET | RCTRL_SET)
+#define SHIFTS_BOTH (LSHIFT_SET | RSHIFT_SET)
+#define SUPERS_BOTH (LSUPER_SET | RSUPER_SET)
+
+#define NUM_MODS 4
+
+typedef struct mods_info {
+	KeySym left_ks;
+	KeySym right_ks;
+	long left_mod;
+	long right_mod;
+	long any_mod;
+} mod_info_t;
+
+typedef struct parse_mod_info {
+	char *both_str;
+	long both_mod;
+	char *any_str;
+	long any_mod;
+	char *left_str;
+	long left_mod;
+	char *right_str;
+	long right_mod;
+} parse_mod_info_t;
+
+struct grab_combo_ctx {
+	long mod_in_progress;
+	long mod_allowed;
+	long mod_supplied;
+	long hit_ungrab_combo;
+};
+
+mod_info_t mods[NUM_MODS] = {
+	{XK_Control_L, XK_Control_R, LCTRL_SET, RCTRL_SET, CTRL_ANY},
+	{XK_Alt_L, XK_Alt_R, LALT_SET, RALT_SET, ALT_ANY},
+	{XK_Shift_L, XK_Shift_R, LSHIFT_SET, RSHIFT_SET, SHIFT_ANY},
+	{XK_Super_L, XK_Super_R, LSUPER_SET, RSUPER_SET, SUPER_ANY}
+};
+
+parse_mod_info_t parse_mods[NUM_MODS] = {
+	{"supers", SUPERS_BOTH, "super", SUPER_ANY, "lsuper", LSUPER_SET, "rsuper", RSUPER_SET},
+	{"ctrls", CTRLS_BOTH, "ctrl", CTRL_ANY, "lctrl", LCTRL_SET, "rctrl", RCTRL_SET},
+	{"alts", ALTS_BOTH, "alt", ALT_ANY, "lalt", LALT_SET, "ralt", RALT_SET},
+	{"shifts", SHIFTS_BOTH, "shift", SHIFT_ANY, "lshift", LSHIFT_SET, "rshift", RSHIFT_SET}
+};
+
+struct grab_combo_ctx g_grab_ctx = {0, CTRL_ANY | ALT_ANY, CTRL_ANY | ALT_ANY, 0};
+
 extern RD_BOOL g_user_quit;
 extern RD_BOOL g_exit_mainloop;
 
@@ -81,6 +145,8 @@ Time g_last_gesturetime;
 static int g_x_socket;
 static Screen *g_screen;
 Window g_wnd;
+
+static RD_BOOL g_has_wm = False;
 
 RD_BOOL g_dynamic_session_resize = True;
 
@@ -1893,6 +1959,207 @@ set_wm_client_machine(Display * dpy, Window win)
 	XSetWMClientMachine(dpy, win, &tp);
 }
 
+static long parse_single_word_mods(const char *str)
+{
+	int i;
+	size_t len;
+	size_t pat_len;
+
+	if (!str) return -1;
+
+	len = strlen(str);
+
+	if (!len) return -1;
+
+	for (i = 0; i < NUM_MODS; i++) {
+
+		pat_len = strlen(parse_mods[i].both_str);
+
+		if (pat_len == len) {
+			if (!strncmp(str, parse_mods[i].both_str, pat_len)) {
+				return parse_mods[i].both_mod;
+			}
+		}
+
+		pat_len = strlen(parse_mods[i].any_str);
+
+		if (pat_len == len) {
+			if (!strncmp(str, parse_mods[i].any_str, pat_len)) {
+				return parse_mods[i].any_mod;
+			}
+		}
+
+		pat_len = strlen(parse_mods[i].right_str);
+
+		if (pat_len == len) {
+			if (!strncmp(str, parse_mods[i].right_str, pat_len)) {
+				return parse_mods[i].right_mod;
+			}
+		}
+
+		pat_len = strlen(parse_mods[i].left_str);
+
+		if (pat_len == len) {
+			if (!strncmp(str, parse_mods[i].left_str, pat_len)) {
+				return parse_mods[i].left_mod;
+			}
+		}
+
+	}
+
+	return -1;
+}
+
+static long parse_mod_request(const char *str)
+{
+	int i;
+	long bv;
+	long tmp_bv;
+	long sec_bv;
+
+	long idx;
+
+	char *p;
+
+	char *dup_str;
+
+	p = strchr(str, '_');
+
+	if (!p) {
+		tmp_bv = parse_single_word_mods(str);
+
+		if (tmp_bv == -1) {
+			/* Stick to defaults */
+			return -1;
+		} else {
+			return tmp_bv;
+		}
+	} else {
+		idx = (long)p - (long)str;
+
+		dup_str = strdup(str);
+
+		if (!dup_str) {
+			perror("strdup");
+			return -1;
+		}
+
+		dup_str[idx] = 0;
+
+		tmp_bv = parse_single_word_mods(dup_str);
+		sec_bv = parse_single_word_mods(&dup_str[idx + 1]);
+
+		if ((tmp_bv == -1) || (sec_bv == -1)) return -1;
+
+		if (tmp_bv == sec_bv) return -1;
+
+		for (i = 0; i < NUM_MODS; i++) {
+
+			if (tmp_bv == (mods[i].left_mod | mods[i].right_mod)) {
+				return -1;
+			}
+
+			if (sec_bv == (mods[i].left_mod | mods[i].right_mod)) {
+				return -1;
+			}
+		}
+
+		for (i = 0; i < NUM_MODS; i++) {
+			if (tmp_bv == mods[i].any_mod) {
+				if ((sec_bv == mods[i].right_mod) || (sec_bv == mods[i].left_mod)) {
+					return -1;
+				}
+			}
+
+			if (sec_bv == mods[i].any_mod) {
+				if ((tmp_bv == mods[i].right_mod) || (tmp_bv == mods[i].left_mod)) {
+					return -1;
+				}
+			}
+
+		}
+
+		return (tmp_bv | sec_bv);
+	}
+}
+
+int xwin_parse_grab_combo(const char *str)
+{
+	long bv;
+
+	bv = parse_mod_request(str);
+
+	if (bv != -1) {
+		g_grab_ctx.mod_supplied = bv;
+		g_grab_ctx.mod_allowed = g_grab_ctx.mod_supplied;
+		return 0;
+	} else {
+		logger(Keyboard, Warning, "%s(): Failed to parse supplied ungrab key combo (%s). Setting to default (any_ctrl + any_alt)", __func__, str);
+		return 1;
+	}
+}
+
+RD_BOOL is_wm_active(void)
+{
+	Atom prop, actual_type;
+	int actual_fmt;
+	unsigned long nitems, bytes_left;
+	unsigned char *data;
+	Window wid;
+
+	prop = XInternAtom(g_display, "_NET_SUPPORTING_WM_CHECK", True);
+
+	if (prop == None) return False;
+
+	if (XGetWindowProperty(g_display, DefaultRootWindow(g_display), prop, 0, 1, False,
+				XA_WINDOW, &actual_type, &actual_fmt, &nitems, &bytes_left, &data) != Success) {
+		return False;
+	}
+
+	if (!nitems) {
+		XFree(data);
+		return False;
+	}
+
+	wid = ((Window *)data)[0];
+	XFree(data);
+
+	if (XGetWindowProperty(g_display, wid, prop, 0, 1, False,
+				XA_WINDOW, &actual_type, &actual_fmt, &nitems, &bytes_left, &data) != Success) {
+		return False;
+	}
+
+	if (!nitems) {
+		XFree(data);
+		return False;
+	}
+
+	if (wid != ((Window *)data)[0]) {
+		XFree(data);
+		return False;
+	}
+
+	XFree(data);
+
+	/* Just for the curious minds */
+	prop = XInternAtom(g_display, "_NET_WM_NAME", True);
+
+	if (prop == None) return False;
+
+
+	if (XGetWindowProperty(g_display, wid, prop, 0, 1, False,
+				AnyPropertyType, &actual_type, &actual_fmt, &nitems, &bytes_left, &data) == Success) {
+		if (nitems) {
+			logger(GUI, Verbose, "%s(): WM name: %s", __func__, data);
+		}
+
+		XFree(data);
+	}
+
+	return True;
+}
+
+
 /* Initialize the UI. This is done once per process. */
 RD_BOOL
 ui_init(void)
@@ -1970,6 +2237,8 @@ ui_init(void)
 		seamless_init();
 	}
 
+	g_has_wm = is_wm_active();
+
 	return True;
 }
 
@@ -2037,7 +2306,11 @@ get_window_attribs(XSetWindowAttributes * attribs)
 	attribs->background_pixel = BlackPixelOfScreen(g_screen);
 	attribs->border_pixel = WhitePixelOfScreen(g_screen);
 	attribs->backing_store = g_ownbackstore ? NotUseful : Always;
-	attribs->override_redirect = g_fullscreen;
+	if (g_has_wm) {
+		attribs->override_redirect = 0;
+	} else {
+		attribs->override_redirect = g_fullscreen;
+	}
 	attribs->colormap = g_xcolmap;
 
 	return vmask;
@@ -2106,6 +2379,13 @@ ui_update_window_sizehints(uint32 width, uint32 height)
 		XSetWMNormalHints(g_display, g_wnd, sizehints);
 		XFree(sizehints);
 	}
+}
+
+void request_wm_fullscreen(Display *dpy, Window win)
+{
+	Atom atom = XInternAtom(dpy, "_NET_WM_STATE_FULLSCREEN", False);
+	XChangeProperty(dpy, win, XInternAtom(dpy, "_NET_WM_STATE", False), XA_ATOM, 32, PropModeReplace, (unsigned char *)&atom, 1);
+	XFlush(dpy);
 }
 
 RD_BOOL
@@ -2202,6 +2482,9 @@ ui_create_window(uint32 width, uint32 height)
 #ifdef HAVE_XRANDR
 	XSelectInput(g_display, RootWindowOfScreen(g_screen), StructureNotifyMask);
 #endif
+	if (g_fullscreen && g_has_wm) {
+		request_wm_fullscreen(g_display, g_wnd);
+	}
 	XMapWindow(g_display, g_wnd);
 
 	/* wait for VisibilityNotify */
@@ -2517,6 +2800,123 @@ handle_button_event(XEvent xevent, RD_BOOL down)
 	}
 }
 
+int is_ungrab_required(struct grab_combo_ctx *ctx, XEvent *ev)
+{
+	int i;
+	KeySym ks;
+
+	switch (ev->type) {
+		case KeyPress:
+			ks = XLookupKeysym((XKeyEvent *)ev, 0);
+
+			logger(Keyboard, Debug, "KeyPress before: mod_allowed = 0x%lx mod_supplied = 0x%lx mod_in_progress = 0x%lx hit_ungrab_combo = %ld\n", ctx->mod_allowed, ctx->mod_supplied, ctx->mod_in_progress, ctx->hit_ungrab_combo);
+
+			if (ctx->hit_ungrab_combo) {
+				ctx->mod_in_progress = 0;
+				ctx->mod_allowed = ctx->mod_supplied;
+				ctx->hit_ungrab_combo = 0;
+			}
+
+			if ((ks == XK_Alt_L) || (ks == XK_Alt_R) || (ks == XK_Shift_L) || (ks == XK_Shift_R) || (ks == XK_Control_L) || (ks == XK_Control_R) || (ks == XK_Super_L) || (ks == XK_Super_R)) {
+				for (i = 0; i < NUM_MODS; i++) {
+
+					if ((ks == mods[i].left_ks) || (ks == mods[i].right_ks)) {
+						/* Check for *_ANY first */
+						if (ctx->mod_allowed & mods[i].any_mod) {
+							ctx->mod_allowed ^= mods[i].any_mod;
+							ctx->mod_in_progress |= mods[i].any_mod;
+						}  else {
+							if (ks == mods[i].left_ks) {
+								if (ctx->mod_allowed & mods[i].left_mod) {
+									ctx->mod_allowed ^= mods[i].left_mod;
+									ctx->mod_in_progress |= mods[i].left_mod;
+								} else {
+									ctx->mod_in_progress = 0;
+									ctx->mod_allowed = ctx->mod_supplied;
+								}
+							} else if (ks == mods[i].right_ks) {
+								if (ctx->mod_allowed & mods[i].right_mod) {
+									ctx->mod_allowed ^= mods[i].right_mod;
+									ctx->mod_in_progress |= mods[i].right_mod;
+								} else {
+									ctx->mod_in_progress = 0;
+									ctx->mod_allowed = ctx->mod_supplied;
+								}
+							}
+						}
+					}
+				}
+
+			} else {
+				ctx->mod_in_progress = 0;
+				ctx->mod_allowed = ctx->mod_supplied;
+			}
+
+			if (ctx->mod_in_progress == ctx->mod_supplied) {
+				ctx->hit_ungrab_combo = 1;
+				logger(Keyboard, Debug, "%s: Seems that we have finally hit UNGRAB COMBO\n", __func__);
+			}
+
+			//if (i == 1 && text[0] == 'q') printf("Got 'q' press\n");
+
+			logger(Keyboard, Debug, "KeyPress after: mod_allowed = 0x%lx mod_supplied = 0x%lx mod_in_progress = 0x%lx hit_ungrab_combo = %ld\n", ctx->mod_allowed, ctx->mod_supplied, ctx->mod_in_progress, ctx->hit_ungrab_combo);
+
+			break;
+		case KeyRelease:
+			ks = XLookupKeysym((XKeyEvent *)ev, 0);
+
+			logger(Keyboard, Debug, "KeyRelease before: mod_allowed = 0x%lx mod_supplied = 0x%lx mod_in_progress = 0x%lx hit_ungrab_combo = %ld\n", ctx->mod_allowed, ctx->mod_supplied, ctx->mod_in_progress, ctx->hit_ungrab_combo);
+
+			if ((ks == XK_Alt_L) || (ks == XK_Alt_R) || (ks == XK_Shift_L) || (ks == XK_Shift_R) || (ks == XK_Control_L) || (ks == XK_Control_R) || (ks == XK_Super_L) || (ks == XK_Super_R)) {
+
+				if (ctx->mod_in_progress) {
+
+					for (i = 0; i < NUM_MODS; i++) {
+
+						if ((ks == mods[i].left_ks) || (ks == mods[i].right_ks)) {
+							/* Check for *_ANY first */
+							if (ctx->mod_in_progress & mods[i].any_mod) {
+								ctx->mod_allowed |= mods[i].any_mod;
+								ctx->mod_in_progress ^= mods[i].any_mod;
+							}  else {
+								if (ks == mods[i].left_ks) {
+									if (ctx->mod_in_progress & mods[i].left_mod) {
+										ctx->mod_allowed |= mods[i].left_mod;
+										ctx->mod_in_progress ^= mods[i].left_mod;
+									} else {
+										ctx->mod_in_progress = 0;
+										ctx->mod_allowed = ctx->mod_supplied;
+									}
+								} else if (ks == mods[i].right_ks) {
+									if (ctx->mod_in_progress & mods[i].right_mod) {
+										ctx->mod_allowed |= mods[i].right_mod;
+										ctx->mod_in_progress ^= mods[i].right_mod;
+									} else {
+										ctx->mod_in_progress = 0;
+										ctx->mod_allowed = ctx->mod_supplied;
+									}
+								}
+							}
+						}
+					}
+
+					if (ctx->hit_ungrab_combo && !ctx->mod_in_progress) {
+						return 1;
+					}
+				}
+			} else {
+				;
+			}
+
+			logger(Keyboard, Debug, "KeyRelease after: mod_allowed = 0x%lx mod_supplied = 0x%lx mod_in_progress = 0x%lx hit_ungrab_combo = %ld\n", ctx->mod_allowed, ctx->mod_supplied, ctx->mod_in_progress, ctx->hit_ungrab_combo);
+			break;
+		default:
+			break;
+	}
+
+	return 0;
+}
+
 /* Process events in Xlib queue
    Returns 0 after user quit, 1 otherwise */
 static int
@@ -2590,6 +2990,10 @@ xwin_process_events(void)
 
 			case KeyPress:
 				g_last_gesturetime = xevent.xkey.time;
+
+				/* The only chance we could detect the "grab_combo" is KeyRelease, but KeyPress is vital to detect this condition */
+				(void)is_ungrab_required(&g_grab_ctx, &xevent);
+
 				if (g_IC != NULL)
 					/* Multi_key compatible version */
 				{
@@ -2632,6 +3036,10 @@ xwin_process_events(void)
 
 				logger(Keyboard, Debug, "KeyRelease for keysym (0x%lx, %s)", keysym,
 				       get_ksname(keysym));
+
+				if (is_ungrab_required(&g_grab_ctx, &xevent) == 1) {
+					XUngrabKeyboard(g_display, CurrentTime);
+				}
 
 				keysym = reset_keypress_keysym(xevent.xkey.keycode, keysym);
 				ev_time = time(NULL);
