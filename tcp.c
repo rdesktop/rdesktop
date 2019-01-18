@@ -3,7 +3,7 @@
    Protocol services - TCP layer
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2005-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
-   Copyright 2012-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2012-2019 Henrik Andersson <hean01@cendio.se> for Cendio AB
    Copyright 2017 Alexander Zakharov <uglym8@gmail.com>
 
    This program is free software: you can redistribute it and/or modify
@@ -35,6 +35,7 @@
 
 #include <gnutls/gnutls.h>
 #include <gnutls/x509.h>
+#include <nettle/base64.h>
 
 #include "rdesktop.h"
 #include "ssl.h"
@@ -116,10 +117,10 @@ cert_tdb_store(const char* db_name, const char* host, const char* service,
 {
 	UNUSED(service);
 	FILE *out;
-	gnutls_datum_t b64;
 	char filename[4096];
+	char b64[BASE64_ENCODE_RAW_LENGTH(4096)];
 
-	CHECK(gnutls_base64_encode2(pubkey, &b64));
+	base64_encode_raw(b64, pubkey->size, pubkey->data);
 
 	/* store pubkey */
 	cert_store_cache_filename(db_name, host, filename, sizeof(filename));
@@ -127,10 +128,8 @@ cert_tdb_store(const char* db_name, const char* host, const char* service,
 
 	out = fopen(filename, "w+");
 	fprintf(out, "%ld\n", expiration);
-	fprintf(out, "%s\n", (char *)b64.data);
+	fprintf(out, "%s\n", b64);
 	fclose(out);
-
-	gnutls_free(b64.data);
 
 	return GNUTLS_E_SUCCESS;
 }
@@ -142,13 +141,16 @@ cert_tdb_verify(const char* db_name, const char* host, const char* service,
 	UNUSED(service);
 
 	FILE *in;
-	gnutls_datum_t tmp, store_pubkey;
+	gnutls_datum_t store_pubkey;
 	char buf[4096];
+	uint8 dst[4096];
 	char filename[4096];
+	struct base64_decode_ctx ctx;
+	size_t dst_size;
 
 	cert_store_cache_filename(db_name, host, filename, sizeof(filename));
 
-	logger(Core, Debug, "%s(), verify pubkey for %s",__func__, host);
+	logger(Core, Debug, "%s(), verify public key for %s",__func__, host);
 
 	in = fopen(filename, "r");
 	if (in == NULL)
@@ -158,6 +160,7 @@ cert_tdb_verify(const char* db_name, const char* host, const char* service,
 		return GNUTLS_E_NO_CERTIFICATE_FOUND;
 	}
 
+	/* get expiration line */
 	if (fgets(buf, sizeof(buf), in) == NULL)
 	{
 		logger(Core, Error, "%s(), invalid content of public key cache '%s'", __func__, filename);
@@ -165,7 +168,7 @@ cert_tdb_verify(const char* db_name, const char* host, const char* service,
 		return GNUTLS_E_NO_CERTIFICATE_FOUND;
 	}
 
-	/* base64 decode stored key and compare */
+	/* get base64 line */
 	if (fgets(buf, sizeof(buf), in) == NULL)
 	{
 		logger(Core, Error, "%s(), invalid content of public key cache '%s'", __func__, filename);
@@ -175,24 +178,31 @@ cert_tdb_verify(const char* db_name, const char* host, const char* service,
 
 	fclose(in);
 
-	tmp.data = (unsigned char*)buf;
-	tmp.size = strlen(buf);
-	CHECK(gnutls_base64_decode2(&tmp, &store_pubkey));
+	/* base64 decode stored key and compare */
+	base64_decode_init(&ctx);
+	dst_size = sizeof(dst);
+	if (base64_decode_update(&ctx, &dst_size, dst, strlen(buf), buf) == 0)
+	{
+		logger(Core, Error, "%s(), failed to base64 decode public key from cache", __func__);
+		unlink(filename);
+		return GNUTLS_E_CERTIFICATE_KEY_MISMATCH;
+	}
+	base64_decode_final(&ctx);
+	store_pubkey.size = dst_size;
+	store_pubkey.data = dst;
 
+	/* verify public key against cached key */
 	if (pubkey->size != store_pubkey.size)
 	{
-		gnutls_free(store_pubkey.data);
 		return GNUTLS_E_CERTIFICATE_KEY_MISMATCH;
 	}
 
 	if (memcmp(pubkey->data, store_pubkey.data, pubkey->size) != 0)
 	{
-		gnutls_free(store_pubkey.data);
 		return GNUTLS_E_CERTIFICATE_KEY_MISMATCH;
 	}
 
 	/* Found mathcing public key in cache */
-	gnutls_free(store_pubkey.data);
 	return GNUTLS_E_SUCCESS;
 }
 
