@@ -297,8 +297,6 @@ int check_cert(gnutls_session_t session)
 	unsigned int cert_list_size = 0;
 
 	size_t size;
-	char dn[256];
-	char *name;
 
 	home = getenv("HOME");
 
@@ -330,38 +328,7 @@ int check_cert(gnutls_session_t session)
 		cert_list = gnutls_certificate_get_peers(session, &cert_list_size);
 
 		if (cert_list_size > 0) {
-			gnutls_x509_crt_init(&cert);
-			gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER);
-
-			size = sizeof(dn);
-			gnutls_x509_crt_get_dn(cert, dn, &size);
-
-			if (size > 0) {
-				name = strstr(dn, "CN=");
-
-				if (!name) {
-					logger(Core, Error, "%s: Failed to find CN in Distinguished Name part of certificate", __func__);
-					goto bail;
-				}
-
-				name += 3;
-
-				if (!strlen(name)) {
-					logger(Core, Error, "%s: DN length is 0", __func__);
-					goto bail;
-				}
-
-			} else {
-				logger(Core, Error, "%s: Failed to get DN from certificate", __func__);
-				goto bail;
-			}
-
-			/*
-			 * uglym8: we can't rely on hostname being consistent here as we can connect
-			 * to tunneled host (e.g. via ssh) so we're going to use DN as a hostname
-			 *
-			 */
-			rv = gnutls_verify_stored_pubkey(certcache_fn, NULL, name, "rdesktop", type, &cert_list[0], 0);
+			rv = gnutls_verify_stored_pubkey(certcache_fn, NULL, g_last_server_name, "rdesktop", type, &cert_list[0], 0);
 
 			if (rv == GNUTLS_E_NO_CERTIFICATE_FOUND || rv == GNUTLS_E_CERTIFICATE_KEY_MISMATCH) {
 				const char *response;
@@ -372,17 +339,19 @@ int check_cert(gnutls_session_t session)
 					snprintf(message, sizeof(message),
 						"Found a certificate for '%s' stored in cache, but it does not match the "
 						"certificate received from server, \n"
-						, name);
+						, g_last_server_name);
 				}
 				else
 				{
 					snprintf(message, sizeof(message),
 						"'%s' uses an invalid security certificate. you have an option to add an "
 						"exception for this certificate, \n"
-						, name);
+						, g_last_server_name);
 
 				}
 
+				gnutls_x509_crt_init(&cert);
+				gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER);
 				rv = gnutls_x509_crt_print(cert, GNUTLS_CRT_PRINT_ONELINE, &cinfo);
 				if (rv == 0)
 				{
@@ -416,12 +385,10 @@ int check_cert(gnutls_session_t session)
 				if (strcmp(response, "no") == 0 || response == NULL)
 					goto bail;
 
-				//logger(Core, Debug, "%s: %s: Replacing certificate for the host '%s'.", __func__, name);
-				/* TODO: PoC: Replace instead of just adding the new certificate */
-				logger(Core, Debug, "%s: %s: Adding a new certificate for the host '%s'.", __func__, name);
+				logger(Core, Debug, "%s: %s: Adding a new certificate for the host '%s'.", __func__, g_last_server_name);
 
 				exp_time = gnutls_x509_crt_get_expiration_time(cert);
-				rv = gnutls_store_pubkey(certcache_fn, NULL, name, "rdesktop", type, &cert_list[0], exp_time, 0);
+				rv = gnutls_store_pubkey(certcache_fn, NULL, g_last_server_name, "rdesktop", type, &cert_list[0], exp_time, 0);
 
 				if (rv != GNUTLS_E_SUCCESS) {
 					logger(Core, Error, "%s: Failed to store certificate. error = 0x%x (%s)", __func__, rv, gnutls_strerror(rv));
@@ -430,7 +397,7 @@ int check_cert(gnutls_session_t session)
 
 			} else if (rv < 0) {
 				fprintf(stderr, "%s: gnutls_verify_stored_pubkey: %s\n", __func__, gnutls_strerror(rv));
-				logger(Core, Error, "%s: Verification for host '%s' certificate failed. Error = 0x%x (%s)", __func__, name, rv, gnutls_strerror(rv));
+				logger(Core, Error, "%s: Verification for host '%s' certificate failed. Error = 0x%x (%s)", __func__, g_last_server_name, rv, gnutls_strerror(rv));
 				goto bail;
 			} else {
 				logger(Core, Notice, "Certificate received from server is NOT trusted by system, "
