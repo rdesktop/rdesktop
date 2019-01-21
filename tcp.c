@@ -509,24 +509,25 @@ int check_cert(gnutls_session_t session)
 			 */
 			rv = gnutls_verify_stored_pubkey(certcache_dir, g_tdb, name, "rdesktop", type, &cert_list[0], 0);
 
-			if (rv == GNUTLS_E_NO_CERTIFICATE_FOUND) {
-				logger(Core, Debug, "%s: %s: No previous stored certificate for the host '%s'. Storing it into the cache", __func__, name);
-
-				exp_time = gnutls_x509_crt_get_expiration_time(cert);
-				rv = gnutls_store_pubkey(certcache_dir, g_tdb, name, "rdesktop", type, &cert_list[0], exp_time, 0);
-
-				if (rv != GNUTLS_E_SUCCESS) {
-					logger(Core, Error, "%s: Failed to store certificate. error = 0x%x (%s)", __func__, rv, gnutls_strerror(rv));
-					goto bail;
-				}
-
-			} else if (rv == GNUTLS_E_CERTIFICATE_KEY_MISMATCH) {
+			if (rv == GNUTLS_E_NO_CERTIFICATE_FOUND || rv == GNUTLS_E_CERTIFICATE_KEY_MISMATCH) {
 				const char *response;
 				char message[2048];
 
-				snprintf(message, sizeof(message),
-					"Host '%s' is known but has another key associated with it, \n"
-					, name);
+				if (rv == GNUTLS_E_CERTIFICATE_KEY_MISMATCH)
+				{
+					snprintf(message, sizeof(message),
+						"Found a certificate for '%s' stored in cache, but it does not match the "
+						"certificate received from server, \n"
+						, name);
+				}
+				else
+				{
+					snprintf(message, sizeof(message),
+						"'%s' uses an invalid security certificate. you have an option to add an "
+						"exception for this certificate, \n"
+						, name);
+
+				}
 
 				rv = gnutls_x509_crt_print(cert, GNUTLS_CRT_PRINT_ONELINE, &cinfo);
 				if (rv == 0)
@@ -561,7 +562,6 @@ int check_cert(gnutls_session_t session)
 				if (strcmp(response, "no") == 0 || response == NULL)
 					goto bail;
 
-				//logger(Core, Debug, "%s: %s: Replacing certificate for the host '%s'.", __func__, name);
 				logger(Core, Debug, "%s: %s: Adding a new certificate for the host '%s'.", __func__, name);
 
 				exp_time = gnutls_x509_crt_get_expiration_time(cert);
@@ -577,7 +577,8 @@ int check_cert(gnutls_session_t session)
 				logger(Core, Error, "%s: Verification for host '%s' certificate failed. Error = 0x%x (%s)", __func__, name, rv, gnutls_strerror(rv));
 				goto bail;
 			} else {
-				logger(Core, Debug, "%s: %s: Host %s is known and the key is OK.", __func__, name);
+				logger(Core, Notice, "Certificate received from server is NOT trusted by system, "
+					"an exception has been added by the user to trust this certificate.");
 			}
 		}
 	}
