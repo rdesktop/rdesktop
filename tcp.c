@@ -589,6 +589,97 @@ bail:
 	return 1;
 }
 
+
+/*
+ * Callback during handshake to verify peer certificate
+ */
+static int
+cert_verify_callback(gnutls_session_t session)
+{
+	int rv;
+	int type;
+	unsigned int status;
+	gnutls_x509_crt_t cert;
+	const gnutls_datum_t *cert_list;
+	unsigned int cert_list_size;
+
+	/*
+	* verify certificate against system trust store
+	*/
+	rv = gnutls_certificate_verify_peers2(session, &status);
+	if (rv == GNUTLS_E_SUCCESS)
+	{
+		if (status == 0)
+		{
+			/* get list of certificates */
+			cert_list = NULL;
+			cert_list_size = 0;
+
+			type = gnutls_certificate_type_get(session);
+			if (type == GNUTLS_CRT_X509) {
+				cert_list = gnutls_certificate_get_peers(session, &cert_list_size);
+			}
+
+			if (cert_list_size > 0)
+			{
+				/* validate hostname */
+				gnutls_x509_crt_init(&cert);
+				gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER);
+				if (gnutls_x509_crt_check_hostname(cert, g_last_server_name) != 0)
+				{
+					logger(Core, Notice, "%s(), certificate is valid", __func__);
+					return 0;
+				}
+				else
+				{
+					logger(Core, Error, "%s(), certificate hostname mismatch", __func__);
+				}
+			}
+			else
+			{
+				logger(Core, Error, "%s(), failed to verify certificate hostname", __func__);
+			}
+		}
+
+		logger(Core, Debug, "%s(), certificate status flags: %x", __func__, status);
+
+		if (status&GNUTLS_CERT_INVALID)
+		{
+			logger(Core, Error, "%s(), certificate is invalid", __func__);
+		}
+
+		if (status&GNUTLS_CERT_SIGNER_NOT_FOUND)
+		{
+			logger(Core, Error, "%s(), certificate signed by unknown issuer", __func__);
+		}
+
+		if(status&GNUTLS_CERT_SIGNATURE_FAILURE)
+		{
+			logger(Core, Error, "%s(), certificate has an invalid signature", __func__);
+		}
+
+		if(status&GNUTLS_CERT_REVOKED)
+		{
+			logger(Core, Error, "%s(), certificate is revoked", __func__);
+		}
+
+		if(status&GNUTLS_CERT_EXPIRED)
+		{
+			logger(Core, Error, "%s(), certificate has expired", __func__);
+		}
+
+		if(status&GNUTLS_CERT_INSECURE_ALGORITHM)
+		{
+			logger(Core, Error, "%s(), certificate uses an insecure algorithm", __func__);
+		}
+	}
+
+	/*
+	 *  Use local store as fallback
+	 */
+	return check_cert(session);
+}
+
 /* Establish a SSL/TLS 1.0 connection */
 RD_BOOL
 tcp_tls_connect(void)
@@ -616,6 +707,8 @@ tcp_tls_connect(void)
 	CHECK(gnutls_priority_set_direct(g_tls_session, "NORMAL:%COMPAT", NULL));
 	CHECK(gnutls_certificate_allocate_credentials(&xcred));
 	CHECK(gnutls_credentials_set(g_tls_session, GNUTLS_CRD_CERTIFICATE, xcred));
+	CHECK(gnutls_certificate_set_x509_system_trust(xcred));
+	gnutls_certificate_set_verify_function(xcred, cert_verify_callback);
 
 #if GNUTLS_VERSION_NUMBER >= 0x030109
 	gnutls_transport_set_int(g_tls_session, g_sock);
@@ -632,7 +725,19 @@ tcp_tls_connect(void)
 		err = gnutls_handshake(g_tls_session);
 	} while (err < 0 && gnutls_error_is_fatal(err) == 0);
 
+
 	if (err < 0) {
+
+		if (err == GNUTLS_E_CERTIFICATE_ERROR)
+		{
+			logger(Core, Error, "%s(): Certificate error during TLS handshake", __func__);
+
+			/* TODO: Lookup if exit(1) is just plain wrong, its used here to breakout of
+				fallback code path for connection, eg. if TLS fails, a retry with plain
+				RDP is made.
+			*/
+			exit(1);
+		}
 
 #if GNUTLS_VERSION_NUMBER >= 0x030406
 		if (err == GNUTLS_E_CERTIFICATE_VERIFICATION_ERROR) {
@@ -653,12 +758,6 @@ tcp_tls_connect(void)
 		logger(Core, Verbose, "TLS  Session info: %s\n", desc);
 		gnutls_free(desc);
 #endif
-	}
-
-	//if (check_cert(g_tls_session) != 0) goto fail;
-	if (check_cert(g_tls_session) != 0) {
-		fprintf(stdout, "%s: Failed to check certificate. Bailing out\n", __func__);
-		exit (1);
 	}
 
 	return True;
