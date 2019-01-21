@@ -85,145 +85,6 @@ extern char g_tls_version[];
 
 static gnutls_session_t g_tls_session;
 
-/*
- * Let's roll our own routines for GnuTLS pubkey store
- *
- * Store layout:
- *
- *  ~/.local/share/rdesktop/cert/
- *       |
- *       |-- a7b2373e
- *       |-- b1b78a40
- *
- *  Where filenames are a d2j hash of host
- *
- *  Content of file is two lines, first line a timestamp of when
- *  certificate expires and second line a base64 encoded public key
- *
- */
-
-static void
-cert_store_cache_filename(const char *db_name, const char *host, char *result, size_t size)
-{
-	uint32 hash;
-	hash = utils_djb2_hash(host);
-	snprintf(result, size, "%s/%x", db_name, hash);
-}
-
-static int
-cert_tdb_store(const char* db_name, const char* host, const char* service,
-	time_t expiration, const gnutls_datum_t* pubkey)
-{
-	UNUSED(service);
-	FILE *out;
-	gnutls_datum_t b64;
-	char filename[4096];
-
-	CHECK(gnutls_base64_encode2(pubkey, &b64));
-
-	/* store pubkey */
-	cert_store_cache_filename(db_name, host, filename, sizeof(filename));
-	logger(Core, Debug, "%s(), store pubkey in '%s'",__func__, filename);
-
-	out = fopen(filename, "w+");
-	fprintf(out, "%ld\n", expiration);
-	fprintf(out, "%s\n", (char *)b64.data);
-	fclose(out);
-
-	gnutls_free(b64.data);
-
-	return GNUTLS_E_SUCCESS;
-}
-
-static int
-cert_tdb_verify(const char* db_name, const char* host, const char* service,
-	const gnutls_datum_t* pubkey)
-{
-	UNUSED(service);
-
-	FILE *in;
-	gnutls_datum_t tmp, store_pubkey;
-	char buf[4096];
-	char filename[4096];
-
-	cert_store_cache_filename(db_name, host, filename, sizeof(filename));
-
-	logger(Core, Debug, "%s(), verify pubkey for %s",__func__, host);
-
-	in = fopen(filename, "r");
-	if (in == NULL)
-	{
-		logger(Core, Warning, "%s(), no cached public key found for host '%s'", __func__, host);
-		unlink(filename);
-		return GNUTLS_E_NO_CERTIFICATE_FOUND;
-	}
-
-	if (fgets(buf, sizeof(buf), in) == NULL)
-	{
-		logger(Core, Error, "%s(), invalid content of public key cache '%s'", __func__, filename);
-		unlink(filename);
-		return GNUTLS_E_NO_CERTIFICATE_FOUND;
-	}
-
-	/* base64 decode stored key and compare */
-	if (fgets(buf, sizeof(buf), in) == NULL)
-	{
-		logger(Core, Error, "%s(), invalid content of public key cache '%s'", __func__, filename);
-		unlink(filename);
-		return GNUTLS_E_NO_CERTIFICATE_FOUND;
-	}
-
-	fclose(in);
-
-	tmp.data = (unsigned char*)buf;
-	tmp.size = strlen(buf);
-	CHECK(gnutls_base64_decode2(&tmp, &store_pubkey));
-
-	if (pubkey->size != store_pubkey.size)
-	{
-		gnutls_free(store_pubkey.data);
-		return GNUTLS_E_CERTIFICATE_KEY_MISMATCH;
-	}
-
-	if (memcmp(pubkey->data, store_pubkey.data, pubkey->size) != 0)
-	{
-		gnutls_free(store_pubkey.data);
-		return GNUTLS_E_CERTIFICATE_KEY_MISMATCH;
-	}
-
-	/* Found mathcing public key in cache */
-	gnutls_free(store_pubkey.data);
-	return GNUTLS_E_SUCCESS;
-}
-
-static int
-cert_tdb_store_commitment(const char* db_name, const char* host, const char* service,
-	time_t expiration, gnutls_digest_algorithm_t algorithm, const gnutls_datum_t* hash)
-{
-	UNUSED(db_name);
-	UNUSED(expiration);
-	UNUSED(service);
-	UNUSED(algorithm);
-	UNUSED(hash);
-
-	/* We don't use this, left as NOP */
-	logger(Core, Warning, "Storing commitement for %s", host);
-
-	return GNUTLS_E_SUCCESS;
-}
-
-static gnutls_tdb_t g_tdb;
-
-static int
-cert_store_init(gnutls_tdb_t *tdb)
-{
-	gnutls_tdb_init(tdb);
-	gnutls_tdb_set_store_func(*tdb, cert_tdb_store);
-	gnutls_tdb_set_verify_func(*tdb, cert_tdb_verify);
-	gnutls_tdb_set_store_commitment_func(*tdb, cert_tdb_store_commitment);
-	return 0;
-}
-
 /* wait till socket is ready to write or timeout */
 static RD_BOOL
 tcp_can_send(int sck, int millis)
@@ -424,6 +285,7 @@ int check_cert(gnutls_session_t session)
 	int rv;
 	char *home;
 	char certcache_dir[PATH_MAX];
+	char certcache_fn[PATH_MAX];
 
 	struct stat sb;
 
@@ -458,6 +320,8 @@ int check_cert(gnutls_session_t session)
 			goto bail;
 		}
 	}
+
+	snprintf(certcache_fn, sizeof(certcache_fn) - 1, "%s/%s", certcache_dir, "known_certs");
 
 	type = gnutls_certificate_type_get(session);
 
@@ -497,7 +361,7 @@ int check_cert(gnutls_session_t session)
 			 * to tunneled host (e.g. via ssh) so we're going to use DN as a hostname
 			 *
 			 */
-			rv = gnutls_verify_stored_pubkey(certcache_dir, g_tdb, name, "rdesktop", type, &cert_list[0], 0);
+			rv = gnutls_verify_stored_pubkey(certcache_fn, NULL, name, "rdesktop", type, &cert_list[0], 0);
 
 			if (rv == GNUTLS_E_NO_CERTIFICATE_FOUND || rv == GNUTLS_E_CERTIFICATE_KEY_MISMATCH) {
 				const char *response;
@@ -552,10 +416,12 @@ int check_cert(gnutls_session_t session)
 				if (strcmp(response, "no") == 0 || response == NULL)
 					goto bail;
 
+				//logger(Core, Debug, "%s: %s: Replacing certificate for the host '%s'.", __func__, name);
+				/* TODO: PoC: Replace instead of just adding the new certificate */
 				logger(Core, Debug, "%s: %s: Adding a new certificate for the host '%s'.", __func__, name);
 
 				exp_time = gnutls_x509_crt_get_expiration_time(cert);
-				rv = gnutls_store_pubkey(certcache_dir, g_tdb, name, "rdesktop", type, &cert_list[0], exp_time, 0);
+				rv = gnutls_store_pubkey(certcache_fn, NULL, name, "rdesktop", type, &cert_list[0], exp_time, 0);
 
 				if (rv != GNUTLS_E_SUCCESS) {
 					logger(Core, Error, "%s: Failed to store certificate. error = 0x%x (%s)", __func__, rv, gnutls_strerror(rv));
@@ -686,7 +552,6 @@ tcp_tls_connect(void)
 	{
 		gnutls_global_init();
 		CHECK(gnutls_init(&g_tls_session, GNUTLS_CLIENT));
-		CHECK(cert_store_init(&g_tdb));
 		g_ssl_initialized = True;
 	}
 
