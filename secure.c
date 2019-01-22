@@ -480,7 +480,7 @@ sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 	out_uint16_le(s, 12);	/* length */
 
 	cluster_flags |= SEC_CC_REDIRECTION_SUPPORTED;
-	cluster_flags |= (SEC_CC_REDIRECT_VERSION_3 << 2);
+	cluster_flags |= (SEC_CC_REDIRECT_VERSION_4 << 2);
 
 	if (g_console_session || g_redirect_session_id != 0)
 		cluster_flags |= SEC_CC_REDIRECT_SESSIONID_FIELD_VALID;
