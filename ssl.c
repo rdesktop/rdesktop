@@ -212,14 +212,19 @@ rdssl_cert_to_rkey(RDSSL_CERT * cert, uint32 * key_len)
 
 	} else if (algo == GNUTLS_E_UNIMPLEMENTED_FEATURE) {
 
-		/* Maybe we should get rid of gnutls_x509_crt_get_pk_oid() and
-		   check public key algo in  libtasn_read_cert_pk_params() */
-
-#if GNUTLS_VERSION_NUMBER >= 0x030500
-		// manpage says that this function is useful when gnutls_x509_crt_get_pk_algorithm() returns GNUTLS_PK_UNKNOWN
-		if ((ret = gnutls_x509_crt_get_pk_oid(*cert, oid, &oid_size)) != GNUTLS_E_SUCCESS) {
-			logger(Protocol, Error, "%s:%s:%d: Failed to get OID of public key algorithm. GnuTLS error = 0x%02x (%s)\n",
+		len = sizeof(data);
+		if ((ret = gnutls_x509_crt_export(*cert, GNUTLS_X509_FMT_DER, data, &len)) != GNUTLS_E_SUCCESS) {
+			logger(Protocol, Error, "%s:%s:%d: Failed to encode X.509 certificate to DER. GnuTLS error = 0x%02x (%s)\n",
 					__FILE__, __func__, __LINE__, ret, gnutls_strerror(ret));
+			return NULL;
+		}
+
+		/* Validate public key algorithm as OID_SHA_WITH_RSA_SIGNATURE
+		   or OID_MD5_WITH_RSA_SIGNATURE
+		*/
+		if ((ret = libtasn_read_cert_pk_oid(data, len, oid, &oid_size)) != 0) {
+			logger(Protocol, Error, "%s:%s:%d: Failed to get OID of public key algorithm.\n",
+					__FILE__, __func__, __LINE__);
 			return NULL;
 		}
 
@@ -231,17 +236,9 @@ rdssl_cert_to_rkey(RDSSL_CERT * cert, uint32 * key_len)
 					__FILE__, __func__, __LINE__, algo, oid);
 			return NULL;
 		}
-#endif
 
-		len = sizeof(data);
-
-		if ((ret = gnutls_x509_crt_export(*cert, GNUTLS_X509_FMT_DER, data, &len)) != GNUTLS_E_SUCCESS) {
-			logger(Protocol, Error, "%s:%s:%d: Failed to encode X.509 certificate to DER. GnuTLS error = 0x%02x (%s)\n",
-					__FILE__, __func__, __LINE__, ret, gnutls_strerror(ret));
-			return NULL;
-		}
-
-		if ((ret = libtasn_read_cert_pk_parameters(data, len, &m, &e, check_pk_algo)) != 0) {
+		/* Get public key parameters */
+		if ((ret = libtasn_read_cert_pk_parameters(data, len, &m, &e)) != 0) {
 			logger(Protocol, Error, "%s:%s:%d: Failed to read RSA public key parameters\n",
 					__FILE__, __func__, __LINE__);
 

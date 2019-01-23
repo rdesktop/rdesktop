@@ -34,7 +34,9 @@ extern "C" {
 
 int init_asn1_lib(void);
 int write_pkcs1_der_pubkey(const gnutls_datum_t *m, const gnutls_datum_t *e, uint8_t *out, int *out_len);
-int libtasn_read_cert_pk_parameters(uint8_t *data, size_t len, gnutls_datum_t *m, gnutls_datum_t *e, int check_pk_algo);
+
+int libtasn_read_cert_pk_oid(uint8_t *data, size_t len, char *oid, size_t *oid_size);
+int libtasn_read_cert_pk_parameters(uint8_t *data, size_t len, gnutls_datum_t *m, gnutls_datum_t *e);
 
 #ifdef __cplusplus
 }

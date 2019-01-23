@@ -207,7 +207,42 @@ int write_pkcs1_der_pubkey(const gnutls_datum_t *m, const gnutls_datum_t *e, uin
 	return 0;
 }
 
-int libtasn_read_cert_pk_parameters(uint8_t *data, size_t len, gnutls_datum_t *m, gnutls_datum_t *e, int check_pk_algo)
+int libtasn_read_cert_pk_oid(uint8_t *data, size_t len, char *oid, size_t *oid_size)
+{
+	int asn1_rv;
+	asn1_node asn_cert;
+
+	/* Parse DER encoded x.509 certificate */
+	if (!asn_defs) {
+		if (init_asn1_lib() != 0) {
+			return 1;
+		}
+	}
+
+	if (ASN1_SUCCESS != (asn1_rv = asn1_create_element(*asn_defs, "PKIX1Implicit88.Certificate", &asn_cert))) {
+		logger(Core, Error, "%s:%s:%d Failed to create ASN.1 parser element. Error = 0x%x (%s)\n",
+				__FILE__, __func__, __LINE__, asn1_rv, asn1_strerror(asn1_rv));
+		return 1;
+	}
+
+	if (ASN1_SUCCESS != (asn1_rv = asn1_der_decoding(&asn_cert, data, len, errstr))) {
+		logger(Core, Error, "%s:%s:%d Failed to decode certificate object. Error = 0x%x (%s)\n",
+				__FILE__, __func__, __LINE__, asn1_rv, asn1_strerror(asn1_rv));
+		return 1;
+	}
+
+	if (ASN1_SUCCESS != (asn1_rv = asn1_read_value(asn_cert, "tbsCertificate.subjectPublicKeyInfo.algorithm.algorithm",
+												   oid, (int *)oid_size)))
+	{
+		logger(Core, Error, "%s:%s:%d Failed to get cert's public key algorithm. Error = 0x%x (%s)\n",
+				__FILE__, __func__, __LINE__, asn1_rv, asn1_strerror(asn1_rv));
+		return 1;
+	}
+
+	return 0;
+}
+
+int libtasn_read_cert_pk_parameters(uint8_t *data, size_t len, gnutls_datum_t *m, gnutls_datum_t *e)
 {
 	int asn1_rv;
 	asn1_node asn_cert;
@@ -232,26 +267,6 @@ int libtasn_read_cert_pk_parameters(uint8_t *data, size_t len, gnutls_datum_t *m
 		logger(Core, Error, "%s:%s:%d Failed to decode certificate object. Error = 0x%x (%s)\n",
 				__FILE__, __func__, __LINE__, asn1_rv, asn1_strerror(asn1_rv));
 		return 1;
-	}
-
-	if (check_pk_algo) {
-		/* Get and check cert's public key algorithm  */
-		buflen = sizeof(buf) - 1;
-
-		if (ASN1_SUCCESS != (asn1_rv = asn1_read_value(asn_cert, "tbsCertificate.subjectPublicKeyInfo.algorithm.algorithm", buf, (int *)&buflen))) {
-			logger(Core, Error, "%s:%s:%d Failed to get cert's public key algorithm. Error = 0x%x (%s)\n",
-					__FILE__, __func__, __LINE__, asn1_rv, asn1_strerror(asn1_rv));
-			return 1;
-		}
-
-		if ((strncmp((char *)buf, OID_SHA_WITH_RSA_SIGNATURE, strlen(OID_SHA_WITH_RSA_SIGNATURE)) != 0)
-				&& (strncmp((char *)buf, OID_MD5_WITH_RSA_SIGNATURE, strlen(OID_MD5_WITH_RSA_SIGNATURE)) != 0)) {
-
-			logger(Core, Error, "%s:%s:%d Wrong public key algorithm: %s\n",
-					__FILE__, __func__, __LINE__, buf);
-
-			return 1;
-		}
 	}
 
 	buflen = sizeof(buf) - 1;
