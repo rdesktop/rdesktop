@@ -29,6 +29,8 @@
 extern RDP_VERSION g_rdp_version;
 extern RD_BOOL g_encryption;
 
+uint32 vc_chunk_size = CHANNEL_CHUNK_LENGTH;
+
 VCHANNEL g_channels[MAX_CHANNELS];
 unsigned int g_num_channels;
 
@@ -95,11 +97,16 @@ channel_send(STREAM s, VCHANNEL * channel)
 	logger(Protocol, Debug, "channel_send(), channel = %d, length = %d", channel->mcs_id,
 	       length);
 
-	thislength = MIN(length, CHANNEL_CHUNK_LENGTH);
+	thislength = MIN(length, vc_chunk_size);
 /* Note: In the original clipboard implementation, this number was
    1592, not 1600. However, I don't remember the reason and 1600 seems
    to work so.. This applies only to *this* length, not the length of
    continuation or ending packets. */
+
+	/* Actually, CHANNEL_CHUNK_LENGTH (default value is 1600 bytes) is described
+	   in MS-RDPBCGR (s. 2.2.6, s.3.1.5.2.1) and can be set by server only
+	   in the optional field VCChunkSize of VC Caps) */
+
 	remaining = length - thislength;
 	flags = (remaining == 0) ? CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST : CHANNEL_FLAG_FIRST;
 	if (channel->flags & CHANNEL_OPTION_SHOW_PROTOCOL)
@@ -114,7 +121,7 @@ channel_send(STREAM s, VCHANNEL * channel)
 	/* subsequent segments copied (otherwise would have to generate headers backwards) */
 	while (remaining > 0)
 	{
-		thislength = MIN(remaining, CHANNEL_CHUNK_LENGTH);
+		thislength = MIN(remaining, vc_chunk_size);
 		remaining -= thislength;
 		flags = (remaining == 0) ? CHANNEL_FLAG_LAST : 0;
 		if (channel->flags & CHANNEL_OPTION_SHOW_PROTOCOL)

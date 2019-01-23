@@ -1518,7 +1518,7 @@ copyIORequest_ServerToMyPCSC(SERVER_LPSCARD_IO_REQUEST src, MYPCSC_LPSCARD_IO_RE
 
 
 static DWORD
-TS_SCardTransmit(STREAM in, STREAM out)
+TS_SCardTransmit(STREAM in, STREAM out, uint32 srv_buf_len)
 {
 	MYPCSC_DWORD rv;
 	SERVER_DWORD map[7], linkedLen;
@@ -1531,6 +1531,7 @@ TS_SCardTransmit(STREAM in, STREAM out)
 	SERVER_DWORD cbSendLength, cbRecvLength;
 	MYPCSC_DWORD myCbRecvLength;
 	PMEM_HANDLE lcHandle = NULL;
+
 
 	in->p += 0x14;
 	in_uint32_le(in, map[0]);
@@ -1548,6 +1549,9 @@ TS_SCardTransmit(STREAM in, STREAM out)
 	in_uint32_le(in, cbRecvLength);
 	if (map[0] & INPUT_LINKED)
 		inSkipLinked(in);
+
+	if (srv_buf_len <= cbRecvLength)
+		cbRecvLength = srv_buf_len;
 
 	in->p += 0x04;
 	in_uint32_le(in, hCard);
@@ -1647,14 +1651,6 @@ TS_SCardTransmit(STREAM in, STREAM out)
 			   myPioRecvPci, recvBuf, &myCbRecvLength);
 	cbRecvLength = myCbRecvLength;
 
-	/* FIXME: handle responses with length > 448 bytes */
-	if (cbRecvLength > 448)
-	{
-		logger(SmartCard, Warning,
-		       "TS_SCardTransmit(), card response limit reached, %d truncated to 448 bytes",
-		       cbRecvLength);
-		cbRecvLength = 448;
-	}
 
 	if (pioRecvPci)
 	{
@@ -2262,7 +2258,7 @@ TS_SCardAccessStartedEvent(STREAM in, STREAM out)
 
 
 static RD_NTSTATUS
-scard_device_control(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
+scard_device_control(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out, uint32 srv_buf_len)
 {
 	UNUSED(handle);
 	SERVER_DWORD Result = 0x00000000;
@@ -2271,9 +2267,13 @@ scard_device_control(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 
 	/* Processing request */
 
+	/* See MS-RSPESC 1.3 Overview for protocol flow */
+
+	/* Set CommonTypeHeader (MS-RPCE 2.2.6.1) */
 	out_uint32_le(out, 0x00081001);	/* Header lines */
 	out_uint32_le(out, 0xCCCCCCCC);
 	psize = out->p;
+	/* Set PrivateTypeHeader (MS-RPCE 2.2.6.2) */
 	out_uint32_le(out, 0x00000000);	/* Size of data portion */
 	out_uint32_le(out, 0x00000000);	/* Zero bytes (may be useful) */
 	pStatusCode = out->p;
@@ -2364,7 +2364,7 @@ scard_device_control(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 			/* ScardTransmit */
 		case SC_TRANSMIT:
 			{
-				Result = (SERVER_DWORD) TS_SCardTransmit(in, out);
+				Result = (SERVER_DWORD) TS_SCardTransmit(in, out, srv_buf_len);
 				break;
 			}
 			/* SCardControl */
@@ -2423,11 +2423,14 @@ scard_device_control(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 	/* finish */
 	out->p = pend;
 
+	/* TODO: Check MS-RPCE 2.2.6.2 for alignment requirements (IIRC length must be integral multiple of 8) */
 	addToEnd = (pend - pStatusCode) % 16;
 	if (addToEnd < 16 && addToEnd > 0)
 	{
 		out_uint8s(out, addToEnd);
 	}
+
+	if (Result == SCARD_E_INSUFFICIENT_BUFFER) return RD_STATUS_BUFFER_TOO_SMALL;
 
 	return RD_STATUS_SUCCESS;
 }
@@ -2502,6 +2505,7 @@ SC_addToQueue(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 		data->epoch = curEpoch;
 		data->handle = handle;
 		data->request = request;
+		data->srv_buf_len = curBytesOut - 0x14;
 		data->in = duplicateStream(&(data->memHandle), in, 0, SC_TRUE);
 		if (data->in == NULL)
 		{
@@ -2568,16 +2572,16 @@ SC_getNextInQueue()
 static void
 SC_deviceControl(PSCThreadData data)
 {
+	RD_NTSTATUS status;
 	size_t buffer_len = 0;
-	scard_device_control(data->handle, data->request, data->in, data->out);
+	status = scard_device_control(data->handle, data->request, data->in, data->out, data->srv_buf_len);
 	buffer_len = (size_t) data->out->p - (size_t) data->out->data;
 
 	/* if iorequest belongs to another epoch, don't send response
 	   back to server due to it's considered as abandoned.
 	 */
 	if (data->epoch == curEpoch)
-		rdpdr_send_completion(data->device, data->id, 0, buffer_len, data->out->data,
-				      buffer_len);
+		rdpdr_send_completion(data->device, data->id, status, buffer_len, data->out->data, buffer_len);
 
 	SC_destroyThreadData(data);
 }
