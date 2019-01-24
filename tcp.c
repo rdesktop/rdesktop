@@ -352,20 +352,10 @@ int check_cert(gnutls_session_t session)
 
 				gnutls_x509_crt_init(&cert);
 				gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER);
-				rv = gnutls_x509_crt_print(cert, GNUTLS_CRT_PRINT_ONELINE, &cinfo);
+				rv = gnutls_x509_crt_print(cert, GNUTLS_CRT_PRINT_FULL, &cinfo);
 				if (rv == 0)
 				{
-					char *p;
 					strcat(message, "review the following certificate info:\n\n");
-
-					/* replace ',' with '\n' for simpler format */
-					p = (char *)cinfo.data;
-					while(*p != '\0')
-					{
-						if (*p == ',') *p = '\n';
-						p++;
-					}
-					strcat(message, " ");
 					strncat(message, (char *)cinfo.data, cinfo.size);
 					gnutls_free(cinfo.data);
 				}
