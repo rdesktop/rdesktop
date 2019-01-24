@@ -553,15 +553,9 @@ tcp_tls_connect(void)
 			exit(1);
 		}
 
-#if GNUTLS_VERSION_NUMBER >= 0x030406
-		if (err == GNUTLS_E_CERTIFICATE_VERIFICATION_ERROR) {
-			/* check certificate verification status */
-			type = gnutls_certificate_type_get(g_tls_session);
-			status = gnutls_session_get_verify_cert_status(g_tls_session);
-			CHECK(gnutls_certificate_verification_status_print(status, type, &out, 0));
-			gnutls_free(out.data);
-		}
-#endif
+		/* Handshake failed with unknown error, lets log */
+		logger(Core, Error, "%s(), TLS handshake failed. GnuTLS error: %s",
+			   __func__, gnutls_strerror(err));
 
 		goto fail;
 
