@@ -180,7 +180,6 @@ RDSSL_RKEY *
 rdssl_cert_to_rkey(RDSSL_CERT * cert, uint32 * key_len)
 {
 	int ret;
-	int check_pk_algo;
 
 	RDSSL_RKEY *pkey;
 	gnutls_datum_t m, e;
@@ -191,8 +190,6 @@ rdssl_cert_to_rkey(RDSSL_CERT * cert, uint32 * key_len)
 
 	uint8_t data[2048];
 	size_t len;
-
-	check_pk_algo = 1;
 
 	algo = gnutls_x509_crt_get_pk_algorithm(*cert, &bits);
 
@@ -228,10 +225,9 @@ rdssl_cert_to_rkey(RDSSL_CERT * cert, uint32 * key_len)
 			return NULL;
 		}
 
-		if (!strncmp(oid, OID_SHA_WITH_RSA_SIGNATURE, strlen(OID_SHA_WITH_RSA_SIGNATURE))
-				|| !strncmp(oid, OID_MD5_WITH_RSA_SIGNATURE, strlen(OID_MD5_WITH_RSA_SIGNATURE))) {
-			check_pk_algo = 0;
-		} else {
+		if (!(strncmp(oid, OID_SHA_WITH_RSA_SIGNATURE, strlen(OID_SHA_WITH_RSA_SIGNATURE)) == 0
+				|| strncmp(oid, OID_MD5_WITH_RSA_SIGNATURE, strlen(OID_MD5_WITH_RSA_SIGNATURE)) == 0))
+		{
 			logger(Protocol, Error, "%s:%s:%d: Wrong public key algorithm algo = 0x%02x (%s)\n",
 					__FILE__, __func__, __LINE__, algo, oid);
 			return NULL;
