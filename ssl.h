@@ -66,4 +66,17 @@ RD_BOOL rdssl_sig_ok(uint8 * exponent, uint32 exp_len, uint8 * modulus, uint32 m
 void rdssl_hmac_md5(const void *key, int key_len,
 		    const unsigned char *msg, int msg_len, unsigned char *md);
 void rdssl_log_ssl_errors(const char *prefix);
+
+#if defined(OPENSSL_VERSION_NUMBER) && (OPENSSL_VERSION_NUMBER < 0x1000000fL)
+int X509_ALGOR_set0(X509_ALGOR *alg, ASN1_OBJECT *aobj, int ptype, void *pval);
+
+int X509_PUBKEY_set0_param(X509_PUBKEY *pub, ASN1_OBJECT *aobj,
+                           int ptype, void *pval,
+                           unsigned char *penc, int penclen);
+
+int X509_PUBKEY_get0_param(ASN1_OBJECT **ppkalg,
+                           const unsigned char **pk, int *ppklen,
+                           X509_ALGOR **pa, X509_PUBKEY *pub);
+#endif
+
 #endif
