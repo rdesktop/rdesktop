@@ -31,12 +31,12 @@ rdp_in_present(STREAM s, uint32 * present, uint8 flags, int size)
 	uint8 bits;
 	int i;
 
-	if (flags & RDP_ORDER_SMALL)
+	if (flags & TS_ZERO_FIELD_BYTE_BIT0)
 	{
 		size--;
 	}
 
-	if (flags & RDP_ORDER_TINY)
+	if (flags & TS_ZERO_FIELD_BYTE_BIT1)
 	{
 		if (size < 2)
 			size = 0;
@@ -902,7 +902,7 @@ process_text2(STREAM s, TEXT2_ORDER * os, uint32 present, RD_BOOL delta)
 
 /* Process a raw bitmap cache order */
 static void
-process_raw_bmpcache(STREAM s)
+process_cache_bitmap_uncompressed(STREAM s)
 {
 	RD_HBITMAP bitmap;
 	uint16 cache_idx, bufsize;
@@ -920,7 +920,7 @@ process_raw_bmpcache(STREAM s)
 	in_uint16_le(s, cache_idx);
 	in_uint8p(s, data, bufsize);
 
-	logger(Graphics, Debug, "process_raw_bpmcache(), cx=%d, cy=%d, id=%d, idx=%d", width,
+	logger(Graphics, Debug, "process_cache_bitmap_uncompressed(), cx=%d, cy=%d, id=%d, idx=%d", width,
 	       height, cache_id, cache_idx);
 	inverted = (uint8 *) xmalloc(width * height * Bpp);
 	for (y = 0; y < height; y++)
@@ -936,7 +936,7 @@ process_raw_bmpcache(STREAM s)
 
 /* Process a bitmap cache order */
 static void
-process_bmpcache(STREAM s)
+process_cache_bitmap_compressed(STREAM s)
 {
 	RD_HBITMAP bitmap;
 	uint16 cache_idx, size;
@@ -973,7 +973,7 @@ process_bmpcache(STREAM s)
 	}
 	in_uint8p(s, data, size);
 	logger(Graphics, Debug,
-	       "process_bmpcache(), cx=%d, cy=%d, id=%d, idx=%d, bpp=%d, size=%d, pad1=%d, bufsize=%d, pad2=%d, rs=%d, fs=%d",
+	       "process_cache_bitmap_compressed(), cx=%d, cy=%d, id=%d, idx=%d, bpp=%d, size=%d, pad1=%d, bufsize=%d, pad2=%d, rs=%d, fs=%d",
 	       width, height, cache_id, cache_idx, bpp, size, pad1, bufsize, pad2, row_size,
 	       final_size);
 
@@ -986,7 +986,7 @@ process_bmpcache(STREAM s)
 	}
 	else
 	{
-		logger(Graphics, Error, "process_bmpcache(), Failed to decompress bitmap data");
+		logger(Graphics, Error, "process_cache_bitmap_compressed(), Failed to decompress bitmap data");
 	}
 
 	xfree(bmpdata);
@@ -994,7 +994,7 @@ process_bmpcache(STREAM s)
 
 /* Process a bitmap cache v2 order */
 static void
-process_bmpcache2(STREAM s, uint16 flags, RD_BOOL compressed)
+process_cache_bitmap_rev2(STREAM s, uint16 flags, RD_BOOL compressed)
 {
 	RD_HBITMAP bitmap;
 	int y;
@@ -1035,7 +1035,7 @@ process_bmpcache2(STREAM s, uint16 flags, RD_BOOL compressed)
 	in_uint8p(s, data, bufsize);
 
 	logger(Graphics, Debug,
-	       "process_bmpcache2(), compr=%d, flags=%x, cx=%d, cy=%d, id=%d, idx=%d, Bpp=%d, bs=%d",
+	       "process_cache_bitmap_rev2(), compr=%d, flags=%x, cx=%d, cy=%d, id=%d, idx=%d, Bpp=%d, bs=%d",
 	       compressed, flags, width, height, cache_id, cache_idx, Bpp, bufsize);
 
 	bmpdata = (uint8 *) xmalloc(width * height * Bpp);
@@ -1045,7 +1045,7 @@ process_bmpcache2(STREAM s, uint16 flags, RD_BOOL compressed)
 		if (!bitmap_decompress(bmpdata, width, height, data, bufsize, Bpp))
 		{
 			logger(Graphics, Error,
-			       "process_bmpcache2(), failed to decompress bitmap data");
+			       "process_cache_bitmap_rev2(), failed to decompress bitmap data");
 			xfree(bmpdata);
 			return;
 		}
@@ -1068,15 +1068,15 @@ process_bmpcache2(STREAM s, uint16 flags, RD_BOOL compressed)
 	}
 	else
 	{
-		logger(Graphics, Error, "process_bmpcache2(), ui_create_bitmap(), failed");
+		logger(Graphics, Error, "process_cache_bitmap_rev2(), ui_create_bitmap() failed");
 	}
 
 	xfree(bmpdata);
 }
 
-/* Process a colourmap cache order */
+/* Process a colormap cache order */
 static void
-process_colcache(STREAM s)
+process_cache_color_table(STREAM s)
 {
 	COLOURENTRY *entry;
 	COLOURMAP map;
@@ -1098,7 +1098,7 @@ process_colcache(STREAM s)
 		in_uint8s(s, 1);	/* pad */
 	}
 
-	logger(Graphics, Debug, "process_colcache(), id=%d, n=%d", cache_id, map.ncolours);
+	logger(Graphics, Debug, "process_cache_color_table(), id=%d, n=%d", cache_id, map.ncolours);
 
 	hmap = ui_create_colourmap(&map);
 
@@ -1110,7 +1110,7 @@ process_colcache(STREAM s)
 
 /* Process a font cache order */
 static void
-process_fontcache(STREAM s)
+process_cache_glyph(STREAM s)
 {
 	RD_HGLYPH bitmap;
 	uint8 font, nglyphs;
@@ -1121,7 +1121,7 @@ process_fontcache(STREAM s)
 	in_uint8(s, font);
 	in_uint8(s, nglyphs);
 
-	logger(Graphics, Debug, "process_fontcache(), font=%d, n=%d", font, nglyphs);
+	logger(Graphics, Debug, "process_cache_glyph(), font=%d, n=%d", font, nglyphs);
 
 	for (i = 0; i < nglyphs; i++)
 	{
@@ -1174,7 +1174,7 @@ process_compressed_8x8_brush_data(uint8 * in, uint8 * out, int Bpp)
 
 /* Process a brush cache order */
 static void
-process_brushcache(STREAM s, uint16 flags)
+process_cache_brush(STREAM s, uint16 flags)
 {
 	UNUSED(flags);
 	BRUSHDATA brush_data;
@@ -1190,7 +1190,7 @@ process_brushcache(STREAM s, uint16 flags)
 	in_uint8(s, type);	/* type, 0x8x = cached */
 	in_uint8(s, size);
 
-	logger(Graphics, Debug, "process_brushcache(), idx=%d, wd=%d, ht=%d, type=0x%x sz=%d",
+	logger(Graphics, Debug, "process_cache_brush(), idx=%d, wd=%d, ht=%d, type=0x%x sz=%d",
 	       cache_idx, width, height, type, size);
 
 	if ((width == 8) && (height == 8))
@@ -1211,7 +1211,7 @@ process_brushcache(STREAM s, uint16 flags)
 			else
 			{
 				logger(Graphics, Warning,
-				       "process_brushcache(), incompatible brush, colour_code %d size %d",
+				       "process_cache_brush(), incompatible brush, colour_code %d size %d",
 				       colour_code, size);
 			}
 			cache_put_brush_data(1, cache_idx, &brush_data);
@@ -1236,14 +1236,14 @@ process_brushcache(STREAM s, uint16 flags)
 		else
 		{
 			logger(Graphics, Warning,
-			       "process_brushcache(), incompatible brush, colour_code %d size %d",
+			       "process_cache_brush(), incompatible brush, colour_code %d size %d",
 			       colour_code, size);
 		}
 	}
 	else
 	{
 		logger(Graphics, Warning,
-		       "process_brushcache(), incompatible brush, width height %d %d", width,
+		       "process_cache_brush(), incompatible brush, width height %d %d", width,
 		       height);
 	}
 }
@@ -1252,18 +1252,23 @@ process_brushcache(STREAM s, uint16 flags)
 static void
 process_secondary_order(STREAM s)
 {
-	/* The length isn't calculated correctly by the server.
-	 * For very compact orders the length becomes negative
-	 * so a signed integer must be used. */
+	/* The length isn't calculated correctly by the server. For very
+	   compact orders the length becomes negative so the protocol specifies
+	   this as a signed integer.
+
+	   "Hence, when decoding the order, the orderLength field MUST be
+	   adjusted by adding 13 bytes. These adjustments are for historical
+	   reasons." */
+
 	uint16 length;
 	uint16 flags;
 	uint8 type;
 	uint8 *next_order;
 	struct stream packet = *s;
 
-	in_uint16_le(s, length);
-	in_uint16_le(s, flags);	/* used by bmpcache2 */
-	in_uint8(s, type);
+	in_uint16_le(s, length);	/* orderLength */
+	in_uint16_le(s, flags);		/* extraFlags */
+	in_uint8(s, type);		/* orderType */
 
 	if (!s_check_rem(s, length + 7))
 	{
@@ -1274,35 +1279,36 @@ process_secondary_order(STREAM s)
 
 	switch (type)
 	{
-		case RDP_ORDER_RAW_BMPCACHE:
-			process_raw_bmpcache(s);
+		case TS_CACHE_BITMAP_UNCOMPRESSED:
+			process_cache_bitmap_uncompressed(s);
 			break;
 
-		case RDP_ORDER_COLCACHE:
-			process_colcache(s);
+		case TS_CACHE_COLOR_TABLE:
+			process_cache_color_table(s);
 			break;
 
-		case RDP_ORDER_BMPCACHE:
-			process_bmpcache(s);
+		case TS_CACHE_BITMAP_COMPRESSED:
+			process_cache_bitmap_compressed(s);
 			break;
 
-		case RDP_ORDER_FONTCACHE:
-			process_fontcache(s);
+		case TS_CACHE_GLYPH:
+			process_cache_glyph(s);
 			break;
 
-		case RDP_ORDER_RAW_BMPCACHE2:
-			process_bmpcache2(s, flags, False);	/* uncompressed */
+		case TS_CACHE_BITMAP_UNCOMPRESSED_REV2:
+			process_cache_bitmap_rev2(s, flags, False);	/* uncompressed */
 			break;
 
-		case RDP_ORDER_BMPCACHE2:
-			process_bmpcache2(s, flags, True);	/* compressed */
+		case TS_CACHE_BITMAP_COMPRESSED_REV2:
+			process_cache_bitmap_rev2(s, flags, True);	/* compressed */
 			break;
 
-		case RDP_ORDER_BRUSHCACHE:
-			process_brushcache(s, flags);
+		case TS_CACHE_BRUSH:
+			process_cache_brush(s, flags);
 			break;
 
 		default:
+			/* FIXME: TS_CACHE_BITMAP_COMPRESSED_REV3 */
 			logger(Graphics, Warning,
 			       "process_secondary_order(), unhandled secondary order %d", type);
 	}
@@ -1310,141 +1316,152 @@ process_secondary_order(STREAM s)
 	s->p = next_order;
 }
 
+static void
+process_primary_order(STREAM s, uint8 order_flags)
+{
+	RDP_ORDER_STATE *os = &g_order_state;
+	uint32 present;
+	int size;
+	RD_BOOL delta;
+
+	if (order_flags & TS_TYPE_CHANGE)
+	{
+		in_uint8(s, os->order_type);
+	}
+
+	switch (os->order_type)
+	{
+		case TS_ENC_MEM3BLT_ORDER:
+		case TS_ENC_INDEX_ORDER:
+			size = 3;
+			break;
+
+		case TS_ENC_PATBLT_ORDER:
+		case TS_ENC_MEMBLT_ORDER:
+		case TS_ENC_LINETO_ORDER:
+		case TS_ENC_POLYGON_CB_ORDER:
+		case TS_ENC_ELLIPSE_CB_ORDER:
+			size = 2;
+			break;
+
+		default:
+			size = 1;
+	}
+
+	rdp_in_present(s, &present, order_flags, size);
+
+	if (order_flags & TS_BOUNDS)
+	{
+		if (!(order_flags & TS_ZERO_BOUNDS_DELTAS))
+			rdp_parse_bounds(s, &os->bounds);
+
+		ui_set_clip(os->bounds.left,
+			    os->bounds.top,
+			    os->bounds.right -
+			    os->bounds.left + 1,
+			    os->bounds.bottom - os->bounds.top + 1);
+	}
+
+	delta = order_flags & TS_DELTA_COORDINATES;
+
+	switch (os->order_type)
+	{
+		case TS_ENC_DSTBLT_ORDER:
+			process_destblt(s, &os->destblt, present, delta);
+			break;
+
+		case TS_ENC_PATBLT_ORDER:
+			process_patblt(s, &os->patblt, present, delta);
+			break;
+
+		case TS_ENC_SCRBLT_ORDER:
+			process_screenblt(s, &os->screenblt, present, delta);
+			break;
+
+		case TS_ENC_LINETO_ORDER:
+			process_line(s, &os->line, present, delta);
+			break;
+
+		case TS_ENC_OPAQUERECT_ORDER:
+			process_rect(s, &os->rect, present, delta);
+			break;
+
+		case TS_ENC_SAVEBITMAP_ORDER:
+			process_desksave(s, &os->desksave, present, delta);
+			break;
+
+		case TS_ENC_MEMBLT_ORDER:
+			process_memblt(s, &os->memblt, present, delta);
+			break;
+
+		case TS_ENC_MEM3BLT_ORDER:
+			process_triblt(s, &os->triblt, present, delta);
+			break;
+
+		case TS_ENC_POLYGON_SC_ORDER:
+			process_polygon(s, &os->polygon, present, delta);
+			break;
+
+		case TS_ENC_POLYGON_CB_ORDER:
+			process_polygon2(s, &os->polygon2, present, delta);
+			break;
+
+		case TS_ENC_POLYLINE_ORDER:
+			process_polyline(s, &os->polyline, present, delta);
+			break;
+
+		case TS_ENC_ELLIPSE_SC_ORDER:
+			process_ellipse(s, &os->ellipse, present, delta);
+			break;
+
+		case TS_ENC_ELLIPSE_CB_ORDER:
+			process_ellipse2(s, &os->ellipse2, present, delta);
+			break;
+
+		case TS_ENC_INDEX_ORDER:
+			process_text2(s, &os->text2, present, delta);
+			break;
+
+		default:
+			logger(Graphics, Warning,
+			       "process_primary_orders(), unhandled order type %d",
+			       os->order_type);
+			return;
+	}
+
+	if (order_flags & TS_BOUNDS)
+		ui_reset_clip();
+}
+
 /* Process an order PDU */
 void
 process_orders(STREAM s, uint16 num_orders)
 {
-	RDP_ORDER_STATE *os = &g_order_state;
-	uint32 present;
 	uint8 order_flags;
-	int size, processed = 0;
-	RD_BOOL delta;
+	uint16 processed = 0;
+
 
 	while (processed < num_orders)
 	{
 		in_uint8(s, order_flags);
 
-		if (!(order_flags & RDP_ORDER_STANDARD))
+		/* order_flags can hold more data than just the type, so we
+		   only want to look at the TS_STANDARD and TS_SECONDARY
+		   bits. */
+		switch (order_flags & (TS_STANDARD | TS_SECONDARY))
 		{
-			logger(Graphics, Error, "process_orders(), order parsing failed");
-			break;
+			case TS_STANDARD:
+				process_primary_order(s, order_flags);
+				break;
+			case (TS_STANDARD | TS_SECONDARY):
+				process_secondary_order(s);
+				break;
+			default:
+				/* FIXME: alternate secondary drawing orders */
+				logger(Graphics, Warning,
+				       "process_orders(), Unhandled order type 0x%x",
+				       order_flags);
 		}
-
-		if (order_flags & RDP_ORDER_SECONDARY)
-		{
-			process_secondary_order(s);
-		}
-		else
-		{
-			if (order_flags & RDP_ORDER_CHANGE)
-			{
-				in_uint8(s, os->order_type);
-			}
-
-			switch (os->order_type)
-			{
-				case RDP_ORDER_TRIBLT:
-				case RDP_ORDER_TEXT2:
-					size = 3;
-					break;
-
-				case RDP_ORDER_PATBLT:
-				case RDP_ORDER_MEMBLT:
-				case RDP_ORDER_LINE:
-				case RDP_ORDER_POLYGON2:
-				case RDP_ORDER_ELLIPSE2:
-					size = 2;
-					break;
-
-				default:
-					size = 1;
-			}
-
-			rdp_in_present(s, &present, order_flags, size);
-
-			if (order_flags & RDP_ORDER_BOUNDS)
-			{
-				if (!(order_flags & RDP_ORDER_LASTBOUNDS))
-					rdp_parse_bounds(s, &os->bounds);
-
-				ui_set_clip(os->bounds.left,
-					    os->bounds.top,
-					    os->bounds.right -
-					    os->bounds.left + 1,
-					    os->bounds.bottom - os->bounds.top + 1);
-			}
-
-			delta = order_flags & RDP_ORDER_DELTA;
-
-			switch (os->order_type)
-			{
-				case RDP_ORDER_DESTBLT:
-					process_destblt(s, &os->destblt, present, delta);
-					break;
-
-				case RDP_ORDER_PATBLT:
-					process_patblt(s, &os->patblt, present, delta);
-					break;
-
-				case RDP_ORDER_SCREENBLT:
-					process_screenblt(s, &os->screenblt, present, delta);
-					break;
-
-				case RDP_ORDER_LINE:
-					process_line(s, &os->line, present, delta);
-					break;
-
-				case RDP_ORDER_RECT:
-					process_rect(s, &os->rect, present, delta);
-					break;
-
-				case RDP_ORDER_DESKSAVE:
-					process_desksave(s, &os->desksave, present, delta);
-					break;
-
-				case RDP_ORDER_MEMBLT:
-					process_memblt(s, &os->memblt, present, delta);
-					break;
-
-				case RDP_ORDER_TRIBLT:
-					process_triblt(s, &os->triblt, present, delta);
-					break;
-
-				case RDP_ORDER_POLYGON:
-					process_polygon(s, &os->polygon, present, delta);
-					break;
-
-				case RDP_ORDER_POLYGON2:
-					process_polygon2(s, &os->polygon2, present, delta);
-					break;
-
-				case RDP_ORDER_POLYLINE:
-					process_polyline(s, &os->polyline, present, delta);
-					break;
-
-				case RDP_ORDER_ELLIPSE:
-					process_ellipse(s, &os->ellipse, present, delta);
-					break;
-
-				case RDP_ORDER_ELLIPSE2:
-					process_ellipse2(s, &os->ellipse2, present, delta);
-					break;
-
-				case RDP_ORDER_TEXT2:
-					process_text2(s, &os->text2, present, delta);
-					break;
-
-				default:
-					logger(Graphics, Warning,
-					       "process_orders(), unhandled order type %d",
-					       os->order_type);
-					return;
-			}
-
-			if (order_flags & RDP_ORDER_BOUNDS)
-				ui_reset_clip();
-		}
-
 		processed++;
 	}
 #if 0
@@ -1461,5 +1478,5 @@ void
 reset_order_state(void)
 {
 	memset(&g_order_state, 0, sizeof(g_order_state));
-	g_order_state.order_type = RDP_ORDER_PATBLT;
+	g_order_state.order_type = TS_ENC_PATBLT_ORDER;
 }
