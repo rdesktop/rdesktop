@@ -3,7 +3,7 @@
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2004-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
    Copyright 2010-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
-   Copyright 2017 Karl Mikaelsson <derfian@cendio.se> for Cendio AB
+   Copyright 2017-2019 Karl Mikaelsson <derfian@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -86,7 +86,8 @@ char *g_rdpdr_clientname = NULL;
 /* if multiple IOs are being done on the same FD */
 struct async_iorequest
 {
-	uint32 fd, major, minor, offset, device, id, length, partial_len;
+	uint32 fd, major, minor, device, id, length, partial_len;
+	uint64 offset;
 	long timeout,		/* Total timeout */
 	  itv_timeout;		/* Interval timeout (between serial characters) */
 	uint8 *buffer;
@@ -146,7 +147,7 @@ rdpdr_handle_ok(uint32 device, RD_NTHANDLE handle)
 static RD_BOOL
 add_async_iorequest(uint32 device, uint32 file, uint32 id, uint32 major, uint32 length,
 		    DEVICE_FNS * fns, uint32 total_timeout, uint32 interval_timeout, uint8 * buffer,
-		    uint32 offset)
+		    uint64 offset)
 {
 	struct async_iorequest *iorq;
 
@@ -395,6 +396,7 @@ rdpdr_send_completion(uint32 device, uint32 id, uint32 status, uint32 result, ui
 #endif
 }
 
+/* Processes a DR_DEVICE_IOREQUEST (minus the leading header field) */
 static void
 rdpdr_process_irp(STREAM s)
 {
@@ -409,9 +411,10 @@ rdpdr_process_irp(STREAM s)
 		major,
 		minor,
 		device,
-		offset,
 		bytes_out,
 		share_mode, disposition, total_timeout, interval_timeout, flags_and_attributes = 0;
+
+	uint64 offset;
 
 	char *filename;
 	uint32 filename_len;
@@ -534,11 +537,12 @@ rdpdr_process_irp(STREAM s)
 			}
 
 			in_uint32_le(s, length);
-			in_uint32_le(s, offset);
+			in_uint64_le(s, offset);
+			in_uint8s(s, 20); 	   /* 20 bytes of padding */
 
 			logger(Protocol, Debug,
-			       "rdpdr_process_irp(), IRP Read length=%d, offset=%d", length,
-			       offset);
+			       "rdpdr_process_irp(), IRP Read length=%d, offset=%ld",
+			       length, offset);
 
 			if (!rdpdr_handle_ok(device, file))
 			{
@@ -588,10 +592,12 @@ rdpdr_process_irp(STREAM s)
 			}
 
 			in_uint32_le(s, length);
-			in_uint32_le(s, offset);
-			in_uint8s(s, 0x18);
+			in_uint64_le(s, offset);
+			in_uint8s(s, 20);        /* 20 bytes of padding before WriteData */
 
-			logger(Protocol, Debug, "rdpdr_process_irp(), IRP Write length=%d", result);
+			logger(Protocol, Debug,
+			       "rdpdr_process_irp(), IRP Write length=%d, offset=%ld",
+			       result, offset);
 
 			if (!rdpdr_handle_ok(device, file))
 			{
@@ -875,8 +881,8 @@ rdpdr_process(STREAM s)
 	logger(Protocol, Debug, "rdpdr_process()");
 	/* hexdump(s->p, s->end - s->p); */
 
-	in_uint16(s, component);
-	in_uint16(s, pakid);
+	in_uint16(s, component);        /* RDPDR_HEADER.Component */
+	in_uint16(s, pakid);            /* RDPDR_HEADER.PacketId */
 
 	if (component == RDPDR_CTYP_CORE)
 	{

@@ -219,9 +219,9 @@ typedef struct _DEVICE_FNS
 			      uint32 create_disposition, uint32 flags_and_attributes,
 			      char *filename, RD_NTHANDLE * handle);
 	RD_NTSTATUS(*close) (RD_NTHANDLE handle);
-	RD_NTSTATUS(*read) (RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset,
+	RD_NTSTATUS(*read) (RD_NTHANDLE handle, uint8 * data, uint32 length, uint64 offset,
 			    uint32 * result);
-	RD_NTSTATUS(*write) (RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset,
+	RD_NTSTATUS(*write) (RD_NTHANDLE handle, uint8 * data, uint32 length, uint64 offset,
 			     uint32 * result);
 	RD_NTSTATUS(*device_control) (RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out);
 }

@@ -144,9 +144,9 @@ printer_close(RD_NTHANDLE handle)
 }
 
 static RD_NTSTATUS
-printer_write(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
+printer_write(RD_NTHANDLE handle, uint8 * data, uint32 length, uint64 offset, uint32 * result)
 {
-	UNUSED(offset);
+	UNUSED(offset);  /* Currently unused, MS-RDPEPC reserves for later use */
 	PRINTER *pprinter_data;
 
 	pprinter_data = get_printer_data(handle);

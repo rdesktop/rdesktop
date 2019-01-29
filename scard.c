@@ -120,7 +120,7 @@ scard_close(RD_NTHANDLE handle)
 }
 
 static RD_NTSTATUS
-scard_read(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
+scard_read(RD_NTHANDLE handle, uint8 * data, uint32 length, uint64 offset, uint32 * result)
 {
 	UNUSED(handle);
 	UNUSED(data);
@@ -131,7 +131,7 @@ scard_read(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint3
 }
 
 static RD_NTSTATUS
-scard_write(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
+scard_write(RD_NTHANDLE handle, uint8 * data, uint32 length, uint64 offset, uint32 * result)
 {
 	UNUSED(handle);
 	UNUSED(data);

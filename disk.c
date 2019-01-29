@@ -582,7 +582,7 @@ disk_close(RD_NTHANDLE handle)
 }
 
 static RD_NTSTATUS
-disk_read(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
+disk_read(RD_NTHANDLE handle, uint8 * data, uint32 length, uint64 offset, uint32 * result)
 {
 	int n;
 
@@ -623,7 +623,7 @@ disk_read(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32
 }
 
 static RD_NTSTATUS
-disk_write(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
+disk_write(RD_NTHANDLE handle, uint8 * data, uint32 length, uint64 offset, uint32 * result)
 {
 	int n;
 
