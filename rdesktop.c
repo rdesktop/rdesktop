@@ -159,6 +159,8 @@ extern RDPDR_DEVICE g_rdpdr_device[];
 extern uint32 g_num_devices;
 extern char *g_rdpdr_clientname;
 
+RD_BOOL password_provided = False;
+
 /* Display usage information */
 static void
 usage(char *program)
@@ -857,6 +859,7 @@ main(int argc, char *argv[])
 			case 'p':
 				if (!((optarg[0] == '-') && (optarg[1] == 0)))
 				{
+					password_provided = True;
 					STRNCPY(g_password, optarg, sizeof(g_password));
 					flags |= RDP_INFO_AUTOLOGON;
 
@@ -1282,7 +1285,7 @@ main(int argc, char *argv[])
 		xfree(locale);
 
 	/* If no password provided at this point, prompt for password / pin */
-	if (!g_password[0])
+	if (!g_password[0] && password_provided == False)
 	{
 		if (read_password(g_password, sizeof(g_password)))
 		{
