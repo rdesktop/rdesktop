@@ -1,11 +1,11 @@
 matrix:
   include:
     - os: linux
-      dist: trusty
+      dist: xenial
       sudo: required
       compiler: gcc
     - os: linux
-      dist: trusty
+      dist: xenial
       sudo: required
       compiler: clang
     - os: osx
@@ -20,12 +20,12 @@ notifications:
     
 before_install:
  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update ; fi
- - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install openssl ; fi
+ - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install libtasn1 nettle gnutls; fi
  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get -qq update ; fi
- - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install -y libpcsclite-dev libxcursor-dev libao-dev libasound2-dev ; fi
+ - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install -y libpcsclite-dev libxcursor-dev libao-dev libasound2-dev libtasn1-dev nettle-dev libgnutls-dev ; fi
 
 script: 
     - ./bootstrap
-    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then PKG_CONFIG_PATH=/opt/X11/lib/pkgconfig ./configure --with-openssl=/usr/local/opt/openssl ; fi
+    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then PKG_CONFIG_PATH=/opt/X11/lib/pkgconfig ./configure ; fi
     - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then ./configure ; fi
     - make

@@ -29,6 +29,9 @@ fi
 
 AC_PATH_TOOL(PKG_CONFIG, pkg-config)
 
+# no .pc for GMP
+AC_SEARCH_LIBS([__gmpz_init], [gmp])
+
 AC_SEARCH_LIBS(socket, socket)
 AC_SEARCH_LIBS(inet_aton, resolv)
 
@@ -61,74 +64,6 @@ AC_ARG_ENABLE([address-sanitizer], AS_HELP_STRING([--enable-address-sanitizer], 
                                                  [AC_MSG_ERROR([Address Sanitizer not available])])
               ])
 
-#
-# OpenSSL detection borrowed from stunnel
-#
-checkssldir() { :
-    if test -f "$1/include/openssl/ssl.h"; then
-        ssldir="$1"
-        return 0
-    fi
-    return 1
-}
-AC_MSG_CHECKING([for OpenSSL directory])
-AC_ARG_WITH(openssl,
-    [  --with-openssl=DIR          look for OpenSSL at DIR/include, DIR/lib],
-    [
-        dnl Check the specified location only
-        checkssldir "$withval"
-    ],
-    [
-        dnl Search default locations of OpenSSL library
-        for maindir in /usr/local /usr/lib /usr/pkg /usr /var/ssl /opt; do
-            for dir in $maindir $maindir/openssl $maindir/ssl; do
-                checkssldir $dir && break 2
-            done
-        done
-    ]
-)
-if test -z "$ssldir"; then
-    AC_MSG_RESULT([Not found])
-    echo
-    echo "ERROR: Could not find OpenSSL headers/libraries."
-    if test -f /etc/debian_version; then
-       echo "Probably you need to install the libssl-dev package."
-    elif test -f /etc/redhat-release; then
-       echo "Probably you need to install the openssl-devel package."
-    fi
-    echo "To specify a path manually, use the --with-openssl option."
-    echo
-    exit 1
-fi
-AC_MSG_RESULT([$ssldir])
-AC_SUBST(ssldir)
-AC_DEFINE_UNQUOTED(ssldir, "$ssldir")
-
-dnl Add OpenSSL includes and libraries
-CFLAGS="$CFLAGS -I$ssldir/include"
-AC_ARG_ENABLE(static-openssl,
-             [  --enable-static-openssl link OpenSSL statically],
-             [static_openssl=yes],
-             [static_openssl=no])
-if test x"$static_openssl" = "xyes"; then
-    # OpenSSL generally relies on libz
-    AC_SEARCH_LIBS(deflate, z)
-    LIBS="-L$ssldir/lib -L$ssldir/lib64 -Wl,-Bstatic -lssl -lcrypto -Wl,-Bdynamic -ldl $LIBS"
-else
-    LIBS="-L$ssldir/lib -L$ssldir/lib64 -lssl -lcrypto -ldl $LIBS"
-
-    #
-    # target-specific stuff
-    #
-    case "$host" in
-    *-*-solaris*)
-        LDFLAGS="$LDFLAGS -R$ssldir/lib"
-        ;;
-    *-dec-osf*)
-        LDFLAGS="$LDFLAGS -Wl,-rpath,$ssldir/lib"
-        ;;
-    esac
-fi
 
 dnl CredSSP feature
 AC_ARG_ENABLE([credssp], AS_HELP_STRING([--disable-credssp], [disable support for CredSSP]))
@@ -201,6 +136,62 @@ else
     exit 1
 fi
 
+# libtasn1
+if test -n "$PKG_CONFIG"; then
+    PKG_CHECK_MODULES(LIBTASN1, libtasn1, [HAVE_LIBTASN1=1], [HAVE_LIBTASN1=0])
+fi
+if test x"$HAVE_LIBTASN1" = "x1"; then
+    CFLAGS="$CFLAGS $LIBTASN1_CFLAGS"
+    LIBS="$LIBS $LIBTASN1_LIBS"
+else
+	   echo
+	   echo "rdesktop requires libtasn1. Please install the dependency"
+	   echo
+	   exit 1
+fi
+
+# nettle
+if test -n "$PKG_CONFIG"; then
+    PKG_CHECK_MODULES(NETTLE, nettle, [HAVE_NETTLE=1], [HAVE_NETTLE=0])
+fi
+if test x"$HAVE_NETTLE" = "x1"; then
+    CFLAGS="$CFLAGS $NETTLE_CFLAGS"
+    LIBS="$LIBS $NETTLE_LIBS"
+else
+	   echo
+	   echo "rdesktop requires Nettle. Please install the dependency"
+	   echo
+	   exit 1
+fi
+
+# hogweed
+if test -n "$PKG_CONFIG"; then
+    PKG_CHECK_MODULES(HOGWEED, hogweed, [HAVE_HOGWEED=1], [HAVE_HOGWEED=0])
+fi
+if test x"$HAVE_HOGWEED" = "x1"; then
+    CFLAGS="$CFLAGS $HOGWEED_CFLAGS"
+    LIBS="$LIBS $HOGWEED_LIBS"
+else
+	   echo
+	   echo "rdesktop requires hogweed. Please install the dependency"
+	   echo
+	   exit 1
+fi
+
+# GnuTLS
+
+if test -n "$PKG_CONFIG"; then
+    PKG_CHECK_MODULES(GNUTLS, gnutls >= 3.2.0, [HAVE_GNUTLS=1], [HAVE_GNUTLS=0])
+fi
+if test x"$HAVE_GNUTLS" = "x1"; then
+    CFLAGS="$CFLAGS $GNUTLS_CFLAGS"
+    LIBS="$LIBS $GNUTLS_LIBS"
+else
+	   echo
+	   echo "rdesktop requires GnuTLS. Please install the dependency"
+	   echo
+	   exit 1
+fi
 
 dnl Smartcard support
 AC_ARG_ENABLE(smartcard, AS_HELP_STRING([--disable-smartcard], [disable support for smartcard]))

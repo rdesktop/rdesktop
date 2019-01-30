@@ -1,7 +1,7 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    Generic utility functions
-   Copyright 2013-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2013-2019 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -22,6 +22,8 @@
 #include <sys/stat.h>
 #include <errno.h>
 #include <iconv.h>
+#include <stdarg.h>
+#include <assert.h>
 
 #include "rdesktop.h"
 
@@ -277,11 +279,67 @@ utils_apply_session_size_limitations(uint32 * width, uint32 * height)
 		*height = 200;
 }
 
+#define MAX_CHOICES 10
+const char *
+util_dialog_choice(const char *message, ...)
+{
+	int i;
+	va_list ap;
+	char *p;
+	const char *choice;
+	char response[512];
+	const char *choices[MAX_CHOICES] = {0};
+
+	/* gather choices into array */
+	va_start(ap, message);
+	for (i = 0; i < MAX_CHOICES; i++)
+	{
+		choices[i] = va_arg(ap, const char *);
+		if (choices[i] == NULL)
+			break;
+    }
+    va_end(ap);
+
+	choice = NULL;
+	while (choice == NULL)
+	{
+		/* display message */
+		fprintf(stderr,"\n%s", message);
+
+		/* read input */
+		if (fgets(response, sizeof(response), stdin) != NULL)
+		{
+			/* strip final newline */
+			p = strchr(response, '\n');
+			if (p != NULL)
+				*p = 0;
+
+			for (i = 0; i < MAX_CHOICES; i++)
+			{
+				if (choices[i] == NULL)
+					break;
+
+				if (strcmp(response, choices[i]) == 0)
+				{
+					choice = choices[i];
+					break;
+				}
+			}
+		}
+		else
+		{
+			logger(Core, Error, "Failed to read response from stdin");
+			break;
+		}
+	}
+
+	return choice;
+}
+
 /*
  * component logging
  *
  */
-#include <stdarg.h>
 
 static char *level[] = {
 	"debug",
@@ -430,4 +488,536 @@ logger_set_subjects(char *subjects)
 	_logger_level = Debug;
 
 	free(pcs);
+}
+
+static size_t
+_utils_data_to_hex(uint8 *data, size_t len, char *out, size_t size)
+{
+	size_t i;
+	char hex[4];
+
+	assert((len * 2) < size);
+
+	memset(out, 0, size);
+	for (i = 0; i < len; i++)
+	{
+		snprintf(hex, sizeof(hex), "%.2x", data[i]);
+		strcat(out, hex);
+	}
+
+	return (len*2);
+}
+
+static size_t
+_utils_oid_to_string(const char *oid, char *out, size_t size)
+{
+	memset(out, 0, size);
+	if (strcmp(oid, "0.9.2342.19200300.100.1.25") == 0) {
+		snprintf(out, size, "%s", "DC");
+	}
+	else if (strcmp(oid, "2.5.4.3") == 0) {
+		snprintf(out, size, "%s", "CN");
+	}
+	else if (strcmp(oid, "1.2.840.113549.1.1.13") == 0)
+	{
+		snprintf(out, size, "%s", "sha512WithRSAEncryption");
+	}
+	else
+	{
+		snprintf(out, size, "%s", oid);
+	}
+
+	return strlen(out);
+}
+
+static int
+_utils_dn_to_string(gnutls_x509_dn_t dn, RD_BOOL exclude_oid,
+				    char *out, size_t size)
+{
+	int i, j;
+	char buf[128] = {0};
+	char name[64] = {0};
+	char result[1024] = {0};
+	size_t left;
+	gnutls_x509_ava_st ava;
+
+	left = sizeof(result);
+
+	for (j = 0; j < 100; j++)
+	{
+		for (i = 0; i < 100; i++)
+		{
+			if (gnutls_x509_dn_get_rdn_ava(dn, j, i, &ava) != 0)
+			{
+				break;
+			}
+
+			if (exclude_oid)
+			{
+				snprintf(buf, sizeof(buf), "%.*s", ava.value.size, ava.value.data);
+				strncat(result, buf, left);
+				left -= strlen(buf);
+			}
+			else
+			{
+				_utils_oid_to_string((char *)ava.oid.data, name, sizeof(name));
+				snprintf(buf, sizeof(buf), "%s%s=%.*s",
+						 (j > 0)?", ":"", name, ava.value.size, ava.value.data);
+				strncat(result, buf, left);
+				left -= strlen(buf);
+			}
+		}
+
+		if (i == 0)
+		{
+			break;
+		}
+	}
+
+	snprintf(out, size, "%s", result);
+
+	return 0;
+}
+
+static void
+_utils_cert_get_info(gnutls_x509_crt_t cert, char *out, size_t size)
+{
+	char buf[128];
+	size_t buf_size;
+	char digest[128];
+	gnutls_x509_dn_t dn;
+	time_t expire_ts, activated_ts;
+
+	char subject[256];
+	char issuer[256];
+	char valid_from[256];
+	char valid_to[256];
+	char sha1[256];
+	char sha256[256];
+
+	/* get subject */
+	gnutls_x509_crt_get_subject(cert, &dn);
+	if (_utils_dn_to_string(dn, False, buf, sizeof(buf)) == 0)
+	{
+		snprintf(subject, sizeof(subject), "    Subject: %s", buf);
+	}
+
+	/* get issuer */
+	gnutls_x509_crt_get_issuer(cert, &dn);
+	if (_utils_dn_to_string(dn, False, buf, sizeof(buf)) == 0)
+	{
+		snprintf(issuer, sizeof(issuer), "     Issuer: %s", buf);
+	}
+
+	/* get activation / expiration time */
+	activated_ts = gnutls_x509_crt_get_activation_time(cert);
+	snprintf(valid_from, sizeof(valid_from), " Valid From: %s", ctime(&activated_ts));
+
+	expire_ts = gnutls_x509_crt_get_expiration_time(cert);
+	snprintf(valid_to, sizeof(valid_to), "         To: %s", ctime(&expire_ts));
+
+	/* get sha1 / sha256 fingerprint */
+	buf_size = sizeof(buf);
+	gnutls_x509_crt_get_fingerprint(cert, GNUTLS_DIG_SHA1, buf, &buf_size);
+	_utils_data_to_hex((uint8 *)buf, buf_size, digest, sizeof(digest));
+	snprintf(sha1, sizeof(sha1), "       sha1: %s", digest);
+
+	buf_size = sizeof(buf);
+	gnutls_x509_crt_get_fingerprint(cert, GNUTLS_DIG_SHA256, buf, &buf_size);
+	_utils_data_to_hex((uint8 *)buf, buf_size, digest, sizeof(digest));
+	snprintf(sha256, sizeof(sha256), "     sha256: %s", digest);
+
+	/* render cert info into out */
+	snprintf(out, size,
+		"%s\n"
+		"%s\n"
+		"%s"
+		"%s"
+		"\n"
+		"  Certificate fingerprints:\n\n"
+		"%s\n"
+		"%s\n", subject, issuer, valid_from, valid_to, sha1, sha256);
+}
+
+static int
+_utils_cert_san_to_string(gnutls_x509_crt_t cert, char *out, size_t size)
+{
+	int i, res;
+	char entries[1024] = {0};
+	char san[128] = {0};
+	ssize_t left;
+	size_t san_size;
+	unsigned int san_type, critical;
+
+	left = sizeof(entries);
+
+	for(i = 0; i < 50; i++)
+	{
+		san_size = sizeof(san);
+		res = gnutls_x509_crt_get_subject_alt_name2(cert, i, san, &san_size, &san_type, &critical);
+
+		/* break if there are no more SAN entries */
+		if (res <= 0)
+			break;
+
+		/* log if we cant handle more san entires in buffer */
+		if (left <= 0)
+		{
+			logger(Core, Warning, "%s(), buffer is full, at least one SAN entry is missing from list", __func__);
+			break;
+		}
+
+		/* add SAN entry to list */
+		switch(san_type)
+		{
+			case GNUTLS_SAN_IPADDRESS:
+			case GNUTLS_SAN_DNSNAME:
+
+				if (left < (ssize_t)sizeof(entries))
+				{
+					strncat(entries, ", ", left);
+					left -= 2;
+				}
+
+				strncat(entries, san, left);
+				left -= strlen(san);
+
+			break;
+		}
+	}
+
+	if (strlen(entries) == 0)
+	{
+		return 1;
+	}
+	snprintf(out, size, "%s", entries);
+
+	return 0;
+}
+
+static void
+_utils_cert_get_status_report(gnutls_x509_crt_t cert, unsigned int status,
+						     RD_BOOL hostname_mismatch, const char *hostname,
+						     char *out, size_t size)
+{
+	int i;
+	char buf[1024];
+	char str[1024 + 64];
+
+	i = 1;
+
+	if (hostname_mismatch == True)
+	{
+		snprintf(buf, sizeof(buf),
+			" %d. The hostname used for this connection does not match any of the names\n"
+			"    given in the certificate.\n\n"
+			"             Hostname: %s\n"
+			, i++, hostname);
+		strncat(out, buf, size - 1);
+		size -= strlen(buf);
+
+		/* parse subject dn */
+		gnutls_x509_dn_t dn;
+		gnutls_x509_crt_get_subject(cert, &dn);
+
+		memset(buf, 0, sizeof(buf));
+		if (_utils_dn_to_string(dn, True, buf, sizeof(buf)) == 0)
+		{
+			snprintf(str, sizeof(str), "          Common Name: %s\n", buf);
+			strncat(out, str, size);
+			size -= strlen(str);
+		}
+
+		/* get SAN entries */
+		if (_utils_cert_san_to_string(cert, buf, sizeof(buf)) == 0)
+		{
+			snprintf(str, sizeof(str), "      Alternate names: %s\n", buf);
+			strncat(out, str, size);
+			size -= strlen(str);
+		}
+
+		strcat(out, "\n");
+		size -= 1;
+	}
+
+	if (status & GNUTLS_CERT_REVOKED) {
+		snprintf(buf, sizeof(buf),
+			" %d. Certificate is revoked by its authority\n\n", i++);
+		strncat(out, buf, size);
+		size -= strlen(buf);
+	}
+
+	if (status & GNUTLS_CERT_SIGNER_NOT_FOUND) {
+		snprintf(buf, sizeof(buf),
+			" %d. Certificate issuer is not trusted by this system.\n\n", i++);
+		strncat(out, buf, size);
+		size -= strlen(buf);
+
+		/* parse subject dn */
+		gnutls_x509_dn_t dn;
+		gnutls_x509_crt_get_issuer(cert, &dn);
+
+		memset(buf, 0, sizeof(buf));
+		if (_utils_dn_to_string(dn, False, buf, sizeof(buf)) == 0)
+		{
+			snprintf(str, sizeof(str), "     Issuer: %s\n", buf);
+			strncat(out, str, size);
+			size -= strlen(str);
+		}
+	}
+
+	if (status & GNUTLS_CERT_SIGNER_NOT_CA) {
+		snprintf(buf, sizeof(buf),
+			" %d. Certificate signer is not a CA.\n\n", i++);
+		strncat(out, buf, size);
+		size -= strlen(buf);
+	}
+
+	if (status & GNUTLS_CERT_INSECURE_ALGORITHM) {
+		snprintf(buf, sizeof(buf),
+			" %d. Certificate was signed using an insecure algorithm.\n\n", i++);
+		strncat(out, buf, size);
+		size -= strlen(buf);
+		/* TODO: print algorithm*/
+	}
+
+	if (status & GNUTLS_CERT_NOT_ACTIVATED) {
+		snprintf(buf, sizeof(buf),
+			" %d. Certificate is not yet activated.\n\n", i++);
+		strncat(out, buf, size);
+		size -= strlen(buf);
+		/* TODO: print activation date */
+	}
+
+	if (status & GNUTLS_CERT_EXPIRED) {
+		snprintf(buf, sizeof(buf),
+			" %d. Certificate has expired.\n\n", i++);
+		strncat(out, buf, size);
+		size -= strlen(buf);
+		/* TODO: print expiration date */
+	}
+
+	if (status & GNUTLS_CERT_SIGNATURE_FAILURE) {
+		snprintf(buf, sizeof(buf),
+			" %d. Failed to verify the signature of the certificate.\n\n", i++);
+		strncat(out, buf, size);
+		size -= strlen(buf);
+	}
+
+	if (status & GNUTLS_CERT_REVOCATION_DATA_SUPERSEDED) {
+		snprintf(buf, sizeof(buf),
+			" %d. Revocation data are old and have been superseded.\n\n", i++);
+		strncat(out, buf, size);
+		size -= strlen(buf);
+	}
+
+	if (status & GNUTLS_CERT_UNEXPECTED_OWNER) {
+		snprintf(buf, sizeof(buf),
+			" %d. The owner is not the expected one.\n\n", i++);
+		strncat(out, buf, size);
+		size -= strlen(buf);
+	}
+
+	if (status & GNUTLS_CERT_REVOCATION_DATA_ISSUED_IN_FUTURE) {
+		snprintf(buf, sizeof(buf),
+			" %d. The revocation data have a future issue date.\n\n", i++);
+		strncat(out, buf, size);
+		size -= strlen(buf);
+	}
+
+	if (status & GNUTLS_CERT_SIGNER_CONSTRAINTS_FAILURE) {
+		snprintf(buf, sizeof(buf),
+			" %d. The certificate's signer constraints were violated.\n\n", i++);
+		strncat(out, buf, size);
+		size -= strlen(buf);
+	}
+
+	if (status & GNUTLS_CERT_MISMATCH) {
+		snprintf(buf, sizeof(buf),
+			" %d. The certificate presented isn't the expected one (TOFU)\n\n", i++);
+		strncat(out, buf, size);
+		size -= strlen(buf);
+	}
+
+	if (status & GNUTLS_CERT_PURPOSE_MISMATCH) {
+		snprintf(buf, sizeof(buf),
+			" %d. The certificate or an intermediate does not match the\n"
+			"     intended purpose (extended key usage).\n\n", i++);
+		strncat(out, buf, size);
+		size -= strlen(buf);
+	}
+}
+
+static int
+_utils_cert_store_get_filename(char *out, size_t size)
+{
+	int rv;
+	char *home;
+	char dir[PATH_MAX - 12];
+	struct stat sb;
+
+	home = getenv("HOME");
+
+	if (home == NULL)
+		return 1;
+
+	if (snprintf(dir, sizeof(dir) - 1, "%s/%s", home, ".local/share/rdesktop/certs/") > (int)sizeof(dir))
+	{
+		logger(Core, Error, "%s(), certificate store directory is truncated", __func__);
+		return 1;
+	}
+
+	if ((rv = stat(dir, &sb)) == -1)
+	{
+		if (errno == ENOENT)
+		{
+			if (rd_certcache_mkdir() == False) {
+				logger(Core, Error, "%s(), failed to create directory '%s'", dir);
+				return 1;
+			}
+		}
+	}
+	else
+	{
+		if ((sb.st_mode & S_IFMT) != S_IFDIR)
+		{
+			logger(Core, Error, "%s(), %s exists but it's not a directory",
+				   __func__, dir);
+			return 1;
+		}
+	}
+
+	if (snprintf(out, size, "%s/known_certs", dir) > (int)size)
+	{
+		logger(Core, Error, "%s(), certificate store filename is truncated");
+		return 1;
+	}
+
+	return 0;
+}
+
+#define TRUST_CERT_PROMPT_TEXT "Do you trust this certificate (yes/no)? "
+#define REVIEW_CERT_TEXT \
+	"Review the following certificate info before you trust it to be added as an exception.\n" \
+	"If you do not trust the certificate the connection atempt will be aborted:"
+
+int
+utils_cert_handle_exception(gnutls_session_t session, unsigned int status,
+						    RD_BOOL hostname_mismatch, const char *hostname)
+{
+	int rv;
+	int type;
+	time_t exp_time;
+	gnutls_x509_crt_t cert;
+	const gnutls_datum_t *cert_list;
+	unsigned int cert_list_size = 0;
+
+	char certcache_fn[PATH_MAX];
+	char cert_info[2048] = {0};
+	char cert_invalid_reasons[2048] = {0};
+	char message[8192] = {0};
+	const char *response;
+
+	/* get filename for certificate exception store */
+	if (_utils_cert_store_get_filename(certcache_fn, sizeof(certcache_fn)) != 0)
+	{
+		logger(Core, Error, "%s(), Failed to get certificate store file, "
+							"disabling exception handling.", __func__);
+		return 1;
+	}
+
+	type = gnutls_certificate_type_get(session);
+	if (type != GNUTLS_CRT_X509)
+	{
+		logger(Core, Error, "%s(), Certificate for session is not an x509 certificate, "
+							"disabling exception handling.", __func__);
+		return 1;
+	}
+
+
+	cert_list = gnutls_certificate_get_peers(session, &cert_list_size);
+	if (cert_list_size == 0)
+	{
+		logger(Core, Error, "%s(), Failed to get certificate, "
+							"disabling exception handling.", __func__);
+		return 1;
+	}
+
+	rv = gnutls_verify_stored_pubkey(certcache_fn, NULL, hostname, "rdesktop", type, &cert_list[0], 0);
+	if (rv == GNUTLS_E_SUCCESS)
+	{
+		/* Certificate found in store and matches server */
+		logger(Core, Warning, "Certificate received from server is NOT trusted by this system, "
+			"an exception has been added by the user to trust this specific certificate.");
+		return 0;
+	}
+	else if (rv !=  GNUTLS_E_CERTIFICATE_KEY_MISMATCH && rv != GNUTLS_E_NO_CERTIFICATE_FOUND)
+	{
+		/* Unhandled errors */
+		logger(Core, Error, "%s(), verification for host '%s' certificate failed. Error = 0x%x (%s)",
+				__func__, hostname, rv, gnutls_strerror(rv));
+		return 1;
+	}
+
+	/*
+	 * Give user possibility to add / update certificate to store
+	 */
+
+	gnutls_x509_crt_init(&cert);
+	gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER);
+	_utils_cert_get_info(cert, cert_info, sizeof(cert_info));
+
+	if (rv == GNUTLS_E_CERTIFICATE_KEY_MISMATCH)
+	{
+		/* Certificate from server mismatches the one in store */
+
+		snprintf(message, sizeof(message),
+			"ATTENTION! Found a certificate stored for host '%s', but it does not match the certificate\n"
+			"received from server.\n"
+			REVIEW_CERT_TEXT
+			"\n\n"
+			"%s"
+			"\n\n"
+			TRUST_CERT_PROMPT_TEXT
+			, hostname, cert_info);
+
+
+	}
+	else if (rv == GNUTLS_E_NO_CERTIFICATE_FOUND)
+	{
+		/* Certificate is not found in store, propose to add an exception */
+		_utils_cert_get_status_report(cert, status, hostname_mismatch, hostname,
+			cert_invalid_reasons, sizeof(cert_invalid_reasons));
+
+		snprintf(message, sizeof(message),
+			"ATTENTION! The server uses and invalid security certificate which can not be trusted for\n"
+			"the following identified reasons(s);\n\n"
+			"%s"
+			"\n"
+			REVIEW_CERT_TEXT
+			"\n\n"
+			"%s"
+			"\n\n"
+			TRUST_CERT_PROMPT_TEXT,
+			cert_invalid_reasons, cert_info);
+	}
+
+	/* show dialog */
+	response = util_dialog_choice(message, "no", "yes", NULL);
+	if (strcmp(response, "no") == 0 || response == NULL)
+	{
+		return 1;
+	}
+
+	/* user responded with yes, lets add certificate to store */
+	logger(Core, Debug, "%s(), adding a new certificate for the host '%s'", __func__, hostname);
+	exp_time = gnutls_x509_crt_get_expiration_time(cert);
+	rv = gnutls_store_pubkey(certcache_fn, NULL, hostname, "rdesktop", type, &cert_list[0], exp_time, 0);
+	if (rv != GNUTLS_E_SUCCESS)
+	{
+		logger(Core, Error, "%s(), failed to store certificate. error = 0x%x (%s)", __func__, rv, gnutls_strerror(rv));
+		return 1;
+	}
+
+	return 0;
 }
