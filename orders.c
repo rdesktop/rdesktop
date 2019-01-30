@@ -1250,7 +1250,7 @@ process_secondary_order(STREAM s)
 	/* The length isn't calculated correctly by the server.
 	 * For very compact orders the length becomes negative
 	 * so a signed integer must be used. */
-	uint16 length;
+	sint16 length;
 	uint16 flags;
 	uint8 type;
 	size_t next_order;
@@ -1260,12 +1260,17 @@ process_secondary_order(STREAM s)
 	in_uint16_le(s, flags);	/* used by bmpcache2 */
 	in_uint8(s, type);
 
-	if (!s_check_rem(s, length + 7))
+	length += 13;  /* MS-RDPEGDI is ridiculous and says that you need to add 13 to this
+			  field to get the total packet length. "For historical reasons". */
+	length -= 6;   /* Subtract six bytes of headers and you'll get the size of the remaining
+			  order data. */
+
+	if (!s_check_rem(s, length))
 	{
 		rdp_protocol_error("next order pointer would overrun stream", &packet);
 	}
 
-	next_order = s_tell(s) + length + 7;
+	next_order = s_tell(s) + length;
 
 	switch (type)
 	{
