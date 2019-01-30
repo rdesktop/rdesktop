@@ -1908,7 +1908,7 @@ process_redirect_pdu(STREAM s, RD_BOOL enhanced_redirect /*, uint32 * ext_disc_r
 		g_redirect_cookie = xmalloc(g_redirect_cookie_len);
 
 		/* read cookie as is */
-		in_uint8p(s, g_redirect_cookie, g_redirect_cookie_len);
+		in_uint8a(s, g_redirect_cookie, g_redirect_cookie_len);
 
 		logger(Protocol, Debug, "process_redirect_pdu(), Read %d bytes redirection cookie",
 		       g_redirect_cookie_len);
