@@ -846,29 +846,6 @@ _utils_cert_get_status_report(gnutls_x509_crt_t cert, unsigned int status,
 		strncat(out, buf, size);
 		size -= strlen(buf);
 	}
-
-	if (status & GNUTLS_CERT_MISSING_OCSP_STATUS) {
-		snprintf(buf, sizeof(buf),
-			" %d. The certificate requires the server to send the certifiate\n"
-			"     status, but no status was received.\n\n", i++);
-		strncat(out, buf, size);
-		size -= strlen(buf);
-	}
-
-	if (status & GNUTLS_CERT_INVALID_OCSP_STATUS) {
-		snprintf(buf, sizeof(buf),
-			" %d. The received OCSP status response is invalid.\n\n", i++);
-		strncat(out, buf, size);
-		size -= strlen(buf);
-	}
-
-	if (status & GNUTLS_CERT_UNKNOWN_CRIT_EXTENSIONS) {
-		snprintf(buf, sizeof(buf),
-			" %d. The certificate has extensions marked as critical which are\n"
-			"     not supported.\n\n", i++);
-		strncat(out, buf, size);
-		size -= strlen(buf);
-	}
 }
 
 static int
