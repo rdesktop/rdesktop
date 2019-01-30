@@ -1,7 +1,7 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
 
-   Copyright 2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2017-2019 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -20,6 +20,9 @@
 #ifndef _utils_h
 #define _utils_h
 
+#include <gnutls/gnutls.h>
+#include <gnutls/x509.h>
+
 #include "types.h"
 
 uint32 utils_djb2_hash(const char *str);
@@ -34,6 +37,9 @@ void utils_calculate_dpi_scale_factors(uint32 width, uint32 height, uint32 dpi,
 void utils_apply_session_size_limitations(uint32 * width, uint32 * height);
 
 const char* util_dialog_choice(const char *message, ...);
+
+int utils_cert_handle_exception(gnutls_session_t session, unsigned int status,
+							    RD_BOOL hostname_mismatch, const char *hostname);
 
 typedef enum log_level_t
 {

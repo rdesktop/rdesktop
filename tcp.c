@@ -3,7 +3,7 @@
    Protocol services - TCP layer
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2005-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
-   Copyright 2012-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2012-2019 Henrik Andersson <hean01@cendio.se> for Cendio AB
    Copyright 2017 Alexander Zakharov <uglym8@gmail.com>
 
    This program is free software: you can redistribute it and/or modify
@@ -280,129 +280,6 @@ tcp_recv(STREAM s, uint32 length)
 	return s;
 }
 
-int check_cert(gnutls_session_t session)
-{
-	int rv;
-	char *home;
-	char certcache_dir[PATH_MAX];
-	char certcache_fn[PATH_MAX];
-
-	struct stat sb;
-
-	int type;
-	time_t exp_time;
-	gnutls_x509_crt_t cert;
-	gnutls_datum_t cinfo;
-	const gnutls_datum_t *cert_list;
-	unsigned int cert_list_size = 0;
-
-	size_t size;
-
-	home = getenv("HOME");
-
-	if (home == NULL)
-		return False;
-
-	snprintf(certcache_dir, sizeof(certcache_dir) - 1, "%s/%s", home, ".local/share/rdesktop/certs/");
-
-	if ((rv = stat(certcache_dir, &sb)) == -1) {
-
-		if (errno == ENOENT) {
-			if (rd_certcache_mkdir() == False) {
-				goto bail;
-			}
-		}
-	} else {
-		if ((sb.st_mode & S_IFMT) != S_IFDIR) {
-			logger(Core, Error, "%s: %s exists but it's not a directory", __func__, certcache_dir);
-			goto bail;
-		}
-	}
-
-	snprintf(certcache_fn, sizeof(certcache_fn) - 1, "%s/%s", certcache_dir, "known_certs");
-
-	type = gnutls_certificate_type_get(session);
-
-	if (type == GNUTLS_CRT_X509) {
-
-		cert_list = gnutls_certificate_get_peers(session, &cert_list_size);
-
-		if (cert_list_size > 0) {
-			rv = gnutls_verify_stored_pubkey(certcache_fn, NULL, g_last_server_name, "rdesktop", type, &cert_list[0], 0);
-
-			if (rv == GNUTLS_E_NO_CERTIFICATE_FOUND || rv == GNUTLS_E_CERTIFICATE_KEY_MISMATCH) {
-				const char *response;
-				char message[2048];
-
-				if (rv == GNUTLS_E_CERTIFICATE_KEY_MISMATCH)
-				{
-					snprintf(message, sizeof(message),
-						"Found a certificate for '%s' stored in cache, but it does not match the "
-						"certificate received from server, \n"
-						, g_last_server_name);
-				}
-				else
-				{
-					snprintf(message, sizeof(message),
-						"'%s' uses an invalid security certificate. you have an option to add an "
-						"exception for this certificate, \n"
-						, g_last_server_name);
-
-				}
-
-				gnutls_x509_crt_init(&cert);
-				gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER);
-				rv = gnutls_x509_crt_print(cert, GNUTLS_CRT_PRINT_FULL, &cinfo);
-				if (rv == 0)
-				{
-					strcat(message, "review the following certificate info:\n\n");
-					strncat(message, (char *)cinfo.data, cinfo.size);
-					gnutls_free(cinfo.data);
-				}
-				else
-				{
-					logger(Core, Error, "%s: Failed to print the certificate. error = 0x%x (%s)", __func__, rv, gnutls_strerror(rv));
-
-					strcat(message,
-						"rdesktop failed to parse the certificate and there for " \
-						"we can not display certificate information for you to "  \
-						" inspect the change.\n\n");
-				}
-
-				strcat(message, "\n\nDo you trust this certificate (yes/no)? ");
-
-				response = util_dialog_choice(message, "no", "yes", NULL);
-				if (strcmp(response, "no") == 0 || response == NULL)
-					goto bail;
-
-				logger(Core, Debug, "%s: %s: Adding a new certificate for the host '%s'.", __func__, g_last_server_name);
-
-				exp_time = gnutls_x509_crt_get_expiration_time(cert);
-				rv = gnutls_store_pubkey(certcache_fn, NULL, g_last_server_name, "rdesktop", type, &cert_list[0], exp_time, 0);
-
-				if (rv != GNUTLS_E_SUCCESS) {
-					logger(Core, Error, "%s: Failed to store certificate. error = 0x%x (%s)", __func__, rv, gnutls_strerror(rv));
-					goto bail;
-				}
-
-			} else if (rv < 0) {
-				fprintf(stderr, "%s: gnutls_verify_stored_pubkey: %s\n", __func__, gnutls_strerror(rv));
-				logger(Core, Error, "%s: Verification for host '%s' certificate failed. Error = 0x%x (%s)", __func__, g_last_server_name, rv, gnutls_strerror(rv));
-				goto bail;
-			} else {
-				logger(Core, Notice, "Certificate received from server is NOT trusted by system, "
-					"an exception has been added by the user to trust this certificate.");
-			}
-		}
-	}
-
-	return 0;
-
-bail:
-	return 1;
-}
-
-
 /*
  * Callback during handshake to verify peer certificate
  */
@@ -411,6 +288,7 @@ cert_verify_callback(gnutls_session_t session)
 {
 	int rv;
 	int type;
+	RD_BOOL hostname_mismatch = False;
 	unsigned int status;
 	gnutls_x509_crt_t cert;
 	const gnutls_datum_t *cert_list;
@@ -422,6 +300,8 @@ cert_verify_callback(gnutls_session_t session)
 	rv = gnutls_certificate_verify_peers2(session, &status);
 	if (rv == GNUTLS_E_SUCCESS)
 	{
+		logger(Core, Debug, "%s(), certificate verify status flags: %x", __func__, status);
+
 		if (status == 0)
 		{
 			/* get list of certificates */
@@ -440,57 +320,27 @@ cert_verify_callback(gnutls_session_t session)
 				gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER);
 				if (gnutls_x509_crt_check_hostname(cert, g_last_server_name) != 0)
 				{
-					logger(Core, Notice, "%s(), certificate is valid", __func__);
+					logger(Core, Debug, "%s(), certificate is valid", __func__);
 					return 0;
 				}
 				else
 				{
-					logger(Core, Error, "%s(), certificate hostname mismatch", __func__);
+					logger(Core, Warning, "%s(), certificate hostname mismatch", __func__);
+					hostname_mismatch = True;
 				}
 			}
 			else
 			{
-				logger(Core, Error, "%s(), failed to verify certificate hostname", __func__);
+				logger(Core, Error, "%s(), failed to get certificate list for peers", __func__);
+				return 1;
 			}
-		}
-
-		logger(Core, Debug, "%s(), certificate status flags: %x", __func__, status);
-
-		if (status&GNUTLS_CERT_INVALID)
-		{
-			logger(Core, Error, "%s(), certificate is invalid", __func__);
-		}
-
-		if (status&GNUTLS_CERT_SIGNER_NOT_FOUND)
-		{
-			logger(Core, Error, "%s(), certificate signed by unknown issuer", __func__);
-		}
-
-		if(status&GNUTLS_CERT_SIGNATURE_FAILURE)
-		{
-			logger(Core, Error, "%s(), certificate has an invalid signature", __func__);
-		}
-
-		if(status&GNUTLS_CERT_REVOKED)
-		{
-			logger(Core, Error, "%s(), certificate is revoked", __func__);
-		}
-
-		if(status&GNUTLS_CERT_EXPIRED)
-		{
-			logger(Core, Error, "%s(), certificate has expired", __func__);
-		}
-
-		if(status&GNUTLS_CERT_INSECURE_ALGORITHM)
-		{
-			logger(Core, Error, "%s(), certificate uses an insecure algorithm", __func__);
 		}
 	}
 
 	/*
 	 *  Use local store as fallback
 	 */
-	return check_cert(session);
+	return utils_cert_handle_exception(session, status, hostname_mismatch, g_last_server_name);
 }
 
 /* Establish a SSL/TLS 1.0 connection */
