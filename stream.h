@@ -3,6 +3,7 @@
    Parsing primitives
    Copyright (C) Matthew Chapman 1999-2008
    Copyright 2012-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2019 Karl Mikaelsson <derfian@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -62,42 +63,56 @@ size_t in_ansi_string(STREAM s, char *string, size_t len);
 #if defined(L_ENDIAN) && !defined(NEED_ALIGN)
 #define in_uint16_le(s,v)	{ v = *(uint16 *)((s)->p); (s)->p += 2; }
 #define in_uint32_le(s,v)	{ v = *(uint32 *)((s)->p); (s)->p += 4; }
+#define in_uint64_le(s,v)	{ v = *(uint64 *)((s)->p); (s)->p += 8; }
 #define out_uint16_le(s,v)	{ *(uint16 *)((s)->p) = v; (s)->p += 2; }
 #define out_uint32_le(s,v)	{ *(uint32 *)((s)->p) = v; (s)->p += 4; }
+#define out_uint64_le(s,v)	{ *(uint64 *)((s)->p) = v; (s)->p += 8; }
 #else
 #define in_uint16_le(s,v)	{ v = *((s)->p++); v += *((s)->p++) << 8; }
 #define in_uint32_le(s,v)	{ in_uint16_le(s,v) \
 				v += *((s)->p++) << 16; v += *((s)->p++) << 24; }
+#define in_uint64_le(s,v)	{ in_uint32_le(s,v) \
+				v += *((s)->p++) << 32; v += *((s)->p++) << 40; \
+				v += *((s)->p++) << 48; v += *((s)->p++) << 56; }
 #define out_uint16_le(s,v)	{ *((s)->p++) = (v) & 0xff; *((s)->p++) = ((v) >> 8) & 0xff; }
 #define out_uint32_le(s,v)	{ out_uint16_le(s, (v) & 0xffff); out_uint16_le(s, ((v) >> 16) & 0xffff); }
+#define out_uint64_le(s,v)	{ out_uint32_le(s, (v) & 0xffffffff); out_uint32_le(s, ((v) >> 32) & 0xffffffff); }
 #endif
 
-#define out_uint64_le(s,v)	{ out_uint32_le(s, (v) & 0xffffffff); out_uint32_le(s, ((v) >> 32) & 0xffffffff); }
 
 #if defined(B_ENDIAN) && !defined(NEED_ALIGN)
 #define in_uint16_be(s,v)	{ v = *(uint16 *)((s)->p); (s)->p += 2; }
 #define in_uint32_be(s,v)	{ v = *(uint32 *)((s)->p); (s)->p += 4; }
+#define in_uint64_be(s,v)	{ v = *(uint64 *)((s)->p); (s)->p += 8; }
 #define out_uint16_be(s,v)	{ *(uint16 *)((s)->p) = v; (s)->p += 2; }
 #define out_uint32_be(s,v)	{ *(uint32 *)((s)->p) = v; (s)->p += 4; }
+#define out_uint64_be(s,v)	{ *(uint64 *)((s)->p) = v; (s)->p += 8; }
 
 #define B_ENDIAN_PREFERRED
 #define in_uint16(s,v)		in_uint16_be(s,v)
 #define in_uint32(s,v)		in_uint32_be(s,v)
+#define in_uint64(s,v)		in_uint64_be(s,v)
+
 #define out_uint16(s,v)		out_uint16_be(s,v)
 #define out_uint32(s,v)		out_uint32_be(s,v)
+#define out_uint64(s,v)		out_uint64_be(s,v)
 
 #else
 #define in_uint16_be(s,v)	{ v = *((s)->p++); next_be(s,v); }
 #define in_uint32_be(s,v)	{ in_uint16_be(s,v); next_be(s,v); next_be(s,v); }
+#define in_uint64_be(s,v)	{ in_uint32_be(s,v); next_be(s,v); next_be(s,v); next_be(s,v); next_be(s,v); }
 #define out_uint16_be(s,v)	{ *((s)->p++) = ((v) >> 8) & 0xff; *((s)->p++) = (v) & 0xff; }
 #define out_uint32_be(s,v)	{ out_uint16_be(s, ((v) >> 16) & 0xffff); out_uint16_be(s, (v) & 0xffff); }
+#define out_uint64_be(s,v)	{ out_uint32_be(s, ((v) >> 32) & 0xffffffff); out_uint32_be(s, (v) & 0xffffffff); }
 #endif
 
 #ifndef B_ENDIAN_PREFERRED
 #define in_uint16(s,v)		in_uint16_le(s,v)
 #define in_uint32(s,v)		in_uint32_le(s,v)
+#define in_uint64(s,v)		in_uint64_le(s,v)
 #define out_uint16(s,v)		out_uint16_le(s,v)
 #define out_uint32(s,v)		out_uint32_le(s,v)
+#define out_uint64(s,v)		out_uint64_le(s,v)
 #endif
 
 #define in_uint8(s,v)		v = *((s)->p++);

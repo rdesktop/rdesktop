@@ -628,9 +628,9 @@ serial_close(RD_NTHANDLE handle)
 }
 
 static RD_NTSTATUS
-serial_read(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
+serial_read(RD_NTHANDLE handle, uint8 * data, uint32 length, uint64 offset, uint32 * result)
 {
-	UNUSED(offset);
+	UNUSED(offset);  /* Offset must always be zero according to MS-RDPESP */
 	long timeout;
 	SERIAL_DEVICE *pser_inf;
 	struct termios *ptermios;
@@ -684,12 +684,10 @@ serial_read(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint
 }
 
 static RD_NTSTATUS
-serial_write(RD_NTHANDLE handle, uint8 * data, uint32 length, uint32 offset, uint32 * result)
+serial_write(RD_NTHANDLE handle, uint8 * data, uint32 length, uint64 offset, uint32 * result)
 {
-	UNUSED(offset);
+	UNUSED(offset);  /* Offset must always be zero according to MS-RDPESP */
 	SERIAL_DEVICE *pser_inf;
-
-	/* FIXME: offset is not used ? */
 
 	pser_inf = get_serial_info(handle);
 
