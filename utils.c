@@ -760,7 +760,7 @@ _utils_cert_get_status_report(gnutls_x509_crt_t cert, unsigned int status,
 		memset(buf, 0, sizeof(buf));
 		if (_utils_dn_to_string(dn, False, buf, sizeof(buf)) == 0)
 		{
-			snprintf(str, sizeof(str), "     Issuer: %s\n", buf);
+			snprintf(str, sizeof(str), "     Issuer: %s\n\n", buf);
 			strncat(out, str, size);
 			size -= strlen(str);
 		}
@@ -786,7 +786,11 @@ _utils_cert_get_status_report(gnutls_x509_crt_t cert, unsigned int status,
 			" %d. Certificate is not yet activated.\n\n", i++);
 		strncat(out, buf, size);
 		size -= strlen(buf);
-		/* TODO: print activation date */
+
+		time_t ts = gnutls_x509_crt_get_activation_time(cert);
+		snprintf(buf, sizeof(buf), "     Valid From: %s\n\n", ctime(&ts));
+		strncat(out, buf, size);
+		size -= strlen(buf);
 	}
 
 	if (status & GNUTLS_CERT_EXPIRED) {
@@ -794,7 +798,11 @@ _utils_cert_get_status_report(gnutls_x509_crt_t cert, unsigned int status,
 			" %d. Certificate has expired.\n\n", i++);
 		strncat(out, buf, size);
 		size -= strlen(buf);
-		/* TODO: print expiration date */
+
+		time_t ts = gnutls_x509_crt_get_expiration_time(cert);
+		snprintf(buf, sizeof(buf), "     Valid to: %s\n\n", ctime(&ts));
+		strncat(out, buf, size);
+		size -= strlen(buf);
 	}
 
 	if (status & GNUTLS_CERT_SIGNATURE_FAILURE) {
