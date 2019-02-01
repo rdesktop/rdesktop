@@ -325,7 +325,7 @@ int libtasn_read_cert_pk_parameters(uint8_t *data, size_t len, gnutls_datum_t *m
 		return 1;
 	}
 
-	memcpy((void *)e->data, newbuf, m->size);
+	memcpy((void *)e->data, newbuf, e->size);
 
 	return 0;
 }
