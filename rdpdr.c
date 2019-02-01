@@ -4,6 +4,7 @@
    Copyright 2004-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
    Copyright 2010-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
    Copyright 2017-2019 Karl Mikaelsson <derfian@cendio.se> for Cendio AB
+   Copyright 2016, 2018 Alexander Zakharov <uglym8@gmail.com>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by

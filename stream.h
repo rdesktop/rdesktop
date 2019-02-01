@@ -3,6 +3,7 @@
    Parsing primitives
    Copyright (C) Matthew Chapman 1999-2008
    Copyright 2012-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2017 Alexander Zakharov <uglym8@gmail.com>
    Copyright 2019 Karl Mikaelsson <derfian@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify

@@ -6,7 +6,7 @@
    Copyright 2011-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
    Copyright 2015 Rostislav Kondratenko <r.kondratenk@wwpass.com>
    Copyright 2017 Karl Mikaelsson <derfian@cendio.se> for Cendio AB
-   Copyright 2018 Alexander Zakharov <uglym8@gmail.com>
+   Copyright 2016-2018 Alexander Zakharov <uglym8@gmail.com>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by

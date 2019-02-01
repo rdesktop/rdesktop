@@ -4,6 +4,7 @@
    Copyright 2003-2008 Erik Forsberg <forsberg@cendio.se> for Cendio AB
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 2003-2008
    Copyright 2006-2011 Pierre Ossman <ossman@cendio.se> for Cendio AB
+   Copyright 2016 Alexander Zakharov <uglym8@gmail.com>
    Copyright 2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify

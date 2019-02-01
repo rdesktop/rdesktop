@@ -2,6 +2,7 @@
    rdesktop: A Remote Desktop Protocol client.
    Miscellaneous protocol constants
    Copyright (C) Matthew Chapman 1999-2008
+   Copyright 2016 Alexander Zakharov <uglym8@gmail.com>
    Copyright 2017-2018 Henrik Andersson <hean01@cendio.se> for Cendio AB
 
    This program is free software: you can redistribute it and/or modify

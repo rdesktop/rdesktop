@@ -4,7 +4,7 @@
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2005-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
    Copyright 2012-2019 Henrik Andersson <hean01@cendio.se> for Cendio AB
-   Copyright 2017 Alexander Zakharov <uglym8@gmail.com>
+   Copyright 2017-2018 Alexander Zakharov <uglym8@gmail.com>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
