@@ -220,11 +220,15 @@ xclip_provide_selection(XSelectionRequestEvent * req, Atom type, unsigned int fo
 			uint32 length)
 {
 	XEvent xev;
+	char *target_name, *property_name;
 
+	target_name = XGetAtomName(g_display, req->target);
+	property_name = XGetAtomName(g_display, req->property);
 	logger(Clipboard, Debug,
 	       "xclip_provide_selection(), requestor=0x%08x, target=%s, property=%s, length=%u",
-	       (unsigned) req->requestor, XGetAtomName(g_display, req->target),
-	       XGetAtomName(g_display, req->property), (unsigned) length);
+	       (unsigned) req->requestor, target_name, property_name, (unsigned) length);
+	XFree(target_name);
+	XFree(property_name);
 
 	XChangeProperty(g_display, req->requestor, req->property,
 			type, format, PropModeReplace, data, length);
@@ -247,11 +251,15 @@ static void
 xclip_refuse_selection(XSelectionRequestEvent * req)
 {
 	XEvent xev;
+	char *target_name, *property_name;
 
+	target_name = XGetAtomName(g_display, req->target);
+	property_name = XGetAtomName(g_display, req->property);
 	logger(Clipboard, Debug,
 	       "xclip_refuse_selection(), requestor=0x%08x, target=%s, property=%s",
-	       (unsigned) req->requestor, XGetAtomName(g_display, req->target),
-	       XGetAtomName(g_display, req->property));
+	       (unsigned) req->requestor, target_name, property_name);
+	XFree(target_name);
+	XFree(property_name);
 
 	xev.xselection.type = SelectionNotify;
 	xev.xselection.serial = 0;
@@ -292,8 +300,12 @@ helper_cliprdr_send_empty_response()
 static RD_BOOL
 xclip_send_data_with_convert(uint8 * source, size_t source_size, Atom target)
 {
+	char *target_name;
+
+	target_name = XGetAtomName(g_display, target);
 	logger(Clipboard, Debug, "xclip_send_data_with_convert(), target=%s, size=%u",
-	       XGetAtomName(g_display, target), (unsigned) source_size);
+	       target_name, (unsigned) source_size);
+	XFree(target_name);
 
 #ifdef USE_UNICODE_CLIPBOARD
 	if (target == format_string_atom ||
@@ -513,14 +525,20 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 	Atom *supported_targets;
 	int res, format;
 	uint8 *data = NULL;
+	char *selection_name, *target_name, *property_name;
 
 	if (event->property == None)
 		goto fail;
 
+	selection_name = XGetAtomName(g_display, event->selection);
+	target_name = XGetAtomName(g_display, event->target);
+	property_name = XGetAtomName(g_display, event->property);
 	logger(Clipboard, Debug,
 	       "xclip_handle_SelectionNotify(), selection=%s, target=%s, property=%s",
-	       XGetAtomName(g_display, event->selection), XGetAtomName(g_display, event->target),
-	       XGetAtomName(g_display, event->property));
+	       selection_name, target_name, property_name);
+	XFree(selection_name);
+	XFree(target_name);
+	XFree(property_name);
 
 	if (event->target == timestamp_atom)
 	{
@@ -643,9 +661,11 @@ xclip_handle_SelectionNotify(XSelectionEvent * event)
 			supported_targets = (Atom *) data;
 			for (i = 0; i < nitems; i++)
 			{
+				target_name = XGetAtomName(g_display, supported_targets[i]);
 				logger(Clipboard, Debug,
 				       "xclip_handle_SelectionNotify(), target %d: %s", i,
-				       XGetAtomName(g_display, supported_targets[i]));
+				       target_name);
+				XFree(target_name);
 				if (supported_targets[i] == format_string_atom)
 				{
 					if (text_target_satisfaction < 1)
@@ -782,11 +802,17 @@ xclip_handle_SelectionRequest(XSelectionRequestEvent * event)
 	unsigned char *prop_return = NULL;
 	int format, res;
 	Atom type;
+	char *selection_name, *target_name, *property_name;
 
+	selection_name = XGetAtomName(g_display, event->selection);
+	target_name = XGetAtomName(g_display, event->target);
+	property_name = XGetAtomName(g_display, event->property);
 	logger(Clipboard, Debug,
 	       "xclip_handle_SelectionRequest(), selection=%s, target=%s, property=%s",
-	       XGetAtomName(g_display, event->selection), XGetAtomName(g_display, event->target),
-	       XGetAtomName(g_display, event->property));
+	       selection_name, target_name, property_name);
+	XFree(selection_name);
+	XFree(target_name);
+	XFree(property_name);
 
 	if (event->target == targets_atom)
 	{
@@ -856,9 +882,11 @@ xclip_handle_SelectionRequest(XSelectionRequestEvent * event)
 		}
 		else
 		{
+			target_name = XGetAtomName(g_display, event->target);
 			logger(Clipboard, Warning,
 			       "xclip_handle_SelectionRequest(), unsupported target format, target='%s'",
-			       XGetAtomName(g_display, event->target));
+			       target_name);
+			XFree(target_name);
 			xclip_refuse_selection(event);
 			return;
 		}
@@ -1052,9 +1080,11 @@ ui_clip_handle_data(uint8 * data, uint32 length)
 	}
 	else
 	{
+		char *target_name = XGetAtomName(g_display, selection_request.target);
 		logger(Clipboard, Debug,
 		       "ui_clip_handle_data(), no handler for selection target '%s'",
-		       XGetAtomName(g_display, selection_request.target));
+		       target_name);
+		XFree(target_name);
 		xclip_refuse_selection(&selection_request);
 		has_selection_request = False;
 		return;
