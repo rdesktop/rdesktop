@@ -156,7 +156,8 @@ rdssl_cert_read(uint8 * data, uint32 len)
 void
 rdssl_cert_free(RDSSL_CERT * cert)
 {
-	gnutls_free(cert);
+	gnutls_x509_crt_deinit(*cert);
+	free(cert);
 }
 
 
