@@ -683,6 +683,10 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 				logger(Protocol, Error,
 				       "sec_parse_crypt_info(), got a bad cert: this will probably screw up the rest of the communication");
 			}
+			else
+			{
+				rdssl_cert_free(ignorecert);
+			}
 		}
 		/* Do da funky X.509 stuffy
 
