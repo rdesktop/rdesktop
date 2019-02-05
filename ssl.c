@@ -114,6 +114,11 @@ rdssl_rsa_encrypt(uint8 * out, uint8 * in, int len, uint32 modulus_size, uint8 *
 
 	mpz_export(out, &outlen, -1, sizeof(out[0]), 0, 0, y);
 
+	mpz_clear(y);
+	mpz_clear(x);
+	mpz_clear(exp);
+	mpz_clear(mod);
+
 	if (outlen < (int) modulus_size)
 		memset(out + outlen, 0, modulus_size - outlen);
 }
