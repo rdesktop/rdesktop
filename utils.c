@@ -880,7 +880,7 @@ _utils_cert_store_get_filename(char *out, size_t size)
 		if (errno == ENOENT)
 		{
 			if (rd_certcache_mkdir() == False) {
-				logger(Core, Error, "%s(), failed to create directory '%s'", dir);
+				logger(Core, Error, "%s(), failed to create directory '%s'", __func__, dir);
 				return 1;
 			}
 		}
@@ -897,7 +897,7 @@ _utils_cert_store_get_filename(char *out, size_t size)
 
 	if (snprintf(out, size, "%s/known_certs", dir) > (int)size)
 	{
-		logger(Core, Error, "%s(), certificate store filename is truncated");
+		logger(Core, Error, "%s(), certificate store filename is truncated", __func__);
 		return 1;
 	}
 
