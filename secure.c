@@ -510,7 +510,7 @@ sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 			logger(Protocol, Debug, "sec_out_mcs_data(), requesting channel %s",
 			       g_channels[i].name);
 			out_uint8a(s, g_channels[i].name, 8);
-			out_uint32_be(s, g_channels[i].flags);
+			out_uint32_le(s, g_channels[i].flags);
 		}
 	}
 
