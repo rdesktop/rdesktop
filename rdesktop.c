@@ -1023,8 +1023,8 @@ main(int argc, char *argv[])
 				{
 					if (addin_count >= MAX_ADDINS)
 					{
-						error("Add-ins data table full, increase MAX_ADDINS\n");
-						return 1;
+						logger(Core, Error, "Add-ins data table full, increase MAX_ADDINS");
+						return EX_USAGE;
 					}
 
 					optarg += 5;
@@ -1054,8 +1054,8 @@ main(int argc, char *argv[])
 							}
 							else
 							{
-								error("Failed to initialise add-in [%s]\n", addin_name);
-								return 1;
+								logger(Core, Error, "Failed to initialise add-in [%s]", addin_name);
+								return EX_USAGE;
 							}
 						}
 						else
