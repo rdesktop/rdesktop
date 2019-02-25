@@ -169,7 +169,7 @@ typedef struct _VCHANNEL
 	char name[8];
 	uint32 flags;
 	struct stream in;
-	void (*process) (STREAM);
+	void (*process) (STREAM,char *);
 }
 VCHANNEL;
 
@@ -310,6 +310,15 @@ typedef struct fileinfo
 	uint32 info_class;
 }
 FILEINFO;
+
+typedef struct _ADDIN_DATA
+{
+	char name[255];
+	pid_t pid;
+	int pipe_read;
+	int pipe_write;
+	VCHANNEL *vchannel;
+} ADDIN_DATA;
 
 typedef RD_BOOL(*str_handle_lines_t) (const char *line, void *data);
 

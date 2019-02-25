@@ -372,7 +372,7 @@ seamless_line_handler(const char *line, void *data)
 
 
 static void
-seamless_process(STREAM s)
+seamless_process(STREAM s, char *name)
 {
 	unsigned int pkglen;
 	char *buf;

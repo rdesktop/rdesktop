@@ -19,6 +19,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <unistd.h>
 #include "rdesktop.h"
 
 #define MAX_CHANNELS			6
@@ -46,7 +47,7 @@ unsigned int g_num_channels;
 */
 
 VCHANNEL *
-channel_register(char *name, uint32 flags, void (*callback) (STREAM))
+channel_register(char *name, uint32 flags, void (*callback) (STREAM,char*))
 {
 	VCHANNEL *channel;
 
@@ -170,7 +171,7 @@ channel_process(STREAM s, uint16 mcs_channel)
 	if ((flags & CHANNEL_FLAG_FIRST) && (flags & CHANNEL_FLAG_LAST))
 	{
 		/* single fragment - pass straight up */
-		channel->process(s);
+		channel->process(s, channel->name);
 	}
 	else
 	{
@@ -194,7 +195,75 @@ channel_process(STREAM s, uint16 mcs_channel)
 		{
 			in->end = in->p;
 			in->p = in->data;
-			channel->process(in);
+			channel->process(in, channel->name);
+		}
+	}
+}
+
+/* Generic callback for delivering data to third party add-ins */
+void addin_callback(STREAM s, char *name)
+{
+	pid_t pid;
+	int pipe_read;
+	int pipe_write;
+	uint32 blocksize;
+
+	/* s->p is the start and s->end is the end plus 1 */
+	blocksize = s->end - s->p;
+
+	lookup_addin(name, &pid, &pipe_read, &pipe_write);
+	if (!pid)
+		perror("Can't locate addin");
+	else
+	{
+		/* Prepend the block with the block size so the
+		add-in can identify blocks */
+		write(pipe_write, &blocksize, sizeof(uint32));
+		write(pipe_write, s->p, blocksize);
+	}
+}
+
+/* Add the add-in pipes to the set of file descriptors */
+void addin_add_fds(int *n, fd_set * rfds)
+{
+	extern ADDIN_DATA addin_data[];
+	extern int addin_count;
+
+	int i;
+
+	for (i = 0; i < addin_count; i++)
+	{
+		FD_SET(addin_data[i].pipe_read, rfds);
+		*n = MAX(*n, addin_data[i].pipe_read);
+	}
+}
+
+/* Check the add-in pipes for data to write */
+void addin_check_fds(fd_set * rfds)
+{
+	extern ADDIN_DATA addin_data[];
+	extern int addin_count;
+
+	int i;
+	char buffer[1024];
+	ssize_t bytes_read;
+	STREAM s;
+
+	for (i = 0; i < addin_count; i++)
+	{
+		if (FD_ISSET(addin_data[i].pipe_read, rfds))
+		{
+			bytes_read = read(addin_data[i].pipe_read, buffer, 1024);
+			if (bytes_read > 0)
+			{
+				/* write to appropriate vc */
+				s = channel_init(addin_data[i].vchannel, bytes_read);
+				memcpy(s->p, buffer, bytes_read);
+				s->p += bytes_read;
+				s->end = s->p;
+
+				channel_send(s, addin_data[i].vchannel);
+			}
 		}
 	}
 }

@@ -113,7 +113,7 @@ cliprdr_send_data(uint8 * data, uint32 length)
 }
 
 static void
-cliprdr_process(STREAM s)
+cliprdr_process(STREAM s, char *name)
 {
 	uint16 type, status;
 	uint32 length, format;

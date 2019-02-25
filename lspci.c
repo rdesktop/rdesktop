@@ -130,7 +130,7 @@ lspci_process_line(const char *line, void *data)
 
 /* Process new data from the virtual channel */
 static void
-lspci_process(STREAM s)
+lspci_process(STREAM s, char *name)
 {
 	unsigned int pkglen;
 	static char *rest = NULL;

@@ -190,3 +190,5 @@
 #include "constants.h"
 #include "types.h"
 #include "proto.h"
+
+#define MAX_ADDINS 20

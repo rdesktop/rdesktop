@@ -47,7 +47,7 @@ void cache_put_cursor(uint16 cache_idx, RD_HCURSOR cursor);
 BRUSHDATA *cache_get_brush_data(uint8 colour_code, uint8 idx);
 void cache_put_brush_data(uint8 colour_code, uint8 idx, BRUSHDATA * brush_data);
 /* channels.c */
-VCHANNEL *channel_register(char *name, uint32 flags, void (*callback) (STREAM));
+VCHANNEL *channel_register(char *name, uint32 flags, void (*callback) (STREAM,char *));
 STREAM channel_init(VCHANNEL * channel, uint32 length);
 void channel_send(STREAM s, VCHANNEL * channel);
 void channel_process(STREAM s, uint16 mcs_channel);
@@ -363,6 +363,21 @@ int scard_enum_devices(uint32 * id, char *optarg);
 void scardSetInfo(uint32 epoch, uint32 device, uint32 id, uint32 bytes_out);
 void scard_reset_state();
 void scard_release_all_contexts(void);
+
+/* External addins */
+void init_external_addin(char * addin_name, char * addin_path, char * args, ADDIN_DATA * addin_data);
+
+/* Generic callback for delivering data to third party add-ins */
+void addin_callback(STREAM s, char *name);
+
+/* Find an external add-in registration by virtual channel name */
+void lookup_addin(char *name, pid_t * pid, int * pipe_read, int * pipe_write);
+
+/* Add external add-in pipes to the set of listened file descriptors */
+void addin_add_fds(int *n, fd_set * rfds);
+
+/* Read any available data from external add-in pipes */
+void addin_check_fds(fd_set *rfds);
 
 /* *INDENT-OFF* */
 #ifdef __cplusplus

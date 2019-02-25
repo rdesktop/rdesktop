@@ -377,7 +377,7 @@ rdpsnd_process_packet(uint8 opcode, STREAM s)
 }
 
 static void
-rdpsnd_process(STREAM s)
+rdpsnd_process(STREAM s, char *name)
 {
 	uint16 len;
 
@@ -445,7 +445,7 @@ rdpsnddbg_line_handler(const char *line, void *data)
 }
 
 static void
-rdpsnddbg_process(STREAM s)
+rdpsnddbg_process(STREAM s, char *name)
 {
 	unsigned int pkglen;
 	static char *rest = NULL;

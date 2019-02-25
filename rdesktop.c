@@ -160,6 +160,9 @@ extern RDPDR_DEVICE g_rdpdr_device[];
 extern uint32 g_num_devices;
 extern char *g_rdpdr_clientname;
 
+ADDIN_DATA addin_data[MAX_ADDINS];
+int addin_count = 0;
+
 RD_BOOL password_provided = False;
 
 /* Display usage information */
@@ -249,6 +252,9 @@ usage(char *program)
 	fprintf(stderr,
 		"                   \"AKS\"              -> Device vendor name                 \n");
 #endif
+	fprintf(stderr,
+		"         '-r addin:<channelname>:</path/to/executable>[:arg1[:arg2:]...]': enable third\n");
+	fprintf(stderr, "                      party virtual channel add-in.\n");
 	fprintf(stderr, "   -0: attach to console\n");
 	fprintf(stderr, "   -4: use RDP version 4\n");
 	fprintf(stderr, "   -5: use RDP version 5 (default)\n");
@@ -778,10 +784,12 @@ main(int argc, char *argv[])
 	char domain[256];
 	char shell[256];
 	char directory[256];
-	RD_BOOL deactivated;
+	RD_BOOL deactivated, sent_sigusr1;
 	struct passwd *pw;
 	uint32 flags, ext_disc_reason = 0;
 	char *p;
+	char *addin_name;
+	char *addin_path;
 	int c;
 	char *locale = NULL;
 	int username_option = 0;
@@ -1011,8 +1019,58 @@ main(int argc, char *argv[])
 				break;
 
 			case 'r':
+				if (str_startswith(optarg, "addin"))
+				{
+					if (addin_count >= MAX_ADDINS)
+					{
+						error("Add-ins data table full, increase MAX_ADDINS\n");
+						return 1;
+					}
 
-				if (str_startswith(optarg, "sound"))
+					optarg += 5;
+
+					if (*optarg == ':')
+					{
+						addin_name = optarg + 1;
+						if (*addin_name != '\0')
+						{
+							addin_path = next_arg(addin_name, ':');
+						}
+						else
+						{
+							addin_path = 0;
+						}
+						if (addin_path != 0)
+						{
+							p = next_arg(addin_path, ':');
+						}
+						if (*addin_name != '\0' && addin_path != 0 && *addin_path != '\0')
+						{
+							init_external_addin(addin_name, addin_path,
+									p, &addin_data[addin_count]);
+							if (addin_data[addin_count].pid != 0)
+							{
+								addin_count++;
+							}
+							else
+							{
+								error("Failed to initialise add-in [%s]\n", addin_name);
+								return 1;
+							}
+						}
+						else
+						{
+							usage(argv[0]);
+							return(1);
+						}
+					}
+					else
+					{
+						usage(argv[0]);
+						return(1);
+					}
+				}
+				else if (str_startswith(optarg, "sound"))
 				{
 					optarg += 5;
 
@@ -1493,6 +1551,20 @@ main(int argc, char *argv[])
 
 	cache_save_state();
 	ui_deinit();
+
+	/* Send a SIGUSR1 to all addins to close and sleep for a couple of secs
+	   to give them a chance to stop */
+	sent_sigusr1=False;
+	for (c = 0; c < addin_count; c++)
+	{
+		if (addin_data[c].pid != 0)
+		{
+			kill(addin_data[c].pid,SIGUSR1);
+			sent_sigusr1=True;
+		}
+	}
+	if (sent_sigusr1)
+		sleep(2);
 
 	if (g_user_quit)
 		return EXRD_WINDOW_CLOSED;
@@ -2163,4 +2235,112 @@ rd_lock_file(int fd, int start, int len)
 	if (fcntl(fd, F_SETLK, &lock) == -1)
 		return False;
 	return True;
+}
+
+/* Initialise external addin */
+void init_external_addin(char * addin_name, char * addin_path, char * args, ADDIN_DATA * addin_data)
+{
+	char *p;
+	char *current_arg;
+	char * argv[256];
+	char argv_buffer[256][256];
+	int i;
+	int readpipe[2],writepipe[2];
+	pid_t child;
+
+	/* Initialise addin structure */
+	memset(addin_data, 0, sizeof(ADDIN_DATA));
+	/* Go through the list of args, adding each to argv */
+	argv[0] = addin_path;
+	i = 1;
+	p=current_arg=args;
+	while (current_arg != 0 && current_arg[0] != '\0')
+	{
+		p=next_arg(p, ':');;
+		if (p != 0 && *p != '\0')
+			*(p - 1) = '\0';
+		strcpy(argv_buffer[i], current_arg);
+		argv[i]=argv_buffer[i];
+		i++;
+		current_arg=p;
+	}
+	argv[i] = NULL;
+
+
+	/* Create pipes */
+	if (pipe(readpipe) < 0 || pipe(writepipe) < 0)
+	{
+		perror("pipes for addin");
+		return;
+	}
+
+	/* Fork process */
+	if ((child = fork()) < 0)
+	{
+		perror("fork for addin");
+		return;
+	}
+
+	/* Child */
+	if (child == 0)
+	{
+		/* Set stdin and stdout of child to relevant pipe ends */
+		dup2(writepipe[0],0);
+		dup2(readpipe[1],1);
+
+		/* Close all fds as they are not needed now */
+		close(readpipe[0]);
+		close(readpipe[1]);
+		close(writepipe[0]);
+		close(writepipe[1]);
+		execvp((char *)argv[0], (char **)argv);
+		perror("Error executing child");
+		_exit(128);
+	}
+	else
+	{
+		strcpy(addin_data->name, addin_name);
+		/* Close child end fd's */
+		close(readpipe[1]);
+		close(writepipe[0]);
+		addin_data->pipe_read=readpipe[0];
+		addin_data->pipe_write=writepipe[1];
+		addin_data->vchannel=channel_register(addin_name,
+						CHANNEL_OPTION_INITIALIZED |
+						CHANNEL_OPTION_ENCRYPT_RDP |
+						CHANNEL_OPTION_COMPRESS_RDP,
+						addin_callback);
+		if (!addin_data->vchannel)
+		{
+			perror("Channel register failed");
+			return;
+		}
+		else
+			addin_data->pid=child;
+
+	}
+
+}
+
+/* Find an external add-in registration by virtual channel name */
+void lookup_addin(char *name, pid_t * pid, int * pipe_read, int * pipe_write)
+{
+	int i=0;
+
+	*pid = 0;
+
+	while (i < addin_count && !*pid)
+	{
+		if (!strcmp(name,addin_data[i].name))
+		{
+			*pid=addin_data[i].pid;
+			*pipe_read=addin_data[i].pipe_read;
+			*pipe_write=addin_data[i].pipe_write;
+		}
+		i++;
+
+	}
+
+	return;
+
 }

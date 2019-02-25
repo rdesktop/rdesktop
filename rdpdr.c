@@ -871,7 +871,7 @@ rdpdr_send_client_capability_response(void)
 }
 
 static void
-rdpdr_process(STREAM s)
+rdpdr_process(STREAM s, char *name)
 {
 	uint32 handle;
 	uint16 vmin;
