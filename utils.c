@@ -847,6 +847,7 @@ _utils_cert_get_status_report(gnutls_x509_crt_t cert, unsigned int status,
 		size -= strlen(buf);
 	}
 
+#if GNUTLS_VERSION_NUMBER >= 0x030600
 	if (status & GNUTLS_CERT_PURPOSE_MISMATCH) {
 		snprintf(buf, sizeof(buf),
 			" %d. The certificate or an intermediate does not match the\n"
@@ -854,6 +855,7 @@ _utils_cert_get_status_report(gnutls_x509_crt_t cert, unsigned int status,
 		strncat(out, buf, size);
 		size -= strlen(buf);
 	}
+#endif
 }
 
 static int
