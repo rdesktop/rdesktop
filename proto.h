@@ -25,6 +25,11 @@ extern "C" {
 #endif
 /* *INDENT-ON* */
 #define UNUSED(param) ((void)param)
+#ifdef __GNUC__
+#  define NORETURN __attribute__((noreturn))
+#else
+#  define NORETURN
+#endif // __GNUC__
 /* bitmap.c */
 RD_BOOL bitmap_decompress(uint8 * output, int width, int height, uint8 * input, int size, int Bpp);
 /* cache.c */
@@ -167,7 +172,7 @@ void rdp_reset_state(void);
 void rdp_disconnect(void);
 #define rdp_protocol_error(m, s) _rdp_protocol_error(__FILE__, __LINE__, __func__, m, s)
 void _rdp_protocol_error(const char *file, int line, const char *func,
-			 const char *message, STREAM s);
+			 const char *message, STREAM s) NORETURN;
 /* rdpdr.c */
 int get_device_index(RD_NTHANDLE handle);
 void convert_to_unix_filename(char *filename);
