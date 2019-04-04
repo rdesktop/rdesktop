@@ -101,8 +101,7 @@ rdp5_process(STREAM s)
 			case 8:	/* pointer position */
 				in_uint16_le(ts, x);
 				in_uint16_le(ts, y);
-				if (s_check(ts))
-					ui_move_pointer(x, y);
+				ui_move_pointer(x, y);
 				break;
 			case 9:	/* color pointer */
 				process_colour_pointer_pdu(ts);

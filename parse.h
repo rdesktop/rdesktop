@@ -39,8 +39,7 @@ typedef struct stream
 #define s_push_layer(s,h,n)	{ (s)->h = (s)->p; (s)->p += n; }
 #define s_pop_layer(s,h)	(s)->p = (s)->h;
 #define s_mark_end(s)		(s)->end = (s)->p;
-#define s_check(s)		((s)->p <= (s)->end)
-#define s_check_rem(s,n)        (s_check(s) && (n <= (s)->end - (s)->p))
+#define s_check_rem(s,n)	(((s)->p <= (s)->end) && (n <= (s)->end - (s)->p))
 #define s_check_end(s)		((s)->p == (s)->end)
 #define s_length(s)		((s)->end - (s)->data)
 #define s_reset(s)		((s)->end = (s)->p = (s)->data)

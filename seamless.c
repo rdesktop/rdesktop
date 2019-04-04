@@ -381,12 +381,6 @@ seamless_process(STREAM s)
 {
 	unsigned int pkglen;
 	char *buf;
-	struct stream packet = *s;
-
-	if (!s_check(s))
-	{
-		rdp_protocol_error("seamless_process(), stream is in unstable state", &packet);
-	}
 
 	pkglen = s->end - s->p;
 	/* str_handle_lines requires null terminated strings */
