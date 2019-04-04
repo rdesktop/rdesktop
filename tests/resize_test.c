@@ -433,7 +433,7 @@ void get_width_and_height_from_mcs_connect_initial(int *width, int *height)
 
 	/* Rewind and extract the requested session size */
 	s_reset(s);
-	in_skip(s, 31);
+	in_uint8s(s, 31);
 	in_uint16_le(s, *width);	/* desktopWidth */
 	in_uint16_le(s, *height);	/* desktopHeight */
 

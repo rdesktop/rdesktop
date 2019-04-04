@@ -64,7 +64,7 @@ rdpedisp_process_pdu(STREAM s)
 
 	/* Read DISPLAYCONTROL_HEADER */
 	in_uint32_le(s, type);	/* type */
-	in_skip(s, 4);		/* length */
+	in_uint8s(s, 4);	/* length */
 
 	logger(Protocol, Debug, "rdpedisp_process_pdu(), Got PDU type %d", type);
 
