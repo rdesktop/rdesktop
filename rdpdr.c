@@ -877,7 +877,6 @@ rdpdr_process(STREAM s)
 	uint16 vmin;
 	uint16 component;
 	uint16 pakid;
-	struct stream packet = *s;
 
 	logger(Protocol, Debug, "rdpdr_process()");
 	/* hexdump(s->p, s->end - s->p); */
@@ -899,15 +898,6 @@ rdpdr_process(STREAM s)
 				in_uint16_le(s, vmin);	/* VersionMinor */
 
 				in_uint32_le(s, g_client_id);	/* ClientID */
-
-				/* g_client_id is sent back to server,
-				   so lets check that we actually got
-				   valid data from stream to prevent
-				   that we leak back data to server */
-				if (!s_check(s))
-				{
-					rdp_protocol_error("rdpdr_process(), consume of g_client_id from stream did overrun", &packet);
-				}
 
 				/* The RDP client is responsibility to provide a random client id
 				   if server version is < 12 */

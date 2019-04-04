@@ -56,8 +56,7 @@ process_ts_fp_update_by_code(STREAM s, uint8 code)
 		case FASTPATH_UPDATETYPE_PTR_POSITION:
 			in_uint16_le(s, x);
 			in_uint16_le(s, y);
-			if (s_check(s))
-				ui_move_pointer(x, y);
+			ui_move_pointer(x, y);
 			break;
 		case FASTPATH_UPDATETYPE_COLOR:
 			process_colour_pointer_pdu(s);

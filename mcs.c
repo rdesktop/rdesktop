@@ -42,7 +42,7 @@ mcs_out_domain_params(STREAM s, int max_channels, int max_users, int max_tokens,
 }
 
 /* Parse a DOMAIN_PARAMS structure (ASN.1 BER) */
-static RD_BOOL
+static void
 mcs_parse_domain_params(STREAM s)
 {
 	uint32 length;
@@ -56,8 +56,6 @@ mcs_parse_domain_params(STREAM s)
 	}
 
 	in_uint8s(s, length);
-
-	return s_check(s);
 }
 
 /* Send an MCS_CONNECT_INITIAL message (ASN.1 BER) */

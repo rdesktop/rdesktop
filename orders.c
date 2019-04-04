@@ -101,7 +101,7 @@ rdp_in_colour(STREAM s, uint32 * colour)
 }
 
 /* Parse bounds information */
-static RD_BOOL
+static void
 rdp_parse_bounds(STREAM s, BOUNDS * bounds)
 {
 	uint8 present;
@@ -127,12 +127,10 @@ rdp_parse_bounds(STREAM s, BOUNDS * bounds)
 		rdp_in_coord(s, &bounds->bottom, False);
 	else if (present & 128)
 		rdp_in_coord(s, &bounds->bottom, True);
-
-	return s_check(s);
 }
 
 /* Parse a pen */
-static RD_BOOL
+static void
 rdp_parse_pen(STREAM s, PEN * pen, uint32 present)
 {
 	if (present & 1)
@@ -143,8 +141,6 @@ rdp_parse_pen(STREAM s, PEN * pen, uint32 present)
 
 	if (present & 4)
 		rdp_in_colour(s, &pen->colour);
-
-	return s_check(s);
 }
 
 static void
@@ -176,7 +172,7 @@ setup_brush(BRUSH * out_brush, BRUSH * in_brush)
 }
 
 /* Parse a brush */
-static RD_BOOL
+static void
 rdp_parse_brush(STREAM s, BRUSH * brush, uint32 present)
 {
 	if (present & 1)
@@ -193,8 +189,6 @@ rdp_parse_brush(STREAM s, BRUSH * brush, uint32 present)
 
 	if (present & 16)
 		in_uint8a(s, &brush->pattern[1], 7);
-
-	return s_check(s);
 }
 
 /* Process a destination blt order */
