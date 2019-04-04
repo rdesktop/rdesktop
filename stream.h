@@ -55,38 +55,42 @@ size_t in_ansi_string(STREAM s, char *string, size_t len);
 #define s_push_layer(s,h,n)	{ (s)->h = (s)->p; (s)->p += n; }
 #define s_pop_layer(s,h)	(s)->p = (s)->h;
 #define s_mark_end(s)		(s)->end = (s)->p;
-#define s_check_rem(s,n)	(((s)->p <= (s)->end) && (n <= (s)->end - (s)->p))
+#define s_check_rem(s,n)	(((s)->p <= (s)->end) && ((size_t)n <= (size_t)((s)->end - (s)->p)))
 #define s_check_end(s)		((s)->p == (s)->end)
 #define s_length(s)		((s)->end - (s)->data)
-#define s_left(s)               ((s)->size - ((s)->p - (s)->data))
+#define s_left(s)		((s)->size - (size_t)((s)->p - (s)->data))
+
+/* Verify that there is enough data/space before accessing a STREAM */
+#define s_assert_r(s,n)		{ if (!s_check_rem(s, n)) rdp_protocol_error( "unexpected stream overrun", s); }
+#define s_assert_w(s,n)		{ if (s_left(s) < (size_t)n) { logger(Core, Error, "%s:%d: %s(), %s", __FILE__, __LINE__, __func__, "unexpected stream overrun"); exit(0); } }
 
 #if defined(L_ENDIAN) && !defined(NEED_ALIGN)
-#define in_uint16_le(s,v)	{ v = *(uint16 *)((s)->p); (s)->p += 2; }
-#define in_uint32_le(s,v)	{ v = *(uint32 *)((s)->p); (s)->p += 4; }
-#define in_uint64_le(s,v)	{ v = *(uint64 *)((s)->p); (s)->p += 8; }
-#define out_uint16_le(s,v)	{ *(uint16 *)((s)->p) = v; (s)->p += 2; }
-#define out_uint32_le(s,v)	{ *(uint32 *)((s)->p) = v; (s)->p += 4; }
-#define out_uint64_le(s,v)	{ *(uint64 *)((s)->p) = v; (s)->p += 8; }
+#define in_uint16_le(s,v)	{ s_assert_r(s, 2); v = *(uint16 *)((s)->p); (s)->p += 2; }
+#define in_uint32_le(s,v)	{ s_assert_r(s, 4); v = *(uint32 *)((s)->p); (s)->p += 4; }
+#define in_uint64_le(s,v)	{ s_assert_r(s, 8); v = *(uint64 *)((s)->p); (s)->p += 8; }
+#define out_uint16_le(s,v)	{ s_assert_w(s, 2); *(uint16 *)((s)->p) = v; (s)->p += 2; }
+#define out_uint32_le(s,v)	{ s_assert_w(s, 4); *(uint32 *)((s)->p) = v; (s)->p += 4; }
+#define out_uint64_le(s,v)	{ s_assert_w(s, 8); *(uint64 *)((s)->p) = v; (s)->p += 8; }
 #else
-#define in_uint16_le(s,v)	{ v = *((s)->p++); v += *((s)->p++) << 8; }
-#define in_uint32_le(s,v)	{ in_uint16_le(s,v) \
+#define in_uint16_le(s,v)	{ s_assert_r(s, 2); v = *((s)->p++); v += *((s)->p++) << 8; }
+#define in_uint32_le(s,v)	{ s_assert_r(s, 4); in_uint16_le(s,v) \
 				v += *((s)->p++) << 16; v += *((s)->p++) << 24; }
-#define in_uint64_le(s,v)	{ in_uint32_le(s,v) \
+#define in_uint64_le(s,v)	{ s_assert_r(s, 8); in_uint32_le(s,v) \
 				v += *((s)->p++) << 32; v += *((s)->p++) << 40; \
 				v += *((s)->p++) << 48; v += *((s)->p++) << 56; }
-#define out_uint16_le(s,v)	{ *((s)->p++) = (v) & 0xff; *((s)->p++) = ((v) >> 8) & 0xff; }
-#define out_uint32_le(s,v)	{ out_uint16_le(s, (v) & 0xffff); out_uint16_le(s, ((v) >> 16) & 0xffff); }
-#define out_uint64_le(s,v)	{ out_uint32_le(s, (v) & 0xffffffff); out_uint32_le(s, ((v) >> 32) & 0xffffffff); }
+#define out_uint16_le(s,v)	{ s_assert_w(s, 2); *((s)->p++) = (v) & 0xff; *((s)->p++) = ((v) >> 8) & 0xff; }
+#define out_uint32_le(s,v)	{ s_assert_w(s, 4); out_uint16_le(s, (v) & 0xffff); out_uint16_le(s, ((v) >> 16) & 0xffff); }
+#define out_uint64_le(s,v)	{ s_assert_w(s, 8); out_uint32_le(s, (v) & 0xffffffff); out_uint32_le(s, ((v) >> 32) & 0xffffffff); }
 #endif
 
 
 #if defined(B_ENDIAN) && !defined(NEED_ALIGN)
-#define in_uint16_be(s,v)	{ v = *(uint16 *)((s)->p); (s)->p += 2; }
-#define in_uint32_be(s,v)	{ v = *(uint32 *)((s)->p); (s)->p += 4; }
-#define in_uint64_be(s,v)	{ v = *(uint64 *)((s)->p); (s)->p += 8; }
-#define out_uint16_be(s,v)	{ *(uint16 *)((s)->p) = v; (s)->p += 2; }
-#define out_uint32_be(s,v)	{ *(uint32 *)((s)->p) = v; (s)->p += 4; }
-#define out_uint64_be(s,v)	{ *(uint64 *)((s)->p) = v; (s)->p += 8; }
+#define in_uint16_be(s,v)	{ s_assert_r(s, 2); v = *(uint16 *)((s)->p); (s)->p += 2; }
+#define in_uint32_be(s,v)	{ s_assert_r(s, 4); v = *(uint32 *)((s)->p); (s)->p += 4; }
+#define in_uint64_be(s,v)	{ s_assert_r(s, 8); v = *(uint64 *)((s)->p); (s)->p += 8; }
+#define out_uint16_be(s,v)	{ s_assert_w(s, 2); *(uint16 *)((s)->p) = v; (s)->p += 2; }
+#define out_uint32_be(s,v)	{ s_assert_w(s, 4); *(uint32 *)((s)->p) = v; (s)->p += 4; }
+#define out_uint64_be(s,v)	{ s_assert_w(s, 8); *(uint64 *)((s)->p) = v; (s)->p += 8; }
 
 #define B_ENDIAN_PREFERRED
 #define in_uint16(s,v)		in_uint16_be(s,v)
@@ -98,12 +102,12 @@ size_t in_ansi_string(STREAM s, char *string, size_t len);
 #define out_uint64(s,v)		out_uint64_be(s,v)
 
 #else
-#define in_uint16_be(s,v)	{ v = *((s)->p++); next_be(s,v); }
-#define in_uint32_be(s,v)	{ in_uint16_be(s,v); next_be(s,v); next_be(s,v); }
-#define in_uint64_be(s,v)	{ in_uint32_be(s,v); next_be(s,v); next_be(s,v); next_be(s,v); next_be(s,v); }
-#define out_uint16_be(s,v)	{ *((s)->p++) = ((v) >> 8) & 0xff; *((s)->p++) = (v) & 0xff; }
-#define out_uint32_be(s,v)	{ out_uint16_be(s, ((v) >> 16) & 0xffff); out_uint16_be(s, (v) & 0xffff); }
-#define out_uint64_be(s,v)	{ out_uint32_be(s, ((v) >> 32) & 0xffffffff); out_uint32_be(s, (v) & 0xffffffff); }
+#define in_uint16_be(s,v)	{ s_assert_r(s, 2); v = *((s)->p++); next_be(s,v); }
+#define in_uint32_be(s,v)	{ s_assert_r(s, 4); in_uint16_be(s,v); next_be(s,v); next_be(s,v); }
+#define in_uint64_be(s,v)	{ s_assert_r(s, 8); in_uint32_be(s,v); next_be(s,v); next_be(s,v); next_be(s,v); next_be(s,v); }
+#define out_uint16_be(s,v)	{ s_assert_w(s, 2); *((s)->p++) = ((v) >> 8) & 0xff; *((s)->p++) = (v) & 0xff; }
+#define out_uint32_be(s,v)	{ s_assert_w(s, 4); out_uint16_be(s, ((v) >> 16) & 0xffff); out_uint16_be(s, (v) & 0xffff); }
+#define out_uint64_be(s,v)	{ s_assert_w(s, 8); out_uint32_be(s, ((v) >> 32) & 0xffffffff); out_uint32_be(s, (v) & 0xffffffff); }
 #endif
 
 #ifndef B_ENDIAN_PREFERRED
@@ -115,18 +119,18 @@ size_t in_ansi_string(STREAM s, char *string, size_t len);
 #define out_uint64(s,v)		out_uint64_le(s,v)
 #endif
 
-#define in_uint8(s,v)		v = *((s)->p++);
-#define in_uint8p(s,v,n)	{ v = (s)->p; (s)->p += n; }
-#define in_uint8a(s,v,n)	{ memcpy(v,(s)->p,n); (s)->p += n; }
-#define in_uint8s(s,n)		(s)->p += n;
+#define in_uint8(s,v)		{ s_assert_r(s, 1); v = *((s)->p++); }
+#define in_uint8p(s,v,n)	{ s_assert_r(s, n); v = (s)->p; (s)->p += n; }
+#define in_uint8a(s,v,n)	{ s_assert_r(s, n); memcpy(v,(s)->p,n); (s)->p += n; }
+#define in_uint8s(s,n)		{ s_assert_r(s, n); (s)->p += n; }
 #define in_skip(s,n)		in_uint8s(s,n)
-#define out_uint8(s,v)		*((s)->p++) = v;
-#define out_uint8p(s,v,n)	{ memcpy((s)->p,v,n); (s)->p += n; }
+#define out_uint8(s,v)		{ s_assert_w(s, 1); *((s)->p++) = v; }
+#define out_uint8p(s,v,n)	{ s_assert_w(s, n); memcpy((s)->p,v,n); (s)->p += n; }
 #define out_uint8a(s,v,n)	out_uint8p(s,v,n);
-#define out_uint8s(s,n)		{ memset((s)->p,0,n); (s)->p += n; }
+#define out_uint8s(s,n)		{ s_assert_w(s, n); memset((s)->p,0,n); (s)->p += n; }
 #define out_stream(s, v)        out_uint8p(s, (v)->data, s_length((v)))
 
-#define next_be(s,v)		v = ((v) << 8) + *((s)->p++);
+#define next_be(s,v)		{ s_assert_r(s, 1); v = ((v) << 8) + *((s)->p++); }
 
 
 #endif /* _STREAM_H */
