@@ -1192,7 +1192,7 @@ pulse_play(void)
 			playback_seek = PA_SEEK_RELATIVE;
 
 		avail_space = pa_stream_writable_size(playback_stream);
-		audio_size = out->end - out->p <= avail_space ? out->end - out->p : avail_space;
+		audio_size = MIN(s_remaining(out), avail_space);
 		if (audio_size)
 		{
 			if (pa_stream_write

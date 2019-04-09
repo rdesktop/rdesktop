@@ -136,7 +136,7 @@ lspci_process(STREAM s)
 	static char *rest = NULL;
 	char *buf;
 
-	pkglen = s->end - s->p;
+	pkglen = s_remaining(s);
 	/* str_handle_lines requires null terminated strings */
 	buf = xmalloc(pkglen + 1);
 	STRNCPY(buf, (char *) s->p, pkglen + 1);

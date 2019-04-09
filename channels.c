@@ -93,7 +93,7 @@ channel_send(STREAM s, VCHANNEL * channel)
 
 	/* first fragment sent in-place */
 	s_pop_layer(s, channel_hdr);
-	length = s->end - s->p - 8;
+	length = s_remaining(s) - 8;
 
 	logger(Protocol, Debug, "channel_send(), channel = %d, length = %d", channel->mcs_id,
 	       length);
@@ -186,7 +186,7 @@ channel_process(STREAM s, uint16 mcs_channel)
 			in->p = in->data;
 		}
 
-		thislength = MIN(s->end - s->p, in->data + in->size - in->p);
+		thislength = MIN(s_remaining(s), in->data + in->size - in->p);
 		memcpy(in->p, s->p, thislength);
 		in->p += thislength;
 

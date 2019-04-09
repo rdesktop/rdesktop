@@ -177,7 +177,7 @@ iso_send(STREAM s)
 	uint16 length;
 
 	s_pop_layer(s, iso_hdr);
-	length = s->end - s->p;
+	length = s_remaining(s);
 
 	out_uint8(s, T123_HEADER_VERSION);	/* version */
 	out_uint8(s, 0);	/* reserved */

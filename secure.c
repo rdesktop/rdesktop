@@ -352,7 +352,7 @@ sec_send_to_channel(STREAM s, uint32 flags, uint16 channel)
 	if (flags & SEC_ENCRYPT)
 	{
 		flags &= ~SEC_ENCRYPT;
-		datalen = s->end - s->p - 8;
+		datalen = s_remaining(s) - 8;
 		sec_sign(s->p, 8, g_sec_sign_key, g_rc4_key_len, s->p + 8, datalen);
 		sec_encrypt(s->p + 8, datalen);
 	}
@@ -885,7 +885,7 @@ sec_recv(RD_BOOL * is_fastpath)
 				}
 
 				in_uint8s(s, 8);	/* signature */
-				sec_decrypt(s->p, s->end - s->p);
+				sec_decrypt(s->p, s_remaining(s));
 			}
 			return s;
 		}
@@ -905,7 +905,7 @@ sec_recv(RD_BOOL * is_fastpath)
 					}
 
 					in_uint8s(s, 8);	/* signature */
-					sec_decrypt(s->p, s->end - s->p);
+					sec_decrypt(s->p, s_remaining(s));
 				}
 
 				if (sec_flags & SEC_LICENSE_PKT)
@@ -923,7 +923,7 @@ sec_recv(RD_BOOL * is_fastpath)
 					}
 
 					in_uint8s(s, 8);	/* signature */
-					sec_decrypt(s->p, s->end - s->p);
+					sec_decrypt(s->p, s_remaining(s));
 
 					/* Check for a redirect packet, starts with 00 04 */
 					if (s->p[0] == 0 && s->p[1] == 4)

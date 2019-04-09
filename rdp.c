@@ -194,7 +194,7 @@ rdp_send_data(STREAM s, uint8 data_pdu_type)
 	uint16 length;
 
 	s_pop_layer(s, rdp_hdr);
-	length = s->end - s->p;
+	length = s_remaining(s);
 
 	out_uint16_le(s, length);
 	out_uint16_le(s, (RDP_PDU_DATA | 0x10));

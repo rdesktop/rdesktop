@@ -377,7 +377,7 @@ seamless_process(STREAM s)
 	unsigned int pkglen;
 	char *buf;
 
-	pkglen = s->end - s->p;
+	pkglen = s_remaining(s);
 	/* str_handle_lines requires null terminated strings */
 	buf = xmalloc(pkglen + 1);
 	STRNCPY(buf, (char *) s->p, pkglen + 1);

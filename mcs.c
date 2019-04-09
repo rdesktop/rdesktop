@@ -306,7 +306,7 @@ mcs_send_to_channel(STREAM s, uint16 channel)
 	uint16 length;
 
 	s_pop_layer(s, mcs_hdr);
-	length = s->end - s->p - 8;
+	length = s_remaining(s) - 8;
 	length |= 0x8000;
 
 	out_uint8(s, (MCS_SDRQ << 2));

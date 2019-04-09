@@ -60,7 +60,9 @@ size_t in_ansi_string(STREAM s, char *string, size_t len);
 #define s_push_layer(s,h,n)	{ (s)->h = (s)->p; (s)->p += n; }
 #define s_pop_layer(s,h)	(s)->p = (s)->h;
 #define s_mark_end(s)		(s)->end = (s)->p;
-#define s_check_rem(s,n)	(((s)->p <= (s)->end) && ((size_t)n <= (size_t)((s)->end - (s)->p)))
+/* Returns number of bytes that can still be read from STREAM */
+#define s_remaining(s)		(size_t)((s)->end - (s)->p)
+#define s_check_rem(s,n)	(((s)->p <= (s)->end) && ((size_t)n <= s_remaining(s)))
 #define s_check_end(s)		((s)->p == (s)->end)
 #define s_length(s)		((s)->end - (s)->data)
 #define s_left(s)		((s)->size - (size_t)((s)->p - (s)->data))

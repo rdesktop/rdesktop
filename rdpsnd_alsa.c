@@ -380,7 +380,7 @@ alsa_play(void)
 
 	next_tick = rdpsnd_queue_next_tick();
 
-	len = (out->end - out->p) / (samplewidth_out * audiochannels_out);
+	len = s_remaining(out) / (samplewidth_out * audiochannels_out);
 	if ((len = snd_pcm_writei(out_handle, out->p, ((MAX_FRAMES < len) ? MAX_FRAMES : len))) < 0)
 	{
 		snd_pcm_prepare(out_handle);

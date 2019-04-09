@@ -343,7 +343,7 @@ rdpsnd_process_packet(uint8 opcode, STREAM s)
 			}
 
 			rdpsnd_queue_write(rdpsnd_dsp_process
-					   (s->p, s->end - s->p, current_driver,
+					   (s->p, s_remaining(s), current_driver,
 					    &formats[current_format]), tick, packet_index);
 			return;
 			break;
@@ -386,7 +386,7 @@ rdpsnd_process(STREAM s)
 		/* New packet */
 		if (packet.size == 0)
 		{
-			if ((s->end - s->p) < 4)
+			if (!s_check_rem(s, 4))
 			{
 				logger(Sound, Error,
 				       "rdpsnd_process(), split at packet header, things will go south from here...");
@@ -405,7 +405,7 @@ rdpsnd_process(STREAM s)
 		}
 		else
 		{
-			len = MIN(s->end - s->p, packet.end - packet.p);
+			len = MIN(s_remaining(s), s_remaining(&packet));
 
 			/* Microsoft's server is so broken it's not even funny... */
 			if (packet_opcode == SNDC_WAVE)
@@ -451,7 +451,7 @@ rdpsnddbg_process(STREAM s)
 	static char *rest = NULL;
 	char *buf;
 
-	pkglen = s->end - s->p;
+	pkglen = s_remaining(s);
 	/* str_handle_lines requires null terminated strings */
 	buf = (char *) xmalloc(pkglen + 1);
 	STRNCPY(buf, (char *) s->p, pkglen + 1);

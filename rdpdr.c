@@ -879,7 +879,7 @@ rdpdr_process(STREAM s)
 	uint16 pakid;
 
 	logger(Protocol, Debug, "rdpdr_process()");
-	/* hexdump(s->p, s->end - s->p); */
+	/* hexdump(s->p, s_remaining(s)); */
 
 	in_uint16(s, component);        /* RDPDR_HEADER.Component */
 	in_uint16(s, pakid);            /* RDPDR_HEADER.PacketId */
