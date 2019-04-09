@@ -416,7 +416,7 @@ sun_play(void)
 	packet = rdpsnd_queue_current_packet();
 	out = &packet->s;
 
-	len = out->end - out->p;
+	len = s_remaining(out);
 
 	len = write(dsp_fd, out->p, (len > MAX_LEN) ? MAX_LEN : len);
 	if (len == -1)

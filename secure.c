@@ -348,7 +348,7 @@ sec_send_to_channel(STREAM s, uint32 flags, uint16 channel)
 	if (flags & SEC_ENCRYPT)
 	{
 		flags &= ~SEC_ENCRYPT;
-		datalen = s->end - s->p - 8;
+		datalen = s_remaining(s) - 8;
 
 #if WITH_DEBUG
 		DEBUG(("Sending encrypted packet:\n"));
@@ -832,7 +832,7 @@ sec_recv(uint8 * rdpver)
 					}
 
 					in_uint8s(s, 8);	/* signature */
-					sec_decrypt(s->p, s->end - s->p);
+					sec_decrypt(s->p, s_remaining(s));
 				}
 				return s;
 			}
@@ -850,7 +850,7 @@ sec_recv(uint8 * rdpver)
 					}
 
 					in_uint8s(s, 8);	/* signature */
-					sec_decrypt(s->p, s->end - s->p);
+					sec_decrypt(s->p, s_remaining(s));
 				}
 
 				if (sec_flags & SEC_LICENCE_NEG)
@@ -868,7 +868,7 @@ sec_recv(uint8 * rdpver)
 					}
 
 					in_uint8s(s, 8);	/* signature */
-					sec_decrypt(s->p, s->end - s->p);
+					sec_decrypt(s->p, s_remaining(s));
 
 					/* Check for a redirect packet, starts with 00 04 */
 					if (s->p[0] == 0 && s->p[1] == 4)
@@ -893,7 +893,7 @@ sec_recv(uint8 * rdpver)
 					}
 #ifdef WITH_DEBUG
 					/* warning!  this debug statement will show passwords in the clear! */
-					hexdump(s->p, s->end - s->p);
+					hexdump(s->p, s_remaining(s));
 #endif
 				}
 			}

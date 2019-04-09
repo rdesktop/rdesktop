@@ -37,7 +37,7 @@ rdp5_process(STREAM s)
 
 #if 0
 	printf("RDP5 data:\n");
-	hexdump(s->p, s->end - s->p);
+	hexdump(s->p, s_remaining(s));
 #endif
 
 	ui_begin_update();

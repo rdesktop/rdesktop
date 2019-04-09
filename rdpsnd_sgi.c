@@ -265,7 +265,7 @@ sgi_play(void)
 		packet = rdpsnd_queue_current_packet();
 		out = &packet->s;
 
-		len = out->end - out->p;
+		len = s_remaining(out);
 
 		alWriteFrames(output_port, out->p, len / combinedFrameSize);
 

@@ -164,7 +164,7 @@ libao_play(void)
 
 	next_tick = rdpsnd_queue_next_tick();
 
-	len = (WAVEOUTLEN > (out->end - out->p)) ? (out->end - out->p) : WAVEOUTLEN;
+	len = MIN(WAVEOUTLEN, s_remaining(out));
 	ao_play(o_device, (char *) out->p, len);
 	out->p += len;
 

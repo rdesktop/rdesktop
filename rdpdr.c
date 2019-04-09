@@ -800,7 +800,7 @@ rdpdr_process(STREAM s)
 
 #if WITH_DEBUG_RDP5
 	printf("--- rdpdr_process ---\n");
-	hexdump(s->p, s->end - s->p);
+	hexdump(s->p, s_remaining(s));
 #endif
 
 	in_uint16(s, component);
