@@ -139,13 +139,14 @@ cssp_gss_get_service_name(char *server, gss_name_t * name)
 
 }
 
-static RD_BOOL
-cssp_gss_wrap(gss_ctx_id_t * ctx, STREAM in, STREAM out)
+static STREAM
+cssp_gss_wrap(gss_ctx_id_t * ctx, STREAM in)
 {
 	int conf_state;
 	OM_uint32 major_status;
 	OM_uint32 minor_status;
 	gss_buffer_desc inbuf, outbuf;
+	STREAM out;
 
 	inbuf.value = in->data;
 	inbuf.length = s_length(in);
@@ -157,34 +158,35 @@ cssp_gss_wrap(gss_ctx_id_t * ctx, STREAM in, STREAM out)
 	{
 		cssp_gss_report_error(GSS_C_GSS_CODE, "Failed to encrypt and sign message",
 				      major_status, minor_status);
-		return False;
+		return NULL;
 	}
 
 	if (!conf_state)
 	{
 		error("GSS Confidentiality failed, no encryption of message performed.");
-		return False;
+		return NULL;
 	}
 
 	// write enc data to out stream
-	out->data = out->p = xmalloc(outbuf.length);
-	out->size = outbuf.length;
+	out = s_alloc(outbuf.length);
 	out_uint8a(out, outbuf.value, outbuf.length);
 	s_mark_end(out);
+	s_seek(out, 0);
 
 	gss_release_buffer(&minor_status, &outbuf);
 
-	return True;
+	return out;
 }
 
-static RD_BOOL
-cssp_gss_unwrap(gss_ctx_id_t * ctx, STREAM in, STREAM out)
+static STREAM
+cssp_gss_unwrap(gss_ctx_id_t * ctx, STREAM in)
 {
 	OM_uint32 major_status;
 	OM_uint32 minor_status;
 	gss_qop_t qop_state;
 	gss_buffer_desc inbuf, outbuf;
 	int conf_state;
+	STREAM out;
 
 	inbuf.value = in->data;
 	inbuf.length = s_length(in);
@@ -195,17 +197,17 @@ cssp_gss_unwrap(gss_ctx_id_t * ctx, STREAM in, STREAM out)
 	{
 		cssp_gss_report_error(GSS_C_GSS_CODE, "Failed to decrypt message",
 				      major_status, minor_status);
-		return False;
+		return NULL;
 	}
 
-	out->data = out->p = xmalloc(outbuf.length);
-	out->size = outbuf.length;
+	out = s_alloc(outbuf.length);
 	out_uint8a(out, outbuf.value, outbuf.length);
 	s_mark_end(out);
+	s_seek(out, 0);
 
 	gss_release_buffer(&minor_status, &outbuf);
 
-	return True;
+	return out;
 }
 
 #ifdef WITH_DEBUG_CREDSSP
@@ -610,10 +612,10 @@ cssp_send_tsrequest(STREAM token, STREAM auth, STREAM pubkey)
 }
 
 
-RD_BOOL
-cssp_read_tsrequest(STREAM token, STREAM pubkey)
+STREAM
+cssp_read_tsrequest(RD_BOOL pubkey)
 {
-	STREAM s;
+	STREAM s, out;
 	int length;
 	int tagval;
 	struct stream packet;
@@ -621,13 +623,13 @@ cssp_read_tsrequest(STREAM token, STREAM pubkey)
 	s = tcp_recv(NULL, 4);
 
 	if (s == NULL)
-		return False;
+		return NULL;
 
 	// verify ASN.1 header
 	if (s->p[0] != (BER_TAG_SEQUENCE | BER_TAG_CONSTRUCTED))
 	{
 		error("Expected BER_TAG_SEQUENCE|BER_TAG_CONSTRUCTED, got %x", s->p[0]);
-		return False;
+		return NULL;
 	}
 
 	// peek at first 4 bytes to get full message length
@@ -638,7 +640,7 @@ cssp_read_tsrequest(STREAM token, STREAM pubkey)
 	else if (s->p[1] == 0x82)
 		length = (s->p[2] << 8) | s->p[3];
 	else
-		return False;
+		return NULL;
 
 	// receive the remainings of message
 	s = tcp_recv(s, length);
@@ -653,12 +655,12 @@ cssp_read_tsrequest(STREAM token, STREAM pubkey)
 	// parse the response and into nego token
 	if (!ber_in_header(s, &tagval, &length) ||
 	    tagval != (BER_TAG_SEQUENCE | BER_TAG_CONSTRUCTED))
-		return False;
+		return NULL;
 
 	// version [0]
 	if (!ber_in_header(s, &tagval, &length) ||
 	    tagval != (BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 0))
-		return False;
+		return NULL;
 
 	if (!s_check_rem(s, length))
 	{
@@ -668,23 +670,23 @@ cssp_read_tsrequest(STREAM token, STREAM pubkey)
 	in_uint8s(s, length);
 
 	// negoToken [1]
-	if (token)
+	if (!pubkey)
 	{
 		if (!ber_in_header(s, &tagval, &length)
 		    || tagval != (BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 1))
-			return False;
+			return NULL;
 		if (!ber_in_header(s, &tagval, &length)
 		    || tagval != (BER_TAG_SEQUENCE | BER_TAG_CONSTRUCTED))
-			return False;
+			return NULL;
 		if (!ber_in_header(s, &tagval, &length)
 		    || tagval != (BER_TAG_SEQUENCE | BER_TAG_CONSTRUCTED))
-			return False;
+			return NULL;
 		if (!ber_in_header(s, &tagval, &length)
 		    || tagval != (BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 0))
-			return False;
+			return NULL;
 
 		if (!ber_in_header(s, &tagval, &length) || tagval != BER_TAG_OCTET_STRING)
-			return False;
+			return NULL;
 
 		if (!s_check_rem(s, length))
 		{
@@ -692,29 +694,29 @@ cssp_read_tsrequest(STREAM token, STREAM pubkey)
 					   &packet);
 		}
 
-		s_realloc(token, length);
-		s_reset(token);
-		out_uint8a(token, s->p, length);
-		s_mark_end(token);
+		out = s_alloc(length);
+		out_uint8a(out, s->p, length);
+		s_mark_end(out);
+		s_seek(out, 0);
 	}
-
 	// pubKey [3]
-	if (pubkey)
+	else
 	{
 		if (!ber_in_header(s, &tagval, &length)
 		    || tagval != (BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 3))
-			return False;
+			return NULL;
 
 		if (!ber_in_header(s, &tagval, &length) || tagval != BER_TAG_OCTET_STRING)
-			return False;
+			return NULL;
 
-		pubkey->data = pubkey->p = s->p;
-		pubkey->end = pubkey->data + length;
-		pubkey->size = length;
+		out = s_alloc(length);
+		out_uint8a(out, s->p, length);
+		s_mark_end(out);
+		s_seek(out, 0);
 	}
 
 
-	return True;
+	return out;
 }
 
 RD_BOOL
@@ -730,9 +732,14 @@ cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 	gss_OID desired_mech = &_gss_spnego_krb5_mechanism_oid_desc;
 
 	STREAM ts_creds;
-	struct stream token = { 0 };
-	struct stream pubkey = { 0 };
-	struct stream pubkey_cmp = { 0 };
+	STREAM token;
+	STREAM pubkey, pubkey_cmp;
+	unsigned char *pubkey_data;
+	unsigned char *pubkey_cmp_data;
+	unsigned char first_byte;
+
+	RD_BOOL ret;
+	STREAM blob;
 
 	// Verify that system gss support spnego
 	if (!cssp_gss_mech_available(desired_mech))
@@ -755,7 +762,10 @@ cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 		return False;
 	}
 
-	tcp_tls_get_server_pubkey(&pubkey);
+	pubkey = tcp_tls_get_server_pubkey();
+	if (pubkey == NULL)
+		return False;
+	pubkey_cmp = NULL;
 
 #ifdef WITH_DEBUG_CREDSSP
 	streamsave(&pubkey, "PubKey.raw");
@@ -764,11 +774,11 @@ cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 	// Enter the spnego loop
 	OM_uint32 actual_services;
 	gss_OID actual_mech;
-	struct stream blob = { 0 };
 
 	gss_ctx = GSS_C_NO_CONTEXT;
 	cred = GSS_C_NO_CREDENTIAL;
 
+	token = NULL;
 	input_tok.length = 0;
 	output_tok.length = 0;
 	minor_status = 0;
@@ -788,6 +798,11 @@ cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 						    &input_tok,
 						    &actual_mech,
 						    &output_tok, &actual_services, &actual_time);
+
+		// input_tok might have pointed to token's data,
+		// but it's safe to free it now after the call
+		s_free(token);
+		token = NULL;
 
 		if (GSS_ERROR(major_status))
 		{
@@ -813,39 +828,44 @@ cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 		// Send token to server
 		if (output_tok.length != 0)
 		{
-			if (output_tok.length > token.size)
-				s_realloc(&token, output_tok.length);
-			s_reset(&token);
+			token = s_alloc(output_tok.length);
+			out_uint8a(token, output_tok.value, output_tok.length);
+			s_mark_end(token);
 
-			out_uint8a(&token, output_tok.value, output_tok.length);
-			s_mark_end(&token);
+			ret = cssp_send_tsrequest(token, NULL, NULL);
 
-			if (!cssp_send_tsrequest(&token, NULL, NULL))
-				goto bail_out;
-
+			s_free(token);
+			token = NULL;
 			(void) gss_release_buffer(&minor_status, &output_tok);
+
+			if (!ret)
+				goto bail_out;
 		}
 
 		// Read token from server
 		if (major_status & GSS_S_CONTINUE_NEEDED)
 		{
-			(void) gss_release_buffer(&minor_status, &input_tok);
-
-			if (!cssp_read_tsrequest(&token, NULL))
+			token = cssp_read_tsrequest(False);
+			if (token == NULL)
 				goto bail_out;
 
-			input_tok.value = token.data;
-			input_tok.length = s_length(&token);
+			input_tok.length = s_length(token);
+			in_uint8p(token, input_tok.value, input_tok.length);
 		}
 		else
 		{
 			// Send encrypted pubkey for verification to server
 			context_established = 1;
 
-			if (!cssp_gss_wrap(gss_ctx, &pubkey, &blob))
+			blob = cssp_gss_wrap(gss_ctx, pubkey);
+			if (blob == NULL)
 				goto bail_out;
 
-			if (!cssp_send_tsrequest(NULL, NULL, &blob))
+			ret = cssp_send_tsrequest(NULL, NULL, blob);
+
+			s_free(blob);
+
+			if (!ret)
 				goto bail_out;
 
 			context_established = 1;
@@ -856,37 +876,62 @@ cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 	}
 	while (!context_established);
 
+	s_free(token);
+
 	// read tsrequest response and decrypt for public key validation
-	if (!cssp_read_tsrequest(NULL, &blob))
+	blob = cssp_read_tsrequest(True);
+	if (blob == NULL)
 		goto bail_out;
 
-	if (!cssp_gss_unwrap(gss_ctx, &blob, &pubkey_cmp))
+	pubkey_cmp = cssp_gss_unwrap(gss_ctx, blob);
+	s_free(blob);
+	if (pubkey_cmp == NULL)
 		goto bail_out;
 
-	pubkey_cmp.data[0] -= 1;
+	// the first byte gets 1 added before being sent by the server
+	// in order to protect against replays of the data sent earlier
+	// by the client
+	in_uint8(pubkey_cmp, first_byte);
+	s_seek(pubkey_cmp, 0);
+	out_uint8(pubkey_cmp, first_byte - 1);
+	s_seek(pubkey_cmp, 0);
 
 	// validate public key
-	if (memcmp(pubkey.data, pubkey_cmp.data, s_length(&pubkey)) != 0)
+	in_uint8p(pubkey, pubkey_data, s_length(pubkey));
+	in_uint8p(pubkey_cmp, pubkey_cmp_data, s_length(pubkey_cmp));
+	if ((s_length(pubkey) != s_length(pubkey_cmp)) ||
+	    (memcmp(pubkey_data, pubkey_cmp_data, s_length(pubkey)) != 0))
 	{
 		error("CredSSP: Cannot guarantee integrity of server connection, MITM ? "
 		      "(public key data mismatch)\n");
 		goto bail_out;
 	}
 
+	s_free(pubkey);
+	s_free(pubkey_cmp);
+
 	// Send TSCredentials
 	ts_creds = cssp_encode_tscredentials(user, password, domain);
 
-	if (!cssp_gss_wrap(gss_ctx, ts_creds, &blob))
-		goto bail_out;
+	blob = cssp_gss_wrap(gss_ctx, ts_creds);
 
 	s_free(ts_creds);
 
-	if (!cssp_send_tsrequest(NULL, &blob, NULL))
+	if (blob == NULL)
+		goto bail_out;
+
+	ret = cssp_send_tsrequest(NULL, blob, NULL);
+
+	s_free(blob);
+
+	if (!ret)
 		goto bail_out;
 
 	return True;
 
       bail_out:
-	xfree(token.data);
+	s_free(token);
+	s_free(pubkey);
+	s_free(pubkey_cmp);
 	return False;
 }

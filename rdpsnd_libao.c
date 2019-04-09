@@ -160,7 +160,7 @@ libao_play(void)
 		return;
 
 	packet = rdpsnd_queue_current_packet();
-	out = &packet->s;
+	out = packet->s;
 
 	next_tick = rdpsnd_queue_next_tick();
 

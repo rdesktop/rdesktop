@@ -865,7 +865,7 @@ rdpsnd_queue_write(STREAM s, uint16 tick, uint8 index)
 
 	queue_hi = next_hi;
 
-	packet->s = *s;
+	packet->s = s;
 	packet->tick = tick;
 	packet->index = index;
 
@@ -899,7 +899,7 @@ rdpsnd_queue_clear(void)
 	while (queue_pending != queue_hi)
 	{
 		packet = &packet_queue[queue_pending];
-		xfree(packet->s.data);
+		s_free(packet->s);
 		queue_pending = (queue_pending + 1) % MAX_QUEUE;
 	}
 
@@ -964,7 +964,7 @@ rdpsnd_queue_complete_pending(void)
 			(packet->completion_tv.tv_usec - packet->arrive_tv.tv_usec);
 		elapsed /= 1000;
 
-		xfree(packet->s.data);
+		s_free(packet->s);
 		rdpsnd_send_completion((packet->tick + elapsed) % 65536, packet->index);
 		queue_pending = (queue_pending + 1) % MAX_QUEUE;
 	}

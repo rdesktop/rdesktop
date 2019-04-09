@@ -342,14 +342,15 @@ tcp_tls_connect(void)
 }
 
 /* Get public key from server of TLS 1.0 connection */
-RD_BOOL
-tcp_tls_get_server_pubkey(STREAM s)
+STREAM
+tcp_tls_get_server_pubkey()
 {
 	X509 *cert = NULL;
 	EVP_PKEY *pkey = NULL;
 
-	s->data = s->p = NULL;
-	s->size = 0;
+	size_t len;
+	unsigned char *data;
+	STREAM s = NULL;
 
 	if (g_ssl == NULL)
 		goto out;
@@ -368,24 +369,25 @@ tcp_tls_get_server_pubkey(STREAM s)
 		goto out;
 	}
 
-	s->size = i2d_PublicKey(pkey, NULL);
-	if (s->size < 1)
+	len = i2d_PublicKey(pkey, NULL);
+	if (len < 1)
 	{
 		error("tcp_tls_get_server_pubkey: i2d_PublicKey() failed\n");
 		goto out;
 	}
 
-	s->data = s->p = xmalloc(s->size);
-	i2d_PublicKey(pkey, &s->p);
-	s->p = s->data;
-	s->end = s->p + s->size;
+	s = s_alloc(len);
+	out_uint8p(s, data, len);
+	i2d_PublicKey(pkey, &data);
+	s_mark_end(s);
+	s_seek(s, 0);
 
       out:
 	if (cert)
 		X509_free(cert);
 	if (pkey)
 		EVP_PKEY_free(pkey);
-	return (s->size != 0);
+	return s;
 }
 
 /* Establish a connection on the TCP layer */
