@@ -1268,7 +1268,7 @@ process_secondary_order(STREAM s)
 
 	if (!s_check_rem(s, length + 7))
 	{
-		rdp_protocol_error("process_secondary_order(), next order pointer would overrun stream", &packet);
+		rdp_protocol_error("next order pointer would overrun stream", &packet);
 	}
 
 	next_order = s->p + (sint16) length + 7;

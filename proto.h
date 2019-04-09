@@ -173,7 +173,9 @@ RD_BOOL rdp_connect(char *server, uint32 flags, char *domain, char *password, ch
 		    char *directory, RD_BOOL reconnect);
 void rdp_reset_state(void);
 void rdp_disconnect(void);
-void rdp_protocol_error(const char *message, STREAM s);
+#define rdp_protocol_error(m, s) _rdp_protocol_error(__FILE__, __LINE__, __func__, m, s)
+void _rdp_protocol_error(const char *file, int line, const char *func,
+			 const char *message, STREAM s);
 /* rdpdr.c */
 int get_device_index(RD_NTHANDLE handle);
 void convert_to_unix_filename(char *filename);

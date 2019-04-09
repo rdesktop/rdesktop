@@ -359,7 +359,7 @@ rdpsnd_process_ping(STREAM in)
 
 	if (!s_check_rem(in, 4))
 	{
-		rdp_protocol_error("rdpsnd_process_training(), consume of training data from stream would overrun", &packet);
+		rdp_protocol_error("consume of training data from stream would overrun", &packet);
 	}
 
 	in_uint16_le(in, tick);

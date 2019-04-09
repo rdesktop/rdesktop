@@ -694,7 +694,7 @@ cssp_read_tsrequest(STREAM token, STREAM pubkey)
 
 	if (!s_check_rem(s, length))
 	{
-		 rdp_protocol_error("cssp_read_tsrequest(), consume of version from stream would overrun",
+		 rdp_protocol_error("consume of version from stream would overrun",
 				    &packet);
 	}
 	in_uint8s(s, length);
@@ -720,7 +720,7 @@ cssp_read_tsrequest(STREAM token, STREAM pubkey)
 
 		if (!s_check_rem(s, length))
 		{
-			rdp_protocol_error("cssp_read_tsrequest(), consume of token from stream would overrun",
+			rdp_protocol_error("consume of token from stream would overrun",
 					   &packet);
 		}
 
