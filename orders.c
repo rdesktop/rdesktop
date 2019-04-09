@@ -20,7 +20,7 @@
 #include "rdesktop.h"
 #include "orders.h"
 
-extern uint8 *g_next_packet;
+extern size_t g_next_packet;
 static RDP_ORDER_STATE g_order_state;
 extern RDP_VERSION g_rdp_version;
 
@@ -1252,7 +1252,7 @@ process_secondary_order(STREAM s)
 	sint16 length;
 	uint16 flags;
 	uint8 type;
-	uint8 *next_order;
+	size_t next_order;
 	struct stream packet = *s;
 
 	in_uint16_le(s, length);
@@ -1269,7 +1269,7 @@ process_secondary_order(STREAM s)
 		rdp_protocol_error("next order pointer would overrun stream", &packet);
 	}
 
-	next_order = s->p + length;
+	next_order = s_tell(s) + length;
 
 	switch (type)
 	{
@@ -1306,7 +1306,7 @@ process_secondary_order(STREAM s)
 			       "process_secondary_order(), unhandled secondary order %d", type);
 	}
 
-	s->p = next_order;
+	s_seek(s, next_order);
 }
 
 /* Process an order PDU */
@@ -1448,9 +1448,9 @@ process_orders(STREAM s, uint16 num_orders)
 	}
 #if 0
 	/* not true when RDP_COMPRESSION is set */
-	if (s->p != g_next_packet)
+	if (s_tell(s) != g_next_packet)
 		logger(Graphics, Error, "process_orders(), %d bytes remaining",
-		       (int) (g_next_packet - s->p));
+		       (int) (g_next_packet - s_tell(s)));
 #endif
 
 }

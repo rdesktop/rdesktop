@@ -139,7 +139,8 @@ lspci_process(STREAM s)
 	pkglen = s_remaining(s);
 	/* str_handle_lines requires null terminated strings */
 	buf = xmalloc(pkglen + 1);
-	STRNCPY(buf, (char *) s->p, pkglen + 1);
+	in_uint8a(s, buf, pkglen);
+	buf[pkglen] = '\0';
 	str_handle_lines(buf, &rest, lspci_process_line, NULL);
 	xfree(buf);
 }

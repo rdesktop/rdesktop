@@ -109,8 +109,9 @@ tcp_init(uint32 maxlen)
 void
 tcp_send(STREAM s)
 {
-	int length = s->end - s->data;
-	int sent, total = 0;
+	size_t before;
+	int length, sent;
+	unsigned char *data;
 
 	if (g_network_error == True)
 		return;
@@ -119,10 +120,16 @@ tcp_send(STREAM s)
 	scard_lock(SCARD_LOCK_TCP);
 #endif
 
-	while (total < length)
+	s_seek(s, 0);
+
+	while (!s_check_end(s))
 	{
+		before = s_tell(s);
+		length = s_remaining(s);
+		in_uint8p(s, data, length);
+
 		if (g_ssl_initialized) {
-			sent = gnutls_record_send(g_tls_session, s->data + total, length - total);
+			sent = gnutls_record_send(g_tls_session, data, length);
 			if (sent <= 0) {
 				if (gnutls_error_is_fatal(sent)) {
 #ifdef WITH_SCARD
@@ -139,7 +146,7 @@ tcp_send(STREAM s)
 		}
 		else
 		{
-			sent = send(g_sock, s->data + total, length - total, 0);
+			sent = send(g_sock, data, length, 0);
 			if (sent <= 0)
 			{
 				if (sent == -1 && TCP_BLOCKS)
@@ -159,7 +166,9 @@ tcp_send(STREAM s)
 				}
 			}
 		}
-		total += sent;
+
+		/* Everything might not have been sent */
+		s_seek(s, before + sent);
 	}
 #ifdef WITH_SCARD
 	scard_unlock(SCARD_LOCK_TCP);
@@ -170,7 +179,8 @@ tcp_send(STREAM s)
 STREAM
 tcp_recv(STREAM s, uint32 length)
 {
-	uint32 new_length, end_offset, p_offset;
+	size_t before;
+	unsigned char *data;
 	int rcvd = 0;
 
 	if (g_network_error == True)
@@ -179,27 +189,14 @@ tcp_recv(STREAM s, uint32 length)
 	if (s == NULL)
 	{
 		/* read into "new" stream */
-		if (length > g_in.size)
-		{
-			g_in.data = (uint8 *) xrealloc(g_in.data, length);
-			g_in.size = length;
-		}
-		g_in.end = g_in.p = g_in.data;
+		s_realloc(&g_in, length);
+		s_reset(&g_in);
 		s = &g_in;
 	}
 	else
 	{
 		/* append to existing stream */
-		new_length = (s->end - s->data) + length;
-		if (new_length > s->size)
-		{
-			p_offset = s->p - s->data;
-			end_offset = s->end - s->data;
-			s->data = (uint8 *) xrealloc(s->data, new_length);
-			s->size = new_length;
-			s->p = s->data + p_offset;
-			s->end = s->data + end_offset;
-		}
+		s_realloc(s, s_length(s) + length);
 	}
 
 	while (length > 0)
@@ -215,8 +212,15 @@ tcp_recv(STREAM s, uint32 length)
 				return NULL;
 		}
 
+		before = s_tell(s);
+		s_seek(s, s_length(s));
+
+		out_uint8p(s, data, length);
+
+		s_seek(s, before);
+
 		if (g_ssl_initialized) {
-			rcvd = gnutls_record_recv(g_tls_session, s->end, length);
+			rcvd = gnutls_record_recv(g_tls_session, data, length);
 
 			if (rcvd < 0) {
 				if (gnutls_error_is_fatal(rcvd)) {
@@ -231,7 +235,7 @@ tcp_recv(STREAM s, uint32 length)
 		}
 		else
 		{
-			rcvd = recv(g_sock, s->end, length, 0);
+			rcvd = recv(g_sock, data, length, 0);
 			if (rcvd < 0)
 			{
 				if (rcvd == -1 && TCP_BLOCKS)
@@ -253,6 +257,7 @@ tcp_recv(STREAM s, uint32 length)
 			}
 		}
 
+		// FIXME: Should probably have a macro for this
 		s->end += rcvd;
 		length -= rcvd;
 	}

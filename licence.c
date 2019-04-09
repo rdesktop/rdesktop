@@ -277,6 +277,7 @@ licence_process_platform_challenge(STREAM s)
 static void
 licence_process_new_license(STREAM s)
 {
+	unsigned char *data;
 	RDSSL_RC4 crypt_key;
 	uint32 length;
 	int i;
@@ -286,8 +287,12 @@ licence_process_new_license(STREAM s)
 	if (!s_check_rem(s, length))
 		return;
 
+	inout_uint8p(s, data, length);
+
 	rdssl_rc4_set_key(&crypt_key, g_licence_key, 16);
-	rdssl_rc4_crypt(&crypt_key, s->p, s->p, length);
+	rdssl_rc4_crypt(&crypt_key, data, data, length);
+
+	s_seek(s, s_tell(s) - length);
 
 	/* Parse NEW_LICENSE_INFO block */
 	in_uint8s(s, 4);	// skip dwVersion
@@ -304,7 +309,8 @@ licence_process_new_license(STREAM s)
 	}
 
 	g_licence_issued = True;
-	save_licence(s->p, length);
+	in_uint8p(s, data, length);
+	save_licence(data, length);
 }
 
 /* process a licence error alert packet */

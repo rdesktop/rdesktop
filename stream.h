@@ -152,6 +152,9 @@ size_t in_ansi_string(STREAM s, char *string, size_t len);
 /* Copy the entire STREAM v (ignoring offsets) in to STREAM s */
 #define out_stream(s, v)	out_uint8a(s, (v)->data, s_length((v)))
 
+/* Return a pointer in v to manually modify n bytes of STREAM s in place */
+#define inout_uint8p(s,v,n)	{ s_assert_r(s, n); s_assert_w(s, n); v = (s)->p; (s)->p += n; }
+
 #define next_be(s,v)		{ s_assert_r(s, 1); v = ((v) << 8) + *((s)->p++); }
 
 

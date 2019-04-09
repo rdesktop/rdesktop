@@ -59,7 +59,7 @@ extern RD_BOOL g_dynamic_session_resize;
 
 RD_BOOL g_exit_mainloop = False;
 
-uint8 *g_next_packet;
+size_t g_next_packet;
 uint32 g_rdp_shareid;
 
 extern RDPCOMP g_mppc_dict;
@@ -128,6 +128,9 @@ rdp_ts_in_share_control_header(STREAM s, uint8 * type, uint16 * length)
 
 	*type = pdu_type & 0xf;
 
+	/* Give just the size of the data */
+	*length -= 6;
+
 	return True;
 }
 
@@ -142,7 +145,7 @@ rdp_recv(uint8 * type)
 	while (1)
 	{
 		/* fill stream with data if needed for parsing a new packet */
-		if ((rdp_s == NULL) || (g_next_packet >= rdp_s->end) || (g_next_packet == NULL))
+		if (g_next_packet == 0)
 		{
 			rdp_s = sec_recv(&is_fastpath);
 			if (rdp_s == NULL)
@@ -155,11 +158,16 @@ rdp_recv(uint8 * type)
 				continue;
 			}
 
-			g_next_packet = rdp_s->p;
+			g_next_packet = s_tell(rdp_s);
 		}
 		else
 		{
-			rdp_s->p = g_next_packet;
+			s_seek(rdp_s, g_next_packet);
+			if (s_check_end(rdp_s))
+			{
+				g_next_packet = 0;
+				continue;
+			}
 		}
 
 		/* parse a TS_SHARECONTROLHEADER */
@@ -171,7 +179,13 @@ rdp_recv(uint8 * type)
 
 	logger(Protocol, Debug, "rdp_recv(), RDP packet #%d, type 0x%x", ++g_packetno, *type);
 
-	g_next_packet += length;
+	if (!s_check_rem(rdp_s, length))
+	{
+		rdp_protocol_error("not enough data for PDU", rdp_s);
+	}
+
+	g_next_packet = s_tell(rdp_s) + length;
+
 	return rdp_s;
 }
 
@@ -241,7 +255,8 @@ rdp_out_unistr(STREAM s, char *string, int len)
 	 */
 	static iconv_t icv_local_to_utf16;
 	size_t ibl, obl;
-	char *pin, *pout;
+	char *pin;
+	unsigned char *pout;
 
 
 	if (string == NULL || len == 0)
@@ -263,18 +278,16 @@ rdp_out_unistr(STREAM s, char *string, int len)
 	ibl = strlen(string);
 	obl = len + 2;
 	pin = string;
-	pout = (char *) s->p;
+	out_uint8p(s, pout, len + 2);
 
-	memset(pout, 0, len + 4);
+	memset(pout, 0, len + 2);
 
 
-	if (iconv(icv_local_to_utf16, (char **) &pin, &ibl, &pout, &obl) == (size_t) - 1)
+	if (iconv(icv_local_to_utf16, (char **) &pin, &ibl, (char **)&pout, &obl) == (size_t) - 1)
 	{
 		logger(Protocol, Error, "rdp_out_unistr(), iconv(2) fail, errno %d", errno);
 		abort();
 	}
-
-	s->p += len + 2;
 }
 
 /* Input a string in Unicode
@@ -286,7 +299,8 @@ rdp_in_unistr(STREAM s, int in_len, char **string, uint32 * str_size)
 {
 	static iconv_t icv_utf16_to_local;
 	size_t ibl, obl;
-	char *pin, *pout;
+	unsigned char *pin;
+	char *pout;
 
 	struct stream packet = *s;
 
@@ -323,7 +337,7 @@ rdp_in_unistr(STREAM s, int in_len, char **string, uint32 * str_size)
 
 	ibl = in_len;
 	obl = *str_size - 1;
-	pin = (char *) s->p;
+	in_uint8p(s, pin, in_len);
 	pout = *string;
 
 	if (iconv(icv_utf16_to_local, (char **) &pin, &ibl, &pout, &obl) == (size_t) - 1)
@@ -343,9 +357,6 @@ rdp_in_unistr(STREAM s, int in_len, char **string, uint32 * str_size)
 		}
 		abort();
 	}
-
-	/* we must update the location of the current STREAM for future reads of s->p */
-	s->p += in_len;
 
 	*pout = 0;
 
@@ -1219,25 +1230,25 @@ static void
 rdp_process_server_caps(STREAM s, uint16 length)
 {
 	int n;
-	uint8 *next, *start;
+	size_t next, start;
 	uint16 ncapsets, capset_type, capset_length;
 
 	logger(Protocol, Debug, "%s()", __func__);
 
-	start = s->p;
+	start = s_tell(s);
 
 	in_uint16_le(s, ncapsets);
 	in_uint8s(s, 2);	/* pad */
 
 	for (n = 0; n < ncapsets; n++)
 	{
-		if (s->p > start + length)
+		if (s_tell(s) > start + length)
 			return;
 
 		in_uint16_le(s, capset_type);
 		in_uint16_le(s, capset_length);
 
-		next = s->p + capset_length - 4;
+		next = s_tell(s) + capset_length - 4;
 
 		switch (capset_type)
 		{
@@ -1256,7 +1267,7 @@ rdp_process_server_caps(STREAM s, uint16 length)
 				break;
 		}
 
-		s->p = next;
+		s_seek(s, next);
 	}
 }
 
@@ -1726,6 +1737,7 @@ process_data_pdu(STREAM s, uint32 * ext_disc_reason)
 	uint16 clen;
 	uint32 len;
 
+	uint8 *buf;
 	uint32 roff, rlen;
 
 	struct stream *ns = &(g_mppc_dict.ns);
@@ -1742,21 +1754,22 @@ process_data_pdu(STREAM s, uint32 * ext_disc_reason)
 		if (len > RDP_MPPC_DICT_SIZE)
 			logger(Protocol, Error,
 			       "process_data_pdu(), error decompressed packet size exceeds max");
-		if (mppc_expand(s->p, clen, ctype, &roff, &rlen) == -1)
+		in_uint8p(s, buf, clen);
+		if (mppc_expand(buf, clen, ctype, &roff, &rlen) == -1)
 			logger(Protocol, Error,
 			       "process_data_pdu(), error while decompressing packet");
 
 		/* len -= 18; */
 
 		/* allocate memory and copy the uncompressed data into the temporary stream */
-		ns->data = (uint8 *) xrealloc(ns->data, rlen);
+		s_realloc(ns, rlen);
+		s_reset(ns);
 
-		memcpy((ns->data), (unsigned char *) (g_mppc_dict.hist + roff), rlen);
+		out_uint8a(ns, (unsigned char *) (g_mppc_dict.hist + roff), rlen);
 
-		ns->size = rlen;
-		ns->end = (ns->data + ns->size);
-		ns->p = ns->data;
-		ns->rdp_hdr = ns->p;
+		s_mark_end(ns);
+		s_seek(ns, 0);
+		s_push_layer(ns, rdp_hdr, 0);
 
 		s = ns;
 	}
@@ -2056,7 +2069,7 @@ rdp_loop(RD_BOOL * deactivated, uint32 * ext_disc_reason)
 				logger(Protocol, Warning,
 				       "rdp_loop(), unhandled PDU type %d received", type);
 		}
-		cont = g_next_packet < s->end;
+		cont = g_next_packet < s_length(s);
 	}
 	return True;
 }
@@ -2094,7 +2107,7 @@ void
 rdp_reset_state(void)
 {
 	logger(Protocol, Debug, "%s()", __func__);
-	g_next_packet = NULL;	/* reset the packet information */
+	g_next_packet = 0;	/* reset the packet information */
 	g_rdp_shareid = 0;
 	g_exit_mainloop = False;
 	g_first_bitmap_caps = True;

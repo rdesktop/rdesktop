@@ -1195,8 +1195,11 @@ pulse_play(void)
 		audio_size = MIN(s_remaining(out), avail_space);
 		if (audio_size)
 		{
+			unsigned char *data;
+
+			in_uint8p(out, data, audio_size);
 			if (pa_stream_write
-			    (playback_stream, out->p, audio_size, NULL, 0, playback_seek) != 0)
+			    (playback_stream, data, audio_size, NULL, 0, playback_seek) != 0)
 			{
 				err = pa_context_errno(context);
 				logger(Sound, Error, "pulse_play(), pa_stream_write: %s",
@@ -1207,9 +1210,7 @@ pulse_play(void)
 				playback_seek = PA_SEEK_RELATIVE;
 		}
 
-		out->p += audio_size;
-
-		if (out->p == out->end)
+		if (s_check_end(out))
 		{
 			ret = pa_stream_get_latency(playback_stream, &delay, NULL);
 			if (ret != 0 && (err = pa_context_errno(context)) == PA_ERR_NODATA)
@@ -1251,7 +1252,7 @@ pulse_play(void)
 
 	pa_threaded_mainloop_unlock(mainloop);
 
-	if (out->p == out->end)
+	if (s_check_end(out))
 		rdpsnd_queue_next(delay);
 
 	return result;
