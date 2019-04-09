@@ -39,8 +39,13 @@ typedef struct stream
 }
  *STREAM;
 
+/* Return a newly allocated STREAM object of the specified size */
+STREAM s_alloc(unsigned int size);
+/* Resize an existing STREAM object, keeping all data and offsets intact */
 void s_realloc(STREAM s, unsigned int size);
+/* Free STREAM object and its associated buffer */
 void s_free(STREAM s);
+/* Reset all internal offsets, but keep the allocated size */
 void s_reset(STREAM s);
 
 #define s_push_layer(s,h,n)	{ (s)->h = (s)->p; (s)->p += n; }

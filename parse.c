@@ -22,6 +22,18 @@
 
 #include "parse.h"
 
+STREAM
+s_alloc(unsigned int size)
+{
+	STREAM s;
+
+	s = xmalloc(sizeof(struct stream));
+	memset(s, 0, sizeof(struct stream));
+	s_realloc(s, size);
+
+	return s;
+}
+
 void
 s_realloc(STREAM s, unsigned int size)
 {
