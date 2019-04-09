@@ -43,6 +43,8 @@ typedef struct stream
 
 /* Return a newly allocated STREAM object of the specified size */
 STREAM s_alloc(unsigned int size);
+/* Wrap an existing buffer in a STREAM object, transferring ownership */
+STREAM s_inherit(unsigned char *data, unsigned int size);
 /* Resize an existing STREAM object, keeping all data and offsets intact */
 void s_realloc(STREAM s, unsigned int size);
 /* Free STREAM object and its associated buffer */
@@ -60,6 +62,10 @@ size_t in_ansi_string(STREAM s, char *string, size_t len);
 #define s_push_layer(s,h,n)	{ (s)->h = (s)->p; (s)->p += n; }
 #define s_pop_layer(s,h)	(s)->p = (s)->h;
 #define s_mark_end(s)		(s)->end = (s)->p;
+/* Return current read offset in the STREAM */
+#define s_tell(s)		(size_t)((s)->p - (s)->data)
+/* Set current read offset in the STREAM */
+#define s_seek(s,o)		(s)->p = (s)->data; s_assert_r(s,o); (s)->p += o;
 /* Returns number of bytes that can still be read from STREAM */
 #define s_remaining(s)		(size_t)((s)->end - (s)->p)
 #define s_check_rem(s,n)	(((s)->p <= (s)->end) && ((size_t)n <= s_remaining(s)))

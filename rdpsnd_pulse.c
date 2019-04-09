@@ -1154,7 +1154,7 @@ pulse_play(void)
 	do
 	{
 		packet = rdpsnd_queue_current_packet();
-		out = &packet->s;
+		out = packet->s;
 
 		ti = pa_stream_get_timing_info(playback_stream);
 		if (ti == NULL)

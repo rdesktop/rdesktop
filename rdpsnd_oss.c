@@ -410,7 +410,7 @@ oss_play(void)
 		return;
 
 	packet = rdpsnd_queue_current_packet();
-	out = &packet->s;
+	out = packet->s;
 
 	len = s_remaining(out);
 

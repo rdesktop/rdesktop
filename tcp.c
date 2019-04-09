@@ -399,8 +399,8 @@ fail:
 }
 
 /* Get public key from server of TLS 1.x connection */
-RD_BOOL
-tcp_tls_get_server_pubkey(STREAM s)
+STREAM
+tcp_tls_get_server_pubkey()
 {
 	int ret;
 	unsigned int list_size;
@@ -413,8 +413,7 @@ tcp_tls_get_server_pubkey(STREAM s)
 	int pk_size;
 	uint8_t pk_data[1024];
 
-	s->data = s->p = NULL;
-	s->size = 0;
+	STREAM s = NULL;
 
 	cert_list = gnutls_certificate_get_peers(g_tls_session, &list_size);
 
@@ -466,11 +465,10 @@ tcp_tls_get_server_pubkey(STREAM s)
 			goto out;
 	}
 
-	s->size = pk_size;
-	s->data = s->p = xmalloc(s->size);
-	memcpy((void *)s->data, (void *)pk_data, pk_size);
-	s->p = s->data;
-	s->end = s->p + s->size;
+	s = s_alloc(pk_size);
+	out_uint8a(s, pk_data, pk_size);
+	s_mark_end(s);
+	s_seek(s, 0);
 
 out:
 	if ((e.size != 0) && (e.data)) {
@@ -481,7 +479,7 @@ out:
 		free(m.data);
 	}
 
-	return (s->size != 0);
+	return s;
 }
 
 /* Helper function to determine if rdesktop should resolve hostnames again or not */

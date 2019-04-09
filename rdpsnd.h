@@ -19,7 +19,7 @@
 
 struct audio_packet
 {
-	struct stream s;
+	STREAM s;
 	uint16 tick;
 	uint8 index;
 
