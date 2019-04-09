@@ -352,7 +352,6 @@ rdpdr_process_irp(STREAM s)
 		request,
 		file,
 		info_level,
-		buffer_len,
 		id,
 		major,
 		minor,
@@ -366,8 +365,8 @@ rdpdr_process_irp(STREAM s)
 	char *filename;
 	uint32 filename_len;
 
-	uint8 *buffer, *pst_buf;
-	struct stream out;
+	uint8 *pst_buf;
+	STREAM out;
 	DEVICE_FNS *fns;
 	RD_BOOL rw_blocking = True;
 	RD_NTSTATUS status = RD_STATUS_INVALID_DEVICE_REQUEST;
@@ -380,15 +379,12 @@ rdpdr_process_irp(STREAM s)
 
 	filename = NULL;
 
-	buffer_len = 0;
-	buffer = (uint8 *) xmalloc(1024);
-	buffer[0] = 0;
+	out = NULL;
 
 	if (device >= RDPDR_MAX_DEVICES)
 	{
 		error("invalid irp device 0x%lx file 0x%lx id 0x%lx major 0x%lx minor 0x%lx\n",
 		      device, file, id, major, minor);
-		xfree(buffer);
 		return;
 	}
 
@@ -426,7 +422,6 @@ rdpdr_process_irp(STREAM s)
 		default:
 
 			error("IRP for bad device %ld\n", device);
-			xfree(buffer);
 			return;
 	}
 
@@ -460,7 +455,9 @@ rdpdr_process_irp(STREAM s)
 					     flags_and_attributes, filename, &result);
 
 			free(filename);
-			buffer_len = 1;
+			out = s_alloc(1);
+			out_uint8(out, 0);
+			s_mark_end(out);
 			break;
 
 		case IRP_MJ_CLOSE:
@@ -494,14 +491,14 @@ rdpdr_process_irp(STREAM s)
 
 			if (rw_blocking)	/* Complete read immediately */
 			{
-				buffer = (uint8 *) xrealloc((void *) buffer, length);
-				if (!buffer)
-				{
-					status = RD_STATUS_CANCELLED;
-					break;
-				}
+				uint8* buffer;
+				out = s_alloc(length);
+				out_uint8p(out, buffer, length);
 				status = fns->read(file, buffer, length, offset, &result);
-				buffer_len = result;
+				/* Might have read less */
+				s_mark_end(out);
+				s_seek(out, result);
+				s_mark_end(out);
 				break;
 			}
 
@@ -525,7 +522,9 @@ rdpdr_process_irp(STREAM s)
 			break;
 		case IRP_MJ_WRITE:
 
-			buffer_len = 1;
+			out = s_alloc(1);
+			out_uint8(out, 0);
+			s_mark_end(out);
 
 			if (!fns->write)
 			{
@@ -547,7 +546,9 @@ rdpdr_process_irp(STREAM s)
 
 			if (rw_blocking)	/* Complete immediately */
 			{
-				status = fns->write(file, s->p, length, offset, &result);
+				unsigned char *data;
+				in_uint8p(s, data, length);
+				status = fns->write(file, data, length, offset, &result);
 				break;
 			}
 
@@ -580,10 +581,10 @@ rdpdr_process_irp(STREAM s)
 			}
 			in_uint32_le(s, info_level);
 
-			out.data = out.p = buffer;
-			out.size = sizeof(buffer);
-			status = disk_query_information(file, info_level, &out);
-			result = buffer_len = out.p - out.data;
+			out = s_alloc(1024);
+			status = disk_query_information(file, info_level, out);
+			s_mark_end(out);
+			result = s_length(out);
 
 			break;
 
@@ -597,10 +598,10 @@ rdpdr_process_irp(STREAM s)
 
 			in_uint32_le(s, info_level);
 
-			out.data = out.p = buffer;
-			out.size = sizeof(buffer);
-			status = disk_set_information(file, info_level, s, &out);
-			result = buffer_len = out.p - out.data;
+			out = s_alloc(1024);
+			status = disk_set_information(file, info_level, s, out);
+			s_mark_end(out);
+			result = s_length(out);
 			break;
 
 		case IRP_MJ_QUERY_VOLUME_INFORMATION:
@@ -613,10 +614,10 @@ rdpdr_process_irp(STREAM s)
 
 			in_uint32_le(s, info_level);
 
-			out.data = out.p = buffer;
-			out.size = sizeof(buffer);
-			status = disk_query_volume_information(file, info_level, &out);
-			result = buffer_len = out.p - out.data;
+			out = s_alloc(1024);
+			status = disk_query_volume_information(file, info_level, out);
+			s_mark_end(out);
+			result = s_length(out);
 			break;
 
 		case IRP_MJ_DIRECTORY_CONTROL:
@@ -642,13 +643,16 @@ rdpdr_process_irp(STREAM s)
 							convert_to_unix_filename(filename);
 					}
 
-					out.data = out.p = buffer;
-					out.size = sizeof(buffer);
+					out = s_alloc(1024);
 					status = disk_query_directory(file, info_level, filename,
-								      &out);
-					result = buffer_len = out.p - out.data;
-					if (!buffer_len)
-						buffer_len++;
+								      out);
+					s_mark_end(out);
+					if (!s_length(out))
+					{
+						out_uint8(out, 0);
+						s_mark_end(out);
+					}
+					result = s_length(out);
 
 					free(filename);
 					break;
@@ -689,21 +693,14 @@ rdpdr_process_irp(STREAM s)
 			in_uint32_le(s, request);
 			in_uint8s(s, 0x14);
 
-			buffer = (uint8 *) xrealloc((void *) buffer, bytes_out + 0x14);
-			if (!buffer)
-			{
-				status = RD_STATUS_CANCELLED;
-				break;
-			}
-
-			out.data = out.p = buffer;
-			out.size = sizeof(buffer);
+			out = s_alloc(bytes_out + 0x14);
 
 #ifdef WITH_SCARD
 			scardSetInfo(g_epoch, device, id, bytes_out + 0x14);
 #endif
-			status = fns->device_control(file, request, s, &out);
-			result = buffer_len = out.p - out.data;
+			status = fns->device_control(file, request, s, out);
+			s_mark_end(out);
+			result = s_length(out);
 
 			/* Serial SERIAL_WAIT_ON_MASK */
 			if (status == RD_STATUS_PENDING)
@@ -732,12 +729,12 @@ rdpdr_process_irp(STREAM s)
 
 			in_uint32_le(s, info_level);
 
-			out.data = out.p = buffer;
-			out.size = sizeof(buffer);
+			out = s_alloc(1024);
 			/* FIXME: Perhaps consider actually *do*
 			   something here :-) */
 			status = RD_STATUS_SUCCESS;
-			result = buffer_len = out.p - out.data;
+			s_mark_end(out);
+			result = s_length(out);
 			break;
 
 		default:
@@ -747,11 +744,25 @@ rdpdr_process_irp(STREAM s)
 
 	if (status != RD_STATUS_PENDING)
 	{
+		size_t buffer_len;
+		uint8 *buffer;
+
+		if (out != NULL)
+		{
+			buffer_len = s_length(out);
+			s_seek(out, 0);
+			in_uint8p(out, buffer, buffer_len);
+		}
+		else
+		{
+			buffer_len = 0;
+			buffer = NULL;
+		}
+
 		rdpdr_send_completion(device, id, status, result, buffer, buffer_len);
 	}
-	if (buffer)
-		xfree(buffer);
-	buffer = NULL;
+	if (out)
+		s_free(out);
 }
 
 static void

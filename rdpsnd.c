@@ -78,6 +78,7 @@ static char record_buffer[8192];
 static uint32 record_buffer_size;
 
 static uint8 packet_opcode;
+static size_t packet_len;
 static struct stream packet;
 
 void (*wave_out_play) (void);
@@ -483,8 +484,11 @@ static void
 rdpsnd_process_packet(uint8 opcode, STREAM s)
 {
 	uint16 vol_left, vol_right;
-	static uint16 tick, format;
-	static uint8 packet_index;
+
+	uint16 tick, format;
+	uint8 packet_index;
+	unsigned int size;
+	unsigned char *data;
 
 	switch (opcode)
 	{
@@ -529,9 +533,12 @@ rdpsnd_process_packet(uint8 opcode, STREAM s)
 				current_format = format;
 			}
 
-			rdpsnd_queue_write(rdpsnd_dsp_process
-					   (s->p, s_remaining(s), current_driver,
-					    &formats[current_format]), tick, packet_index);
+			size = s_remaining(s);
+			in_uint8p(s, data, size);
+			rdpsnd_queue_write(rdpsnd_dsp_process(data, size,
+							      current_driver,
+							      &formats[current_format]),
+					   tick, packet_index);
 			return;
 			break;
 		case RDPSND_CLOSE:
@@ -607,12 +614,10 @@ rdpsnd_process_packet(uint8 opcode, STREAM s)
 static void
 rdpsnd_process(STREAM s)
 {
-	uint16 len;
-
 	while (!s_check_end(s))
 	{
 		/* New packet */
-		if (packet.size == 0)
+		if (packet_len == 0)
 		{
 			if (!s_check_rem(s, 4))
 			{
@@ -621,25 +626,23 @@ rdpsnd_process(STREAM s)
 			}
 			in_uint8(s, packet_opcode);
 			in_uint8s(s, 1);	/* Padding */
-			in_uint16_le(s, len);
+			in_uint16_le(s, packet_len);
 
 			DEBUG_SOUND(("RDPSND: == Opcode %x Length: %d ==\n",
 				     (int) packet_opcode, (int) len));
-
-			packet.p = packet.data;
-			packet.end = packet.data + len;
-			packet.size = len;
 		}
 		else
 		{
-			len = MIN(s_remaining(s), s_remaining(&packet));
+			uint16 len;
+
+			len = MIN(s_remaining(s), packet_len - s_length(&packet));
 
 			/* Microsoft's server is so broken it's not even funny... */
 			if (packet_opcode == RDPSND_WRITE)
 			{
-				if ((packet.p - packet.data) < 12)
-					len = MIN(len, 12 - (packet.p - packet.data));
-				else if ((packet.p - packet.data) == 12)
+				if (s_length(&packet) < 12)
+					len = MIN(len, 12 - s_length(&packet));
+				else if (s_length(&packet) == 12)
 				{
 					DEBUG_SOUND(("RDPSND: Eating 4 bytes of %d bytes...\n",
 						     len));
@@ -648,16 +651,18 @@ rdpsnd_process(STREAM s)
 				}
 			}
 
-			in_uint8a(s, packet.p, len);
-			packet.p += len;
+			in_uint8stream(s, &packet, len);
+			/* Always end it so s_length() works */
+			s_mark_end(&packet);
 		}
 
 		/* Packet fully assembled */
-		if (packet.p == packet.end)
+		if (s_length(&packet) == packet_len)
 		{
-			packet.p = packet.data;
+			s_seek(&packet, 0);
 			rdpsnd_process_packet(packet_opcode, &packet);
-			packet.size = 0;
+			packet_len = 0;
+			s_reset(&packet);
 		}
 	}
 }
@@ -681,7 +686,8 @@ rdpsnddbg_process(STREAM s)
 	pkglen = s_remaining(s);
 	/* str_handle_lines requires null terminated strings */
 	buf = (char *) xmalloc(pkglen + 1);
-	STRNCPY(buf, (char *) s->p, pkglen + 1);
+	in_uint8a(s, buf, pkglen);
+	buf[pkglen] = '\0';
 
 	str_handle_lines(buf, &rest, rdpsnddbg_line_handler, NULL);
 
@@ -732,9 +738,7 @@ rdpsnd_init(char *optarg)
 
 	drivers = NULL;
 
-	packet.data = (uint8 *) xmalloc(65536);
-	packet.p = packet.end = packet.data;
-	packet.size = 0;
+	s_realloc(&packet, 65536);
 
 	rdpsnd_channel =
 		channel_register("rdpsnd", CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_ENCRYPT_RDP,

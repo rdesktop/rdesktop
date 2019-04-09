@@ -61,7 +61,7 @@ mcs_parse_domain_params(STREAM s)
 static void
 mcs_send_connect_initial(STREAM mcs_data)
 {
-	int datalen = mcs_data->end - mcs_data->data;
+	int datalen = s_length(mcs_data);
 	int length = 9 + 3 * 34 + 4 + datalen;
 	STREAM s;
 
@@ -133,9 +133,10 @@ mcs_recv_connect_response(STREAM mcs_data)
 	   length = mcs_data->size;
 	   }
 
-	   in_uint8a(s, mcs_data->data, length);
-	   mcs_data->p = mcs_data->data;
-	   mcs_data->end = mcs_data->data + length;
+	   s_reset(mcs_data);
+	   in_uint8stream(s, mcs_data, length);
+	   s_mark_end(mcs_data);
+	   s_seek(mcs_data, 0);
 	 */
 	return s_check_end(s);
 }

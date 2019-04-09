@@ -255,6 +255,7 @@ sgi_play(void)
 	ssize_t len;
 	unsigned int i;
 	STREAM out;
+	unsigned char *data;
 	int gf;
 
 	while (1)
@@ -266,11 +267,11 @@ sgi_play(void)
 		out = packet->s;
 
 		len = s_remaining(out);
+		in_uint8p(out, data, len);
 
-		alWriteFrames(output_port, out->p, len / combinedFrameSize);
+		alWriteFrames(output_port, data, len / combinedFrameSize);
 
-		out->p += len;
-		if (out->p == out->end)
+		if (s_check_end(out))
 		{
 			gf = alGetFilled(output_port);
 			if (gf < (4 * maxFillable / 10))

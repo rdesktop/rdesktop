@@ -20,7 +20,7 @@
 
 #include "rdesktop.h"
 
-extern uint8 *g_next_packet;
+extern size_t g_next_packet;
 
 extern RDPCOMP g_mppc_dict;
 
@@ -29,8 +29,9 @@ rdp5_process(STREAM s)
 {
 	uint16 length, count, x, y;
 	uint8 type, ctype;
-	uint8 *next;
+	size_t next;
 
+	uint8 *buf;
 	uint32 roff, rlen;
 	struct stream *ns = &(g_mppc_dict.ns);
 	struct stream *ts;
@@ -41,7 +42,7 @@ rdp5_process(STREAM s)
 #endif
 
 	ui_begin_update();
-	while (s->p < s->end)
+	while (!s_check_end(s))
 	{
 		in_uint8(s, type);
 		if (type & RDP5_COMPRESSED)
@@ -55,22 +56,23 @@ rdp5_process(STREAM s)
 			ctype = 0;
 			in_uint16_le(s, length);
 		}
-		g_next_packet = next = s->p + length;
+		g_next_packet = next = s_tell(s) + length;
 
 		if (ctype & RDP_MPPC_COMPRESSED)
 		{
-			if (mppc_expand(s->p, length, ctype, &roff, &rlen) == -1)
+			in_uint8p(s, buf, length);
+			if (mppc_expand(buf, length, ctype, &roff, &rlen) == -1)
 				error("error while decompressing packet\n");
 
 			/* allocate memory and copy the uncompressed data into the temporary stream */
-			ns->data = (uint8 *) xrealloc(ns->data, rlen);
+			s_realloc(ns, rlen);
+			s_reset(ns);
 
-			memcpy((ns->data), (unsigned char *) (g_mppc_dict.hist + roff), rlen);
+			out_uint8a(ns, (unsigned char *) (g_mppc_dict.hist + roff), rlen);
 
-			ns->size = rlen;
-			ns->end = (ns->data + ns->size);
-			ns->p = ns->data;
-			ns->rdp_hdr = ns->p;
+			s_mark_end(ns);
+			s_seek(ns, 0);
+			s_push_layer(ns, rdp_hdr, 0);
 
 			ts = ns;
 		}
@@ -116,7 +118,7 @@ rdp5_process(STREAM s)
 				unimpl("RDP5 opcode %d\n", type);
 		}
 
-		s->p = next;
+		s_seek(s, next);
 	}
 	ui_end_update();
 }

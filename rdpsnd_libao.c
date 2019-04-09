@@ -141,6 +141,7 @@ libao_play(void)
 {
 	struct audio_packet *packet;
 	STREAM out;
+	unsigned char *data;
 	int len;
 	static long prev_s, prev_us;
 	unsigned int duration;
@@ -165,8 +166,8 @@ libao_play(void)
 	next_tick = rdpsnd_queue_next_tick();
 
 	len = MIN(WAVEOUTLEN, s_remaining(out));
-	ao_play(o_device, (char *) out->p, len);
-	out->p += len;
+	in_uint8p(out, data, len);
+	ao_play(o_device, (char *) data, len);
 
 	gettimeofday(&tv, NULL);
 
@@ -175,7 +176,7 @@ libao_play(void)
 	if (packet->tick > next_tick)
 		next_tick += 65536;
 
-	if ((out->p == out->end) || duration > next_tick - packet->tick + 500)
+	if (s_check_end(out) || duration > next_tick - packet->tick + 500)
 	{
 		unsigned int delay_us;
 

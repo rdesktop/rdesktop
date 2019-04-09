@@ -176,7 +176,6 @@ void
 channel_process(STREAM s, uint16 mcs_channel)
 {
 	uint32 length, flags;
-	uint32 thislength;
 	VCHANNEL *channel = NULL;
 	unsigned int i;
 	STREAM in;
@@ -204,22 +203,16 @@ channel_process(STREAM s, uint16 mcs_channel)
 		in = &channel->in;
 		if (flags & CHANNEL_FLAG_FIRST)
 		{
-			if (length > in->size)
-			{
-				in->data = (uint8 *) xrealloc(in->data, length);
-				in->size = length;
-			}
-			in->p = in->data;
+			s_realloc(in, length);
+			s_reset(in);
 		}
 
-		thislength = MIN(s_remaining(s), in->data + in->size - in->p);
-		memcpy(in->p, s->p, thislength);
-		in->p += thislength;
+		out_uint8stream(in, s, s_remaining(s));
 
 		if (flags & CHANNEL_FLAG_LAST)
 		{
-			in->end = in->p;
-			in->p = in->data;
+			s_mark_end(in);
+			s_seek(in, 0);
 			channel->process(in);
 		}
 	}

@@ -116,19 +116,12 @@ cliprdr_process(STREAM s)
 	uint16 type, status;
 	uint32 length, format;
 	uint8 *data;
-	struct stream packet = *s;
 
 	in_uint16_le(s, type);
 	in_uint16_le(s, status);
 	in_uint32_le(s, length);
-	data = s->p;
 
 	DEBUG_CLIPBOARD(("CLIPRDR recv: type=%d, status=%d, length=%d\n", type, status, length));
-
-	if (!s_check_rem(s, length))
-	{
-		rdp_protocol_error("consume of packet from stream would overrun", &packet);
-	}
 
 	if (status == CLIPRDR_ERROR)
 	{
@@ -156,6 +149,7 @@ cliprdr_process(STREAM s)
 			ui_clip_sync();
 			break;
 		case CLIPRDR_FORMAT_ANNOUNCE:
+			in_uint8p(s, data, length);
 			ui_clip_format_announce(data, length);
 			cliprdr_send_packet(CLIPRDR_FORMAT_ACK, CLIPRDR_RESPONSE, NULL, 0);
 			return;
@@ -166,6 +160,7 @@ cliprdr_process(STREAM s)
 			ui_clip_request_data(format);
 			break;
 		case CLIPRDR_DATA_RESPONSE:
+			in_uint8p(s, data, length);
 			ui_clip_handle_data(data, length);
 			break;
 		case 7:	/* TODO: W2K3 SP1 sends this on connect with a value of 1 */

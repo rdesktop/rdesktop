@@ -58,7 +58,7 @@ extern RD_BOOL g_numlock_sync;
 extern RD_BOOL g_pending_resize;
 extern RD_BOOL g_network_error;
 
-uint8 *g_next_packet;
+size_t g_next_packet;
 uint32 g_rdp_shareid;
 
 extern RDPCOMP g_mppc_dict;
@@ -102,14 +102,14 @@ rdp_recv(uint8 * type)
 	uint16 length, pdu_type;
 	uint8 rdpver;
 
-	if ((rdp_s == NULL) || (g_next_packet >= rdp_s->end) || (g_next_packet == NULL))
+	if ((g_next_packet == 0) || (g_next_packet == s_length(rdp_s)))
 	{
 		rdp_s = sec_recv(&rdpver);
 		if (rdp_s == NULL)
 			return NULL;
 		if (rdpver == 0xff)
 		{
-			g_next_packet = rdp_s->end;
+			g_next_packet = s_length(rdp_s);
 			*type = 0;
 			return rdp_s;
 		}
@@ -121,11 +121,11 @@ rdp_recv(uint8 * type)
 			return rdp_s;
 		}
 
-		g_next_packet = rdp_s->p;
+		g_next_packet = s_tell(rdp_s);
 	}
 	else
 	{
-		rdp_s->p = g_next_packet;
+		s_seek(rdp_s, g_next_packet);
 	}
 
 	in_uint16_le(rdp_s, length);
@@ -142,10 +142,11 @@ rdp_recv(uint8 * type)
 
 #if WITH_DEBUG
 	DEBUG(("RDP packet #%d, (type %x)\n", ++g_packetno, *type));
-	hexdump(g_next_packet, length);
+	hexdump(rdp_s->data + g_next_packet, length);
 #endif /*  */
 
 	g_next_packet += length;
+
 	return rdp_s;
 }
 
@@ -195,37 +196,29 @@ rdp_out_unistr(STREAM s, char *string, int len)
 #ifdef HAVE_ICONV
 	size_t ibl = strlen(string), obl = len + 2;
 	static iconv_t iconv_h = (iconv_t) - 1;
-	char *pin = string, *pout = (char *) s->p;
+	char *pin = string, *pout;
+	size_t start;
 
-	memset(pout, 0, len + 4);
+	start = s_tell(s);
+	out_uint8p(s, pout, len + 2);
+	// FIXME: hack so that s_seek() works
+	s_mark_end(s);
+	memset(pout, 0, len + 2);
 
 	if (g_iconv_works)
 	{
 		if (iconv_h == (iconv_t) - 1)
 		{
-			size_t i = 1, o = 4;
 			if ((iconv_h = iconv_open(WINDOWS_CODEPAGE, g_codepage)) == (iconv_t) - 1)
 			{
 				warning("rdp_out_unistr: iconv_open[%s -> %s] fail %p\n",
 					g_codepage, WINDOWS_CODEPAGE, iconv_h);
 
 				g_iconv_works = False;
+				s_seek(s, start);
 				rdp_out_unistr(s, string, len);
 				return;
 			}
-			if (iconv(iconv_h, (ICONV_CONST char **) &pin, &i, &pout, &o) ==
-			    (size_t) - 1)
-			{
-				iconv_close(iconv_h);
-				iconv_h = (iconv_t) - 1;
-				warning("rdp_out_unistr: iconv(1) fail, errno %d\n", errno);
-
-				g_iconv_works = False;
-				rdp_out_unistr(s, string, len);
-				return;
-			}
-			pin = string;
-			pout = (char *) s->p;
 		}
 
 		if (iconv(iconv_h, (ICONV_CONST char **) &pin, &ibl, &pout, &obl) == (size_t) - 1)
@@ -235,12 +228,10 @@ rdp_out_unistr(STREAM s, char *string, int len)
 			warning("rdp_out_unistr: iconv(2) fail, errno %d\n", errno);
 
 			g_iconv_works = False;
+			s_seek(s, start);
 			rdp_out_unistr(s, string, len);
 			return;
 		}
-
-		s->p += len + 2;
-
 	}
 	else
 #endif
@@ -251,11 +242,10 @@ rdp_out_unistr(STREAM s, char *string, int len)
 
 		while (i < len)
 		{
-			s->p[i++] = string[j++];
-			s->p[i++] = 0;
+			out_uint8(s, string[j++]);
+			out_uint8(s, 0);
+			i += 2;
 		}
-
-		s->p += len;
 	}
 }
 
@@ -286,8 +276,12 @@ rdp_in_unistr(STREAM s, int in_len, char **string, uint32 * str_size)
 
 #ifdef HAVE_ICONV
 	size_t ibl = in_len, obl = *str_size - 1;
-	char *pin = (char *) s->p, *pout = *string;
+	char *pin, *pout = *string;
 	static iconv_t iconv_h = (iconv_t) - 1;
+	size_t start;
+
+	start = s_tell(s);
+	in_uint8p(s, pin, in_len);
 
 	if (g_iconv_works)
 	{
@@ -299,6 +293,7 @@ rdp_in_unistr(STREAM s, int in_len, char **string, uint32 * str_size)
 					WINDOWS_CODEPAGE, g_codepage, iconv_h);
 
 				g_iconv_works = False;
+				s_seek(s, start);
 				return rdp_in_unistr(s, in_len, string, str_size);
 			}
 		}
@@ -318,9 +313,6 @@ rdp_in_unistr(STREAM s, int in_len, char **string, uint32 * str_size)
 				*str_size = 0;
 			}
 		}
-
-		/* we must update the location of the current STREAM for future reads of s->p */
-		s->p += in_len;
 
 		*pout = 0;
 
@@ -1067,23 +1059,23 @@ static void
 rdp_process_server_caps(STREAM s, uint16 length)
 {
 	int n;
-	uint8 *next, *start;
+	size_t next, start;
 	uint16 ncapsets, capset_type, capset_length;
 
-	start = s->p;
+	start = s_tell(s);
 
 	in_uint16_le(s, ncapsets);
 	in_uint8s(s, 2);	/* pad */
 
 	for (n = 0; n < ncapsets; n++)
 	{
-		if (s->p > start + length)
+		if (s_tell(s) > start + length)
 			return;
 
 		in_uint16_le(s, capset_type);
 		in_uint16_le(s, capset_length);
 
-		next = s->p + capset_length - 4;
+		next = s_tell(s) + capset_length - 4;
 
 		switch (capset_type)
 		{
@@ -1096,7 +1088,7 @@ rdp_process_server_caps(STREAM s, uint16 length)
 				break;
 		}
 
-		s->p = next;
+		s_seek(s, next);
 	}
 }
 
@@ -1514,6 +1506,7 @@ process_data_pdu(STREAM s, uint32 * ext_disc_reason)
 	uint16 clen;
 	uint32 len;
 
+	uint8 *buf;
 	uint32 roff, rlen;
 
 	struct stream *ns = &(g_mppc_dict.ns);
@@ -1529,20 +1522,21 @@ process_data_pdu(STREAM s, uint32 * ext_disc_reason)
 	{
 		if (len > RDP_MPPC_DICT_SIZE)
 			error("error decompressed packet size exceeds max\n");
-		if (mppc_expand(s->p, clen, ctype, &roff, &rlen) == -1)
+		in_uint8p(s, buf, clen);
+		if (mppc_expand(buf, clen, ctype, &roff, &rlen) == -1)
 			error("error while decompressing packet\n");
 
 		/* len -= 18; */
 
 		/* allocate memory and copy the uncompressed data into the temporary stream */
-		ns->data = (uint8 *) xrealloc(ns->data, rlen);
+		s_realloc(ns, rlen);
+		s_reset(ns);
 
-		memcpy((ns->data), (unsigned char *) (g_mppc_dict.hist + roff), rlen);
+		out_uint8a(ns, (unsigned char *) (g_mppc_dict.hist + roff), rlen);
 
-		ns->size = rlen;
-		ns->end = (ns->data + ns->size);
-		ns->p = ns->data;
-		ns->rdp_hdr = ns->p;
+		s_mark_end(ns);
+		s_seek(ns, 0);
+		s_push_layer(ns, rdp_hdr, 0);
 
 		s = ns;
 	}
@@ -1801,7 +1795,7 @@ rdp_loop(RD_BOOL * deactivated, uint32 * ext_disc_reason)
 			default:
 				unimpl("PDU %d\n", type);
 		}
-		cont = g_next_packet < s->end;
+		cont = g_next_packet < s_length(s);
 	}
 	return True;
 }
@@ -1838,7 +1832,7 @@ rdp_connect(char *server, uint32 flags, char *domain, char *password,
 void
 rdp_reset_state(void)
 {
-	g_next_packet = NULL;	/* reset the packet information */
+	g_next_packet = 0;	/* reset the packet information */
 	g_rdp_shareid = 0;
 	sec_reset_state();
 }
