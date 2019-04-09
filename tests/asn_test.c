@@ -46,23 +46,13 @@ xfree(void *mem)
 	free(mem);
 }
 
-static struct stream  *stream_new(size_t size) {
-  struct stream  *s;
-  s = malloc(sizeof(struct stream));
-  memset(s, 0, sizeof(struct stream));
-  s_realloc(s, size);
-  s_reset(s);
-  return(s);
-}
-
-
 Ensure(ASN1, can_create_empty_sequence)
 {
   struct stream *s, *empty;
   uint8_t expected_data[] = {0x30, 0x00};
 
-  s = stream_new(100);
-  empty = stream_new(100);
+  s = s_alloc(100);
+  empty = s_alloc(100);
 
   ber_out_sequence(s, empty);
   s_mark_end(s);
@@ -76,7 +66,7 @@ Ensure(ASN1, can_create_empty_sequence_using_null)
   struct stream *s;
   uint8_t expected_data[] = {0x30, 0x00};
 
-  s = stream_new(100);
+  s = s_alloc(100);
 
   ber_out_sequence(s, NULL);
   s_mark_end(s);
@@ -90,8 +80,8 @@ Ensure(ASN1, can_create_sequence_of_two_integers)
   struct stream *s, *content;
   uint8_t expected_data[] = {0x30, 0x08, 0x02, 0x02, 0x00, 0xbe, 0x02, 0x02, 0x00, 0xef};
 
-  s = stream_new(100);
-  content = stream_new(100);
+  s = s_alloc(100);
+  content = s_alloc(100);
 
   ber_out_integer(content, 0xbe);
   ber_out_integer(content, 0xef);
@@ -109,8 +99,8 @@ Ensure(ASN1, can_create_sequence_of_one_integer)
   struct stream *s, *content;
   uint8_t expected_data[] = {0x30, 0x04, 0x02, 0x02, 0x00, 0xbe};
 
-  s = stream_new(100);
-  content = stream_new(100);
+  s = s_alloc(100);
+  content = s_alloc(100);
 
   ber_out_integer(content, 0xbe);
   s_mark_end(content);

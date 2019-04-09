@@ -132,11 +132,7 @@ process_ts_fp_updates(STREAM s)
 		{
 			if (assembled[code] == NULL)
 			{
-				assembled[code] = xmalloc(sizeof(struct stream));
-				memset(assembled[code], 0, sizeof(struct stream));
-				s_realloc(assembled[code],
-					  RDESKTOP_FASTPATH_MULTIFRAGMENT_MAX_SIZE);
-				s_reset(assembled[code]);
+				assembled[code] = s_alloc(RDESKTOP_FASTPATH_MULTIFRAGMENT_MAX_SIZE);
 			}
 
 			if (frag == FASTPATH_FRAGMENT_FIRST)

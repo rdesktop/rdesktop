@@ -2438,6 +2438,7 @@ scard_device_control(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out, 
 static STREAM
 duplicateStream(PMEM_HANDLE * handle, STREAM s, uint32 buffer_size, RD_BOOL isInputStream)
 {
+	// FIXME: Shouldn't be allocating streams manually
 	STREAM d = SC_xmalloc(handle, sizeof(struct stream));
 	if (d != NULL)
 	{
