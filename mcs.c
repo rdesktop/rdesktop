@@ -52,7 +52,7 @@ mcs_parse_domain_params(STREAM s)
 
 	if (!s_check_rem(s, length))
 	{
-		rdp_protocol_error("mcs_parse_domain_params(), consume domain params from stream would overrun", &packet);
+		rdp_protocol_error("consume domain params from stream would overrun", &packet);
 	}
 
 	in_uint8s(s, length);
@@ -125,7 +125,7 @@ mcs_recv_connect_response(STREAM mcs_data)
 
 	if (!s_check_rem(s, length))
 	{
-		rdp_protocol_error("mcs_recv_connect_response(), consume connect id from stream would overrun", &packet);
+		rdp_protocol_error("consume connect id from stream would overrun", &packet);
 	}
 
 	mcs_parse_domain_params(s);

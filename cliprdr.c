@@ -130,7 +130,7 @@ cliprdr_process(STREAM s)
 
 	if (!s_check_rem(s, length))
 	{
-		rdp_protocol_error("cliprdr_process(), consume of packet from stream would overrun", &packet);
+		rdp_protocol_error("consume of packet from stream would overrun", &packet);
 	}
 
 	if (status == CLIPRDR_ERROR)

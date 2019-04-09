@@ -298,7 +298,7 @@ rdp_in_unistr(STREAM s, int in_len, char **string, uint32 * str_size)
 
 	if (!s_check_rem(s, in_len))
 	{
-		rdp_protocol_error("rdp_in_unistr(), consume of unicode data from stream would overrun", &packet);
+		rdp_protocol_error("consume of unicode data from stream would overrun", &packet);
 	}
 
 	// if not already open
@@ -1269,7 +1269,7 @@ process_demand_active(STREAM s)
 
 	if (!s_check_rem(s, len_src_descriptor))
 	{
-		rdp_protocol_error("rdp_demand_active(), consume of source descriptor from stream would overrun", &packet);
+		rdp_protocol_error("consume of source descriptor from stream would overrun", &packet);
 	}
 	in_uint8s(s, len_src_descriptor);
 
@@ -1522,7 +1522,7 @@ process_bitmap_data(STREAM s)
 	/* read compressed bitmap data */
 	if (!s_check_rem(s, size))
 	{
-		rdp_protocol_error("process_bitmap_data(), consume of bitmap data from stream would overrun", &packet);
+		rdp_protocol_error("consume of bitmap data from stream would overrun", &packet);
 	}
 	in_uint8p(s, data, size);
 	bmpdata = (uint8 *) xmalloc(width * height * Bpp);
@@ -2112,9 +2112,10 @@ rdp_disconnect(void)
 
 */
 void
-rdp_protocol_error(const char *message, STREAM s)
+_rdp_protocol_error(const char *file, int line, const char *func,
+		    const char *message, STREAM s)
 {
-	logger(Protocol, Error, "%s(), %s", __func__, message);
+	logger(Protocol, Error, "%s:%d: %s(), %s", file, line, func, message);
 	if (s)
 		hexdump(s->p, s_length(s));
 	exit(0);

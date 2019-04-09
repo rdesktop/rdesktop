@@ -873,7 +873,7 @@ sec_recv(RD_BOOL * is_fastpath)
 			if (fastpath_flags & FASTPATH_OUTPUT_ENCRYPTED)
 			{
 				if (!s_check_rem(s, 8)) {
-					rdp_protocol_error("sec_recv(), consume fastpath signature from stream would overrun", &packet);
+					rdp_protocol_error("consume fastpath signature from stream would overrun", &packet);
 				}
 
 				in_uint8s(s, 8);	/* signature */
@@ -893,7 +893,7 @@ sec_recv(RD_BOOL * is_fastpath)
 				if (sec_flags & SEC_ENCRYPT)
 				{
 					if (!s_check_rem(s, 8)) {
-						rdp_protocol_error("sec_recv(), consume encrypt signature from stream would overrun", &packet);
+						rdp_protocol_error("consume encrypt signature from stream would overrun", &packet);
 					}
 
 					in_uint8s(s, 8);	/* signature */
@@ -911,7 +911,7 @@ sec_recv(RD_BOOL * is_fastpath)
 					uint8 swapbyte;
 
 					if (!s_check_rem(s, 8)) {
-						rdp_protocol_error("sec_recv(), consume redirect signature from stream would overrun", &packet);
+						rdp_protocol_error("consume redirect signature from stream would overrun", &packet);
 					}
 
 					in_uint8s(s, 8);	/* signature */
