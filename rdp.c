@@ -1858,6 +1858,6 @@ _rdp_protocol_error(const char *file, int line, const char *func,
 {
 	error("%s:%d: %s(), %s", file, line, func, message);
 	if (s)
-		hexdump(s->p, s_length(s));
+		hexdump(s->data, s_length(s));
 	exit(0);
 }
