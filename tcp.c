@@ -349,9 +349,6 @@ tcp_tls_connect(void)
 {
 	int err;
 
-	int type;
-	int status;
-	gnutls_datum_t out;
 	gnutls_certificate_credentials_t xcred;
 
 	/* Initialize TLS session */

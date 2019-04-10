@@ -948,6 +948,7 @@ rdp_process_virtchan_caps(STREAM s)
 	in_uint32_le(s, flags);
 	in_uint32_le(s, chunk_size);
 
+	UNUSED(flags);
 	vc_chunk_size = chunk_size;
 }
 
