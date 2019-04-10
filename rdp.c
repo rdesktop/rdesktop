@@ -469,7 +469,7 @@ rdp_send_client_info_pdu(uint32 flags, char *domain, char *user,
 
 		if (g_redirect == True && 0 < g_redirect_cookie_len)
 		{
-			out_uint8p(s, g_redirect_cookie, g_redirect_cookie_len);
+			out_uint8a(s, g_redirect_cookie, g_redirect_cookie_len);
 		}
 		else
 		{
@@ -792,7 +792,7 @@ rdp_out_ts_order_capabilityset(STREAM s)
 	out_uint16_le(s, 1);	/* maximumOrderLevel (ignored, should be 1) */
 	out_uint16_le(s, 0);	/* numberFonts (ignored, should be 0) */
 	out_uint16_le(s, orderflags);	/* orderFlags */
-	out_uint8p(s, order_caps, 32);	/* orderSupport */
+	out_uint8a(s, order_caps, 32);	/* orderSupport */
 	out_uint16_le(s, 0);	/* textFlags (ignored) */
 	out_uint16_le(s, 0);	/* orderSupportExFlags */
 	out_uint32_le(s, 0);	/* pad4OctetsB */
@@ -1096,7 +1096,7 @@ rdp_send_confirm_active(void)
 	out_uint16_le(s, sizeof(RDP_SOURCE));
 	out_uint16_le(s, caplen);
 
-	out_uint8p(s, RDP_SOURCE, sizeof(RDP_SOURCE));
+	out_uint8a(s, RDP_SOURCE, sizeof(RDP_SOURCE));
 	out_uint16_le(s, 17);	/* num_caps */
 	out_uint8s(s, 2);	/* pad */
 

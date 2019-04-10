@@ -78,8 +78,8 @@ iso_send_connection_request(char *username, uint32 neg_proto)
 	out_uint16(s, 0);	/* src_ref */
 	out_uint8(s, 0);	/* class */
 
-	out_uint8p(s, "Cookie: mstshash=", strlen("Cookie: mstshash="));
-	out_uint8p(s, username, strlen(username));
+	out_uint8a(s, "Cookie: mstshash=", strlen("Cookie: mstshash="));
+	out_uint8a(s, username, strlen(username));
 
 	out_uint8(s, 0x0d);	/* cookie termination string: CR+LF */
 	out_uint8(s, 0x0a);

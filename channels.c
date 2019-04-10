@@ -134,7 +134,7 @@ channel_send(STREAM s, VCHANNEL * channel)
 		s = sec_init(g_encryption ? SEC_ENCRYPT : 0, thislength + 8);
 		out_uint32_le(s, length);
 		out_uint32_le(s, flags);
-		out_uint8p(s, data, thislength);
+		out_uint8a(s, data, thislength);
 		s_mark_end(s);
 		sec_send_to_channel(s, g_encryption ? SEC_ENCRYPT : 0, channel->mcs_id);
 

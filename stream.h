@@ -127,14 +127,18 @@ size_t in_ansi_string(STREAM s, char *string, size_t len);
 #endif
 
 #define in_uint8(s,v)		{ s_assert_r(s, 1); v = *((s)->p++); }
+/* Return a pointer in v to manually read n bytes from STREAM s */
 #define in_uint8p(s,v,n)	{ s_assert_r(s, n); v = (s)->p; (s)->p += n; }
+/* Copy n bytes from STREAM s in to array v */
 #define in_uint8a(s,v,n)	{ s_assert_r(s, n); memcpy(v,(s)->p,n); (s)->p += n; }
 #define in_uint8s(s,n)		{ s_assert_r(s, n); (s)->p += n; }
 #define out_uint8(s,v)		{ s_assert_w(s, 1); *((s)->p++) = v; }
-#define out_uint8p(s,v,n)	{ s_assert_w(s, n); memcpy((s)->p,v,n); (s)->p += n; }
-#define out_uint8a(s,v,n)	out_uint8p(s,v,n);
+/* Return a pointer in v to manually fill in n bytes in STREAM s */
+#define out_uint8p(s,v,n)	{ s_assert_w(s, n); v = (s)->p; (s)->p += n; }
+/* Copy n bytes from array v in to STREAM s */
+#define out_uint8a(s,v,n)	{ s_assert_w(s, n); memcpy((s)->p,v,n); (s)->p += n; }
 #define out_uint8s(s,n)		{ s_assert_w(s, n); memset((s)->p,0,n); (s)->p += n; }
-#define out_stream(s, v)        out_uint8p(s, (v)->data, s_length((v)))
+#define out_stream(s, v)	out_uint8a(s, (v)->data, s_length((v)))
 
 #define next_be(s,v)		{ s_assert_r(s, 1); v = ((v) << 8) + *((s)->p++); }
 

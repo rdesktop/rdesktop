@@ -140,7 +140,7 @@ process_ts_fp_updates(STREAM s)
 				s_reset(assembled[code]);
 			}
 
-			out_uint8p(assembled[code], ts->p, length);
+			out_uint8a(assembled[code], ts->p, length);
 
 			if (frag == FASTPATH_FRAGMENT_LAST)
 			{

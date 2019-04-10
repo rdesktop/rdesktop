@@ -300,7 +300,7 @@ rdpdr_send_client_device_list_announce(void)
 	{
 		out_uint32_le(s, g_rdpdr_device[i].device_type);
 		out_uint32_le(s, i);	/* RDP Device ID */
-		out_uint8p(s, g_rdpdr_device[i].name, 8);	/* preferredDosName, limited to 8 characters */
+		out_uint8a(s, g_rdpdr_device[i].name, 8);	/* preferredDosName, limited to 8 characters */
 		switch (g_rdpdr_device[i].device_type)
 		{
 			case DEVICE_TYPE_DISK:
@@ -314,7 +314,7 @@ rdpdr_send_client_device_list_announce(void)
 				disklen = strlen(diskinfo->name) + 1;
 
 				out_uint32_le(s, disklen);	/* DeviceDataLength */
-				out_uint8p(s, diskinfo->name, disklen);	/* DeviceData */
+				out_uint8a(s, diskinfo->name, disklen);	/* DeviceData */
 				break;
 
 			case DEVICE_TYPE_PRINTER:
@@ -385,7 +385,7 @@ rdpdr_send_completion(uint32 device, uint32 id, uint32 status, uint32 result, ui
 	out_uint32_le(s, status);
 	out_uint32_le(s, result);
 	if (length)
-		out_uint8p(s, buffer, length);
+		out_uint8a(s, buffer, length);
 	s_mark_end(s);
 
 	logger(Protocol, Debug, "rdpdr_send_completion()");

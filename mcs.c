@@ -82,7 +82,7 @@ mcs_send_connect_initial(STREAM mcs_data)
 	mcs_out_domain_params(s, 0xffff, 0xfc17, 0xffff, 0xffff);	/* max params */
 
 	ber_out_header(s, BER_TAG_OCTET_STRING, datalen);
-	out_uint8p(s, mcs_data->data, datalen);
+	out_uint8a(s, mcs_data->data, datalen);
 
 	s_mark_end(s);
 	iso_send(s);

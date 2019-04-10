@@ -163,6 +163,6 @@ lspci_send(const char *output)
 
 	len = strlen(output);
 	s = channel_init(lspci_channel, len);
-	out_uint8p(s, output, len) s_mark_end(s);
+	out_uint8a(s, output, len) s_mark_end(s);
 	channel_send(s, lspci_channel);
 }
