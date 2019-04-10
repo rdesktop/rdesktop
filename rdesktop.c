@@ -1550,7 +1550,7 @@ str_handle_lines(const char *input, char **rest, str_handle_lines_t linehandler,
 	buf[0] = '\0';
 	if (*rest)
 		STRNCPY(buf, *rest, buflen);
-	strncat(buf, input, inputlen);
+	strncat(buf, input, buflen);
 	p = buf;
 
 	while (1)
