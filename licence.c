@@ -79,21 +79,21 @@ licence_info(uint8 * client_random, uint8 * rsa_data,
 	out_uint16(s, 0);
 	out_uint16_le(s, 0x0201);
 
-	out_uint8p(s, client_random, SEC_RANDOM_SIZE);
+	out_uint8a(s, client_random, SEC_RANDOM_SIZE);
 	out_uint16_le(s, 2);
 	out_uint16_le(s, (SEC_MODULUS_SIZE + SEC_PADDING_SIZE));
-	out_uint8p(s, rsa_data, SEC_MODULUS_SIZE);
+	out_uint8a(s, rsa_data, SEC_MODULUS_SIZE);
 	out_uint8s(s, SEC_PADDING_SIZE);
 
 	out_uint16_le(s, 1);
 	out_uint16_le(s, licence_size);
-	out_uint8p(s, licence_data, licence_size);
+	out_uint8a(s, licence_data, licence_size);
 
 	out_uint16_le(s, 1);
 	out_uint16_le(s, LICENCE_HWID_SIZE);
-	out_uint8p(s, hwid, LICENCE_HWID_SIZE);
+	out_uint8a(s, hwid, LICENCE_HWID_SIZE);
 
-	out_uint8p(s, signature, LICENCE_SIGNATURE_SIZE);
+	out_uint8a(s, signature, LICENCE_SIGNATURE_SIZE);
 
 	s_mark_end(s);
 	sec_send(s, sec_flags);
@@ -120,21 +120,21 @@ licence_send_new_licence_request(uint8 * client_random, uint8 * rsa_data, char *
 	out_uint16(s, 0);
 	out_uint16_le(s, 0xff01);
 
-	out_uint8p(s, client_random, SEC_RANDOM_SIZE);
+	out_uint8a(s, client_random, SEC_RANDOM_SIZE);
 	out_uint16_le(s, 2);
 	out_uint16_le(s, (SEC_MODULUS_SIZE + SEC_PADDING_SIZE));
-	out_uint8p(s, rsa_data, SEC_MODULUS_SIZE);
+	out_uint8a(s, rsa_data, SEC_MODULUS_SIZE);
 	out_uint8s(s, SEC_PADDING_SIZE);
 
 	/* Username LICENSE_BINARY_BLOB */
 	out_uint16_le(s, BB_CLIENT_USER_NAME_BLOB);
 	out_uint16_le(s, userlen);
-	out_uint8p(s, user, userlen);
+	out_uint8a(s, user, userlen);
 
 	/* Machinename LICENSE_BINARY_BLOB */
 	out_uint16_le(s, BB_CLIENT_MACHINE_NAME_BLOB);
 	out_uint16_le(s, hostlen);
-	out_uint8p(s, host, hostlen);
+	out_uint8a(s, host, hostlen);
 
 	s_mark_end(s);
 	sec_send(s, sec_flags);
@@ -202,13 +202,13 @@ licence_send_platform_challange_response(uint8 * token, uint8 * crypt_hwid, uint
 
 	out_uint16_le(s, 1);
 	out_uint16_le(s, LICENCE_TOKEN_SIZE);
-	out_uint8p(s, token, LICENCE_TOKEN_SIZE);
+	out_uint8a(s, token, LICENCE_TOKEN_SIZE);
 
 	out_uint16_le(s, 1);
 	out_uint16_le(s, LICENCE_HWID_SIZE);
-	out_uint8p(s, crypt_hwid, LICENCE_HWID_SIZE);
+	out_uint8a(s, crypt_hwid, LICENCE_HWID_SIZE);
 
-	out_uint8p(s, signature, LICENCE_SIGNATURE_SIZE);
+	out_uint8a(s, signature, LICENCE_SIGNATURE_SIZE);
 
 	s_mark_end(s);
 	sec_send(s, sec_flags);

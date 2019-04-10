@@ -525,7 +525,7 @@ outBufferFinishWithLimit(STREAM out, char *buffer, unsigned int length, unsigned
 	{
 		if (header < length)
 			length = header;
-		out_uint8p(out, buffer, length);
+		out_uint8a(out, buffer, length);
 		outRepos(out, length);
 	}
 }
@@ -601,11 +601,11 @@ outString(STREAM out, char *source, RD_BOOL wide)
 				buffer[2 * i] = reader[i];
 			buffer[2 * i + 1] = '\0';
 		}
-		out_uint8p(out, buffer, 2 * dataLength);
+		out_uint8a(out, buffer, 2 * dataLength);
 	}
 	else
 	{
-		out_uint8p(out, reader, dataLength);
+		out_uint8a(out, reader, dataLength);
 	}
 
 	SC_xfreeallmemory(&lcHandle);
@@ -1209,7 +1209,7 @@ TS_SCardGetStatusChange(STREAM in, STREAM out, RD_BOOL wide)
 		cur->dwEventState = swap32(cur->dwEventState);
 		cur->cbAtr = swap32(cur->cbAtr);
 
-		out_uint8p(out, (void *) ((unsigned char **) cur + 2),
+		out_uint8a(out, (void *) ((unsigned char **) cur + 2),
 			   sizeof(SERVER_SCARD_READERSTATE_A) - 2 * sizeof(unsigned char *));
 	}
 	outForceAlignment(out, 8);
@@ -1379,7 +1379,7 @@ TS_SCardLocateCardsByATR(STREAM in, STREAM out, RD_BOOL wide)
 		rsCur->dwEventState = swap32(rsCur->dwEventState);
 		rsCur->cbAtr = swap32(rsCur->cbAtr);
 
-		out_uint8p(out, (void *) ((unsigned char **) rsCur + 2),
+		out_uint8a(out, (void *) ((unsigned char **) rsCur + 2),
 			   sizeof(SCARD_READERSTATE) - 2 * sizeof(unsigned char *));
 	}
 
@@ -1759,7 +1759,7 @@ TS_SCardStatus(STREAM in, STREAM out, RD_BOOL wide)
 		out_uint32_le(out, 0x00020000);
 		out_uint32_le(out, dwState);
 		out_uint32_le(out, dwProtocol);
-		out_uint8p(out, atr, dwAtrLen);
+		out_uint8a(out, atr, dwAtrLen);
 		if (dwAtrLen < 32)
 		{
 			out_uint8s(out, 32 - dwAtrLen);
@@ -1872,7 +1872,7 @@ TS_SCardState(STREAM in, STREAM out)
 		out_uint32_le(out, dwAtrLen);
 		out_uint32_le(out, 0x00000001);
 		out_uint32_le(out, dwAtrLen);
-		out_uint8p(out, atr, dwAtrLen);
+		out_uint8a(out, atr, dwAtrLen);
 		outRepos(out, dwAtrLen);
 	}
 	outForceAlignment(out, 8);
@@ -2014,7 +2014,7 @@ TS_SCardGetAttrib(STREAM in, STREAM out)
 		}
 		else
 		{
-			out_uint8p(out, pbAttr, dwAttrLen);
+			out_uint8a(out, pbAttr, dwAttrLen);
 		}
 		outRepos(out, dwAttrLen);
 		out_uint32_le(out, 0x00000000);
@@ -2202,7 +2202,7 @@ TS_SCardControl(STREAM in, STREAM out)
 	out_uint32_le(out, nBytesReturned);
 	if (nBytesReturned > 0)
 	{
-		out_uint8p(out, pOutBuffer, nBytesReturned);
+		out_uint8a(out, pOutBuffer, nBytesReturned);
 		outRepos(out, nBytesReturned);
 	}
 

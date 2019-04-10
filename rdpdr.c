@@ -277,7 +277,7 @@ rdpdr_send_client_device_list_announce(void)
 		out_uint32_le(s, i);	/* RDP Device ID */
 		/* Is it possible to use share names longer than 8 chars?
 		   /astrand */
-		out_uint8p(s, g_rdpdr_device[i].name, 8);
+		out_uint8a(s, g_rdpdr_device[i].name, 8);
 
 		switch (g_rdpdr_device[i].device_type)
 		{
@@ -326,7 +326,7 @@ rdpdr_send_completion(uint32 device, uint32 id, uint32 status, uint32 result, ui
 	out_uint32_le(s, id);
 	out_uint32_le(s, status);
 	out_uint32_le(s, result);
-	out_uint8p(s, buffer, length);
+	out_uint8a(s, buffer, length);
 	s_mark_end(s);
 	/* JIF */
 #ifdef WITH_DEBUG_RDP5

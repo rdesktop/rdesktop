@@ -148,7 +148,7 @@ rdpsnd_flush_record(void)
 			chunk_size = 1596;
 
 		s = rdpsnd_init_packet(RDPSND_REC_DATA, chunk_size);
-		out_uint8p(s, data, chunk_size);
+		out_uint8a(s, data, chunk_size);
 
 		s_mark_end(s);
 		rdpsnd_send(s);

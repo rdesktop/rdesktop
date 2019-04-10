@@ -38,7 +38,7 @@ ber_wrap_hdr_data(int tagval, STREAM in)
 
 	out = s_alloc(size);
 	ber_out_header(out, tagval, s_length(in));
-	out_uint8p(out, in->data, s_length(in));
+	out_uint8a(out, in->data, s_length(in));
 	s_mark_end(out);
 
 	return out;
@@ -169,7 +169,7 @@ cssp_gss_wrap(gss_ctx_id_t * ctx, STREAM in, STREAM out)
 	// write enc data to out stream
 	out->data = out->p = xmalloc(outbuf.length);
 	out->size = outbuf.length;
-	out_uint8p(out, outbuf.value, outbuf.length);
+	out_uint8a(out, outbuf.value, outbuf.length);
 	s_mark_end(out);
 
 	gss_release_buffer(&minor_status, &outbuf);
@@ -200,7 +200,7 @@ cssp_gss_unwrap(gss_ctx_id_t * ctx, STREAM in, STREAM out)
 
 	out->data = out->p = xmalloc(outbuf.length);
 	out->size = outbuf.length;
-	out_uint8p(out, outbuf.value, outbuf.length);
+	out_uint8a(out, outbuf.value, outbuf.length);
 	s_mark_end(out);
 
 	gss_release_buffer(&minor_status, &outbuf);
@@ -236,7 +236,7 @@ cssp_encode_tspasswordcreds(char *username, char *password, char *domain)
 	h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 0, h2);
 	s_realloc(&message, s_length(&message) + s_length(h1));
-	out_uint8p(&message, h1->data, s_length(h1));
+	out_uint8a(&message, h1->data, s_length(h1));
 	s_mark_end(&message);
 	s_free(h2);
 	s_free(h1);
@@ -250,7 +250,7 @@ cssp_encode_tspasswordcreds(char *username, char *password, char *domain)
 	h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 1, h2);
 	s_realloc(&message, s_length(&message) + s_length(h1));
-	out_uint8p(&message, h1->data, s_length(h1));
+	out_uint8a(&message, h1->data, s_length(h1));
 	s_mark_end(&message);
 	s_free(h2);
 	s_free(h1);
@@ -263,7 +263,7 @@ cssp_encode_tspasswordcreds(char *username, char *password, char *domain)
 	h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 2, h2);
 	s_realloc(&message, s_length(&message) + s_length(h1));
-	out_uint8p(&message, h1->data, s_length(h1));
+	out_uint8a(&message, h1->data, s_length(h1));
 	s_mark_end(&message);
 	s_free(h2);
 	s_free(h1);
@@ -298,7 +298,7 @@ cssp_encode_tscspdatadetail(unsigned char keyspec, char *card, char *reader, cha
 	h2 = ber_wrap_hdr_data(BER_TAG_INTEGER, &tmp);
 	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 0, h2);
 	s_realloc(&message, s_length(&message) + s_length(h1));
-	out_uint8p(&message, h1->data, s_length(h1));
+	out_uint8a(&message, h1->data, s_length(h1));
 	s_mark_end(&message);
 	s_free(h2);
 	s_free(h1);
@@ -313,7 +313,7 @@ cssp_encode_tscspdatadetail(unsigned char keyspec, char *card, char *reader, cha
 		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 1, h2);
 		s_realloc(&message, s_length(&message) + s_length(h1));
-		out_uint8p(&message, h1->data, s_length(h1));
+		out_uint8a(&message, h1->data, s_length(h1));
 		s_mark_end(&message);
 		s_free(h2);
 		s_free(h1);
@@ -329,7 +329,7 @@ cssp_encode_tscspdatadetail(unsigned char keyspec, char *card, char *reader, cha
 		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 2, h2);
 		s_realloc(&message, s_length(&message) + s_length(h1));
-		out_uint8p(&message, h1->data, s_length(h1));
+		out_uint8a(&message, h1->data, s_length(h1));
 		s_mark_end(&message);
 		s_free(h2);
 		s_free(h1);
@@ -345,7 +345,7 @@ cssp_encode_tscspdatadetail(unsigned char keyspec, char *card, char *reader, cha
 		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 3, h2);
 		s_realloc(&message, s_length(&message) + s_length(h1));
-		out_uint8p(&message, h1->data, s_length(h1));
+		out_uint8a(&message, h1->data, s_length(h1));
 		s_mark_end(&message);
 		s_free(h2);
 		s_free(h1);
@@ -361,7 +361,7 @@ cssp_encode_tscspdatadetail(unsigned char keyspec, char *card, char *reader, cha
 		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 4, h2);
 		s_realloc(&message, s_length(&message) + s_length(h1));
-		out_uint8p(&message, h1->data, s_length(h1));
+		out_uint8a(&message, h1->data, s_length(h1));
 		s_mark_end(&message);
 		s_free(h2);
 		s_free(h1);
@@ -393,7 +393,7 @@ cssp_encode_tssmartcardcreds(char *username, char *password, char *domain)
 	h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 0, h2);
 	s_realloc(&message, s_length(&message) + s_length(h1));
-	out_uint8p(&message, h1->data, s_length(h1));
+	out_uint8a(&message, h1->data, s_length(h1));
 	s_mark_end(&message);
 	s_free(h2);
 	s_free(h1);
@@ -403,7 +403,7 @@ cssp_encode_tssmartcardcreds(char *username, char *password, char *domain)
 					 g_sc_container_name, g_sc_csp_name);
 	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 1, h2);
 	s_realloc(&message, s_length(&message) + s_length(h1));
-	out_uint8p(&message, h1->data, s_length(h1));
+	out_uint8a(&message, h1->data, s_length(h1));
 	s_mark_end(&message);
 	s_free(h2);
 	s_free(h1);
@@ -418,7 +418,7 @@ cssp_encode_tssmartcardcreds(char *username, char *password, char *domain)
 		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 2, h2);
 		s_realloc(&message, s_length(&message) + s_length(h1));
-		out_uint8p(&message, h1->data, s_length(h1));
+		out_uint8a(&message, h1->data, s_length(h1));
 		s_mark_end(&message);
 		s_free(h2);
 		s_free(h1);
@@ -434,7 +434,7 @@ cssp_encode_tssmartcardcreds(char *username, char *password, char *domain)
 		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
 		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 3, h2);
 		s_realloc(&message, s_length(&message) + s_length(h1));
-		out_uint8p(&message, h1->data, s_length(h1));
+		out_uint8a(&message, h1->data, s_length(h1));
 		s_mark_end(&message);
 		s_free(h2);
 		s_free(h1);
@@ -475,7 +475,7 @@ cssp_encode_tscredentials(char *username, char *password, char *domain)
 	h2 = ber_wrap_hdr_data(BER_TAG_INTEGER, &tmp);
 	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 0, h2);
 	s_realloc(&message, s_length(&message) + s_length(h1));
-	out_uint8p(&message, h1->data, s_length(h1));
+	out_uint8a(&message, h1->data, s_length(h1));
 	s_mark_end(&message);
 	s_free(h2);
 	s_free(h1);
@@ -493,7 +493,7 @@ cssp_encode_tscredentials(char *username, char *password, char *domain)
 	h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, h3);
 	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 1, h2);
 	s_realloc(&message, s_length(&message) + s_length(h1));
-	out_uint8p(&message, h1->data, s_length(h1));
+	out_uint8a(&message, h1->data, s_length(h1));
 	s_mark_end(&message);
 	s_free(h3);
 	s_free(h2);
@@ -535,7 +535,7 @@ cssp_send_tsrequest(STREAM token, STREAM auth, STREAM pubkey)
 	h2 = ber_wrap_hdr_data(BER_TAG_INTEGER, &tmp);
 	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 0, h2);
 	s_realloc(&message, s_length(&message) + s_length(h1));
-	out_uint8p(&message, h1->data, s_length(h1));
+	out_uint8a(&message, h1->data, s_length(h1));
 	s_mark_end(&message);
 	s_free(h2);
 	s_free(h1);
@@ -549,7 +549,7 @@ cssp_send_tsrequest(STREAM token, STREAM auth, STREAM pubkey)
 		h2 = ber_wrap_hdr_data(BER_TAG_SEQUENCE | BER_TAG_CONSTRUCTED, h3);
 		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 1, h2);
 		s_realloc(&message, s_length(&message) + s_length(h1));
-		out_uint8p(&message, h1->data, s_length(h1));
+		out_uint8a(&message, h1->data, s_length(h1));
 		s_mark_end(&message);
 		s_free(h5);
 		s_free(h4);
@@ -565,7 +565,7 @@ cssp_send_tsrequest(STREAM token, STREAM auth, STREAM pubkey)
 		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 2, h2);
 
 		s_realloc(&message, s_length(&message) + s_length(h1));
-		out_uint8p(&message, h1->data, s_length(h1));
+		out_uint8a(&message, h1->data, s_length(h1));
 
 		s_free(h2);
 		s_free(h1);
@@ -578,7 +578,7 @@ cssp_send_tsrequest(STREAM token, STREAM auth, STREAM pubkey)
 		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 3, h2);
 
 		s_realloc(&message, s_length(&message) + s_length(h1));
-		out_uint8p(&message, h1->data, s_length(h1));
+		out_uint8a(&message, h1->data, s_length(h1));
 		s_mark_end(&message);
 		s_free(h2);
 		s_free(h1);
@@ -589,7 +589,7 @@ cssp_send_tsrequest(STREAM token, STREAM auth, STREAM pubkey)
 	// Todo: can h1 be send directly instead of tcp_init() approach
 	h1 = ber_wrap_hdr_data(BER_TAG_SEQUENCE | BER_TAG_CONSTRUCTED, &message);
 	s = tcp_init(s_length(h1));
-	out_uint8p(s, h1->data, s_length(h1));
+	out_uint8a(s, h1->data, s_length(h1));
 	s_mark_end(s);
 	s_free(h1);
 
@@ -693,7 +693,7 @@ cssp_read_tsrequest(STREAM token, STREAM pubkey)
 
 		s_realloc(token, length);
 		s_reset(token);
-		out_uint8p(token, s->p, length);
+		out_uint8a(token, s->p, length);
 		s_mark_end(token);
 	}
 
@@ -816,7 +816,7 @@ cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 				s_realloc(&token, output_tok.length);
 			s_reset(&token);
 
-			out_uint8p(&token, output_tok.value, output_tok.length);
+			out_uint8a(&token, output_tok.value, output_tok.length);
 			s_mark_end(&token);
 
 			if (!cssp_send_tsrequest(&token, NULL, NULL))

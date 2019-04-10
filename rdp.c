@@ -470,7 +470,7 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 		{
 			if (g_redirect == True && 0 < g_redirect_cookie_len)
 			{
-				out_uint8p(s, g_redirect_cookie, g_redirect_cookie_len);
+				out_uint8a(s, g_redirect_cookie, g_redirect_cookie_len);
 			}
 			else
 			{
@@ -770,7 +770,7 @@ rdp_out_order_caps(STREAM s)
 	out_uint16_le(s, 1);	/* Max order level */
 	out_uint16_le(s, 0x147);	/* Number of fonts */
 	out_uint16_le(s, 0x2a);	/* Capability flags */
-	out_uint8p(s, order_caps, 32);	/* Orders supported */
+	out_uint8a(s, order_caps, 32);	/* Orders supported */
 	out_uint16_le(s, 0x6a1);	/* Text capability flags */
 	out_uint8s(s, 6);	/* Pad */
 	out_uint32_le(s, g_desktop_save == False ? 0 : 0x38400);	/* Desktop cache size */
@@ -935,7 +935,7 @@ rdp_out_unknown_caps(STREAM s, uint16 id, uint16 length, uint8 * caps)
 	out_uint16_le(s, id);
 	out_uint16_le(s, length);
 
-	out_uint8p(s, caps, length - 4);
+	out_uint8a(s, caps, length - 4);
 }
 
 #define RDP5_FLAG 0x0030
@@ -975,7 +975,7 @@ rdp_send_confirm_active(void)
 	out_uint16_le(s, sizeof(RDP_SOURCE));
 	out_uint16_le(s, caplen);
 
-	out_uint8p(s, RDP_SOURCE, sizeof(RDP_SOURCE));
+	out_uint8a(s, RDP_SOURCE, sizeof(RDP_SOURCE));
 	out_uint16_le(s, 0xe);	/* num_caps */
 	out_uint8s(s, 2);	/* pad */
 
