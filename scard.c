@@ -217,10 +217,8 @@ scard_enum_devices(uint32 * id, char *optarg)
 
 				tmpMap = nameMapList + nameMapCount - 1;
 
-				len = strlen(alias);
-				strncpy(tmpMap->alias, alias, (len > 127) ? (127) : (len));
-				len = strlen(name);
-				strncpy(tmpMap->name, name, (len > 127) ? (127) : (len));
+				STRNCPY(tmpMap->alias, alias, sizeof(tmpMap->alias));
+				STRNCPY(tmpMap->name, name, sizeof(tmpMap->name));
 
 				if (vendor)
 				{
@@ -228,8 +226,8 @@ scard_enum_devices(uint32 * id, char *optarg)
 					if (len > 0)
 					{
 						memset(tmpMap->vendor, 0, 128);
-						strncpy(tmpMap->vendor, vendor,
-							(len > 127) ? (127) : (len));
+						STRNCPY(tmpMap->vendor, vendor,
+							sizeof(tmpMap->vendor));
 					}
 					else
 						tmpMap->vendor[0] = '\0';
