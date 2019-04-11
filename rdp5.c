@@ -85,7 +85,7 @@ process_ts_fp_updates(STREAM s)
 	struct stream *ns = &(g_mppc_dict.ns);
 	struct stream *ts;
 
-	static STREAM assembled[0x0F] = { 0 };
+	static STREAM assembled[16] = { 0 };
 
 	ui_begin_update();
 	while (s->p < s->end)
