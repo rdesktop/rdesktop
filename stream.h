@@ -138,6 +138,12 @@ size_t in_ansi_string(STREAM s, char *string, size_t len);
 /* Copy n bytes from array v in to STREAM s */
 #define out_uint8a(s,v,n)	{ s_assert_w(s, n); memcpy((s)->p,v,n); (s)->p += n; }
 #define out_uint8s(s,n)		{ s_assert_w(s, n); memset((s)->p,0,n); (s)->p += n; }
+
+/* Copy n bytes from STREAM s in to STREAM v */
+#define in_uint8stream(s,v,n)	{ s_assert_r(s, n); out_uint8a((v), (s)->p, n); (s)->p += n; }
+/* Copy n bytes in to STREAM s from STREAM v */
+#define out_uint8stream(s,v,n)	in_uint8stream(v,s,n)
+/* Copy the entire STREAM v (ignoring offsets) in to STREAM s */
 #define out_stream(s, v)	out_uint8a(s, (v)->data, s_length((v)))
 
 #define next_be(s,v)		{ s_assert_r(s, 1); v = ((v) << 8) + *((s)->p++); }
