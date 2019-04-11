@@ -75,59 +75,96 @@ channel_init(VCHANNEL * channel, uint32 length)
 	return s;
 }
 
+static void
+channel_send_chunk(STREAM s, VCHANNEL * channel, uint32 length)
+{
+	uint32 flags;
+	uint32 thislength;
+	RD_BOOL inplace;
+	STREAM chunk;
+
+	/* Note: In the original clipboard implementation, this number was
+	   1592, not 1600. However, I don't remember the reason and 1600 seems
+	   to work so.. This applies only to *this* length, not the length of
+	   continuation or ending packets. */
+
+	thislength = MIN(s_remaining(s), CHANNEL_CHUNK_LENGTH);
+
+	flags = 0;
+	if (length == s_remaining(s))
+	{
+		flags |= CHANNEL_FLAG_FIRST;
+	}
+	if (s_remaining(s) == thislength)
+	{
+		flags |= CHANNEL_FLAG_LAST;
+	}
+	if (channel->flags & CHANNEL_OPTION_SHOW_PROTOCOL)
+	{
+		flags |= CHANNEL_FLAG_SHOW_PROTOCOL;
+	}
+
+	DEBUG_CHANNEL(("channel_send_chunk(), sending %d bytes with flags 0x%x\n",
+	       thislength, flags));
+
+	/* first fragment sent in-place */
+	inplace = False;
+	if ((flags & (CHANNEL_FLAG_FIRST|CHANNEL_FLAG_LAST)) ==
+	    (CHANNEL_FLAG_FIRST|CHANNEL_FLAG_LAST))
+	{
+		inplace = True;
+	}
+
+	if (inplace)
+	{
+		s_pop_layer(s, channel_hdr);
+		chunk = s;
+	}
+	else
+	{
+		chunk = sec_init(g_encryption ? SEC_ENCRYPT : 0, thislength + 8);
+	}
+
+	out_uint32_le(chunk, length);
+	out_uint32_le(chunk, flags);
+	if (!inplace)
+	{
+		out_uint8stream(chunk, s, thislength);
+		s_mark_end(chunk);
+	}
+	sec_send_to_channel(chunk, g_encryption ? SEC_ENCRYPT : 0, channel->mcs_id);
+
+	/* Sending modifies the current offset, so make it is marked as
+	   fully completed. */
+	if (inplace)
+	{
+		in_uint8s(s, s_remaining(s));
+	}
+
+	if (!inplace)
+	{
+		s_free(chunk);
+	}
+}
+
 void
 channel_send(STREAM s, VCHANNEL * channel)
 {
-	uint32 length, flags;
-	uint32 thislength, remaining;
-	uint8 *data;
+	uint32 length;
 
 #ifdef WITH_SCARD
 	scard_lock(SCARD_LOCK_CHANNEL);
 #endif
 
-	/* first fragment sent in-place */
 	s_pop_layer(s, channel_hdr);
-	length = s_remaining(s) - 8;
+	in_uint8s(s, 8);
+	length = s_remaining(s);
 
 	DEBUG_CHANNEL(("channel_send, length = %d\n", length));
 
-	thislength = MIN(length, CHANNEL_CHUNK_LENGTH);
-/* Note: In the original clipboard implementation, this number was
-   1592, not 1600. However, I don't remember the reason and 1600 seems
-   to work so.. This applies only to *this* length, not the length of
-   continuation or ending packets. */
-	remaining = length - thislength;
-	flags = (remaining == 0) ? CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST : CHANNEL_FLAG_FIRST;
-	if (channel->flags & CHANNEL_OPTION_SHOW_PROTOCOL)
-		flags |= CHANNEL_FLAG_SHOW_PROTOCOL;
-
-	out_uint32_le(s, length);
-	out_uint32_le(s, flags);
-	data = s->end = s->p + thislength;
-	DEBUG_CHANNEL(("Sending %d bytes with FLAG_FIRST\n", thislength));
-	sec_send_to_channel(s, g_encryption ? SEC_ENCRYPT : 0, channel->mcs_id);
-
-	/* subsequent segments copied (otherwise would have to generate headers backwards) */
-	while (remaining > 0)
+	while (!s_check_end(s))
 	{
-		thislength = MIN(remaining, CHANNEL_CHUNK_LENGTH);
-		remaining -= thislength;
-		flags = (remaining == 0) ? CHANNEL_FLAG_LAST : 0;
-		if (channel->flags & CHANNEL_OPTION_SHOW_PROTOCOL)
-			flags |= CHANNEL_FLAG_SHOW_PROTOCOL;
-
-		DEBUG_CHANNEL(("Sending %d bytes with flags %d\n", thislength, flags));
-
-		s = sec_init(g_encryption ? SEC_ENCRYPT : 0, thislength + 8);
-		out_uint32_le(s, length);
-		out_uint32_le(s, flags);
-		out_uint8a(s, data, thislength);
-		s_mark_end(s);
-		sec_send_to_channel(s, g_encryption ? SEC_ENCRYPT : 0, channel->mcs_id);
-		s_free(s);
-
-		data += thislength;
+		channel_send_chunk(s, channel, length);
 	}
 
 #ifdef WITH_SCARD
