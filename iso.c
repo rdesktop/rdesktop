@@ -54,6 +54,7 @@ iso_send_msg(uint8 code)
 
 	s_mark_end(s);
 	tcp_send(s);
+	s_free(s);
 }
 
 static void
@@ -94,6 +95,7 @@ iso_send_connection_request(char *username, uint32 neg_proto)
 
 	s_mark_end(s);
 	tcp_send(s);
+	s_free(s);
 }
 
 /* Receive a message on the ISO layer, return code */

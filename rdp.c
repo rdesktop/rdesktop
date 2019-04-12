@@ -543,6 +543,7 @@ rdp_send_logon_info(uint32 flags, char *domain, char *user,
 	g_redirect = False;
 
 	sec_send(s, sec_flags);
+	s_free(s);
 }
 
 /* Send a control PDU */
@@ -559,6 +560,7 @@ rdp_send_control(uint16 action)
 
 	s_mark_end(s);
 	rdp_send_data(s, RDP_DATA_PDU_CONTROL);
+	s_free(s);
 }
 
 /* Send a synchronisation PDU */
@@ -574,6 +576,7 @@ rdp_send_synchronise(void)
 
 	s_mark_end(s);
 	rdp_send_data(s, RDP_DATA_PDU_SYNCHRONISE);
+	s_free(s);
 }
 
 /* Send a single input event */
@@ -595,6 +598,7 @@ rdp_send_input(uint32 time, uint16 message_type, uint16 device_flags, uint16 par
 
 	s_mark_end(s);
 	rdp_send_data(s, RDP_DATA_PDU_INPUT);
+	s_free(s);
 }
 
 /* Send a client window information PDU */
@@ -625,6 +629,7 @@ rdp_send_client_window_status(int status)
 
 	s_mark_end(s);
 	rdp_send_data(s, RDP_DATA_PDU_CLIENT_WINDOW_STATUS);
+	s_free(s);
 	current_status = status;
 }
 
@@ -667,6 +672,7 @@ rdp_enum_bmpcache2(void)
 
 		s_mark_end(s);
 		rdp_send_data(s, 0x2b);
+		s_free(s);
 
 		offset += 169;
 	}
@@ -687,6 +693,7 @@ rdp_send_fonts(uint16 seq)
 
 	s_mark_end(s);
 	rdp_send_data(s, RDP_DATA_PDU_FONT2);
+	s_free(s);
 }
 
 /* Output general capability set */
@@ -1005,6 +1012,7 @@ rdp_send_confirm_active(void)
 
 	s_mark_end(s);
 	sec_send(s, sec_flags);
+	s_free(s);
 }
 
 /* Process a general capability set */

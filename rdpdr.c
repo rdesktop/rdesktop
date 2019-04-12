@@ -201,6 +201,7 @@ rdpdr_send_client_announce_reply(void)
 	out_uint32_be(s, g_client_id);	/* ClientID */
 	s_mark_end(s);
 	channel_send(s, rdpdr_channel);
+	s_free(s);
 }
 
 
@@ -226,6 +227,7 @@ rdpdr_send_client_name_request(void)
 	rdp_out_unistr(s, g_rdpdr_clientname, hostlen - 2);
 	s_mark_end(s);
 	channel_send(s, rdpdr_channel);
+	s_free(s);
 }
 
 /* Returns the size of the payload of the announce packet */
@@ -308,6 +310,7 @@ rdpdr_send_client_device_list_announce(void)
 
 	s_mark_end(s);
 	channel_send(s, rdpdr_channel);
+	s_free(s);
 }
 
 void
@@ -334,6 +337,7 @@ rdpdr_send_completion(uint32 device, uint32 id, uint32 status, uint32 result, ui
 	/* hexdump(s->channel_hdr + 8, s->end - s->channel_hdr - 8); */
 #endif
 	channel_send(s, rdpdr_channel);
+	s_free(s);
 #ifdef WITH_SCARD
 	scard_unlock(SCARD_LOCK_RDPDR);
 #endif
@@ -788,6 +792,7 @@ rdpdr_send_client_capability_response(void)
 
 	s_mark_end(s);
 	channel_send(s, rdpdr_channel);
+	s_free(s);
 }
 
 static void

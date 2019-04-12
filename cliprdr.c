@@ -50,6 +50,7 @@ cliprdr_send_packet(uint16 type, uint16 status, uint8 * data, uint32 length)
 	out_uint32(s, 0);	/* pad? */
 	s_mark_end(s);
 	channel_send(s, cliprdr_channel);
+	s_free(s);
 }
 
 /* Helper which announces our readiness to supply clipboard data

@@ -85,6 +85,7 @@ mcs_send_connect_initial(STREAM mcs_data)
 
 	s_mark_end(s);
 	iso_send(s);
+	s_free(s);
 }
 
 /* Expect a MCS_CONNECT_RESPONSE message (ASN.1 BER) */
@@ -153,6 +154,7 @@ mcs_send_edrq(void)
 
 	s_mark_end(s);
 	iso_send(s);
+	s_free(s);
 }
 
 /* Send an AUrq message (ASN.1 PER) */
@@ -167,6 +169,7 @@ mcs_send_aurq(void)
 
 	s_mark_end(s);
 	iso_send(s);
+	s_free(s);
 }
 
 /* Expect a AUcf message (ASN.1 PER) */
@@ -216,6 +219,7 @@ mcs_send_cjrq(uint16 chanid)
 
 	s_mark_end(s);
 	iso_send(s);
+	s_free(s);
 }
 
 /* Expect a CJcf message (ASN.1 PER) */

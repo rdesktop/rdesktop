@@ -460,6 +460,7 @@ seamless_send(const char *command, const char *format, ...)
 #endif
 
 	channel_send(s, seamless_channel);
+	s_free(s);
 
 	return seamless_serial++;
 }

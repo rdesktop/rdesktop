@@ -116,6 +116,7 @@ rdpsnd_send_completion(uint16 tick, uint8 packet_index)
 	out_uint8(s, 0);
 	s_mark_end(s);
 	rdpsnd_send(s);
+	s_free(s);
 
 	DEBUG_SOUND(("RDPSND: -> RDPSND_COMPLETION(tick: %u, index: %u)\n",
 		     (unsigned) tick, (unsigned) packet_index));
@@ -152,6 +153,7 @@ rdpsnd_flush_record(void)
 
 		s_mark_end(s);
 		rdpsnd_send(s);
+		s_free(s);
 
 		data = data + chunk_size;
 		record_buffer_size -= chunk_size;
@@ -346,6 +348,7 @@ rdpsnd_process_negotiate(STREAM in)
 	DEBUG_SOUND(("RDPSND: -> RDPSND_NEGOTIATE(formats: %d)\n", (int) format_count));
 
 	rdpsnd_send(out);
+	s_free(out);
 
 	rdpsnd_negotiated = True;
 }
@@ -371,6 +374,7 @@ rdpsnd_process_ping(STREAM in)
 	out_uint16_le(out, 0);
 	s_mark_end(out);
 	rdpsnd_send(out);
+	s_free(out);
 
 	DEBUG_SOUND(("RDPSND: -> (tick: 0x%04x)\n", (unsigned) tick));
 }
@@ -470,6 +474,7 @@ rdpsnd_process_rec_negotiate(STREAM in)
 	DEBUG_SOUND(("RDPSND: -> RDPSND_REC_NEGOTIATE(formats: %d)\n", (int) rec_format_count));
 
 	rdpsnd_send(out);
+	s_free(out);
 
 	rdpsnd_rec_negotiated = True;
 }

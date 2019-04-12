@@ -174,4 +174,5 @@ lspci_send(const char *output)
 #endif
 
 	channel_send(s, lspci_channel);
+	s_free(s);
 }

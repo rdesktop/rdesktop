@@ -97,6 +97,7 @@ licence_info(uint8 * client_random, uint8 * rsa_data,
 
 	s_mark_end(s);
 	sec_send(s, sec_flags);
+	s_free(s);
 }
 
 /* Send a new licence request packet */
@@ -138,6 +139,7 @@ licence_send_new_licence_request(uint8 * client_random, uint8 * rsa_data, char *
 
 	s_mark_end(s);
 	sec_send(s, sec_flags);
+	s_free(s);
 }
 
 /* Process a licence request packet */
@@ -212,6 +214,7 @@ licence_send_platform_challange_response(uint8 * token, uint8 * crypt_hwid, uint
 
 	s_mark_end(s);
 	sec_send(s, sec_flags);
+	s_free(s);
 }
 
 /* Parse an platform challange request packet */

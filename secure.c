@@ -391,6 +391,7 @@ sec_establish_key(void)
 
 	s_mark_end(s);
 	sec_send(s, flags);
+	s_free(s);
 }
 
 /* Output connect initial data blob */

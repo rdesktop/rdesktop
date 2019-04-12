@@ -600,6 +600,7 @@ cssp_send_tsrequest(STREAM token, STREAM auth, STREAM pubkey)
 #endif
 
 	tcp_send(s);
+	s_free(s);
 
 	// cleanup
 	xfree(message.data);
