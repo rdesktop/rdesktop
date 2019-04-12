@@ -445,6 +445,7 @@ seamless_send(const char *command, const char *format, ...)
 	logger(Core, Debug, "seamless_send(), sending '%s'", buf);
 
 	channel_send(s, seamless_channel);
+	s_free(s);
 
 	return seamless_serial++;
 }

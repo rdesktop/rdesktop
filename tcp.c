@@ -58,12 +58,6 @@
 #define INADDR_NONE ((unsigned long) -1)
 #endif
 
-#ifdef WITH_SCARD
-#define STREAM_COUNT 8
-#else
-#define STREAM_COUNT 1
-#endif
-
 #ifdef IPv6
 static struct addrinfo *g_server_address = NULL;
 #else
@@ -75,7 +69,6 @@ static RD_BOOL g_ssl_initialized = False;
 static int g_sock;
 static RD_BOOL g_run_ui = False;
 static struct stream g_in;
-static struct stream g_out[STREAM_COUNT];
 int g_tcp_port_rdp = TCP_PORT_RDP;
 
 extern RD_BOOL g_exit_mainloop;
@@ -109,20 +102,7 @@ tcp_can_send(int sck, int millis)
 STREAM
 tcp_init(uint32 maxlen)
 {
-	static int cur_stream_id = 0;
-	STREAM result = NULL;
-
-#ifdef WITH_SCARD
-	scard_lock(SCARD_LOCK_TCP);
-#endif
-	result = &g_out[cur_stream_id];
-	s_realloc(result, maxlen);
-	s_reset(result);
-	cur_stream_id = (cur_stream_id + 1) % STREAM_COUNT;
-#ifdef WITH_SCARD
-	scard_unlock(SCARD_LOCK_TCP);
-#endif
-	return result;
+	return s_alloc(maxlen);
 }
 
 /* Send TCP transport data packet */
@@ -527,7 +507,6 @@ tcp_connect(char *server)
 {
 	socklen_t option_len;
 	uint32 option_value;
-	int i;
 	char buf[NI_MAXHOST];
 
 #ifdef IPv6
@@ -678,12 +657,6 @@ tcp_connect(char *server)
 	g_in.size = 4096;
 	g_in.data = (uint8 *) xmalloc(g_in.size);
 
-	for (i = 0; i < STREAM_COUNT; i++)
-	{
-		g_out[i].size = 4096;
-		g_out[i].data = (uint8 *) xmalloc(g_out[i].size);
-	}
-
 	/* After successful connect: update the last server name */
 	if (g_last_server_name)
 		xfree(g_last_server_name);
@@ -695,8 +668,6 @@ tcp_connect(char *server)
 void
 tcp_disconnect(void)
 {
-	int i;
-
 	if (g_ssl_initialized) {
 		(void)gnutls_bye(g_tls_session, GNUTLS_SHUT_WR);
 		gnutls_deinit(g_tls_session);
@@ -712,13 +683,6 @@ tcp_disconnect(void)
 	g_in.size = 0;
 	xfree(g_in.data);
 	g_in.data = NULL;
-
-	for (i = 0; i < STREAM_COUNT; i++)
-	{
-		g_out[i].size = 0;
-		xfree(g_out[i].data);
-		g_out[i].data = NULL;
-	}
 }
 
 char *
@@ -752,16 +716,8 @@ tcp_is_connected()
 void
 tcp_reset_state(void)
 {
-	int i;
-
 	/* Clear the incoming stream */
 	s_reset(&g_in);
-
-	/* Clear the outgoing stream(s) */
-	for (i = 0; i < STREAM_COUNT; i++)
-	{
-		s_reset(&g_out[i]);
-	}
 }
 
 void

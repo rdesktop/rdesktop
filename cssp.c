@@ -575,6 +575,7 @@ cssp_send_tsrequest(STREAM token, STREAM auth, STREAM pubkey)
 	s_free(h1);
 
 	tcp_send(s);
+	s_free(s);
 
 	// cleanup
 	xfree(message.data);

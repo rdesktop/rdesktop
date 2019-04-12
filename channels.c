@@ -137,6 +137,7 @@ channel_send(STREAM s, VCHANNEL * channel)
 		out_uint8a(s, data, thislength);
 		s_mark_end(s);
 		sec_send_to_channel(s, g_encryption ? SEC_ENCRYPT : 0, channel->mcs_id);
+		s_free(s);
 
 		data += thislength;
 	}

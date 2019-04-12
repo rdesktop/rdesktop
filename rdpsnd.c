@@ -103,6 +103,7 @@ rdpsnd_send_waveconfirm(uint16 tick, uint8 packet_index)
 	out_uint8(s, 0);
 	s_mark_end(s);
 	rdpsnd_send(s);
+	s_free(s);
 
 	logger(Sound, Debug, "rdpsnd_send_waveconfirm(), tick=%u, index=%u",
 	       (unsigned) tick, (unsigned) packet_index);
@@ -259,6 +260,7 @@ rdpsnd_process_negotiate(STREAM in)
 	       (int) format_count);
 
 	rdpsnd_send(out);
+	s_free(out);
 
 	rdpsnd_negotiated = True;
 }
@@ -286,6 +288,7 @@ rdpsnd_process_training(STREAM in)
 	out_uint16_le(out, packsize);
 	s_mark_end(out);
 	rdpsnd_send(out);
+	s_free(out);
 }
 
 static void
