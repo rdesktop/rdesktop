@@ -310,6 +310,17 @@ rdp_in_unistr(STREAM s, int in_len, char **string, uint32 * str_size)
 		abort();
 	}
 
+	/* Corner case. We still want to return a null terminated string... */
+	if (in_len == 0) {
+		if (*string == NULL)
+		{
+			*string = xmalloc(1);
+		}
+		**string = '\0';
+		*str_size = 0;
+		return;
+	}
+
 	if (!s_check_rem(s, in_len))
 	{
 		rdp_protocol_error("consume of unicode data from stream would overrun", &packet);
@@ -358,6 +369,7 @@ rdp_in_unistr(STREAM s, int in_len, char **string, uint32 * str_size)
 		abort();
 	}
 
+	/* Always force the last byte to be a null */
 	*pout = 0;
 
 	if (*string)
