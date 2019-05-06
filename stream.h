@@ -59,8 +59,11 @@ void out_utf16s_no_eos(STREAM s, const char *string);
 size_t in_ansi_string(STREAM s, char *string, size_t len);
 
 
+/* Store current offset as header h and skip n bytes */
 #define s_push_layer(s,h,n)	{ (s)->h = (s)->p; (s)->p += n; }
+/* Set header h as current offset */
 #define s_pop_layer(s,h)	(s)->p = (s)->h;
+/* Mark current offset as end of readable data */
 #define s_mark_end(s)		(s)->end = (s)->p;
 /* Return current read offset in the STREAM */
 #define s_tell(s)		(size_t)((s)->p - (s)->data)
@@ -68,15 +71,20 @@ size_t in_ansi_string(STREAM s, char *string, size_t len);
 #define s_seek(s,o)		(s)->p = (s)->data; s_assert_r(s,o); (s)->p += o;
 /* Returns number of bytes that can still be read from STREAM */
 #define s_remaining(s)		(size_t)((s)->end - (s)->p)
+/* True if at least n bytes can still be read */
 #define s_check_rem(s,n)	(((s)->p <= (s)->end) && ((size_t)n <= s_remaining(s)))
+/* True if all data has been read */
 #define s_check_end(s)		((s)->p == (s)->end)
+/* Return the total number of bytes that can be read */
 #define s_length(s)		((s)->end - (s)->data)
+/* Return the number of bytes that can still be written */
 #define s_left(s)		((s)->size - (size_t)((s)->p - (s)->data))
 
 /* Verify that there is enough data/space before accessing a STREAM */
 #define s_assert_r(s,n)		{ if (!s_check_rem(s, n)) rdp_protocol_error( "unexpected stream overrun", s); }
 #define s_assert_w(s,n)		{ if (s_left(s) < (size_t)n) { logger(Core, Error, "%s:%d: %s(), %s", __FILE__, __LINE__, __func__, "unexpected stream overrun"); exit(0); } }
 
+/* Read/write an unsigned integer in little-endian order */
 #if defined(L_ENDIAN) && !defined(NEED_ALIGN)
 #define in_uint16_le(s,v)	{ s_assert_r(s, 2); v = *(uint16 *)((s)->p); (s)->p += 2; }
 #define in_uint32_le(s,v)	{ s_assert_r(s, 4); v = *(uint32 *)((s)->p); (s)->p += 4; }
@@ -97,6 +105,7 @@ size_t in_ansi_string(STREAM s, char *string, size_t len);
 #endif
 
 
+/* Read/write an unsigned integer in big-endian order */
 #if defined(B_ENDIAN) && !defined(NEED_ALIGN)
 #define in_uint16_be(s,v)	{ s_assert_r(s, 2); v = *(uint16 *)((s)->p); (s)->p += 2; }
 #define in_uint32_be(s,v)	{ s_assert_r(s, 4); v = *(uint32 *)((s)->p); (s)->p += 4; }
@@ -132,17 +141,21 @@ size_t in_ansi_string(STREAM s, char *string, size_t len);
 #define out_uint64(s,v)		out_uint64_le(s,v)
 #endif
 
+/* Read a single unsigned byte in v from STREAM s */
 #define in_uint8(s,v)		{ s_assert_r(s, 1); v = *((s)->p++); }
 /* Return a pointer in v to manually read n bytes from STREAM s */
 #define in_uint8p(s,v,n)	{ s_assert_r(s, n); v = (s)->p; (s)->p += n; }
 /* Copy n bytes from STREAM s in to array v */
 #define in_uint8a(s,v,n)	{ s_assert_r(s, n); memcpy(v,(s)->p,n); (s)->p += n; }
+/* Skip reading n bytes in STREAM s */
 #define in_uint8s(s,n)		{ s_assert_r(s, n); (s)->p += n; }
+/* Write a single unsigned byte from v to STREAM s */
 #define out_uint8(s,v)		{ s_assert_w(s, 1); *((s)->p++) = v; }
 /* Return a pointer in v to manually fill in n bytes in STREAM s */
 #define out_uint8p(s,v,n)	{ s_assert_w(s, n); v = (s)->p; (s)->p += n; }
 /* Copy n bytes from array v in to STREAM s */
 #define out_uint8a(s,v,n)	{ s_assert_w(s, n); memcpy((s)->p,v,n); (s)->p += n; }
+/* Fill n bytes with 0:s in STREAM s */
 #define out_uint8s(s,n)		{ s_assert_w(s, n); memset((s)->p,0,n); (s)->p += n; }
 
 /* Copy n bytes from STREAM s in to STREAM v */
@@ -155,6 +168,7 @@ size_t in_ansi_string(STREAM s, char *string, size_t len);
 /* Return a pointer in v to manually modify n bytes of STREAM s in place */
 #define inout_uint8p(s,v,n)	{ s_assert_r(s, n); s_assert_w(s, n); v = (s)->p; (s)->p += n; }
 
+/* Read one more byte of an unsigned big-endian integer */
 #define next_be(s,v)		{ s_assert_r(s, 1); v = ((v) << 8) + *((s)->p++); }
 
 
