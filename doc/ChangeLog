@@ -1,3 +1,9 @@
+rdesktop (1.8.5)
+  * Add bounds checking to protocol handling in order to fix many
+    security problems when communicating with a malicious server.
+
+  -- Pierre Ossman <ossman@cendio.se> 2019-05-08
+
 rdesktop (1.8.4)
   * Add rdp_protocol_error function that is used in several fixes
   * Refactor of process_bitmap_updates
