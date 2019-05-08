@@ -204,6 +204,7 @@ rdpdr_send_client_announce_reply(void)
 	out_uint32_be(s, g_client_id);	/* ClientID */
 	s_mark_end(s);
 	channel_send(s, rdpdr_channel);
+	s_free(s);
 }
 
 
@@ -233,6 +234,7 @@ rdpdr_send_client_name_request(void)
 	out_stream(s, &name);
 	s_mark_end(s);
 	channel_send(s, rdpdr_channel);
+	s_free(s);
 }
 
 /* Returns the size of the payload of the announce packet */
@@ -300,7 +302,7 @@ rdpdr_send_client_device_list_announce(void)
 	{
 		out_uint32_le(s, g_rdpdr_device[i].device_type);
 		out_uint32_le(s, i);	/* RDP Device ID */
-		out_uint8p(s, g_rdpdr_device[i].name, 8);	/* preferredDosName, limited to 8 characters */
+		out_uint8a(s, g_rdpdr_device[i].name, 8);	/* preferredDosName, limited to 8 characters */
 		switch (g_rdpdr_device[i].device_type)
 		{
 			case DEVICE_TYPE_DISK:
@@ -314,7 +316,7 @@ rdpdr_send_client_device_list_announce(void)
 				disklen = strlen(diskinfo->name) + 1;
 
 				out_uint32_le(s, disklen);	/* DeviceDataLength */
-				out_uint8p(s, diskinfo->name, disklen);	/* DeviceData */
+				out_uint8a(s, diskinfo->name, disklen);	/* DeviceData */
 				break;
 
 			case DEVICE_TYPE_PRINTER:
@@ -357,6 +359,7 @@ rdpdr_send_client_device_list_announce(void)
 
 	s_mark_end(s);
 	channel_send(s, rdpdr_channel);
+	s_free(s);
 }
 
 void
@@ -385,13 +388,14 @@ rdpdr_send_completion(uint32 device, uint32 id, uint32 status, uint32 result, ui
 	out_uint32_le(s, status);
 	out_uint32_le(s, result);
 	if (length)
-		out_uint8p(s, buffer, length);
+		out_uint8a(s, buffer, length);
 	s_mark_end(s);
 
 	logger(Protocol, Debug, "rdpdr_send_completion()");
 	/* hexdump(s->channel_hdr + 8, s->end - s->channel_hdr - 8); */
 
 	channel_send(s, rdpdr_channel);
+	s_free(s);
 #ifdef WITH_SCARD
 	scard_unlock(SCARD_LOCK_RDPDR);
 #endif
@@ -407,7 +411,6 @@ rdpdr_process_irp(STREAM s)
 		request,
 		file,
 		info_level,
-		buffer_len,
 		id,
 		major,
 		minor,
@@ -420,8 +423,8 @@ rdpdr_process_irp(STREAM s)
 	char *filename;
 	uint32 filename_len;
 
-	uint8 *buffer, *pst_buf;
-	struct stream out;
+	uint8 *pst_buf;
+	STREAM out;
 	DEVICE_FNS *fns;
 	RD_BOOL rw_blocking = True;
 	RD_NTSTATUS status = RD_STATUS_INVALID_DEVICE_REQUEST;
@@ -434,16 +437,13 @@ rdpdr_process_irp(STREAM s)
 
 	filename = NULL;
 
-	buffer_len = 0;
-	buffer = (uint8 *) xmalloc(1024);
-	buffer[0] = 0;
+	out = NULL;
 
 	if (device >= RDPDR_MAX_DEVICES)
 	{
 		logger(Protocol, Error,
 		       "rdpdr_process_irp(), invalid irp device=0x%lx, file=0x%lx, id=0x%lx, major=0x%lx, minor=0x%lx",
 		       device, file, id, major, minor);
-		xfree(buffer);
 		return;
 	}
 
@@ -482,7 +482,6 @@ rdpdr_process_irp(STREAM s)
 			logger(Protocol, Error,
 			       "rdpdr_process_irp(), received IRP for unknown device type %ld",
 			       device);
-			xfree(buffer);
 			return;
 	}
 
@@ -516,7 +515,9 @@ rdpdr_process_irp(STREAM s)
 					     flags_and_attributes, filename, &result);
 
 			free(filename);
-			buffer_len = 1;
+			out = s_alloc(1);
+			out_uint8(out, 0);
+			s_mark_end(out);
 			break;
 
 		case IRP_MJ_CLOSE:
@@ -553,14 +554,14 @@ rdpdr_process_irp(STREAM s)
 
 			if (rw_blocking)	/* Complete read immediately */
 			{
-				buffer = (uint8 *) xrealloc((void *) buffer, length);
-				if (!buffer)
-				{
-					status = RD_STATUS_CANCELLED;
-					break;
-				}
+				uint8* buffer;
+				out = s_alloc(length);
+				out_uint8p(out, buffer, length);
 				status = fns->read(file, buffer, length, offset, &result);
-				buffer_len = result;
+				/* Might have read less */
+				s_mark_end(out);
+				s_seek(out, result);
+				s_mark_end(out);
 				break;
 			}
 
@@ -584,7 +585,9 @@ rdpdr_process_irp(STREAM s)
 			break;
 		case IRP_MJ_WRITE:
 
-			buffer_len = 1;
+			out = s_alloc(1);
+			out_uint8(out, 0);
+			s_mark_end(out);
 
 			if (!fns->write)
 			{
@@ -608,7 +611,9 @@ rdpdr_process_irp(STREAM s)
 
 			if (rw_blocking)	/* Complete immediately */
 			{
-				status = fns->write(file, s->p, length, offset, &result);
+				unsigned char *data;
+				in_uint8p(s, data, length);
+				status = fns->write(file, data, length, offset, &result);
 				break;
 			}
 
@@ -641,10 +646,10 @@ rdpdr_process_irp(STREAM s)
 			}
 			in_uint32_le(s, info_level);
 
-			out.data = out.p = buffer;
-			out.size = sizeof(buffer);
-			status = disk_query_information(file, info_level, &out);
-			result = buffer_len = out.p - out.data;
+			out = s_alloc(1024);
+			status = disk_query_information(file, info_level, out);
+			s_mark_end(out);
+			result = s_length(out);
 
 			break;
 
@@ -658,10 +663,10 @@ rdpdr_process_irp(STREAM s)
 
 			in_uint32_le(s, info_level);
 
-			out.data = out.p = buffer;
-			out.size = sizeof(buffer);
-			status = disk_set_information(file, info_level, s, &out);
-			result = buffer_len = out.p - out.data;
+			out = s_alloc(1024);
+			status = disk_set_information(file, info_level, s, out);
+			s_mark_end(out);
+			result = s_length(out);
 			break;
 
 		case IRP_MJ_QUERY_VOLUME_INFORMATION:
@@ -674,10 +679,10 @@ rdpdr_process_irp(STREAM s)
 
 			in_uint32_le(s, info_level);
 
-			out.data = out.p = buffer;
-			out.size = sizeof(buffer);
-			status = disk_query_volume_information(file, info_level, &out);
-			result = buffer_len = out.p - out.data;
+			out = s_alloc(1024);
+			status = disk_query_volume_information(file, info_level, out);
+			s_mark_end(out);
+			result = s_length(out);
 			break;
 
 		case IRP_MJ_DIRECTORY_CONTROL:
@@ -703,13 +708,16 @@ rdpdr_process_irp(STREAM s)
 							convert_to_unix_filename(filename);
 					}
 
-					out.data = out.p = buffer;
-					out.size = sizeof(buffer);
+					out = s_alloc(1024);
 					status = disk_query_directory(file, info_level, filename,
-								      &out);
-					result = buffer_len = out.p - out.data;
-					if (!buffer_len)
-						buffer_len++;
+								      out);
+					s_mark_end(out);
+					if (!s_length(out))
+					{
+						out_uint8(out, 0);
+						s_mark_end(out);
+					}
+					result = s_length(out);
 
 					free(filename);
 					break;
@@ -756,23 +764,14 @@ rdpdr_process_irp(STREAM s)
 			in_uint8s(s, 0x14);
 
 			/* TODO: Why do we need to increase length by padlen? Or is it hdr len? */
-			buffer = (uint8 *) xrealloc((void *) buffer, bytes_out + 0x14);
-			if (!buffer)
-			{
-				status = RD_STATUS_CANCELLED;
-				break;
-			}
-
-			out.data = out.p = buffer;
-			/* Guess, just a simple mistype. Check others */
-			//out.size = sizeof(buffer);
-			out.size = bytes_out + 0x14;
+			out = s_alloc(bytes_out + 0x14);
 
 #ifdef WITH_SCARD
 			scardSetInfo(g_epoch, device, id, bytes_out + 0x14);
 #endif
-			status = fns->device_control(file, request, s, &out);
-			result = buffer_len = out.p - out.data;
+			status = fns->device_control(file, request, s, out);
+			s_mark_end(out);
+			result = s_length(out);
 
 			/* Serial SERIAL_WAIT_ON_MASK */
 			if (status == RD_STATUS_PENDING)
@@ -801,12 +800,12 @@ rdpdr_process_irp(STREAM s)
 
 			in_uint32_le(s, info_level);
 
-			out.data = out.p = buffer;
-			out.size = sizeof(buffer);
+			out = s_alloc(1024);
 			/* FIXME: Perhaps consider actually *do*
 			   something here :-) */
 			status = RD_STATUS_SUCCESS;
-			result = buffer_len = out.p - out.data;
+			s_mark_end(out);
+			result = s_length(out);
 			break;
 
 		default:
@@ -818,11 +817,25 @@ rdpdr_process_irp(STREAM s)
 
 	if (status != RD_STATUS_PENDING)
 	{
+		size_t buffer_len;
+		uint8 *buffer;
+
+		if (out != NULL)
+		{
+			buffer_len = s_length(out);
+			s_seek(out, 0);
+			in_uint8p(out, buffer, buffer_len);
+		}
+		else
+		{
+			buffer_len = 0;
+			buffer = NULL;
+		}
+
 		rdpdr_send_completion(device, id, status, result, buffer, buffer_len);
 	}
-	if (buffer)
-		xfree(buffer);
-	buffer = NULL;
+	if (out)
+		s_free(out);
 }
 
 static void
@@ -868,6 +881,7 @@ rdpdr_send_client_capability_response(void)
 
 	s_mark_end(s);
 	channel_send(s, rdpdr_channel);
+	s_free(s);
 }
 
 static void
@@ -877,10 +891,9 @@ rdpdr_process(STREAM s)
 	uint16 vmin;
 	uint16 component;
 	uint16 pakid;
-	struct stream packet = *s;
 
 	logger(Protocol, Debug, "rdpdr_process()");
-	/* hexdump(s->p, s->end - s->p); */
+	/* hexdump(s->p, s_remaining(s)); */
 
 	in_uint16(s, component);        /* RDPDR_HEADER.Component */
 	in_uint16(s, pakid);            /* RDPDR_HEADER.PacketId */
@@ -899,15 +912,6 @@ rdpdr_process(STREAM s)
 				in_uint16_le(s, vmin);	/* VersionMinor */
 
 				in_uint32_le(s, g_client_id);	/* ClientID */
-
-				/* g_client_id is sent back to server,
-				   so lets check that we actually got
-				   valid data from stream to prevent
-				   that we leak back data to server */
-				if (!s_check(s))
-				{
-					rdp_protocol_error("rdpdr_process(), consume of g_client_id from stream did overrun", &packet);
-				}
 
 				/* The RDP client is responsibility to provide a random client id
 				   if server version is < 12 */

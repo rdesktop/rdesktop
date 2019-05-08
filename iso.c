@@ -55,6 +55,7 @@ iso_send_msg(uint8 code)
 
 	s_mark_end(s);
 	tcp_send(s);
+	s_free(s);
 }
 
 static void
@@ -78,8 +79,8 @@ iso_send_connection_request(char *username, uint32 neg_proto)
 	out_uint16(s, 0);	/* src_ref */
 	out_uint8(s, 0);	/* class */
 
-	out_uint8p(s, "Cookie: mstshash=", strlen("Cookie: mstshash="));
-	out_uint8p(s, username, strlen(username));
+	out_uint8a(s, "Cookie: mstshash=", strlen("Cookie: mstshash="));
+	out_uint8a(s, username, strlen(username));
 
 	out_uint8(s, 0x0d);	/* cookie termination string: CR+LF */
 	out_uint8(s, 0x0a);
@@ -95,6 +96,7 @@ iso_send_connection_request(char *username, uint32 neg_proto)
 
 	s_mark_end(s);
 	tcp_send(s);
+	s_free(s);
 }
 
 /* Receive a message on the ISO layer, return code */
@@ -177,7 +179,7 @@ iso_send(STREAM s)
 	uint16 length;
 
 	s_pop_layer(s, iso_hdr);
-	length = s->end - s->p;
+	length = s_remaining(s);
 
 	out_uint8(s, T123_HEADER_VERSION);	/* version */
 	out_uint8(s, 0);	/* reserved */

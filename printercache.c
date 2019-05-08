@@ -238,6 +238,8 @@ printercache_process(STREAM s)
 {
 	uint32 type, printer_length, driver_length, printer_unicode_length, blob_length;
 	char device_name[9], *printer, *driver;
+	size_t blob_start;
+	unsigned char *blob;
 
 	printer = driver = NULL;
 
@@ -279,8 +281,10 @@ printercache_process(STREAM s)
 			{
 				rdp_in_unistr(s, printer_unicode_length, &printer,
 					      &printer_unicode_length);
-				if (printer)
-					printercache_save_blob(printer, s->p, blob_length);
+				if (printer) {
+					in_uint8p(s, blob, blob_length);
+					printercache_save_blob(printer, blob, blob_length);
+				}
 				free(printer);
 			}
 			break;
@@ -289,6 +293,7 @@ printercache_process(STREAM s)
 			in_uint8a(s, device_name, 5);	/* get LPTx/COMx name */
 
 			/* need to fetch this data so that we can get the length of the packet to store. */
+			blob_start = s_tell(s);
 			in_uint8s(s, 0x2);	/* ??? */
 			in_uint8s(s, 0x2)	/* pad?? */
 				in_uint32_be(s, driver_length);
@@ -302,10 +307,11 @@ printercache_process(STREAM s)
 				/* rewind stream so that we can save this blob   */
 				/* length is driver_length + printer_length + 19 */
 				/* rewind stream */
-				s->p = s->p - 19;
+			s_seek(s, blob_start);
 
-			printercache_save_blob(device_name, s->p,
-					       driver_length + printer_length + 19);
+			blob_length = driver_length + printer_length + 19;
+			in_uint8p(s, blob, blob_length);
+			printercache_save_blob(device_name, blob, blob_length);
 			break;
 		default:
 			logger(Protocol, Warning,

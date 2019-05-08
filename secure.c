@@ -351,10 +351,12 @@ sec_send_to_channel(STREAM s, uint32 flags, uint16 channel)
 
 	if (flags & SEC_ENCRYPT)
 	{
+		unsigned char *data;
 		flags &= ~SEC_ENCRYPT;
-		datalen = s->end - s->p - 8;
-		sec_sign(s->p, 8, g_sec_sign_key, g_rc4_key_len, s->p + 8, datalen);
-		sec_encrypt(s->p + 8, datalen);
+		datalen = s_remaining(s) - 8;
+		inout_uint8p(s, data, datalen + 8);
+		sec_sign(data, 8, g_sec_sign_key, g_rc4_key_len, data + 8, datalen);
+		sec_encrypt(data + 8, datalen);
 	}
 
 	mcs_send_to_channel(s, channel);
@@ -384,11 +386,12 @@ sec_establish_key(void)
 	s = sec_init(flags, length + 4);
 
 	out_uint32_le(s, length);
-	out_uint8p(s, g_sec_crypted_random, g_server_public_key_len);
+	out_uint8a(s, g_sec_crypted_random, g_server_public_key_len);
 	out_uint8s(s, SEC_PADDING_SIZE);
 
 	s_mark_end(s);
 	sec_send(s, flags);
+	s_free(s);
 }
 
 /* Output connect initial data blob */
@@ -523,6 +526,10 @@ sec_parse_public_key(STREAM s, uint8 * modulus, uint8 * exponent)
 {
 	uint32 magic, modulus_len;
 
+	if (!s_check_rem(s, 8)) {
+		return False;
+	}
+
 	in_uint32_le(s, magic);
 	if (magic != SEC_RSA_MAGIC)
 	{
@@ -541,13 +548,17 @@ sec_parse_public_key(STREAM s, uint8 * modulus, uint8 * exponent)
 		return False;
 	}
 
+	if (!s_check_rem(s, 1 + SEC_EXPONENT_SIZE + modulus_len + SEC_PADDING_SIZE)) {
+		return False;
+	}
+
 	in_uint8s(s, 8);	/* modulus_bits, unknown */
 	in_uint8a(s, exponent, SEC_EXPONENT_SIZE);
 	in_uint8a(s, modulus, modulus_len);
 	in_uint8s(s, SEC_PADDING_SIZE);
 	g_server_public_key_len = modulus_len;
 
-	return s_check(s);
+	return True;
 }
 
 /* Parse a public signature structure */
@@ -578,7 +589,7 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 	RDSSL_CERT *cacert, *server_cert;
 	RDSSL_RKEY *server_public_key;
 	uint16 tag, length;
-	uint8 *next_tag, *end;
+	size_t next_tag;
 
 	logger(Protocol, Debug, "%s()", __func__);
 
@@ -604,10 +615,9 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 	in_uint8p(s, *server_random, random_len);
 
 	/* RSA info */
-	end = s->p + rsa_info_len;
-	if (end > s->end)
+	if (!s_check_rem(s, rsa_info_len))
 	{
-		logger(Protocol, Error, "sec_parse_crypt_info(), end > s->end");
+		logger(Protocol, Error, "sec_parse_crypt_info(), !s_check_rem(s, rsa_info_len)");
 		return False;
 	}
 
@@ -618,12 +628,12 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 		       "sec_parse_crypt_info(), We're going for the RDP4-style encryption");
 		in_uint8s(s, 8);	/* unknown */
 
-		while (s->p < end)
+		while (!s_check_end(s))
 		{
 			in_uint16_le(s, tag);
 			in_uint16_le(s, length);
 
-			next_tag = s->p + length;
+			next_tag = s_tell(s) + length;
 
 			switch (tag)
 			{
@@ -654,12 +664,13 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 					       tag);
 			}
 
-			s->p = next_tag;
+			s_seek(s, next_tag);
 		}
 	}
 	else
 	{
 		uint32 certcount;
+		unsigned char *certdata;
 
 		logger(Protocol, Debug,
 		       "sec_parse_crypt_info(), We're going for the RDP5-style encryption");
@@ -674,10 +685,11 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 		{		/* ignore all the certificates between the root and the signing CA */
 			uint32 ignorelen;
 			RDSSL_CERT *ignorecert;
+			unsigned char *ignoredata;
 
 			in_uint32_le(s, ignorelen);
-			ignorecert = rdssl_cert_read(s->p, ignorelen);
-			in_uint8s(s, ignorelen);
+			in_uint8p(s, ignoredata, ignorelen);
+			ignorecert = rdssl_cert_read(ignoredata, ignorelen);
 			if (ignorecert == NULL)
 			{	/* XXX: error out? */
 				logger(Protocol, Error,
@@ -697,10 +709,10 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 		   http://www.cs.auckland.ac.nz/~pgut001/pubs/x509guide.txt
 		 */
 		in_uint32_le(s, cacert_len);
+		in_uint8p(s, certdata, cacert_len);
 		logger(Protocol, Debug,
 		       "sec_parse_crypt_info(), server CA Certificate length is %d", cacert_len);
-		cacert = rdssl_cert_read(s->p, cacert_len);
-		in_uint8s(s, cacert_len);
+		cacert = rdssl_cert_read(certdata, cacert_len);
 		if (NULL == cacert)
 		{
 			logger(Protocol, Error,
@@ -708,10 +720,10 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 			return False;
 		}
 		in_uint32_le(s, cert_len);
+		in_uint8p(s, certdata, cert_len);
 		logger(Protocol, Debug, "sec_parse_crypt_info(), certificate length is %d",
 		       cert_len);
-		server_cert = rdssl_cert_read(s->p, cert_len);
-		in_uint8s(s, cert_len);
+		server_cert = rdssl_cert_read(certdata, cert_len);
 		if (NULL == server_cert)
 		{
 			rdssl_cert_free(cacert);
@@ -805,7 +817,7 @@ void
 sec_process_mcs_data(STREAM s)
 {
 	uint16 tag, length;
-	uint8 *next_tag;
+	size_t next_tag;
 	uint8 len;
 
 	in_uint8s(s, 21);	/* header (T.124 ConferenceCreateResponse) */
@@ -814,7 +826,7 @@ sec_process_mcs_data(STREAM s)
 		in_uint8(s, len);
 	logger(Protocol, Debug, "%s()", __func__);
 
-	while (s->p < s->end)
+	while (!s_check_end(s))
 	{
 		in_uint16_le(s, tag);
 		in_uint16_le(s, length);
@@ -822,7 +834,7 @@ sec_process_mcs_data(STREAM s)
 		if (length <= 4)
 			return;
 
-		next_tag = s->p + length - 4;
+		next_tag = s_tell(s) + length - 4;
 
 		switch (tag)
 		{
@@ -847,7 +859,7 @@ sec_process_mcs_data(STREAM s)
 				logger(Protocol, Warning, "Unhandled response tag 0x%x", tag);
 		}
 
-		s->p = next_tag;
+		s_seek(s, next_tag);
 	}
 }
 
@@ -860,6 +872,8 @@ sec_recv(RD_BOOL * is_fastpath)
 	uint16 channel;
 	STREAM s;
 	struct stream packet;
+	size_t data_offset;
+	unsigned char *data;
 
 	while ((s = mcs_recv(&channel, is_fastpath, &fastpath_hdr)) != NULL)
 	{
@@ -873,35 +887,50 @@ sec_recv(RD_BOOL * is_fastpath)
 			if (fastpath_flags & FASTPATH_OUTPUT_ENCRYPTED)
 			{
 				if (!s_check_rem(s, 8)) {
-					rdp_protocol_error("sec_recv(), consume fastpath signature from stream would overrun", &packet);
+					rdp_protocol_error("consume fastpath signature from stream would overrun", &packet);
 				}
 
 				in_uint8s(s, 8);	/* signature */
-				sec_decrypt(s->p, s->end - s->p);
+
+				data_offset = s_tell(s);
+
+				inout_uint8p(s, data, s_remaining(s));
+				sec_decrypt(data, s_remaining(s));
+
+				s_seek(s, data_offset);
 			}
 			return s;
 		}
 
 		if (g_encryption || (!g_licence_issued && !g_licence_error_result))
 		{
+			data_offset = s_tell(s);
+
 			/* TS_SECURITY_HEADER */
 			in_uint16_le(s, sec_flags);
 			in_uint8s(s, 2);	/* skip sec_flags_hi */
 
 			if (g_encryption)
 			{
+				data_offset = s_tell(s);
+
 				if (sec_flags & SEC_ENCRYPT)
 				{
 					if (!s_check_rem(s, 8)) {
-						rdp_protocol_error("sec_recv(), consume encrypt signature from stream would overrun", &packet);
+						rdp_protocol_error("consume encrypt signature from stream would overrun", &packet);
 					}
 
 					in_uint8s(s, 8);	/* signature */
-					sec_decrypt(s->p, s->end - s->p);
+
+					data_offset = s_tell(s);
+
+					inout_uint8p(s, data, s_remaining(s));
+					sec_decrypt(data, s_remaining(s));
 				}
 
 				if (sec_flags & SEC_LICENSE_PKT)
 				{
+					s_seek(s, data_offset);
 					licence_process(s);
 					continue;
 				}
@@ -911,14 +940,18 @@ sec_recv(RD_BOOL * is_fastpath)
 					uint8 swapbyte;
 
 					if (!s_check_rem(s, 8)) {
-						rdp_protocol_error("sec_recv(), consume redirect signature from stream would overrun", &packet);
+						rdp_protocol_error("consume redirect signature from stream would overrun", &packet);
 					}
 
 					in_uint8s(s, 8);	/* signature */
-					sec_decrypt(s->p, s->end - s->p);
+
+					data_offset = s_tell(s);
+
+					inout_uint8p(s, data, s_remaining(s));
+					sec_decrypt(data, s_remaining(s));
 
 					/* Check for a redirect packet, starts with 00 04 */
-					if (s->p[0] == 0 && s->p[1] == 4)
+					if (data[0] == 0 && data[1] == 4)
 					{
 						/* for some reason the PDU and the length seem to be swapped.
 						   This isn't good, but we're going to do a byte for byte
@@ -926,17 +959,17 @@ sec_recv(RD_BOOL * is_fastpath)
 						   where XX YY is the little endian length. We're going to
 						   use 04 00 as the PDU type, so after our swap this will look
 						   like: XX YY 04 00 */
-						swapbyte = s->p[0];
-						s->p[0] = s->p[2];
-						s->p[2] = swapbyte;
+						swapbyte = data[0];
+						data[0] = data[2];
+						data[2] = swapbyte;
 
-						swapbyte = s->p[1];
-						s->p[1] = s->p[3];
-						s->p[3] = swapbyte;
+						swapbyte = data[1];
+						data[1] = data[3];
+						data[3] = swapbyte;
 
-						swapbyte = s->p[2];
-						s->p[2] = s->p[3];
-						s->p[3] = swapbyte;
+						swapbyte = data[2];
+						data[2] = data[3];
+						data[3] = swapbyte;
 					}
 				}
 			}
@@ -947,8 +980,9 @@ sec_recv(RD_BOOL * is_fastpath)
 					licence_process(s);
 					continue;
 				}
-				s->p -= 4;
 			}
+
+			s_seek(s, data_offset);
 		}
 
 		if (channel != MCS_GLOBAL_CHANNEL)
@@ -968,25 +1002,24 @@ RD_BOOL
 sec_connect(char *server, char *username, char *domain, char *password, RD_BOOL reconnect)
 {
 	uint32 selected_proto;
-	struct stream mcs_data;
+	STREAM mcs_data;
 
 	/* Start a MCS connect sequence */
 	if (!mcs_connect_start(server, username, domain, password, reconnect, &selected_proto))
 		return False;
 
 	/* We exchange some RDP data during the MCS-Connect */
-	mcs_data.size = 512;
-	mcs_data.p = mcs_data.data = (uint8 *) xmalloc(mcs_data.size);
-	sec_out_mcs_connect_initial_pdu(&mcs_data, selected_proto);
+	mcs_data = s_alloc(512);
+	sec_out_mcs_connect_initial_pdu(mcs_data, selected_proto);
 
 	/* finalize the MCS connect sequence */
-	if (!mcs_connect_finalize(&mcs_data))
+	if (!mcs_connect_finalize(mcs_data))
 		return False;
 
 	/* sec_process_mcs_data(&mcs_data); */
 	if (g_encryption)
 		sec_establish_key();
-	xfree(mcs_data.data);
+	s_free(mcs_data);
 	return True;
 }
 

@@ -21,7 +21,7 @@
 
 #include "rdesktop.h"
 
-extern uint8 *g_next_packet;
+extern size_t g_next_packet;
 
 extern RDPCOMP g_mppc_dict;
 
@@ -56,8 +56,7 @@ process_ts_fp_update_by_code(STREAM s, uint8 code)
 		case FASTPATH_UPDATETYPE_PTR_POSITION:
 			in_uint16_le(s, x);
 			in_uint16_le(s, y);
-			if (s_check(s))
-				ui_move_pointer(x, y);
+			ui_move_pointer(x, y);
 			break;
 		case FASTPATH_UPDATETYPE_COLOR:
 			process_colour_pointer_pdu(s);
@@ -79,16 +78,17 @@ process_ts_fp_updates(STREAM s)
 {
 	uint16 length;
 	uint8 hdr, code, frag, comp, ctype = 0;
-	uint8 *next;
+	size_t next;
 
+	uint8 *buf;
 	uint32 roff, rlen;
 	struct stream *ns = &(g_mppc_dict.ns);
 	struct stream *ts;
 
-	static STREAM assembled[0x0F] = { 0 };
+	static STREAM assembled[16] = { 0 };
 
 	ui_begin_update();
-	while (s->p < s->end)
+	while (!s_check_end(s))
 	{
 		/* Reading a number of TS_FP_UPDATE structures from the stream here.. */
 		in_uint8(s, hdr);	/* updateHeader */
@@ -101,23 +101,24 @@ process_ts_fp_updates(STREAM s)
 
 		in_uint16_le(s, length);	/* length */
 
-		g_next_packet = next = s->p + length;
+		g_next_packet = next = s_tell(s) + length;
 
 		if (ctype & RDP_MPPC_COMPRESSED)
 		{
-			if (mppc_expand(s->p, length, ctype, &roff, &rlen) == -1)
+			in_uint8p(s, buf, length);
+			if (mppc_expand(buf, length, ctype, &roff, &rlen) == -1)
 				logger(Protocol, Error,
 				       "process_ts_fp_update_pdu(), error while decompressing packet");
 
 			/* allocate memory and copy the uncompressed data into the temporary stream */
-			ns->data = (uint8 *) xrealloc(ns->data, rlen);
+			s_realloc(ns, rlen);
+			s_reset(ns);
 
-			memcpy((ns->data), (unsigned char *) (g_mppc_dict.hist + roff), rlen);
+			out_uint8a(ns, (unsigned char *) (g_mppc_dict.hist + roff), rlen);
 
-			ns->size = rlen;
-			ns->end = (ns->data + ns->size);
-			ns->p = ns->data;
-			ns->rdp_hdr = ns->p;
+			s_mark_end(ns);
+			s_seek(ns, 0);
+			s_push_layer(ns, rdp_hdr, 0);
 
 			length = rlen;
 			ts = ns;
@@ -133,11 +134,7 @@ process_ts_fp_updates(STREAM s)
 		{
 			if (assembled[code] == NULL)
 			{
-				assembled[code] = xmalloc(sizeof(struct stream));
-				memset(assembled[code], 0, sizeof(struct stream));
-				s_realloc(assembled[code],
-					  RDESKTOP_FASTPATH_MULTIFRAGMENT_MAX_SIZE);
-				s_reset(assembled[code]);
+				assembled[code] = s_alloc(RDESKTOP_FASTPATH_MULTIFRAGMENT_MAX_SIZE);
 			}
 
 			if (frag == FASTPATH_FRAGMENT_FIRST)
@@ -145,17 +142,17 @@ process_ts_fp_updates(STREAM s)
 				s_reset(assembled[code]);
 			}
 
-			out_uint8p(assembled[code], ts->p, length);
+			out_uint8stream(assembled[code], ts, length);
 
 			if (frag == FASTPATH_FRAGMENT_LAST)
 			{
 				s_mark_end(assembled[code]);
-				assembled[code]->p = assembled[code]->data;
+				s_seek(assembled[code], 0);
 				process_ts_fp_update_by_code(assembled[code], code);
 			}
 		}
 
-		s->p = next;
+		s_seek(s, next);
 	}
 	ui_end_update();
 }

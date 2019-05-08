@@ -836,7 +836,7 @@ main(int argc, char *argv[])
 
 			case 'u':
 				g_username = (char *) xmalloc(strlen(optarg) + 1);
-				STRNCPY(g_username, optarg, strlen(optarg) + 1);
+				strcpy(g_username, optarg);
 				username_option = 1;
 				break;
 
@@ -1355,7 +1355,7 @@ main(int argc, char *argv[])
 			STRNCPY(domain, g_redirect_domain, sizeof(domain));
 			xfree(g_username);
 			g_username = (char *) xmalloc(strlen(g_redirect_username) + 1);
-			STRNCPY(g_username, g_redirect_username, strlen(g_redirect_username) + 1);
+			strcpy(g_username, g_redirect_username);
 			STRNCPY(server, g_redirect_server, sizeof(server));
 			flags |= RDP_INFO_AUTOLOGON;
 
@@ -1790,7 +1790,7 @@ str_handle_lines(const char *input, char **rest, str_handle_lines_t linehandler,
 	buf[0] = '\0';
 	if (*rest)
 		STRNCPY(buf, *rest, buflen);
-	strncat(buf, input, inputlen);
+	strncat(buf, input, buflen);
 	p = buf;
 
 	while (1)

@@ -41,10 +41,16 @@ ber_parse_header(STREAM s, int tagval, uint32 *length)
 
 	if (tagval > 0xff)
 	{
+		if (!s_check_rem(s, 2)) {
+			return False;
+		}
 		in_uint16_be(s, tag);
 	}
 	else
 	{
+		if (!s_check_rem(s, 1)) {
+			return False;
+		}
 		in_uint8(s, tag);
 	}
 
@@ -54,11 +60,17 @@ ber_parse_header(STREAM s, int tagval, uint32 *length)
 		return False;
 	}
 
+	if (!s_check_rem(s, 1)) {
+		return False;
+	}
 	in_uint8(s, len);
 
 	if (len & 0x80)
 	{
 		len &= ~0x80;
+		if (!s_check_rem(s, len)) {
+			return False;
+		}
 		*length = 0;
 		while (len--)
 			next_be(s, *length);
@@ -66,7 +78,7 @@ ber_parse_header(STREAM s, int tagval, uint32 *length)
 	else
 		*length = len;
 
-	return s_check(s);
+	return True;
 }
 
 void

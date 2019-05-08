@@ -74,20 +74,6 @@ rdssl_rc4_crypt(RDSSL_RC4 * rc4, uint8 * in_data, uint8 * out_data, uint32 len)
 	arcfour_crypt(rc4, len, out_data, in_data);
 }
 
-static void
-reverse(uint8 * p, int len)
-{
-	int i, j;
-	uint8 temp;
-
-	for (i = 0, j = len - 1; i < j; i++, j--)
-	{
-		temp = p[i];
-		p[i] = p[j];
-		p[j] = temp;
-	}
-}
-
 void
 rdssl_rsa_encrypt(uint8 * out, uint8 * in, int len, uint32 modulus_size, uint8 * modulus,
 		  uint8 * exponent)

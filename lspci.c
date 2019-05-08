@@ -135,17 +135,12 @@ lspci_process(STREAM s)
 	unsigned int pkglen;
 	static char *rest = NULL;
 	char *buf;
-	struct stream packet = *s;
 
-	if (!s_check(s))
-	{
-		rdp_protocol_error("lspci_process(), stream is in unstable state", &packet);
-	}
-
-	pkglen = s->end - s->p;
+	pkglen = s_remaining(s);
 	/* str_handle_lines requires null terminated strings */
 	buf = xmalloc(pkglen + 1);
-	STRNCPY(buf, (char *) s->p, pkglen + 1);
+	in_uint8a(s, buf, pkglen);
+	buf[pkglen] = '\0';
 	str_handle_lines(buf, &rest, lspci_process_line, NULL);
 	xfree(buf);
 }
@@ -169,6 +164,7 @@ lspci_send(const char *output)
 
 	len = strlen(output);
 	s = channel_init(lspci_channel, len);
-	out_uint8p(s, output, len) s_mark_end(s);
+	out_uint8a(s, output, len) s_mark_end(s);
 	channel_send(s, lspci_channel);
+	s_free(s);
 }

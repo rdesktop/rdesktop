@@ -358,6 +358,8 @@ alsa_play(void)
 	struct audio_packet *packet;
 	STREAM out;
 	int len;
+	const unsigned char *data;
+	size_t before;
 	static long prev_s, prev_us;
 	int duration;
 	struct timeval tv;
@@ -376,17 +378,25 @@ alsa_play(void)
 		return;
 
 	packet = rdpsnd_queue_current_packet();
-	out = &packet->s;
+	out = packet->s;
 
 	next_tick = rdpsnd_queue_next_tick();
 
-	len = (out->end - out->p) / (samplewidth_out * audiochannels_out);
-	if ((len = snd_pcm_writei(out_handle, out->p, ((MAX_FRAMES < len) ? MAX_FRAMES : len))) < 0)
+	before = s_tell(out);
+
+	len = s_remaining(out) / (samplewidth_out * audiochannels_out);
+	len = MIN(len, MAX_FRAMES);
+	in_uint8p(out, data, len);
+
+	len = snd_pcm_writei(out_handle, data, len);
+	if (len < 0)
 	{
 		snd_pcm_prepare(out_handle);
 		len = 0;
 	}
-	out->p += (len * samplewidth_out * audiochannels_out);
+
+	/* We might not have written everything */
+	s_seek(out, before + len * samplewidth_out * audiochannels_out);
 
 	gettimeofday(&tv, NULL);
 
@@ -395,7 +405,7 @@ alsa_play(void)
 	if (packet->tick > next_tick)
 		next_tick += 65536;
 
-	if ((out->p == out->end) || duration > next_tick - packet->tick + 500)
+	if (s_check_end(out) || duration > next_tick - packet->tick + 500)
 	{
 		snd_pcm_sframes_t delay_frames;
 		unsigned long delay_us;

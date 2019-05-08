@@ -25,6 +25,31 @@
 
 extern char g_codepage[16];
 
+STREAM
+s_alloc(unsigned int size)
+{
+	STREAM s;
+
+	s = xmalloc(sizeof(struct stream));
+	memset(s, 0, sizeof(struct stream));
+	s_realloc(s, size);
+
+	return s;
+}
+
+STREAM
+s_inherit(unsigned char *data, unsigned int size)
+{
+	STREAM s;
+
+	s = xmalloc(sizeof(struct stream));
+	memset(s, 0, sizeof(struct stream));
+	s->p = s->data = data;
+	s->size = size;
+
+	return s;
+}
+
 void
 s_realloc(STREAM s, unsigned int size)
 {
@@ -59,6 +84,8 @@ s_reset(STREAM s)
 void
 s_free(STREAM s)
 {
+	if (s == NULL)
+		return;
 	free(s->data);
 	free(s);
 }

@@ -246,6 +246,7 @@ sgi_play(void)
 	struct audio_packet *packet;
 	ssize_t len;
 	STREAM out;
+	unsigned char *data;
 	int gf;
 
 	while (1)
@@ -254,14 +255,14 @@ sgi_play(void)
 			return;
 
 		packet = rdpsnd_queue_current_packet();
-		out = (STREAM) (void *) &(packet->s);
+		out = packet->s;
 
-		len = out->end - out->p;
+		len = s_remaining(out);
+		in_uint8p(out, data, len);
 
-		alWriteFrames(output_port, out->p, len / combinedFrameSize);
+		alWriteFrames(output_port, data, len / combinedFrameSize);
 
-		out->p += len;
-		if (out->p == out->end)
+		if (s_check_end(out))
 		{
 			gf = alGetFilled(output_port);
 			if (gf < (4 * maxFillable / 10))

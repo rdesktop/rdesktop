@@ -52,15 +52,6 @@ xfree(void *mem)
 	free(mem);
 }
 
-static struct stream  *stream_new(size_t size) {
-  struct stream  *s;
-  s = malloc(sizeof(struct stream));
-  memset(s, 0, sizeof(struct stream));
-  s_realloc(s, size);
-  s_reset(s);
-  return(s);
-}
-
 
 /* Test function */
 Ensure(MCS, should_produce_valid_packet_for_McsSendCJrq)
@@ -69,7 +60,7 @@ Ensure(MCS, should_produce_valid_packet_for_McsSendCJrq)
   uint8_t content[] = {0x38, 0x00, 0x2A, 0x00, 0x0D};
 
   struct stream *s;
-  s = stream_new(5);
+  s = s_alloc(5);
 
   chan_id = 13;
   g_mcs_userid = 42;
@@ -89,7 +80,7 @@ Ensure(MCS, should_produce_valid_packet_for_McsSendDPU)
   struct stream *s;
   uint8_t content[] = {0x30, 0x06, 0x02, 0x02, 0x00, reason, 0x30, 0x00};
 
-  s = stream_new(8);
+  s = s_alloc(8);
 
   expect(logger);
   expect(iso_init, will_return(s));

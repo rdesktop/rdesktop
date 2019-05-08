@@ -411,17 +411,22 @@ sun_play(void)
 	struct audio_packet *packet;
 	ssize_t len;
 	STREAM out;
+	size_t before;
+	const unsigned char *data;
 
 	/* We shouldn't be called if the queue is empty, but still */
 	if (rdpsnd_queue_empty())
 		return;
 
 	packet = rdpsnd_queue_current_packet();
-	out = &packet->s;
+	out = packet->s;
 
-	len = out->end - out->p;
+	before = s_tell(out);
 
-	len = write(dsp_fd, out->p, (len > MAX_LEN) ? MAX_LEN : len);
+	len = MIN(s_remaining(out), MAX_LEN);
+	in_uint8p(out, data, len);
+
+	len = write(dsp_fd, data, len);
 	if (len == -1)
 	{
 		if (errno != EWOULDBLOCK)
@@ -439,9 +444,10 @@ sun_play(void)
 
 	dsp_broken = False;
 
-	out->p += len;
+	/* We might not have written everything */
+	s_seek(out, before + len);
 
-	if (out->p == out->end)
+	if (s_check_end(out))
 	{
 		audio_info_t info;
 		uint_t delay_samples;

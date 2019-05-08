@@ -80,65 +80,101 @@ channel_init(VCHANNEL * channel, uint32 length)
 	return s;
 }
 
-void
-channel_send(STREAM s, VCHANNEL * channel)
+static void
+channel_send_chunk(STREAM s, VCHANNEL * channel, uint32 length)
 {
-	uint32 length, flags;
-	uint32 thislength, remaining;
-	uint8 *data;
+	uint32 flags;
+	uint32 thislength;
+	RD_BOOL inplace;
+	STREAM chunk;
 
-#ifdef WITH_SCARD
-	scard_lock(SCARD_LOCK_CHANNEL);
-#endif
-
-	/* first fragment sent in-place */
-	s_pop_layer(s, channel_hdr);
-	length = s->end - s->p - 8;
-
-	logger(Protocol, Debug, "channel_send(), channel = %d, length = %d", channel->mcs_id,
-	       length);
-
-	thislength = MIN(length, vc_chunk_size);
-/* Note: In the original clipboard implementation, this number was
-   1592, not 1600. However, I don't remember the reason and 1600 seems
-   to work so.. This applies only to *this* length, not the length of
-   continuation or ending packets. */
+	/* Note: In the original clipboard implementation, this number was
+	   1592, not 1600. However, I don't remember the reason and 1600 seems
+	   to work so.. This applies only to *this* length, not the length of
+	   continuation or ending packets. */
 
 	/* Actually, CHANNEL_CHUNK_LENGTH (default value is 1600 bytes) is described
 	   in MS-RDPBCGR (s. 2.2.6, s.3.1.5.2.1) and can be set by server only
 	   in the optional field VCChunkSize of VC Caps) */
 
-	remaining = length - thislength;
-	flags = (remaining == 0) ? CHANNEL_FLAG_FIRST | CHANNEL_FLAG_LAST : CHANNEL_FLAG_FIRST;
-	if (channel->flags & CHANNEL_OPTION_SHOW_PROTOCOL)
-		flags |= CHANNEL_FLAG_SHOW_PROTOCOL;
+	thislength = MIN(s_remaining(s), vc_chunk_size);
 
-	out_uint32_le(s, length);
-	out_uint32_le(s, flags);
-	data = s->end = s->p + thislength;
-	logger(Protocol, Debug, "channel_send(), sending %d bytes with FLAG_FIRST set", thislength);
-	sec_send_to_channel(s, g_encryption ? SEC_ENCRYPT : 0, channel->mcs_id);
-
-	/* subsequent segments copied (otherwise would have to generate headers backwards) */
-	while (remaining > 0)
+	flags = 0;
+	if (length == s_remaining(s))
 	{
-		thislength = MIN(remaining, vc_chunk_size);
-		remaining -= thislength;
-		flags = (remaining == 0) ? CHANNEL_FLAG_LAST : 0;
-		if (channel->flags & CHANNEL_OPTION_SHOW_PROTOCOL)
-			flags |= CHANNEL_FLAG_SHOW_PROTOCOL;
+		flags |= CHANNEL_FLAG_FIRST;
+	}
+	if (s_remaining(s) == thislength)
+	{
+		flags |= CHANNEL_FLAG_LAST;
+	}
+	if (channel->flags & CHANNEL_OPTION_SHOW_PROTOCOL)
+	{
+		flags |= CHANNEL_FLAG_SHOW_PROTOCOL;
+	}
 
-		logger(Protocol, Debug, "channel_send(), sending %d bytes with flags 0x%x",
-		       thislength, flags);
+	logger(Protocol, Debug, "channel_send_chunk(), sending %d bytes with flags 0x%x",
+	       thislength, flags);
 
-		s = sec_init(g_encryption ? SEC_ENCRYPT : 0, thislength + 8);
-		out_uint32_le(s, length);
-		out_uint32_le(s, flags);
-		out_uint8p(s, data, thislength);
-		s_mark_end(s);
-		sec_send_to_channel(s, g_encryption ? SEC_ENCRYPT : 0, channel->mcs_id);
+	/* first fragment sent in-place */
+	inplace = False;
+	if ((flags & (CHANNEL_FLAG_FIRST|CHANNEL_FLAG_LAST)) ==
+	    (CHANNEL_FLAG_FIRST|CHANNEL_FLAG_LAST))
+	{
+		inplace = True;
+	}
 
-		data += thislength;
+	if (inplace)
+	{
+		s_pop_layer(s, channel_hdr);
+		chunk = s;
+	}
+	else
+	{
+		chunk = sec_init(g_encryption ? SEC_ENCRYPT : 0, thislength + 8);
+	}
+
+	out_uint32_le(chunk, length);
+	out_uint32_le(chunk, flags);
+	if (!inplace)
+	{
+		out_uint8stream(chunk, s, thislength);
+		s_mark_end(chunk);
+	}
+	sec_send_to_channel(chunk, g_encryption ? SEC_ENCRYPT : 0, channel->mcs_id);
+
+	/* Sending modifies the current offset, so make it is marked as
+	   fully completed. */
+	if (inplace)
+	{
+		in_uint8s(s, s_remaining(s));
+	}
+
+	if (!inplace)
+	{
+		s_free(chunk);
+	}
+}
+
+void
+channel_send(STREAM s, VCHANNEL * channel)
+{
+	uint32 length;
+
+#ifdef WITH_SCARD
+	scard_lock(SCARD_LOCK_CHANNEL);
+#endif
+
+	s_pop_layer(s, channel_hdr);
+	in_uint8s(s, 8);
+	length = s_remaining(s);
+
+	logger(Protocol, Debug, "channel_send(), channel = %d, length = %d", channel->mcs_id,
+	       length);
+
+	while (!s_check_end(s))
+	{
+		channel_send_chunk(s, channel, length);
 	}
 
 #ifdef WITH_SCARD
@@ -150,7 +186,6 @@ void
 channel_process(STREAM s, uint16 mcs_channel)
 {
 	uint32 length, flags;
-	uint32 thislength;
 	VCHANNEL *channel = NULL;
 	unsigned int i;
 	STREAM in;
@@ -178,22 +213,16 @@ channel_process(STREAM s, uint16 mcs_channel)
 		in = &channel->in;
 		if (flags & CHANNEL_FLAG_FIRST)
 		{
-			if (length > in->size)
-			{
-				in->data = (uint8 *) xrealloc(in->data, length);
-				in->size = length;
-			}
-			in->p = in->data;
+			s_realloc(in, length);
+			s_reset(in);
 		}
 
-		thislength = MIN(s->end - s->p, in->data + in->size - in->p);
-		memcpy(in->p, s->p, thislength);
-		in->p += thislength;
+		out_uint8stream(in, s, s_remaining(s));
 
 		if (flags & CHANNEL_FLAG_LAST)
 		{
-			in->end = in->p;
-			in->p = in->data;
+			s_mark_end(in);
+			s_seek(in, 0);
 			channel->process(in);
 		}
 	}

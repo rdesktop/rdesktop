@@ -48,10 +48,11 @@ cliprdr_send_packet(uint16 type, uint16 status, uint8 * data, uint32 length)
 	out_uint16_le(s, type);
 	out_uint16_le(s, status);
 	out_uint32_le(s, length);
-	out_uint8p(s, data, length);
+	out_uint8a(s, data, length);
 	out_uint32(s, 0);	/* pad? */
 	s_mark_end(s);
 	channel_send(s, cliprdr_channel);
+	s_free(s);
 }
 
 /* Helper which announces our readiness to supply clipboard data
@@ -118,20 +119,13 @@ cliprdr_process(STREAM s)
 	uint16 type, status;
 	uint32 length, format;
 	uint8 *data;
-	struct stream packet = *s;
 
 	in_uint16_le(s, type);
 	in_uint16_le(s, status);
 	in_uint32_le(s, length);
-	data = s->p;
 
 	logger(Clipboard, Debug, "cliprdr_process(), type=%d, status=%d, length=%d", type, status,
 	       length);
-
-	if (!s_check_rem(s, length))
-	{
-		rdp_protocol_error("cliprdr_process(), consume of packet from stream would overrun", &packet);
-	}
 
 	if (status == CLIPRDR_ERROR)
 	{
@@ -160,6 +154,7 @@ cliprdr_process(STREAM s)
 			ui_clip_sync();
 			break;
 		case CLIPRDR_FORMAT_ANNOUNCE:
+			in_uint8p(s, data, length);
 			ui_clip_format_announce(data, length);
 			cliprdr_send_packet(CLIPRDR_FORMAT_ACK, CLIPRDR_RESPONSE, NULL, 0);
 			return;
@@ -170,6 +165,7 @@ cliprdr_process(STREAM s)
 			ui_clip_request_data(format);
 			break;
 		case CLIPRDR_DATA_RESPONSE:
+			in_uint8p(s, data, length);
 			ui_clip_handle_data(data, length);
 			break;
 		case 7:	/* TODO: W2K3 SP1 sends this on connect with a value of 1 */

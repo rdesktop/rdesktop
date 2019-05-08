@@ -268,6 +268,7 @@ dvc_send(const char *name, STREAM s)
 	s_mark_end(ls);
 
 	channel_send(ls, dvc_channel);
+	s_free(ls);
 }
 
 
@@ -292,6 +293,7 @@ dvc_send_capabilities_response()
 	s_mark_end(s);
 
 	channel_send(s, dvc_channel);
+	s_free(s);
 }
 
 static void
@@ -320,6 +322,7 @@ dvc_send_create_response(RD_BOOL success, dvc_hdr_t hdr, uint32 channelid)
 	s_mark_end(s);
 
 	channel_send(s, dvc_channel);
+	s_free(s);
 }
 
 static void

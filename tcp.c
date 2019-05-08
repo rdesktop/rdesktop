@@ -58,12 +58,6 @@
 #define INADDR_NONE ((unsigned long) -1)
 #endif
 
-#ifdef WITH_SCARD
-#define STREAM_COUNT 8
-#else
-#define STREAM_COUNT 1
-#endif
-
 #ifdef IPv6
 static struct addrinfo *g_server_address = NULL;
 #else
@@ -75,7 +69,6 @@ static RD_BOOL g_ssl_initialized = False;
 static int g_sock;
 static RD_BOOL g_run_ui = False;
 static struct stream g_in;
-static struct stream g_out[STREAM_COUNT];
 int g_tcp_port_rdp = TCP_PORT_RDP;
 
 extern RD_BOOL g_exit_mainloop;
@@ -109,28 +102,16 @@ tcp_can_send(int sck, int millis)
 STREAM
 tcp_init(uint32 maxlen)
 {
-	static int cur_stream_id = 0;
-	STREAM result = NULL;
-
-#ifdef WITH_SCARD
-	scard_lock(SCARD_LOCK_TCP);
-#endif
-	result = &g_out[cur_stream_id];
-	s_realloc(result, maxlen);
-	s_reset(result);
-	cur_stream_id = (cur_stream_id + 1) % STREAM_COUNT;
-#ifdef WITH_SCARD
-	scard_unlock(SCARD_LOCK_TCP);
-#endif
-	return result;
+	return s_alloc(maxlen);
 }
 
 /* Send TCP transport data packet */
 void
 tcp_send(STREAM s)
 {
-	int length = s->end - s->data;
-	int sent, total = 0;
+	size_t before;
+	int length, sent;
+	unsigned char *data;
 
 	if (g_network_error == True)
 		return;
@@ -139,10 +120,16 @@ tcp_send(STREAM s)
 	scard_lock(SCARD_LOCK_TCP);
 #endif
 
-	while (total < length)
+	s_seek(s, 0);
+
+	while (!s_check_end(s))
 	{
+		before = s_tell(s);
+		length = s_remaining(s);
+		in_uint8p(s, data, length);
+
 		if (g_ssl_initialized) {
-			sent = gnutls_record_send(g_tls_session, s->data + total, length - total);
+			sent = gnutls_record_send(g_tls_session, data, length);
 			if (sent <= 0) {
 				if (gnutls_error_is_fatal(sent)) {
 #ifdef WITH_SCARD
@@ -159,7 +146,7 @@ tcp_send(STREAM s)
 		}
 		else
 		{
-			sent = send(g_sock, s->data + total, length - total, 0);
+			sent = send(g_sock, data, length, 0);
 			if (sent <= 0)
 			{
 				if (sent == -1 && TCP_BLOCKS)
@@ -179,7 +166,9 @@ tcp_send(STREAM s)
 				}
 			}
 		}
-		total += sent;
+
+		/* Everything might not have been sent */
+		s_seek(s, before + sent);
 	}
 #ifdef WITH_SCARD
 	scard_unlock(SCARD_LOCK_TCP);
@@ -190,7 +179,8 @@ tcp_send(STREAM s)
 STREAM
 tcp_recv(STREAM s, uint32 length)
 {
-	uint32 new_length, end_offset, p_offset;
+	size_t before;
+	unsigned char *data;
 	int rcvd = 0;
 
 	if (g_network_error == True)
@@ -199,27 +189,14 @@ tcp_recv(STREAM s, uint32 length)
 	if (s == NULL)
 	{
 		/* read into "new" stream */
-		if (length > g_in.size)
-		{
-			g_in.data = (uint8 *) xrealloc(g_in.data, length);
-			g_in.size = length;
-		}
-		g_in.end = g_in.p = g_in.data;
+		s_realloc(&g_in, length);
+		s_reset(&g_in);
 		s = &g_in;
 	}
 	else
 	{
 		/* append to existing stream */
-		new_length = (s->end - s->data) + length;
-		if (new_length > s->size)
-		{
-			p_offset = s->p - s->data;
-			end_offset = s->end - s->data;
-			s->data = (uint8 *) xrealloc(s->data, new_length);
-			s->size = new_length;
-			s->p = s->data + p_offset;
-			s->end = s->data + end_offset;
-		}
+		s_realloc(s, s_length(s) + length);
 	}
 
 	while (length > 0)
@@ -235,8 +212,15 @@ tcp_recv(STREAM s, uint32 length)
 				return NULL;
 		}
 
+		before = s_tell(s);
+		s_seek(s, s_length(s));
+
+		out_uint8p(s, data, length);
+
+		s_seek(s, before);
+
 		if (g_ssl_initialized) {
-			rcvd = gnutls_record_recv(g_tls_session, s->end, length);
+			rcvd = gnutls_record_recv(g_tls_session, data, length);
 
 			if (rcvd < 0) {
 				if (gnutls_error_is_fatal(rcvd)) {
@@ -251,7 +235,7 @@ tcp_recv(STREAM s, uint32 length)
 		}
 		else
 		{
-			rcvd = recv(g_sock, s->end, length, 0);
+			rcvd = recv(g_sock, data, length, 0);
 			if (rcvd < 0)
 			{
 				if (rcvd == -1 && TCP_BLOCKS)
@@ -273,6 +257,7 @@ tcp_recv(STREAM s, uint32 length)
 			}
 		}
 
+		// FIXME: Should probably have a macro for this
 		s->end += rcvd;
 		length -= rcvd;
 	}
@@ -349,9 +334,6 @@ tcp_tls_connect(void)
 {
 	int err;
 
-	int type;
-	int status;
-	gnutls_datum_t out;
 	gnutls_certificate_credentials_t xcred;
 
 	/* Initialize TLS session */
@@ -422,8 +404,8 @@ fail:
 }
 
 /* Get public key from server of TLS 1.x connection */
-RD_BOOL
-tcp_tls_get_server_pubkey(STREAM s)
+STREAM
+tcp_tls_get_server_pubkey()
 {
 	int ret;
 	unsigned int list_size;
@@ -436,8 +418,7 @@ tcp_tls_get_server_pubkey(STREAM s)
 	int pk_size;
 	uint8_t pk_data[1024];
 
-	s->data = s->p = NULL;
-	s->size = 0;
+	STREAM s = NULL;
 
 	cert_list = gnutls_certificate_get_peers(g_tls_session, &list_size);
 
@@ -489,11 +470,10 @@ tcp_tls_get_server_pubkey(STREAM s)
 			goto out;
 	}
 
-	s->size = pk_size;
-	s->data = s->p = xmalloc(s->size);
-	memcpy((void *)s->data, (void *)pk_data, pk_size);
-	s->p = s->data;
-	s->end = s->p + s->size;
+	s = s_alloc(pk_size);
+	out_uint8a(s, pk_data, pk_size);
+	s_mark_end(s);
+	s_seek(s, 0);
 
 out:
 	if ((e.size != 0) && (e.data)) {
@@ -504,7 +484,7 @@ out:
 		free(m.data);
 	}
 
-	return (s->size != 0);
+	return s;
 }
 
 /* Helper function to determine if rdesktop should resolve hostnames again or not */
@@ -530,7 +510,6 @@ tcp_connect(char *server)
 {
 	socklen_t option_len;
 	uint32 option_value;
-	int i;
 	char buf[NI_MAXHOST];
 
 #ifdef IPv6
@@ -681,12 +660,6 @@ tcp_connect(char *server)
 	g_in.size = 4096;
 	g_in.data = (uint8 *) xmalloc(g_in.size);
 
-	for (i = 0; i < STREAM_COUNT; i++)
-	{
-		g_out[i].size = 4096;
-		g_out[i].data = (uint8 *) xmalloc(g_out[i].size);
-	}
-
 	/* After successful connect: update the last server name */
 	if (g_last_server_name)
 		xfree(g_last_server_name);
@@ -698,8 +671,6 @@ tcp_connect(char *server)
 void
 tcp_disconnect(void)
 {
-	int i;
-
 	if (g_ssl_initialized) {
 		(void)gnutls_bye(g_tls_session, GNUTLS_SHUT_WR);
 		gnutls_deinit(g_tls_session);
@@ -715,13 +686,6 @@ tcp_disconnect(void)
 	g_in.size = 0;
 	xfree(g_in.data);
 	g_in.data = NULL;
-
-	for (i = 0; i < STREAM_COUNT; i++)
-	{
-		g_out[i].size = 0;
-		xfree(g_out[i].data);
-		g_out[i].data = NULL;
-	}
 }
 
 char *
@@ -755,16 +719,8 @@ tcp_is_connected()
 void
 tcp_reset_state(void)
 {
-	int i;
-
 	/* Clear the incoming stream */
 	s_reset(&g_in);
-
-	/* Clear the outgoing stream(s) */
-	for (i = 0; i < STREAM_COUNT; i++)
-	{
-		s_reset(&g_out[i]);
-	}
 }
 
 void

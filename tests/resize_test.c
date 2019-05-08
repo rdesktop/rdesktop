@@ -412,17 +412,6 @@ Ensure(Resize, UsingRDPEDISPHonoursServerSessionWidthConstraintMustBeEven)
 	free(s.data);
 }
 
-/* FIXME: promote to actual function in stream.c */
-STREAM s_alloc(size_t capacity)
-{
-	STREAM s;
-	s = xmalloc(sizeof(struct stream));
-	memset(s, 0, sizeof(struct stream));
-	s_realloc(s, capacity);
-	s_reset(s);
-	return s;
-}
-
 void get_width_and_height_from_mcs_connect_initial(int *width, int *height)
 {
 	STREAM s;
@@ -433,7 +422,7 @@ void get_width_and_height_from_mcs_connect_initial(int *width, int *height)
 
 	/* Rewind and extract the requested session size */
 	s_reset(s);
-	in_skip(s, 31);
+	in_uint8s(s, 31);
 	in_uint16_le(s, *width);	/* desktopWidth */
 	in_uint16_le(s, *height);	/* desktopHeight */
 

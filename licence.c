@@ -79,24 +79,25 @@ licence_info(uint8 * client_random, uint8 * rsa_data,
 	out_uint16(s, 0);
 	out_uint16_le(s, 0x0201);
 
-	out_uint8p(s, client_random, SEC_RANDOM_SIZE);
+	out_uint8a(s, client_random, SEC_RANDOM_SIZE);
 	out_uint16_le(s, 2);
 	out_uint16_le(s, (SEC_MODULUS_SIZE + SEC_PADDING_SIZE));
-	out_uint8p(s, rsa_data, SEC_MODULUS_SIZE);
+	out_uint8a(s, rsa_data, SEC_MODULUS_SIZE);
 	out_uint8s(s, SEC_PADDING_SIZE);
 
 	out_uint16_le(s, 1);
 	out_uint16_le(s, licence_size);
-	out_uint8p(s, licence_data, licence_size);
+	out_uint8a(s, licence_data, licence_size);
 
 	out_uint16_le(s, 1);
 	out_uint16_le(s, LICENCE_HWID_SIZE);
-	out_uint8p(s, hwid, LICENCE_HWID_SIZE);
+	out_uint8a(s, hwid, LICENCE_HWID_SIZE);
 
-	out_uint8p(s, signature, LICENCE_SIGNATURE_SIZE);
+	out_uint8a(s, signature, LICENCE_SIGNATURE_SIZE);
 
 	s_mark_end(s);
 	sec_send(s, sec_flags);
+	s_free(s);
 }
 
 /* Send a new licence request packet */
@@ -120,24 +121,25 @@ licence_send_new_licence_request(uint8 * client_random, uint8 * rsa_data, char *
 	out_uint16(s, 0);
 	out_uint16_le(s, 0xff01);
 
-	out_uint8p(s, client_random, SEC_RANDOM_SIZE);
+	out_uint8a(s, client_random, SEC_RANDOM_SIZE);
 	out_uint16_le(s, 2);
 	out_uint16_le(s, (SEC_MODULUS_SIZE + SEC_PADDING_SIZE));
-	out_uint8p(s, rsa_data, SEC_MODULUS_SIZE);
+	out_uint8a(s, rsa_data, SEC_MODULUS_SIZE);
 	out_uint8s(s, SEC_PADDING_SIZE);
 
 	/* Username LICENSE_BINARY_BLOB */
 	out_uint16_le(s, BB_CLIENT_USER_NAME_BLOB);
 	out_uint16_le(s, userlen);
-	out_uint8p(s, user, userlen);
+	out_uint8a(s, user, userlen);
 
 	/* Machinename LICENSE_BINARY_BLOB */
 	out_uint16_le(s, BB_CLIENT_MACHINE_NAME_BLOB);
 	out_uint16_le(s, hostlen);
-	out_uint8p(s, host, hostlen);
+	out_uint8a(s, host, hostlen);
 
 	s_mark_end(s);
 	sec_send(s, sec_flags);
+	s_free(s);
 }
 
 /* Process a licence request packet */
@@ -204,16 +206,17 @@ licence_send_platform_challenge_response(uint8 * token, uint8 * crypt_hwid, uint
 
 	out_uint16_le(s, 1);
 	out_uint16_le(s, LICENCE_TOKEN_SIZE);
-	out_uint8p(s, token, LICENCE_TOKEN_SIZE);
+	out_uint8a(s, token, LICENCE_TOKEN_SIZE);
 
 	out_uint16_le(s, 1);
 	out_uint16_le(s, LICENCE_HWID_SIZE);
-	out_uint8p(s, crypt_hwid, LICENCE_HWID_SIZE);
+	out_uint8a(s, crypt_hwid, LICENCE_HWID_SIZE);
 
-	out_uint8p(s, signature, LICENCE_SIGNATURE_SIZE);
+	out_uint8a(s, signature, LICENCE_SIGNATURE_SIZE);
 
 	s_mark_end(s);
 	sec_send(s, sec_flags);
+	s_free(s);
 }
 
 /* Parse an platform challenge request packet */
@@ -274,6 +277,7 @@ licence_process_platform_challenge(STREAM s)
 static void
 licence_process_new_license(STREAM s)
 {
+	unsigned char *data;
 	RDSSL_RC4 crypt_key;
 	uint32 length;
 	int i;
@@ -283,8 +287,12 @@ licence_process_new_license(STREAM s)
 	if (!s_check_rem(s, length))
 		return;
 
+	inout_uint8p(s, data, length);
+
 	rdssl_rc4_set_key(&crypt_key, g_licence_key, 16);
-	rdssl_rc4_crypt(&crypt_key, s->p, s->p, length);
+	rdssl_rc4_crypt(&crypt_key, data, data, length);
+
+	s_seek(s, s_tell(s) - length);
 
 	/* Parse NEW_LICENSE_INFO block */
 	in_uint8s(s, 4);	// skip dwVersion
@@ -301,7 +309,8 @@ licence_process_new_license(STREAM s)
 	}
 
 	g_licence_issued = True;
-	save_licence(s->p, length);
+	in_uint8p(s, data, length);
+	save_licence(data, length);
 }
 
 /* process a licence error alert packet */
