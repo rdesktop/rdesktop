@@ -278,6 +278,7 @@ static void
 licence_process_new_license(STREAM s)
 {
 	unsigned char *data;
+	size_t before;
 	RDSSL_RC4 crypt_key;
 	uint32 length;
 	int i;
@@ -287,12 +288,13 @@ licence_process_new_license(STREAM s)
 	if (!s_check_rem(s, length))
 		return;
 
+	before = s_tell(s);
 	inout_uint8p(s, data, length);
 
 	rdssl_rc4_set_key(&crypt_key, g_licence_key, 16);
 	rdssl_rc4_crypt(&crypt_key, data, data, length);
 
-	s_seek(s, s_tell(s) - length);
+	s_seek(s, before);
 
 	/* Parse NEW_LICENSE_INFO block */
 	in_uint8s(s, 4);	// skip dwVersion
