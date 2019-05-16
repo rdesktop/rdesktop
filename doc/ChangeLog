@@ -1,4 +1,9 @@
 rdesktop (1.8.5)
+  * Fix protocol code handling new licenses
+
+  -- Pierre Ossman <ossman@cendio.se> 2019-05-16
+
+rdesktop (1.8.5)
   * Add bounds checking to protocol handling in order to fix many
     security problems when communicating with a malicious server.
 
