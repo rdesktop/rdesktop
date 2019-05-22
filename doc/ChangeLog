@@ -1,4 +1,4 @@
-rdesktop (1.8.5)
+rdesktop (1.8.6)
   * Fix protocol code handling new licenses
 
   -- Pierre Ossman <ossman@cendio.se> 2019-05-16
@@ -81,7 +81,7 @@ rdesktop (1.8.1)
   * Fix issue with reconnect, make use of deactivate variable
   * Added 4 new disconnect reasons with exit codes
   * Fix issues of window handling in SeamlessRDP parts of rdesktop
-  * Fix a backward compability with OpenSSL < 0.9.9
+  * Fix a backward compatibility with OpenSSL < 0.9.9
   * Fix a bug when code needs a x window available but there are none.
   * Fix a sigsegv zeroing memory
   * Fix a 64bit portability issue
