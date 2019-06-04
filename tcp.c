@@ -373,7 +373,8 @@ tcp_tls_connect(void)
 	}
 	err = gnutls_certificate_set_x509_system_trust(xcred);
 	if (err < 0) {
-		gnutls_fatal("Could not load system trust database", err);
+		logger(Core, Error, "%s(), Could not load system trust database: %s",
+			   __func__, gnutls_strerror(err));
 	}
 	gnutls_certificate_set_verify_function(xcred, cert_verify_callback);
 	gnutls_transport_set_int(g_tls_session, g_sock);
