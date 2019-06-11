@@ -873,6 +873,7 @@ sec_recv(RD_BOOL * is_fastpath)
 	STREAM s;
 	struct stream packet;
 	size_t data_offset;
+	size_t remaining;
 	unsigned char *data;
 
 	while ((s = mcs_recv(&channel, is_fastpath, &fastpath_hdr)) != NULL)
@@ -894,8 +895,9 @@ sec_recv(RD_BOOL * is_fastpath)
 
 				data_offset = s_tell(s);
 
-				inout_uint8p(s, data, s_remaining(s));
-				sec_decrypt(data, s_remaining(s));
+				remaining = s_remaining(s);
+				inout_uint8p(s, data, remaining);
+				sec_decrypt(data, remaining);
 
 				s_seek(s, data_offset);
 			}
@@ -924,8 +926,9 @@ sec_recv(RD_BOOL * is_fastpath)
 
 					data_offset = s_tell(s);
 
-					inout_uint8p(s, data, s_remaining(s));
-					sec_decrypt(data, s_remaining(s));
+					remaining = s_remaining(s);
+					inout_uint8p(s, data, remaining);
+					sec_decrypt(data, remaining);
 				}
 
 				if (sec_flags & SEC_LICENSE_PKT)
@@ -947,8 +950,9 @@ sec_recv(RD_BOOL * is_fastpath)
 
 					data_offset = s_tell(s);
 
-					inout_uint8p(s, data, s_remaining(s));
-					sec_decrypt(data, s_remaining(s));
+					remaining = s_remaining(s);
+					inout_uint8p(s, data, remaining);
+					sec_decrypt(data, remaining);
 
 					/* Check for a redirect packet, starts with 00 04 */
 					if (data[0] == 0 && data[1] == 4)
