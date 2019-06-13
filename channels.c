@@ -186,6 +186,7 @@ void
 channel_process(STREAM s, uint16 mcs_channel)
 {
 	uint32 length, flags;
+	uint32 thislength;
 	VCHANNEL *channel = NULL;
 	unsigned int i;
 	STREAM in;
@@ -217,7 +218,8 @@ channel_process(STREAM s, uint16 mcs_channel)
 			s_reset(in);
 		}
 
-		out_uint8stream(in, s, s_remaining(s));
+		thislength = s_remaining(s);
+		out_uint8stream(in, s, thislength);
 
 		if (flags & CHANNEL_FLAG_LAST)
 		{
