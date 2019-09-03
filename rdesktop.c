@@ -160,8 +160,6 @@ extern RDPDR_DEVICE g_rdpdr_device[];
 extern uint32 g_num_devices;
 extern char *g_rdpdr_clientname;
 
-RD_BOOL password_provided = False;
-
 /* Display usage information */
 static void
 usage(char *program)
@@ -778,7 +776,7 @@ main(int argc, char *argv[])
 	char domain[256];
 	char shell[256];
 	char directory[256];
-	RD_BOOL deactivated;
+	RD_BOOL prompt_password, deactivated;
 	struct passwd *pw;
 	uint32 flags, ext_disc_reason = 0;
 	char *p;
@@ -815,6 +813,7 @@ main(int argc, char *argv[])
 	flags = RDP_INFO_MOUSE | RDP_INFO_DISABLECTRLALTDEL
 		| RDP_INFO_UNICODE | RDP_INFO_MAXIMIZESHELL | RDP_INFO_ENABLEWINDOWSKEY;
 
+	prompt_password = False;
 	g_seamless_spawn_cmd[0] = g_tls_version[0] = domain[0] = g_password[0] = shell[0] = directory[0] = 0;
 	g_embed_wnd = 0;
 
@@ -858,17 +857,19 @@ main(int argc, char *argv[])
 				break;
 
 			case 'p':
-				if (!((optarg[0] == '-') && (optarg[1] == 0)))
+				if ((optarg[0] == '-') && (optarg[1] == 0))
 				{
-					password_provided = True;
-					STRNCPY(g_password, optarg, sizeof(g_password));
-					flags |= RDP_INFO_AUTOLOGON;
-
-					/* try to overwrite argument so it won't appear in `ps` */
-					p = optarg;
-					while (*p)
-						*(p++) = 'X';
+					prompt_password = True;
+					break;
 				}
+
+				STRNCPY(g_password, optarg, sizeof(g_password));
+				flags |= RDP_INFO_AUTOLOGON;
+
+				/* try to overwrite argument so it won't appear in ps */
+				p = optarg;
+				while (*p)
+					*(p++) = 'X';
 				break;
 #ifdef WITH_SCARD
 			case 'i':
@@ -1285,8 +1286,7 @@ main(int argc, char *argv[])
 	if (locale)
 		xfree(locale);
 
-	/* If no password provided at this point, prompt for password / pin */
-	if (!g_password[0] && password_provided == False)
+	if (prompt_password)
 	{
 		if (read_password(g_password, sizeof(g_password)))
 		{
