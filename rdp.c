@@ -137,13 +137,17 @@ rdp_recv(uint8 * type)
 		return rdp_s;
 	}
 	in_uint16_le(rdp_s, pdu_type);
-	in_uint8s(rdp_s, 2);	/* userid */
 	*type = pdu_type & 0xf;
 
 #if WITH_DEBUG
 	DEBUG(("RDP packet #%d, (type %x)\n", ++g_packetno, *type));
 	hexdump(rdp_s->data + g_next_packet, length);
 #endif /*  */
+
+	if (*type != RDP_PDU_DEACTIVATE)
+	{
+		in_uint8s(rdp_s, 2);	/* userid */
+	}
 
 	g_next_packet += length;
 
