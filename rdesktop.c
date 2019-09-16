@@ -185,7 +185,7 @@ usage(char *program)
 	fprintf(stderr, "   -b: force bitmap updates\n");
 	fprintf(stderr, "   -L: local codepage\n");
 	fprintf(stderr, "   -A: path to SeamlessRDP shell, this enables SeamlessRDP mode\n");
-	fprintf(stderr, "   -V: tls version (1.0, 1.1, 1.2, defaults to 1.0)\n");
+	fprintf(stderr, "   -V: tls version (1.0, 1.1, 1.2, defaults to negotiation)\n");
 	fprintf(stderr, "   -B: use BackingStore of X-server (if available)\n");
 	fprintf(stderr, "   -e: disable encryption (French TS)\n");
 	fprintf(stderr, "   -E: disable encryption from client to server\n");

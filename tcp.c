@@ -55,6 +55,8 @@
 #define INADDR_NONE ((unsigned long) -1)
 #endif
 
+#define GNUTLS_PRIORITY "NORMAL"
+
 #ifdef IPv6
 static struct addrinfo *g_server_address = NULL;
 #else
@@ -341,6 +343,7 @@ RD_BOOL
 tcp_tls_connect(void)
 {
 	int err;
+	const char* priority;
 
 	gnutls_certificate_credentials_t xcred;
 
@@ -355,14 +358,31 @@ tcp_tls_connect(void)
 		g_ssl_initialized = True;
 	}
 
-	/* It is recommended to use the default priorities */
-	//err = gnutls_set_default_priority(g_tls_session);
-	// Use compatible priority to overcome key validation error
-	// THIS IS TEMPORARY
-	err = gnutls_priority_set_direct(g_tls_session, "NORMAL:%COMPAT", NULL);
+	/* FIXME: It is recommended to use the default priorities, but
+	          appending things requires GnuTLS 3.6.3 */
+
+	priority = NULL;
+	if (g_tls_version[0] == 0)
+		priority = GNUTLS_PRIORITY;
+	else if (!strcmp(g_tls_version, "1.0"))
+		priority = GNUTLS_PRIORITY ":-VERS-ALL:+VERS-TLS1.0";
+	else if (!strcmp(g_tls_version, "1.1"))
+		priority = GNUTLS_PRIORITY ":-VERS-ALL:+VERS-TLS1.1";
+	else if (!strcmp(g_tls_version, "1.2"))
+		priority = GNUTLS_PRIORITY ":-VERS-ALL:+VERS-TLS1.2";
+
+	if (priority == NULL)
+	{
+		logger(Core, Error,
+		       "tcp_tls_connect(), TLS method should be 1.0, 1.1, or 1.2");
+		goto fail;
+	}
+
+	err = gnutls_priority_set_direct(g_tls_session, priority, NULL);
 	if (err < 0) {
 		gnutls_fatal("Could not set GnuTLS priority setting", err);
 	}
+
 	err = gnutls_certificate_allocate_credentials(&xcred);
 	if (err < 0) {
 		gnutls_fatal("Could not allocate TLS certificate structure", err);
