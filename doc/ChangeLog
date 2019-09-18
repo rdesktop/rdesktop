@@ -1,3 +1,43 @@
+rdesktop (1.8.6)
+  * Fix protocol code handling new licenses
+
+  -- Pierre Ossman <ossman@cendio.se> 2019-05-16
+
+rdesktop (1.8.5)
+  * Add bounds checking to protocol handling in order to fix many
+    security problems when communicating with a malicious server.
+
+  -- Pierre Ossman <ossman@cendio.se> 2019-05-08
+
+rdesktop (1.8.4)
+  * Add rdp_protocol_error function that is used in several fixes
+  * Refactor of process_bitmap_updates
+  * Fix possible integer overflow in s_check_rem() on 32bit arch
+  * Fix memory corruption in process_bitmap_data - CVE-2018-8794
+  * Fix remote code execution in process_bitmap_data - CVE-2018-8795
+  * Fix remote code execution in process_plane - CVE-2018-8797
+  * Fix Denial of Service in mcs_recv_connect_response - CVE-2018-20175
+  * Fix Denial of Service in mcs_parse_domain_params - CVE-2018-20175
+  * Fix Denial of Service in sec_parse_crypt_info - CVE-2018-20176
+  * Fix Denial of Service in sec_recv - CVE-2018-20176
+  * Fix minor information leak in rdpdr_process - CVE-2018-8791
+  * Fix Denial of Service in cssp_read_tsrequest - CVE-2018-8792
+  * Fix remote code execution in cssp_read_tsrequest - CVE-2018-8793
+  * Fix Denial of Service in process_bitmap_data - CVE-2018-8796
+  * Fix minor information leak in rdpsnd_process_ping - CVE-2018-8798
+  * Fix Denial of Service in process_secondary_order - CVE-2018-8799
+  * Fix remote code execution in in ui_clip_handle_data - CVE-2018-8800
+  * Fix major information leak in ui_clip_handle_data - CVE-2018-20174
+  * Fix memory corruption in rdp_in_unistr - CVE-2018-20177
+  * Fix Denial of Service in process_demand_active - CVE-2018-20178
+  * Fix remote code execution in lspci_process - CVE-2018-20179
+  * Fix remote code execution in rdpsnddbg_process - CVE-2018-20180
+  * Fix remote code execution in seamless_process - CVE-2018-20181
+  * Fix remote code execution in seamless_process_line - CVE-2018-20182
+  * Fix building against OpenSSL 1.1
+
+  -- Henrik Andersson <hean01@users.sourceforge.net> 2019-01-02
+
 rdesktop (1.8.3)
   * Added a persistent mode used with SeamlessRDP
   * Added US international keyboard layout with dead keys
