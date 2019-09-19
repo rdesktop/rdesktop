@@ -124,12 +124,22 @@ rdp_ts_in_share_control_header(STREAM s, uint8 * type, uint16 * length)
 	}
 
 	in_uint16_le(s, pdu_type);	/* pduType */
-	in_uint16(s, pdu_source);	/* pduSource */
-
 	*type = pdu_type & 0xf;
 
+	/* XP omits pduSource for PDUTYPE_DEACTIVATEALLPDU for some reason */
+	if (*length == 4) {
+		logger(Protocol, Debug,
+		       "rdp_ts_in_share_control_header(), missing pduSource field for 0x%x PDU",
+		       *type);
+	} else {
+		in_uint16(s, pdu_source);	/* pduSource */
+	}
+
 	/* Give just the size of the data */
-	*length -= 6;
+	if (*length >= 6)
+		*length -= 6;
+	else
+		*length = 0;
 
 	return True;
 }
