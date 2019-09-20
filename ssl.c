@@ -90,9 +90,8 @@ rdssl_rsa_encrypt(uint8 * out, uint8 * in, int len, uint32 modulus_size, uint8 *
 	mpz_init(exp);
 	mpz_init(mod);
 
-	mpz_import(mod, modulus_size, 1, sizeof(modulus[0]), 0, 0, modulus);
-	// TODO: Need exponent size
-	mpz_import(exp, 3, 1, sizeof(exponent[0]), 0, 0, exponent);
+	mpz_import(mod, modulus_size, -1, sizeof(modulus[0]), 0, 0, modulus);
+	mpz_import(exp, SEC_EXPONENT_SIZE, -1, sizeof(exponent[0]), 0, 0, exponent);
 
 	mpz_import(x, len, -1, sizeof(in[0]), 0, 0, in);
 
@@ -308,9 +307,15 @@ rdssl_rkey_get_exp_mod(RDSSL_RKEY * rkey, uint8 * exponent, uint32 max_exp_len, 
 {
 	size_t outlen;
 
-	// TODO: Check size before exporing
-	mpz_export(modulus, &outlen, 1, sizeof(uint8), 0, 0, rkey->n);
-	mpz_export(exponent, &outlen, 1, sizeof(uint8), 0, 0, rkey->e);
+	outlen = (mpz_sizeinbase(modulus, 2) + 7) / 8;
+	if (outlen > max_mod_len)
+		return 1;
+	outlen = (mpz_sizeinbase(exponent, 2) + 7) / 8;
+	if (outlen > max_exp_len)
+		return 1;
+
+	mpz_export(modulus, &outlen, -1, sizeof(uint8), 0, 0, rkey->n);
+	mpz_export(exponent, &outlen, -1, sizeof(uint8), 0, 0, rkey->e);
 
 	/*
 	 * Note that gnutls_x509_crt_get_pk_rsa_raw() exports modulus with additional
