@@ -55,7 +55,10 @@
 #define INADDR_NONE ((unsigned long) -1)
 #endif
 
-#define GNUTLS_PRIORITY "NORMAL"
+/* Windows' self signed certificates omit the required Digital
+   Signature key usage flag, and only %COMPAT makes GnuTLS ignore
+   that violation. */
+#define GNUTLS_PRIORITY "NORMAL:%COMPAT"
 
 #ifdef IPv6
 static struct addrinfo *g_server_address = NULL;
