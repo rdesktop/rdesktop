@@ -1,3 +1,22 @@
+rdesktop (1.9.0)
+  * Use GnuTLS and nettle instead of OpenSSL
+  * Improved certificate handling
+  * Add support for dynamic resize of sessions
+  * Add support for alpha cursors
+  * Add PulseAudio support
+  * Add Kerberos support on macOS
+  * Kerberos support no longer requires libgssglue
+  * Remove support for rdesktop's custom microphone extension
+  * Several fixes to improve compatibility with modern desktops
+  * macOS compatibility fixes
+  * Improved handling of redirections
+  * Many smart card bug fixes
+  * Many disk redirection bug fixes
+  * Improved logging
+  * Lots of other small bug fixes
+
+  -- Pierre Ossman <ossman@cendio.se> 2019-09-18
+
 rdesktop (1.8.6)
   * Fix protocol code handling new licenses
 
