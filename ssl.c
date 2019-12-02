@@ -307,10 +307,10 @@ rdssl_rkey_get_exp_mod(RDSSL_RKEY * rkey, uint8 * exponent, uint32 max_exp_len, 
 {
 	size_t outlen;
 
-	outlen = (mpz_sizeinbase(modulus, 2) + 7) / 8;
+	outlen = (mpz_sizeinbase(rkey->n, 2) + 7) / 8;
 	if (outlen > max_mod_len)
 		return 1;
-	outlen = (mpz_sizeinbase(exponent, 2) + 7) / 8;
+	outlen = (mpz_sizeinbase(rkey->e, 2) + 7) / 8;
 	if (outlen > max_exp_len)
 		return 1;
 
