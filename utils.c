@@ -1027,8 +1027,8 @@ utils_cert_handle_exception(gnutls_session_t session, unsigned int status,
 			cert_invalid_reasons, sizeof(cert_invalid_reasons));
 
 		snprintf(message, sizeof(message),
-			"ATTENTION! The server uses and invalid security certificate which can not be trusted for\n"
-			"the following identified reasons(s);\n\n"
+			"ATTENTION! The server uses an invalid security certificate which can not be trusted for\n"
+			"the following identified reason(s);\n\n"
 			"%s"
 			"\n"
 			REVIEW_CERT_TEXT
