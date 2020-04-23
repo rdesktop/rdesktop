@@ -46,28 +46,35 @@ ber_wrap_hdr_data(int tagval, STREAM in)
 
 
 static void
-cssp_gss_report_error(OM_uint32 code, char *str, OM_uint32 major_status, OM_uint32 minor_status)
+cssp_gss_report_error(OM_uint32 code, gss_OID mech, char *str, OM_uint32 major_status, OM_uint32 minor_status)
 {
-	OM_uint32 msgctx = 0, ms;
+	OM_uint32 msgctx = 0, ms, discard;
 	gss_buffer_desc status_string;
 
-	logger(Core, Debug, "GSS error [%d:%d:%d]: %s", (major_status & 0xff000000) >> 24,	// Calling error
-	       (major_status & 0xff0000) >> 16,	// Routine error
-	       major_status & 0xffff,	// Supplementary info bits
+	logger(Core, Debug, "GSS error [%d:%d:%d]: %s", GSS_CALLING_ERROR(major_status),
+	       GSS_ROUTINE_ERROR(major_status),
+	       GSS_SUPPLEMENTARY_INFO(major_status),
 	       str);
 
 	do
 	{
-		ms = gss_display_status(&minor_status, major_status,
-					code, GSS_C_NULL_OID, &msgctx, &status_string);
+		ms = gss_display_status(&discard, major_status,
+					code, mech, &msgctx, &status_string);
 		if (ms != GSS_S_COMPLETE)
 			continue;
 
-		logger(Core, Debug, " - %s", status_string.value);
+		logger(Core, Debug, " - %s", (char *)status_string.value);
 
 	}
 	while (ms == GSS_S_COMPLETE && msgctx);
+	gss_release_buffer(&discard, &status_string);
 
+	if (mech != GSS_C_NO_OID) {
+		msgctx = 0;
+		gss_display_status(&discard, minor_status, GSS_C_MECH_CODE, mech, &msgctx, &status_string);
+		logger(Core, Notice, "Kerberos error: %s", (char *)status_string.value);
+		gss_release_buffer(&discard, &status_string);
+	}
 }
 
 
@@ -89,7 +96,7 @@ cssp_gss_mech_available(gss_OID mech)
 
 	if (GSS_ERROR(major_status))
 	{
-		cssp_gss_report_error(GSS_C_GSS_CODE, "Failed to get available mechs on system",
+		cssp_gss_report_error(GSS_C_GSS_CODE, mech, "Failed to get available mechs on system",
 				      major_status, minor_status);
 		return False;
 	}
@@ -98,7 +105,7 @@ cssp_gss_mech_available(gss_OID mech)
 
 	if (GSS_ERROR(major_status))
 	{
-		cssp_gss_report_error(GSS_C_GSS_CODE, "Failed to match mechanism in set",
+		cssp_gss_report_error(GSS_C_GSS_CODE, mech, "Failed to match mechanism in set",
 				      major_status, minor_status);
 		return False;
 	}
@@ -128,7 +135,7 @@ cssp_gss_get_service_name(char *server, gss_name_t * name)
 
 	if (GSS_ERROR(major_status))
 	{
-		cssp_gss_report_error(GSS_C_GSS_CODE, "Failed to create service principal name",
+		cssp_gss_report_error(GSS_C_GSS_CODE, GSS_C_NULL_OID, "Failed to create service principal name",
 				      major_status, minor_status);
 		return False;
 	}
@@ -158,7 +165,7 @@ cssp_gss_wrap(gss_ctx_id_t ctx, STREAM in)
 
 	if (major_status != GSS_S_COMPLETE)
 	{
-		cssp_gss_report_error(GSS_C_GSS_CODE, "Failed to encrypt and sign message",
+		cssp_gss_report_error(GSS_C_GSS_CODE, GSS_C_NULL_OID, "Failed to encrypt and sign message",
 				      major_status, minor_status);
 		return NULL;
 	}
@@ -200,7 +207,7 @@ cssp_gss_unwrap(gss_ctx_id_t ctx, STREAM in)
 
 	if (major_status != GSS_S_COMPLETE)
 	{
-		cssp_gss_report_error(GSS_C_GSS_CODE, "Failed to decrypt message",
+		cssp_gss_report_error(GSS_C_GSS_CODE, GSS_C_NULL_OID, "Failed to decrypt message",
 				      major_status, minor_status);
 		return NULL;
 	}
@@ -772,7 +779,7 @@ cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 			else
 				logger(Core, Error, "cssp_connect(), negotiation failed");
 
-			cssp_gss_report_error(GSS_C_GSS_CODE, "cssp_connect(), negotiation failed.",
+			cssp_gss_report_error(GSS_C_GSS_CODE, desired_mech, "cssp_connect(), negotiation failed.",
 					      major_status, minor_status);
 			goto bail_out;
 		}
