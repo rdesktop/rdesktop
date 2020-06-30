@@ -1986,8 +1986,8 @@ save_licence(unsigned char *data, int length)
 	path[sizeof(path) - 1] = '\0';
 
 	if (snprintf(tmppath, PATH_MAX, "%s.new", path) < 0) {
-        	return;
-    	}
+		return;
+	}
 
 	tmppath[sizeof(path) - 1] = '\0';
 
