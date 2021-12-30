@@ -1,5 +1,5 @@
 ---
-name: GETTING HELP
+name: Getting Help
 about: Get help with some usage related problem
 title: "[SUP]"
 labels: ''

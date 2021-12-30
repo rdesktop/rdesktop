@@ -1,5 +1,5 @@
 ---
-name: BUG REPORT
+name: Bug Report
 about: Follow this template to report a bug
 title: "[BUG] "
 labels: ''

@@ -1,6 +1,6 @@
 ---
-name: FEATURE SUGGESTION
-about: Suggest an idea for rdesktop
+name: Feature Suggestion
+about: Suggest a feature for rdesktop
 title: "[FS]"
 labels: ''
 assignees: ''
