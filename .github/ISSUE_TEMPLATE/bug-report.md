@@ -8,6 +8,7 @@ assignees: ''
 ---
 
 PLEASE, FOLLOW AS CLOSELY AS POSSIBLE THE FOLLOWING SCRIPT TO FILL A BUG REPORT (and remove hints and instructions)
+
 **Describe the bug**
 A clear and concise description of what the bug is.
 
@@ -27,7 +28,7 @@ If applicable, add screenshots to help explain your problem.
  - Server Software: [e.g. xrdp]
  - Server Software Version: [e.g. 1.5.1]
 
-** Checklist **
+**Checklist**
 - [ ] This bug prevents me from using rdesktop
 - [ ] This bug is a security issue
 - [ ] This bug causes a bad experience with rdesktop
