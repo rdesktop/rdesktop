@@ -280,6 +280,30 @@ announcedata_size()
 }
 
 static void
+rdpdr_send_client_device_list_remove(uint32 id)
+{
+	int i;
+	int size;
+	STREAM s;
+
+	/* MS-RDPEFS: 2.2.3.2 Client Drive Device List Remove (DR_DEVICELIST_REMOVE) */
+	/* It can easily be rewritten to remove a list of ids */
+	size = 8; /* Header + DeviceCount */
+
+	size += 4; /* Add one ID */
+
+	s = channel_init(rdpdr_channel, size);
+	out_uint16_le(s, RDPDR_CTYP_CORE);
+	out_uint16_le(s, PAKID_CORE_DEVICELIST_REMOVE);
+
+	out_uint32_le(s, 1); /* DeviceCount */
+	out_uint32_le(s, id); /* DeviceIds */
+
+	s_mark_end(s);
+	channel_send(s, rdpdr_channel);
+}
+
+static void
 rdpdr_send_client_device_list_announce(void)
 {
 	/* DR_CORE_CLIENT_ANNOUNCE_RSP */
