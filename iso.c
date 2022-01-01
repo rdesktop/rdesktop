@@ -386,6 +386,7 @@ iso_connect(char *server, char *username, char *domain, char *password,
 		else if (data == PROTOCOL_RDP)
 		{
 			logger(Core, Notice, "Connection established using plain RDP.");
+			g_encryption = False;
 		}
 		else if (data != PROTOCOL_RDP)
 		{

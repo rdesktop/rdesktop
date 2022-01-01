@@ -156,8 +156,12 @@ mcs_send_edrq(void)
 	s = iso_init(5);
 
 	out_uint8(s, (MCS_EDRQ << 2));
-	out_uint16_be(s, 1);	/* height */
-	out_uint16_be(s, 1);	/* interval */
+	/* seq int: height */
+	out_uint8(s, 1);
+	out_uint8(s, 0);
+	/* seq int: interval */
+	out_uint8(s, 1);
+	out_uint8(s, 0);
 
 	s_mark_end(s);
 	iso_send(s);
