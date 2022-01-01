@@ -100,6 +100,7 @@ RD_BOOL g_packet_encryption = True;
 RD_BOOL g_desktop_save = True;	/* desktop save order */
 RD_BOOL g_polygon_ellipse_orders = True;	/* polygon / ellipse orders */
 RD_BOOL g_fullscreen = False;
+RD_BOOL g_fullscreen_toggle = True;  /* control full-screen toggle using CTRL-ALT-ENTER */
 RD_BOOL g_grab_keyboard = True;
 RD_BOOL g_local_cursor = False;
 RD_BOOL g_hide_decorations = False;
@@ -181,7 +182,8 @@ usage(char *program)
 #ifdef WITH_SCARD
 	fprintf(stderr, "   -i: enables smartcard authentication, password is used as pin\n");
 #endif
-	fprintf(stderr, "   -f: full-screen mode\n");
+	fprintf(stderr, "   -f: enter full-screen mode\n");
+	fprintf(stderr, "   -F: disable full-screen toggle using Ctrl-Alt-Enter\n");
 	fprintf(stderr, "   -b: force bitmap updates\n");
 	fprintf(stderr, "   -L: local codepage\n");
 	fprintf(stderr, "   -A: path to SeamlessRDP shell, this enables SeamlessRDP mode\n");
@@ -820,7 +822,7 @@ main(int argc, char *argv[])
 	g_num_devices = 0;
 
 	while ((c = getopt(argc, argv,
-			   "A:V:u:L:d:s:c:p:n:k:g:o:fbBeEitmMzCDKS:T:NX:a:x:Pr:045vh?")) != -1)
+			   "A:V:u:L:d:s:c:p:n:k:g:o:fFbBeEitmMzCDKS:T:NX:a:x:Pr:045vh?")) != -1)
 	{
 		switch (c)
 		{
@@ -901,6 +903,10 @@ main(int argc, char *argv[])
 			case 'f':
 				g_window_size_type = Fullscreen;
 				g_fullscreen = True;
+				break;
+				
+			case 'F':
+				g_fullscreen_toggle = False;
 				break;
 
 			case 'b':
