@@ -2502,6 +2502,16 @@ xwin_toggle_fullscreen(void)
 	}
 }
 
+void
+xwin_toggle_iconified(void)
+{
+	/* When running rdesktop in seamless mode, toggling of iconified state is not allowed */
+	if (!g_seamless_active)
+	{
+		XIconifyWindow(g_display, g_wnd, XScreenNumberOfScreen(g_screen));
+	}
+}
+
 static void
 handle_button_event(XEvent xevent, RD_BOOL down)
 {

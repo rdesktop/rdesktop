@@ -276,6 +276,7 @@ void ui_destroy_window(void);
 void ui_update_window_sizehints(uint32 width, uint32 height);
 RD_BOOL ui_have_window(void);
 void xwin_toggle_fullscreen(void);
+void xwin_toggle_iconified(void);
 void ui_select(int rdp_socket);
 void ui_move_pointer(int x, int y);
 RD_HBITMAP ui_create_bitmap(int width, int height, uint8 * data);
