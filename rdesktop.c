@@ -100,6 +100,7 @@ RD_BOOL g_packet_encryption = True;
 RD_BOOL g_desktop_save = True;	/* desktop save order */
 RD_BOOL g_polygon_ellipse_orders = True;	/* polygon / ellipse orders */
 RD_BOOL g_fullscreen = False;
+RD_BOOL g_ignore_certificate = False;
 RD_BOOL g_grab_keyboard = True;
 RD_BOOL g_local_cursor = False;
 RD_BOOL g_hide_decorations = False;
@@ -181,6 +182,7 @@ usage(char *program)
 #ifdef WITH_SCARD
 	fprintf(stderr, "   -i: enables smartcard authentication, password is used as pin\n");
 #endif
+	fprintf(stderr, "   -I: ignore certificate\n");
 	fprintf(stderr, "   -f: full-screen mode\n");
 	fprintf(stderr, "   -b: force bitmap updates\n");
 	fprintf(stderr, "   -L: local codepage\n");
@@ -820,7 +822,7 @@ main(int argc, char *argv[])
 	g_num_devices = 0;
 
 	while ((c = getopt(argc, argv,
-			   "A:V:u:L:d:s:c:p:n:k:g:o:fbBeEitmMzCDKS:T:NX:a:x:Pr:045vh?")) != -1)
+			   "A:V:u:L:d:s:c:p:n:k:g:o:IfbBeEitmMzCDKS:T:NX:a:x:Pr:045vh?")) != -1)
 	{
 		switch (c)
 		{
@@ -896,6 +898,10 @@ main(int argc, char *argv[])
 				{
 					return EX_USAGE;
 				}
+				break;
+
+			case 'I':
+				g_ignore_certificate = True;
 				break;
 
 			case 'f':
