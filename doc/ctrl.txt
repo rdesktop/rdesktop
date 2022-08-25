@@ -4,8 +4,8 @@ TODO
 Overview
 ========
 
-The protocol is a UTF-8 line based bidirectional protocol were a slave sends
-a method with optional argument to the master and a result of operation is
+The protocol is a UTF-8 line based bidirectional protocol where a slave sends
+a method with optional argument to the master and a result of the operation is
 returned to the slave in a synchronous send recv operation.
 
 
