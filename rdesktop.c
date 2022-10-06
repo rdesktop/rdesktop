@@ -156,6 +156,8 @@ char *g_sc_reader_name = NULL;
 char *g_sc_card_name = NULL;
 char *g_sc_container_name = NULL;
 
+RD_BOOL g_restricted_admin_mode = False;
+
 extern RDPDR_DEVICE g_rdpdr_device[];
 extern uint32 g_num_devices;
 extern char *g_rdpdr_clientname;
@@ -203,6 +205,7 @@ usage(char *program)
 	fprintf(stderr, "   -z: enable rdp compression\n");
 	fprintf(stderr, "   -x: RDP5 experience (m[odem 28.8], b[roadband], l[an] or hex nr.)\n");
 	fprintf(stderr, "   -P: use persistent bitmap caching\n");
+	fprintf(stderr, "   -R: enable Restricted Admin Mode\n");
 	fprintf(stderr, "   -r: enable specified device redirection (this flag can be repeated)\n");
 	fprintf(stderr,
 		"         '-r comport:COM1=/dev/ttyS0': enable serial redirection of /dev/ttyS0 to COM1\n");
@@ -820,7 +823,7 @@ main(int argc, char *argv[])
 	g_num_devices = 0;
 
 	while ((c = getopt(argc, argv,
-			   "A:V:u:L:d:s:c:p:n:k:g:o:fbBeEitmMzCDKS:T:NX:a:x:Pr:045vh?")) != -1)
+			   "A:V:u:L:d:s:c:p:n:k:g:o:fbBeEitmMzCDKS:T:NX:a:x:PRr:045vh?")) != -1)
 	{
 		switch (c)
 		{
@@ -1118,6 +1121,10 @@ main(int argc, char *argv[])
 				}
 				break;
 
+			case 'R':
+				g_restricted_admin_mode = True;
+				break;
+
 			case '0':
 				g_console_session = True;
 				break;
@@ -1170,6 +1177,10 @@ main(int argc, char *argv[])
 				return EX_USAGE;
 		}
 	}
+
+	/* With restricted admin mode we don't need password */
+	if (g_restricted_admin_mode)
+		memset(g_password, 0, sizeof(g_password));
 
 	if (argc - optind != 1)
 	{
