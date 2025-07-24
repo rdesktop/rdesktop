@@ -2683,19 +2683,19 @@ xwin_process_events(void)
 				/* Handle workspace switching keys when using -G flag - check early */
 				if (g_grab_keyboard_except_workspace)
 				{
-					/* Quick keysym lookup for workspace detection */
-					KeySym temp_keysym = XLookupKeysym(&xevent.xkey, 0);
-					if ((temp_keysym == XK_Left || temp_keysym == XK_Right))
+					/* Only check for Ctrl+Alt first to minimize interference */
+					if ((xevent.xkey.state & ControlMask) && (xevent.xkey.state & Mod1Mask))
 					{
-						if ((xevent.xkey.state & ControlMask) && 
-						    (xevent.xkey.state & Mod1Mask))
+						/* Now check if it's Left or Right arrow */
+						KeySym temp_keysym = XLookupKeysym(&xevent.xkey, 0);
+						if (temp_keysym == XK_Left || temp_keysym == XK_Right)
 						{
 							logger(Keyboard, Warning, "Workspace switch - Ctrl+Alt+%s detected, trying EWMH approach", 
 							       temp_keysym == XK_Left ? "Left" : "Right");
 							
 							/* Ungrab keyboard completely */
 							XUngrabKeyboard(g_display, CurrentTime);
-							XSync(g_display, True);
+							XSync(g_display, False);
 							
 							/* Try EWMH desktop switching instead */
 							int current_desktop = get_current_desktop();
@@ -2723,8 +2723,8 @@ xwin_process_events(void)
 								XFlush(g_display);
 							}
 							
-							/* Small delay before re-grabbing */
-							usleep(50000); /* 50ms */
+							/* Very small delay to ensure X11 processes the event */
+							XSync(g_display, False);
 							
 							/* Re-grab keyboard */
 							if (g_focused && g_mouse_in_wnd)
@@ -2776,6 +2776,20 @@ xwin_process_events(void)
 
 			case KeyRelease:
 				g_last_gesturetime = xevent.xkey.time;
+				
+				/* Skip workspace switch key releases */
+				if (g_grab_keyboard_except_workspace)
+				{
+					if ((xevent.xkey.state & ControlMask) && (xevent.xkey.state & Mod1Mask))
+					{
+						KeySym temp_keysym = XLookupKeysym(&xevent.xkey, 0);
+						if (temp_keysym == XK_Left || temp_keysym == XK_Right)
+						{
+							logger(Keyboard, Debug, "Ignoring workspace switch key release");
+							break;
+						}
+					}
+				}
 				
 				XLookupString((XKeyEvent *) & xevent, str,
 					      sizeof(str), &keysym, NULL);
