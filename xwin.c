@@ -37,6 +37,10 @@
 #ifdef HAVE_XRANDR
 #include <X11/extensions/Xrandr.h>
 #endif
+#include <X11/extensions/xtestext1.h>
+
+/* XTest function declaration */
+extern int XTestFakeKeyEvent(Display *dpy, unsigned int keycode, Bool is_press, unsigned long delay);
 
 #ifdef __APPLE__
 #include <sys/param.h>
@@ -66,6 +70,7 @@ extern int g_pos;
 extern RD_BOOL g_sendmotion;
 extern RD_BOOL g_fullscreen;
 extern RD_BOOL g_grab_keyboard;
+extern RD_BOOL g_grab_keyboard_except_workspace;
 extern RD_BOOL g_hide_decorations;
 extern RD_BOOL g_pending_resize;
 extern RD_BOOL g_pending_resize_defer;
@@ -2133,9 +2138,9 @@ get_input_mask(long *input_mask)
 		*input_mask |= PointerMotionMask;
 	if (g_ownbackstore)
 		*input_mask |= ExposureMask;
-	if (g_fullscreen || g_grab_keyboard)
+	if (g_fullscreen || g_grab_keyboard || g_grab_keyboard_except_workspace)
 		*input_mask |= EnterWindowMask;
-	if (g_grab_keyboard)
+	if (g_grab_keyboard || g_grab_keyboard_except_workspace)
 		*input_mask |= LeaveWindowMask;
 }
 
@@ -2674,6 +2679,66 @@ xwin_process_events(void)
 
 			case KeyPress:
 				g_last_gesturetime = xevent.xkey.time;
+				
+				/* Handle workspace switching keys when using -G flag - check early */
+				if (g_grab_keyboard_except_workspace)
+				{
+					/* Only check for Ctrl+Alt first to minimize interference */
+					if ((xevent.xkey.state & ControlMask) && (xevent.xkey.state & Mod1Mask))
+					{
+						/* Now check if it's Left or Right arrow */
+						KeySym temp_keysym = XLookupKeysym(&xevent.xkey, 0);
+						if (temp_keysym == XK_Left || temp_keysym == XK_Right)
+						{
+							logger(Keyboard, Warning, "Workspace switch - Ctrl+Alt+%s detected, trying EWMH approach", 
+							       temp_keysym == XK_Left ? "Left" : "Right");
+							
+							/* Ungrab keyboard completely */
+							XUngrabKeyboard(g_display, CurrentTime);
+							XSync(g_display, False);
+							
+							/* Try EWMH desktop switching instead */
+							int current_desktop = get_current_desktop();
+							if (current_desktop >= 0)
+							{
+								int new_desktop = current_desktop + (temp_keysym == XK_Left ? -1 : 1);
+								if (new_desktop < 0) new_desktop = 0; /* Don't go negative */
+								
+								logger(Keyboard, Warning, "Switching from desktop %d to %d", current_desktop, new_desktop);
+								
+								/* Send desktop switch message */
+								XEvent switch_event;
+								switch_event.type = ClientMessage;
+								switch_event.xclient.window = DefaultRootWindow(g_display);
+								switch_event.xclient.message_type = XInternAtom(g_display, "_NET_CURRENT_DESKTOP", False);
+								switch_event.xclient.format = 32;
+								switch_event.xclient.data.l[0] = new_desktop;
+								switch_event.xclient.data.l[1] = CurrentTime;
+								switch_event.xclient.data.l[2] = 0;
+								switch_event.xclient.data.l[3] = 0;
+								switch_event.xclient.data.l[4] = 0;
+								
+								XSendEvent(g_display, DefaultRootWindow(g_display), False,
+									   SubstructureNotifyMask | SubstructureRedirectMask, &switch_event);
+								XFlush(g_display);
+							}
+							
+							/* Very small delay to ensure X11 processes the event */
+							XSync(g_display, False);
+							
+							/* Re-grab keyboard */
+							if (g_focused && g_mouse_in_wnd)
+							{
+								XGrabKeyboard(g_display, g_wnd, True,
+									      GrabModeAsync, GrabModeAsync, CurrentTime);
+							}
+							
+							/* Don't process this key */
+							break;
+						}
+					}
+				}
+				
 				if (g_IC != NULL)
 					/* Multi_key compatible version */
 				{
@@ -2699,7 +2764,7 @@ xwin_process_events(void)
 
 				logger(Keyboard, Debug, "KeyPress for keysym (0x%lx, %s)", keysym,
 				       get_ksname(keysym));
-
+				
 				set_keypress_keysym(xevent.xkey.keycode, keysym);
 				ev_time = time(NULL);
 				if (handle_special_keys(keysym, xevent.xkey.state, ev_time, True))
@@ -2711,12 +2776,27 @@ xwin_process_events(void)
 
 			case KeyRelease:
 				g_last_gesturetime = xevent.xkey.time;
+				
+				/* Skip workspace switch key releases */
+				if (g_grab_keyboard_except_workspace)
+				{
+					if ((xevent.xkey.state & ControlMask) && (xevent.xkey.state & Mod1Mask))
+					{
+						KeySym temp_keysym = XLookupKeysym(&xevent.xkey, 0);
+						if (temp_keysym == XK_Left || temp_keysym == XK_Right)
+						{
+							logger(Keyboard, Debug, "Ignoring workspace switch key release");
+							break;
+						}
+					}
+				}
+				
 				XLookupString((XKeyEvent *) & xevent, str,
 					      sizeof(str), &keysym, NULL);
 
 				logger(Keyboard, Debug, "KeyRelease for keysym (0x%lx, %s)", keysym,
 				       get_ksname(keysym));
-
+				
 				keysym = reset_keypress_keysym(xevent.xkey.keycode, keysym);
 				ev_time = time(NULL);
 				if (handle_special_keys(keysym, xevent.xkey.state, ev_time, False))
@@ -2766,7 +2846,7 @@ xwin_process_events(void)
 					break;
 				g_focused = True;
 				reset_modifier_keys();
-				if (g_grab_keyboard && g_mouse_in_wnd)
+				if ((g_grab_keyboard || g_grab_keyboard_except_workspace) && g_mouse_in_wnd)
 					XGrabKeyboard(g_display, g_wnd, True,
 						      GrabModeAsync, GrabModeAsync, CurrentTime);
 
@@ -2814,7 +2894,7 @@ xwin_process_events(void)
 						       CurrentTime);
 					break;
 				}
-				if (g_focused)
+				if (g_focused && (g_grab_keyboard || g_grab_keyboard_except_workspace))
 					XGrabKeyboard(g_display, g_wnd, True,
 						      GrabModeAsync, GrabModeAsync, CurrentTime);
 				break;

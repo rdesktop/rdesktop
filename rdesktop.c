@@ -101,6 +101,7 @@ RD_BOOL g_desktop_save = True;	/* desktop save order */
 RD_BOOL g_polygon_ellipse_orders = True;	/* polygon / ellipse orders */
 RD_BOOL g_fullscreen = False;
 RD_BOOL g_grab_keyboard = True;
+RD_BOOL g_grab_keyboard_except_workspace = False;
 RD_BOOL g_local_cursor = False;
 RD_BOOL g_hide_decorations = False;
 RDP_VERSION g_rdp_version = RDP_V5;	/* Default to version 5 */
@@ -193,6 +194,7 @@ usage(char *program)
 	fprintf(stderr, "   -M: use local mouse cursor\n");
 	fprintf(stderr, "   -C: use private colour map\n");
 	fprintf(stderr, "   -D: hide window manager decorations\n");
+	fprintf(stderr, "   -G: grab keyboard (release grab on CTRL+ALT+LEFT/RIGHT)\n");
 	fprintf(stderr, "   -K: keep window manager key bindings\n");
 	fprintf(stderr, "   -S: caption button size (single application mode)\n");
 	fprintf(stderr, "   -T: window title\n");
@@ -820,7 +822,7 @@ main(int argc, char *argv[])
 	g_num_devices = 0;
 
 	while ((c = getopt(argc, argv,
-			   "A:V:u:L:d:s:c:p:n:k:g:o:fbBeEitmMzCDKS:T:NX:a:x:Pr:045vh?")) != -1)
+			   "A:V:u:L:d:s:c:p:n:k:g:o:fbBeEitmMzCDKGS:T:NX:a:x:Pr:045vh?")) != -1)
 	{
 		switch (c)
 		{
@@ -934,6 +936,11 @@ main(int argc, char *argv[])
 
 			case 'K':
 				g_grab_keyboard = False;
+				break;
+
+			case 'G':
+				g_grab_keyboard_except_workspace = True;
+				g_grab_keyboard = True;
 				break;
 
 			case 'S':
