@@ -4,6 +4,7 @@
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2005-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
    Copyright 2018 Henrik Andersson <hean01@cendio.com> for Cendio AB
+   Copyright 2026 Marco Fortina <marco_fortina@hotmail.it>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -147,6 +148,27 @@ mcs_recv_connect_response(STREAM mcs_data)
 	return s_check_end(s);
 }
 
+/* Output an ASN.1 PER unconstrained integer. */
+static void
+mcs_out_per_integer(STREAM s, uint32 value)
+{
+	if (value <= 0xff)
+	{
+		out_uint8(s, 1);
+		out_uint8(s, value);
+	}
+	else if (value <= 0xffff)
+	{
+		out_uint8(s, 2);
+		out_uint16_be(s, value);
+	}
+	else
+	{
+		out_uint8(s, 4);
+		out_uint32_be(s, value);
+	}
+}
+
 /* Send an EDrq message (ASN.1 PER) */
 static void
 mcs_send_edrq(void)
@@ -156,8 +178,8 @@ mcs_send_edrq(void)
 	s = iso_init(5);
 
 	out_uint8(s, (MCS_EDRQ << 2));
-	out_uint16_be(s, 1);	/* height */
-	out_uint16_be(s, 1);	/* interval */
+	mcs_out_per_integer(s, 1);	/* subHeight */
+	mcs_out_per_integer(s, 1);	/* subInterval */
 
 	s_mark_end(s);
 	iso_send(s);
