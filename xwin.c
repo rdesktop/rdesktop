@@ -6,6 +6,7 @@
    Copyright 2002-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
    Copyright 2012-2018 Henrik Andersson <hean01@cendio.se> for Cendio AB
    Copyright 2017-2019 Alexander Zakharov <uglym8@gmail.com>
+   Copyright 2026 Marco Fortina <marco_fortina@hotmail.it>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -625,6 +626,11 @@ sw_wait_configurenotify(Window wnd, unsigned long serial)
 
 	gettimeofday(&future, NULL);
 	future.tv_usec += 500000;
+	if (future.tv_usec >= 1000000)
+	{
+		future.tv_sec += future.tv_usec / 1000000;
+		future.tv_usec %= 1000000;
+	}
 
 	do
 	{
