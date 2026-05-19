@@ -30,8 +30,16 @@ printer mapping
 ---------------
 Multiple mappings possible: yes
 Default: no printers redirected
-Syntax: -r printer:<printername>
+Syntax: -r printer:<printername>[=<driver>]
 Example: -r printer:mydeskjet
+
+The optional driver name is the driver that the server should use for the
+redirected printer. If omitted, rdesktop asks for a simple PostScript driver.
+Printer redirection passes the server-generated printer data to the local
+print queue. If the selected server-side driver generates data that the local
+queue or printer cannot handle, the printer can output unreadable pages. In
+that case, select a matching server-side driver or configure the local queue to
+accept the generated format.
 
 
 

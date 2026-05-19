@@ -230,8 +230,12 @@ it.
 Redirects a printer queue on the client to the server. The <printername>
 is the name of the queue in your local system. <driver> defaults to a
 simple PS-driver unless you specify one. Keep in mind that you need a
-100% match in the server environment, or the driver will fail. The first
-printer on the command line will be set as your default printer.
+100% match in the server environment, or the driver will fail. Printer
+redirection passes the server-generated printer data to the local queue; if
+the server-side driver emits data your local queue or printer does not
+understand, the printer can output unreadable pages. Install or select a
+server-side driver that matches the local print path. The first printer on
+the command line will be set as your default printer.
 .TP
 .BR "-r sound:[local|off|remote]"
 Redirects sound generated on the server to the client. "remote" only has
