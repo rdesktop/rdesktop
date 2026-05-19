@@ -1081,8 +1081,10 @@ FsVolumeInfo(char *fpath)
 	{
 		if (str_startswith(e->mnt_dir, fpath))
 		{
-			strcpy(info.type, e->mnt_type);
-			strcpy(info.name, e->mnt_fsname);
+			strncpy(info.type, e->mnt_type, PATH_MAX - 1);
+			info.type[PATH_MAX - 1] = '\0';
+			strncpy(info.name, e->mnt_fsname, PATH_MAX - 1);
+			info.name[PATH_MAX - 1] = '\0';
 			if (strstr(e->mnt_opts, "vfat") || strstr(e->mnt_opts, "iso9660"))
 			{
 				int fd = open(e->mnt_fsname, O_RDONLY);
