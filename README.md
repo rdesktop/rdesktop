@@ -34,6 +34,35 @@ later. To enable smart-card support in the rdesktop add `--enable-smartcard` to
 the configure line.
 
 
+## Build dependencies
+
+When building from source, rdesktop requires a C compiler, GNU make, X11
+headers and libraries, pkg-config, GMP, GnuTLS, Nettle, hogweed, libtasn1 and
+libXcursor.
+
+When building from a git checkout instead of a release tarball, `autoconf` and
+`automake` are also required because `./bootstrap` must generate the configure
+script and Makefile templates.
+
+Optional features need additional dependencies:
+
+- smart-card support: PCSC-lite headers and library;
+- CredSSP support: GSSAPI/Kerberos headers and library;
+- sound support: one or more supported audio backends such as ALSA, PulseAudio,
+  libao or OSS, plus libsamplerate when available.
+
+On Debian and Ubuntu, a typical development setup is:
+
+	% sudo apt-get install autoconf automake gcc make pkg-config \
+		libx11-dev libxcursor-dev libxrandr-dev libgmp-dev \
+		libgnutls28-dev nettle-dev libtasn1-6-dev
+
+Add optional packages when enabling those features, for example:
+
+	% sudo apt-get install libpcsclite-dev libkrb5-dev libasound2-dev \
+		libpulse-dev libao-dev libsamplerate0-dev
+
+
 ## Note for users building from source
 
 If you have retrieved a snapshot of the rdesktop source, you will first
