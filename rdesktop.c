@@ -142,6 +142,8 @@ char g_reconnect_random[16];
 time_t g_reconnect_random_ts;
 RD_BOOL g_has_reconnect_random = False;
 RD_BOOL g_reconnect_loop = False;
+RD_BOOL g_reconnect_on_network_error = False;
+time_t g_reconnect_started_ts = 0;
 uint8 g_client_random[SEC_RANDOM_SIZE];
 RD_BOOL g_pending_resize = False;
 RD_BOOL g_pending_resize_defer = True;
@@ -206,6 +208,7 @@ usage(char *program)
 	fprintf(stderr, "   -z: enable rdp compression\n");
 	fprintf(stderr, "   -x: RDP5 experience (m[odem 28.8], b[roadband], l[an] or hex nr.)\n");
 	fprintf(stderr, "   -P: use persistent bitmap caching\n");
+	fprintf(stderr, "   -R: retry a fresh connection after network errors\n");
 	fprintf(stderr, "   -r: enable specified device redirection (this flag can be repeated)\n");
 	fprintf(stderr,
 		"         '-r comport:COM1=/dev/ttyS0': enable serial redirection of /dev/ttyS0 to COM1\n");
@@ -1106,7 +1109,7 @@ main(int argc, char *argv[])
 	g_num_devices = 0;
 
 	while ((c = getopt(argc, argv,
-			   "A:V:u:L:d:s:c:p:n:k:g:o:fbBeEitmMzCDKS:T:w:NX:a:x:Pr:045vh?")) != -1)
+			   "A:V:u:L:d:s:c:p:n:k:g:o:fbBeEitmMzCDKS:T:w:NX:a:x:Pr:R045vh?")) != -1)
 	{
 		switch (c)
 		{
@@ -1415,6 +1418,10 @@ main(int argc, char *argv[])
 				}
 				break;
 
+			case 'R':
+				g_reconnect_on_network_error = True;
+				break;
+
 			case '0':
 				g_console_session = True;
 				break;
@@ -1685,7 +1692,21 @@ main(int argc, char *argv[])
 			g_network_error = False;
 
 			if (g_reconnect_loop == False)
-				return EX_PROTOCOL;
+			{
+				if (!g_reconnect_on_network_error || g_reconnect_started_ts == 0)
+					return EX_PROTOCOL;
+
+				if (time(NULL) - g_reconnect_started_ts > RECONNECT_TIMEOUT)
+				{
+					logger(Core, Notice,
+					       "Tried to reconnect for %d minutes, giving up.",
+					       RECONNECT_TIMEOUT / 60);
+					return EX_PROTOCOL;
+				}
+
+				sleep(4);
+				continue;
+			}
 
 			/* check if auto reconnect cookie has timed out */
 			if (time(NULL) - g_reconnect_random_ts > RECONNECT_TIMEOUT)
@@ -1710,6 +1731,8 @@ main(int argc, char *argv[])
 		   packet but unencrypted transfer of other packets */
 		if (!g_packet_encryption)
 			g_encryption_initial = g_encryption = False;
+
+		g_reconnect_started_ts = 0;
 
 		logger(Core, Verbose, "Connection successful");
 
@@ -1760,21 +1783,35 @@ main(int argc, char *argv[])
 			{
 				if (g_reconnect_random_ts == 0)
 				{
-					/* If there is no auto reconnect cookie available
-					   for reconnect, do not enter reconnect loop. Windows
-					   2016 server does not send any for unknown reasons.
-					 */
-					logger(Core, Notice,
-					       "Disconnected due to network error, exiting...");
-					break;
-				}
+					/* If there is no auto reconnect cookie available,
+					   retrying means starting a fresh connection. Keep
+					   the historic default conservative unless the user
+					   explicitly requested retry-on-network-error. */
+					if (!g_reconnect_on_network_error)
+					{
+						logger(Core, Notice,
+						       "Disconnected due to network error, exiting...");
+						break;
+					}
 
-				/* handle network error and start autoreconnect */
-				logger(Core, Notice,
-				       "Disconnected due to network error, retrying to reconnect for %d minutes.",
-				       RECONNECT_TIMEOUT / 60);
-				g_network_error = False;
-				g_reconnect_loop = True;
+					if (g_reconnect_started_ts == 0)
+						g_reconnect_started_ts = time(NULL);
+
+					logger(Core, Notice,
+					       "Disconnected due to network error, retrying a fresh connection for %d minutes.",
+					       RECONNECT_TIMEOUT / 60);
+					g_network_error = False;
+					g_reconnect_loop = False;
+				}
+				else
+				{
+					/* handle network error and start autoreconnect */
+					logger(Core, Notice,
+					       "Disconnected due to network error, retrying to reconnect for %d minutes.",
+					       RECONNECT_TIMEOUT / 60);
+					g_network_error = False;
+					g_reconnect_loop = True;
+				}
 			}
 			else if (g_pending_resize)
 			{

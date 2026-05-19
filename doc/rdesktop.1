@@ -220,6 +220,12 @@ network traffic at the cost of slightly longer startup and some disk space.
 (10MB for 8-bit colour, 20MB for 15/16-bit colour, 30MB for 24-bit colour
 and 40MB for 32-bit colour sessions)
 .TP
+.BR "-R"
+Retry a fresh connection after network errors for the same timeout window used
+by automatic reconnect. By default, rdesktop only enters the reconnect loop when
+the server supplied an auto-reconnect cookie; this option also retries when no
+cookie is available, which can create a new session depending on server policy.
+.TP
 .BR "-r <device>"
 Enable redirection of the specified device on the client, such
 that it appears on the server. Note that the allowed
