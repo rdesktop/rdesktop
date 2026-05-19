@@ -1041,7 +1041,7 @@ utils_cert_handle_exception(gnutls_session_t session, unsigned int status,
 
 	/* show dialog */
 	response = util_dialog_choice(message, "no", "yes", NULL);
-	if (strcmp(response, "no") == 0 || response == NULL)
+	if (response == NULL || strcmp(response, "no") == 0)
 	{
 		return 1;
 	}
