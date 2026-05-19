@@ -1976,7 +1976,10 @@ ui_init(void)
 	g_display = XOpenDisplay(NULL);
 	if (g_display == NULL)
 	{
-		logger(GUI, Error, "ui_init(), failed to open X11 display: %s", XDisplayName(NULL));
+		logger(GUI, Error,
+		       "ui_init(), failed to open X11 display: %s. "
+		       "Make sure rdesktop is running from an X11 session "
+		       "and that DISPLAY is set and accessible.", XDisplayName(NULL));
 		return False;
 	}
 
