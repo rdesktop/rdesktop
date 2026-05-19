@@ -118,6 +118,10 @@ Accepted exceptions are stored under the per-user rdesktop certificate store in
 `~/.local/share/rdesktop/certs/known_certs`. There is no single key shortcut for
 this prompt.
 
+For scripted launchers, run rdesktop interactively once as the same user and
+accept the certificate before using the launcher. rdesktop intentionally does not
+provide a command-line option to blindly accept unknown certificates.
+
 ### `failed to open X11 display`
 
 rdesktop is an X11 client. If startup fails with:
