@@ -86,6 +86,14 @@ You can also specify a number of options on the command line.  These are listed
 in the rdesktop manual page (run `man rdesktop`).
 
 
+## Documentation
+
+Additional documentation is available in the `doc/` directory. In particular,
+`doc/keymapping.txt` describes the keyboard mapping file format and
+`doc/keymap-creation.txt` provides a practical checklist for creating or
+updating keymaps.
+
+
 ## Troubleshooting
 
 ### `failed to open X11 display`

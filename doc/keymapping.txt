@@ -177,7 +177,8 @@ mod5        Scroll_Lock (0x4e)
 Updating / writing keymap files
 ===============================
 When writing new or updating keymap files, please use comments and
-blanks, to increase readability. The "sv" keymap is a good template. 
+blanks, to increase readability. The "sv" keymap is a good template.
+For a shorter checklist, see doc/keymap-creation.txt.
 
 When you need to add a translation to a keymap file, do:
 
