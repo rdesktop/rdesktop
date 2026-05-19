@@ -24,8 +24,6 @@
 #include <errno.h>
 #include <iconv.h>
 #include <stdarg.h>
-#include <assert.h>
-
 #include "rdesktop.h"
 
 #include "utils.h"
@@ -494,19 +492,25 @@ logger_set_subjects(char *subjects)
 static size_t
 _utils_data_to_hex(uint8 *data, size_t len, char *out, size_t size)
 {
-	size_t i;
-	char hex[4];
+	size_t i, offset, needed;
 
-	assert((len * 2) < size);
+	needed = (len > (((size_t) -1) / 2)) ? ((size_t) -1) : len * 2;
+
+	if (size == 0)
+		return needed;
 
 	memset(out, 0, size);
+	offset = 0;
 	for (i = 0; i < len; i++)
 	{
-		snprintf(hex, sizeof(hex), "%.2x", data[i]);
-		strcat(out, hex);
+		if ((size - offset) < 3)
+			break;
+
+		snprintf(out + offset, size - offset, "%.2x", data[i]);
+		offset += 2;
 	}
 
-	return (len*2);
+	return needed;
 }
 
 static size_t
