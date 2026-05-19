@@ -113,9 +113,7 @@ rdpsnd_send_waveconfirm(uint16 tick, uint8 packet_index)
 void
 rdpsnd_record(const void *data, unsigned int size)
 {
-	UNUSED(data);
-	UNUSED(size);
-	/* TODO: Send audio over RDP */
+	rdpsnd_input_record(data, size);
 }
 
 static RD_BOOL
@@ -146,6 +144,15 @@ rdpsnd_auto_select(void)
 	}
 
 	return False;
+}
+
+struct audio_driver *
+rdpsnd_select_driver(void)
+{
+	if (current_driver == NULL)
+		rdpsnd_auto_select();
+
+	return current_driver;
 }
 
 static void
@@ -582,6 +589,7 @@ rdpsnd_reset_state(void)
 	device_open = False;
 	rdpsnd_queue_clear();
 	rdpsnd_negotiated = False;
+	rdpsnd_input_reset_state();
 }
 
 

@@ -1661,6 +1661,9 @@ main(int argc, char *argv[])
 	rdpdr_init();
 
 	dvc_init();
+#ifdef WITH_RDPSND
+	rdpsnd_input_init();
+#endif
 	rdpedisp_init();
 
 	setup_user_requested_session_size();

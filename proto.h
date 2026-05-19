@@ -188,6 +188,10 @@ void rdpdr_check_fds(fd_set * rfds, fd_set * wfds, RD_BOOL timed_out);
 RD_BOOL rdpdr_abort_io(uint32 fd, uint32 major, RD_NTSTATUS status);
 /* rdpsnd.c */
 void rdpsnd_record(const void *data, unsigned int size);
+void rdpsnd_input_init(void);
+void rdpsnd_input_record(const void *data, unsigned int size);
+void rdpsnd_input_reset_state(void);
+struct audio_driver *rdpsnd_select_driver(void);
 RD_BOOL rdpsnd_init(char *optarg);
 void rdpsnd_show_help(void);
 void rdpsnd_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv);

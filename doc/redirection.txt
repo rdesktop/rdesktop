@@ -80,3 +80,13 @@ Syntax: -r sound:[local|off|remote]
 Example: -r sound:remote
 
 
+
+
+Microphone input
+================
+
+When sound redirection is enabled with `-r sound:local`, rdesktop also registers
+the RDP AUDIO_INPUT dynamic virtual channel. If the server requests microphone
+recording and the selected local audio driver supports capture, rdesktop opens
+the local recording device and sends PCM audio to the server. The PulseAudio and
+ALSA drivers provide capture hooks.

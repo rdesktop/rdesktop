@@ -329,7 +329,7 @@ if test -n "$PKG_CONFIG"; then
 fi
 
 if test "$sound" != "no"; then
-    SOUNDOBJ="$SOUNDOBJ rdpsnd.o rdpsnd_dsp.o"
+    SOUNDOBJ="$SOUNDOBJ rdpsnd.o rdpsnd_dsp.o rdpsnd_input.o"
     CFLAGS="$CFLAGS $LIBSAMPLERATE_CFLAGS"
     LIBS="$LIBS $LIBSAMPLERATE_LIBS"
     AC_DEFINE(WITH_RDPSND)
