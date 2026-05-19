@@ -5,6 +5,7 @@
    Copyright (C) Jay Sorg 2006-2008
    Copyright 2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
    Copyright 2017 Alexander Zakharov <uglym8@gmail.com>
+   Copyright 2026 Marco Fortina <marco_fortina@hotmail.it>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -23,6 +24,7 @@
 #ifndef _RDSSL_H
 #define _RDSSL_H
 
+#include <nettle/version.h>
 #include <nettle/md5.h>
 #include <nettle/sha1.h>
 #include <nettle/arcfour.h>

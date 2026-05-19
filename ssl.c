@@ -5,6 +5,7 @@
    Copyright (C) Jay Sorg <j@american-data.com> 2006-2008
    Copyright 2016-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
    Copyright 2017 Alexander Zakharov <uglym8@gmail.com>
+   Copyright 2026 Marco Fortina <marco_fortina@hotmail.it>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -41,7 +42,11 @@ rdssl_sha1_update(RDSSL_SHA1 * sha1, uint8 * data, uint32 len)
 void
 rdssl_sha1_final(RDSSL_SHA1 * sha1, uint8 * out_data)
 {
+#if NETTLE_VERSION_MAJOR >= 4
+	sha1_digest(sha1, out_data);
+#else
 	sha1_digest(sha1, SHA1_DIGEST_SIZE, out_data);
+#endif
 }
 
 void
@@ -59,7 +64,11 @@ rdssl_md5_update(RDSSL_MD5 * md5, uint8 * data, uint32 len)
 void
 rdssl_md5_final(RDSSL_MD5 * md5, uint8 * out_data)
 {
+#if NETTLE_VERSION_MAJOR >= 4
+	md5_digest(md5, out_data);
+#else
 	md5_digest(md5, MD5_DIGEST_SIZE, out_data);
+#endif
 }
 
 void
@@ -360,5 +369,9 @@ rdssl_hmac_md5(const void *key, int key_len, const unsigned char *msg, int msg_l
 
 	hmac_md5_set_key(&ctx, key_len, key);
 	hmac_md5_update(&ctx, msg_len, msg);
+#if NETTLE_VERSION_MAJOR >= 4
+	hmac_md5_digest(&ctx, md);
+#else
 	hmac_md5_digest(&ctx, MD5_DIGEST_SIZE, md);
+#endif
 }
