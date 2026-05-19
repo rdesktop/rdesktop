@@ -1,10 +1,13 @@
-# IMPORTANT: rdesktop is no longer maintained
+# 📣 rdesktop – Actively Maintained Fork
 
-Please, beware that this project is no longer maintained and hadn't received
-a patch in many years. There are reported security vulnerabilities, yet those
-haven't been reviewed.
+**The original [rdesktop/rdesktop](https://github.com/rdesktop/rdesktop) is no longer maintained**
+and has not received updates for many years. It contains known security vulnerabilities.
 
-Use with caution and use it at your own risk.
+✅ **This fork is actively maintained** and receives bug fixes, security patches and improvements.
+
+**Use this repository instead of the original one.**
+
+Contributions, bug reports and pull requests are welcome!
 
 # rdesktop - A Remote Desktop Protocol client
 
