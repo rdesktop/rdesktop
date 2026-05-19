@@ -23,6 +23,12 @@ Domain for authentication.
 .BR "-s <shell>"
 Startup shell for the user - starts a specific application instead of Explore.
 If SeamlessRDP is enabled this is the application which is started in seamless mode.
+
+On modern Windows and RDS deployments, launching a single application may
+require RemoteApp/server-side policy configuration. If the server is not
+configured to allow that application, the option can result in a normal
+desktop session or a server-side access error instead of launching the
+requested command.
 .TP
 .BR "-c <directory>"
 The initial working directory for the user.  Often used in combination with -s
