@@ -2,6 +2,7 @@
    rdesktop: A Remote Desktop Protocol client.
    Persistent Bitmap Cache routines
    Copyright (C) Jeroen Meijer <jeroen@oldambt7.com> 2004-2008
+   Copyright 2026 Marco Fortina <marco_fortina@hotmail.it>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -19,6 +20,8 @@
 
 #include "rdesktop.h"
 
+#include <ctype.h>
+
 #define MAX_CELL_SIZE		0x1000	/* pixels */
 
 #define IS_PERSISTENT(id) (id < 8 && g_pstcache_fd[id] > 0)
@@ -32,6 +35,59 @@ int g_pstcache_fd[8];
 int g_pstcache_Bpp;
 RD_BOOL g_pstcache_enumerated = False;
 uint8 zero_key[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+
+static char g_pstcache_namespace[128] = "default";
+
+static void
+pstcache_sanitize_namespace(char *out, size_t out_size, const char *in)
+{
+	size_t i;
+	size_t pos = 0;
+
+	if (out_size == 0)
+		return;
+
+	for (i = 0; in != NULL && in[i] != '\0' && pos + 1 < out_size; i++)
+	{
+		unsigned char c = (unsigned char) in[i];
+
+		if (isalnum(c) || c == '-' || c == '_')
+		{
+			out[pos++] = c;
+		}
+		else if (pos > 0 && out[pos - 1] != '_')
+		{
+			out[pos++] = '_';
+		}
+	}
+
+	if (pos == 0)
+		out[pos++] = 'd';
+
+	out[pos] = '\0';
+}
+
+void
+pstcache_set_namespace(const char *server, int port, const char *domain, const char *username)
+{
+	char raw[512];
+	char sanitized[96];
+	uint32 hash;
+
+	if (server == NULL || server[0] == '\0')
+		server = "unknown";
+	if (domain == NULL)
+		domain = "";
+	if (username == NULL || username[0] == '\0')
+		username = "nouser";
+
+	snprintf(raw, sizeof(raw), "%s_%d_%s_%s", server, port, domain, username);
+	raw[sizeof(raw) - 1] = '\0';
+	hash = utils_djb2_hash(raw);
+	pstcache_sanitize_namespace(sanitized, sizeof(sanitized), raw);
+	snprintf(g_pstcache_namespace, sizeof(g_pstcache_namespace), "%08x_%s", hash, sanitized);
+	g_pstcache_namespace[sizeof(g_pstcache_namespace) - 1] = '\0';
+}
 
 
 /* Update mru stamp/index for a bitmap */
@@ -182,7 +238,9 @@ pstcache_init(uint8 cache_id)
 	}
 
 	g_pstcache_Bpp = (g_server_depth + 7) / 8;
-	sprintf(filename, "cache/pstcache_%d_%d", cache_id, g_pstcache_Bpp);
+	snprintf(filename, sizeof(filename), "cache/pstcache_%s_%d_%d",
+		 g_pstcache_namespace, cache_id, g_pstcache_Bpp);
+	filename[sizeof(filename) - 1] = '\0';
 	logger(Core, Debug, "pstcache_init(), bitmap cache file %s", filename);
 
 	fd = rd_open_file(filename);

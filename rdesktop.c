@@ -1691,6 +1691,8 @@ main(int argc, char *argv[])
 		utils_apply_session_size_limitations(&g_requested_session_width,
 						     &g_requested_session_height);
 
+		pstcache_set_namespace(server, g_tcp_port_rdp, domain, g_username);
+
 		if (!rdp_connect
 		    (server, flags, domain, g_password, shell, directory, g_reconnect_loop))
 		{

@@ -123,6 +123,7 @@ RD_BOOL pstcache_load_bitmap(uint8 cache_id, uint16 cache_idx);
 RD_BOOL pstcache_save_bitmap(uint8 cache_id, uint16 cache_idx, uint8 * key, uint8 width,
 			     uint8 height, uint16 length, uint8 * data);
 int pstcache_enumerate(uint8 id, HASH_KEY * keylist);
+void pstcache_set_namespace(const char *server, int port, const char *domain, const char *username);
 RD_BOOL pstcache_init(uint8 cache_id);
 /* rdesktop.c */
 int main(int argc, char *argv[]);
