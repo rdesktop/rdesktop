@@ -194,8 +194,13 @@ theming is enabled, and all other options are disabled (corresponding
 to modem (56 Kbps)). Setting experience to b[roadband] enables menu
 animations and full window dragging. Setting experience to l[an] will
 also enable the desktop wallpaper. Setting experience to m[odem]
-disables all (including themes). Experience can also be a hexadecimal
+requests that wallpaper, full window dragging, menu animations, theming
+and cursor shadows are disabled. Experience can also be a hexadecimal
 number containing the flags.
+
+These flags are sent as RDP performance hints. The server, server-side
+policy, Windows version or individual applications may still display
+animations or transitions even when rdesktop requests the modem profile.
 .TP
 .BR "-P"
 Enable caching of bitmaps to disk (persistent bitmap caching). This generally
