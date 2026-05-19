@@ -29,6 +29,30 @@ fi
 
 AC_PATH_TOOL(PKG_CONFIG, pkg-config)
 
+dnl Prefer pkg.m4 when it is available, but keep configure.ac usable on
+dnl systems where only the pkg-config executable is installed.
+dnl Release tarballs can otherwise warn that pkg-config is unavailable even
+dnl when /usr/bin/pkg-config exists, because PKG_CHECK_MODULES was missing
+dnl when configure was generated.
+m4_ifdef([PKG_CHECK_MODULES], [
+	AC_DEFUN([RD_PKG_CHECK_MODULES], [PKG_CHECK_MODULES([$1], [$2], [$3], [$4])])
+], [
+	AC_DEFUN([RD_PKG_CHECK_MODULES], [
+		AC_MSG_CHECKING([for $2])
+		AS_IF([test -n "$PKG_CONFIG" && "$PKG_CONFIG" --exists "$2"], [
+			AC_MSG_RESULT([yes])
+			$1[]_CFLAGS=`$PKG_CONFIG --cflags "$2"`
+			$1[]_LIBS=`$PKG_CONFIG --libs "$2"`
+			AC_SUBST($1[]_CFLAGS)
+			AC_SUBST($1[]_LIBS)
+			$3
+		], [
+			AC_MSG_RESULT([no])
+			$4
+		])
+	])
+])
+
 # no .pc for GMP
 AC_SEARCH_LIBS([__gmpz_init], [gmp])
 
@@ -44,15 +68,6 @@ AC_CHECK_HEADER(langinfo.h, AC_DEFINE(HAVE_LANGINFO_H))
 AC_CHECK_HEADER(sysexits.h, AC_DEFINE(HAVE_SYSEXITS_H))
 
 AC_CHECK_TOOL(STRIP, strip, :)
-
-dnl Don't depend on pkg-config
-m4_ifdef([PKG_CHECK_MODULES], [], [
-		m4_errprint([warning: pkg-config checks are not available])
-		m4_defun([PKG_CHECK_MODULES], [
-			AC_MSG_WARN([pkg-config not available, cannot check for $2])
-			$4
-		])
-])
 
 dnl Add option to build with using address sanitizer
 AC_ARG_ENABLE([address-sanitizer], AS_HELP_STRING([--enable-address-sanitizer], \
@@ -80,7 +95,7 @@ AS_IF([test "x$enable_credssp" != "xno"], [
 			case "$host" in
 				*-*-freebsd*)
 				if test -n "$PKG_CONFIG"; then
-					PKG_CHECK_MODULES(GSSAPI, gss, [WITH_CREDSSP=1], [WITH_CREDSSP=0])
+					RD_PKG_CHECK_MODULES(GSSAPI, gss, [WITH_CREDSSP=1], [WITH_CREDSSP=0])
 				fi
 				;;
 			*)
@@ -88,7 +103,7 @@ AS_IF([test "x$enable_credssp" != "xno"], [
 			esac
 		else
 			if test -n "$PKG_CONFIG"; then
-				PKG_CHECK_MODULES(GSSAPI, krb5-gssapi, [WITH_CREDSSP=1], [WITH_CREDSSP=0])
+				RD_PKG_CHECK_MODULES(GSSAPI, krb5-gssapi, [WITH_CREDSSP=1], [WITH_CREDSSP=0])
 			fi
 		fi
 		;;
@@ -113,7 +128,7 @@ AC_SUBST(CREDSSPOBJ)
 
 # xrandr
 if test -n "$PKG_CONFIG"; then
-    PKG_CHECK_MODULES(XRANDR, xrandr, [HAVE_XRANDR=1], [HAVE_XRANDR=0])
+    RD_PKG_CHECK_MODULES(XRANDR, xrandr, [HAVE_XRANDR=1], [HAVE_XRANDR=0])
 fi
 if test x"$HAVE_XRANDR" = "x1"; then
     CFLAGS="$CFLAGS $XRANDR_CFLAGS"
@@ -123,7 +138,7 @@ fi
 
 # Xcursor
 if test -n "$PKG_CONFIG"; then
-    PKG_CHECK_MODULES(XCURSOR, xcursor, [HAVE_XCURSOR=1], [HAVE_XCURSOR=0])
+    RD_PKG_CHECK_MODULES(XCURSOR, xcursor, [HAVE_XCURSOR=1], [HAVE_XCURSOR=0])
 fi
 if test x"$HAVE_XCURSOR" = "x1"; then
     CFLAGS="$CFLAGS $XCURSOR_CFLAGS"
@@ -138,7 +153,7 @@ fi
 
 # libtasn1
 if test -n "$PKG_CONFIG"; then
-    PKG_CHECK_MODULES(LIBTASN1, libtasn1, [HAVE_LIBTASN1=1], [HAVE_LIBTASN1=0])
+    RD_PKG_CHECK_MODULES(LIBTASN1, libtasn1, [HAVE_LIBTASN1=1], [HAVE_LIBTASN1=0])
 fi
 if test x"$HAVE_LIBTASN1" = "x1"; then
     CFLAGS="$CFLAGS $LIBTASN1_CFLAGS"
@@ -152,7 +167,7 @@ fi
 
 # nettle
 if test -n "$PKG_CONFIG"; then
-    PKG_CHECK_MODULES(NETTLE, nettle, [HAVE_NETTLE=1], [HAVE_NETTLE=0])
+    RD_PKG_CHECK_MODULES(NETTLE, nettle, [HAVE_NETTLE=1], [HAVE_NETTLE=0])
 fi
 if test x"$HAVE_NETTLE" = "x1"; then
     CFLAGS="$CFLAGS $NETTLE_CFLAGS"
@@ -166,7 +181,7 @@ fi
 
 # hogweed
 if test -n "$PKG_CONFIG"; then
-    PKG_CHECK_MODULES(HOGWEED, hogweed, [HAVE_HOGWEED=1], [HAVE_HOGWEED=0])
+    RD_PKG_CHECK_MODULES(HOGWEED, hogweed, [HAVE_HOGWEED=1], [HAVE_HOGWEED=0])
 fi
 if test x"$HAVE_HOGWEED" = "x1"; then
     CFLAGS="$CFLAGS $HOGWEED_CFLAGS"
@@ -181,7 +196,7 @@ fi
 # GnuTLS
 
 if test -n "$PKG_CONFIG"; then
-    PKG_CHECK_MODULES(GNUTLS, gnutls >= 3.2.0, [HAVE_GNUTLS=1], [HAVE_GNUTLS=0])
+    RD_PKG_CHECK_MODULES(GNUTLS, gnutls >= 3.2.0, [HAVE_GNUTLS=1], [HAVE_GNUTLS=0])
 fi
 if test x"$HAVE_GNUTLS" = "x1"; then
     CFLAGS="$CFLAGS $GNUTLS_CFLAGS"
@@ -204,7 +219,7 @@ AS_IF([test "x$enable_smartcard" != "xno"], [
 		;;
 	     *)
 		if test -n "$PKG_CONFIG"; then
-		   PKG_CHECK_MODULES(PCSCLITE, libpcsclite, [WITH_SCARD=1], [WITH_SCARD=0])
+		   RD_PKG_CHECK_MODULES(PCSCLITE, libpcsclite, [WITH_SCARD=1], [WITH_SCARD=0])
 		fi
 		;;
 	esac
@@ -223,7 +238,7 @@ AS_IF([test "x$enable_smartcard" != "xno"], [
 	fi
 
 	AC_MSG_CHECKING([for PCSC-lite >= 1.6.0 (PnP/Notifications support)])
-	PKG_CHECK_MODULES(PNP_NOTIFICATIONS, libpcsclite >= 1.6.0, [WITH_PNP_NOTIFICATIONS=1], [WITH_PNP_NOTIFICATIONS=0])
+	RD_PKG_CHECK_MODULES(PNP_NOTIFICATIONS, libpcsclite >= 1.6.0, [WITH_PNP_NOTIFICATIONS=1], [WITH_PNP_NOTIFICATIONS=0])
 	AC_DEFINE(WITH_PNP_NOTIFICATIONS)
 
 	AC_MSG_CHECKING([for old version of PCSC])
@@ -299,10 +314,10 @@ AC_ARG_ENABLE(static-libsamplerate,
     [static_libsamplerate=no])
 
 if test -n "$PKG_CONFIG"; then
-    PKG_CHECK_MODULES(LIBAO, ao, [HAVE_LIBAO=1], [HAVE_LIBAO=0])
-    PKG_CHECK_MODULES(PULSE, libpulse, [HAVE_PULSE=1], [HAVE_PULSE=0])
-    PKG_CHECK_MODULES(ALSA, alsa, [HAVE_ALSA=1], [HAVE_ALSA=0])
-    PKG_CHECK_MODULES(LIBSAMPLERATE, samplerate, [HAVE_LIBSAMPLERATE=1], [HAVE_LIBSAMPLERATE=0])
+    RD_PKG_CHECK_MODULES(LIBAO, ao, [HAVE_LIBAO=1], [HAVE_LIBAO=0])
+    RD_PKG_CHECK_MODULES(PULSE, libpulse, [HAVE_PULSE=1], [HAVE_PULSE=0])
+    RD_PKG_CHECK_MODULES(ALSA, alsa, [HAVE_ALSA=1], [HAVE_ALSA=0])
+    RD_PKG_CHECK_MODULES(LIBSAMPLERATE, samplerate, [HAVE_LIBSAMPLERATE=1], [HAVE_LIBSAMPLERATE=0])
     if test x"$HAVE_LIBSAMPLERATE" = "x1"; then
         AC_DEFINE(HAVE_LIBSAMPLERATE)
         if test x"$static_libsamplerate" = "xyes"; then
