@@ -73,6 +73,7 @@ extern RD_BOOL g_pending_resize_defer;
 extern struct timeval g_pending_resize_defer_timer;
 
 extern char g_title[];
+extern char g_wm_class[];
 extern char g_seamless_spawn_cmd[];
 /* Color depth of the RDP session.
    As of RDP 5.1, it may be 8, 15, 16 or 24. */
@@ -2258,7 +2259,8 @@ ui_create_window(uint32 width, uint32 height)
 	classhints = XAllocClassHint();
 	if (classhints != NULL)
 	{
-		classhints->res_name = classhints->res_class = "rdesktop";
+		classhints->res_name = classhints->res_class =
+			g_wm_class[0] ? g_wm_class : "rdesktop";
 		XSetClassHint(g_display, g_wnd, classhints);
 		XFree(classhints);
 	}
@@ -4602,8 +4604,16 @@ ui_seamless_create_window(unsigned long id, unsigned long group, unsigned long p
 	classhints = XAllocClassHint();
 	if (classhints != NULL)
 	{
-		classhints->res_name = "rdesktop";
-		classhints->res_class = "SeamlessRDP";
+		if (g_wm_class[0])
+		{
+			classhints->res_name = g_wm_class;
+			classhints->res_class = g_wm_class;
+		}
+		else
+		{
+			classhints->res_name = "rdesktop";
+			classhints->res_class = "SeamlessRDP";
+		}
 		XSetClassHint(g_display, wnd, classhints);
 		XFree(classhints);
 	}

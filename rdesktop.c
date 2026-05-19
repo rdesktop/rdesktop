@@ -61,6 +61,7 @@ uint8 g_static_rdesktop_salt_16[16] = {
 };
 
 char g_title[64] = "";
+char g_wm_class[64] = "";
 char *g_username;
 char g_password[64] = "";
 char g_hostname[16] = "";
@@ -197,6 +198,7 @@ usage(char *program)
 	fprintf(stderr, "   -K: keep window manager key bindings\n");
 	fprintf(stderr, "   -S: caption button size (single application mode)\n");
 	fprintf(stderr, "   -T: window title\n");
+	fprintf(stderr, "   -w: WM_CLASS name\n");
 	fprintf(stderr, "   -t: disable use of remote ctrl\n");
 	fprintf(stderr, "   -N: enable numlock synchronization\n");
 	fprintf(stderr, "   -X: embed into another window with a given id.\n");
@@ -821,7 +823,7 @@ main(int argc, char *argv[])
 	g_num_devices = 0;
 
 	while ((c = getopt(argc, argv,
-			   "A:V:u:L:d:s:c:p:n:k:g:o:fbBeEitmMzCDKS:T:NX:a:x:Pr:045vh?")) != -1)
+			   "A:V:u:L:d:s:c:p:n:k:g:o:fbBeEitmMzCDKS:T:w:NX:a:x:Pr:045vh?")) != -1)
 	{
 		switch (c)
 		{
@@ -956,6 +958,10 @@ main(int argc, char *argv[])
 
 			case 'T':
 				STRNCPY(g_title, optarg, sizeof(g_title));
+				break;
+
+			case 'w':
+				STRNCPY(g_wm_class, optarg, sizeof(g_wm_class));
 				break;
 
 			case 'N':
