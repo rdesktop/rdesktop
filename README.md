@@ -84,3 +84,17 @@ Terminal Services enabled, or there is a firewall blocking access.
 
 You can also specify a number of options on the command line.  These are listed
 in the rdesktop manual page (run `man rdesktop`).
+
+
+## Troubleshooting
+
+### `failed to open X11 display`
+
+rdesktop is an X11 client. If startup fails with:
+
+	UI(error): ui_init(), failed to open X11 display:
+
+then rdesktop could not connect to an X server. Start it from a graphical X11
+session, make sure the `DISPLAY` environment variable is set, and avoid running
+it from a plain TTY or from `root` without X11 access. When using SSH, enable X11
+forwarding or run rdesktop on the machine that owns the graphical session.
