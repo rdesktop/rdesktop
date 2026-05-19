@@ -107,6 +107,17 @@ To choose a keyboard layout explicitly, use `-k`, for example:
 
 	% rdesktop -k ja server
 
+### Certificate trust prompt
+
+When a server certificate is not trusted by the system trust store, rdesktop asks:
+
+	Do you trust this certificate (yes/no)?
+
+Type `yes` to add a host-specific exception, or `no` to abort the connection.
+Accepted exceptions are stored under the per-user rdesktop certificate store in
+`~/.local/share/rdesktop/certs/known_certs`. There is no single key shortcut for
+this prompt.
+
 ### `failed to open X11 display`
 
 rdesktop is an X11 client. If startup fails with:
