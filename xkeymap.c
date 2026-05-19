@@ -645,6 +645,14 @@ handle_special_keys(uint32 keysym, unsigned int state, uint32 ev_time, RD_BOOL p
 			    && (get_key_state(state, XK_Control_L)
 				|| get_key_state(state, XK_Control_R)))
 			{
+				/* Ctrl-Alt-Shift-Enter: iconify the window */
+				if (get_key_state(state, XK_Shift_L) || get_key_state(state, XK_Shift_R))
+				{
+					if (pressed)
+						xwin_iconify_window();
+					return True;
+				}
+
 				/* Ctrl-Alt-Enter: toggle full screen */
 				if (pressed)
 				{

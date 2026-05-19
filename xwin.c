@@ -2414,6 +2414,16 @@ ui_release_keyboard(void)
 }
 
 void
+xwin_iconify_window(void)
+{
+	if (g_display == NULL)
+		return;
+
+	XIconifyWindow(g_display, g_wnd, DefaultScreen(g_display));
+	XFlush(g_display);
+}
+
+void
 xwin_toggle_fullscreen(void)
 {
 	uint32 x, y, width, height;

@@ -277,6 +277,7 @@ void ui_destroy_window(void);
 void ui_release_keyboard(void);
 void ui_update_window_sizehints(uint32 width, uint32 height);
 RD_BOOL ui_have_window(void);
+void xwin_iconify_window(void);
 void xwin_toggle_fullscreen(void);
 void ui_select(int rdp_socket);
 void ui_move_pointer(int x, int y);
