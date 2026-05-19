@@ -96,6 +96,17 @@ updating keymaps.
 
 ## Troubleshooting
 
+### `Autoselecting keyboard map ... from locale`
+
+This line is informational, not a connection failure. It only means rdesktop
+selected a keyboard map from your current locale. If the session does not open,
+check the next error line for the real failure, such as an unreachable host, a
+closed TCP port, a certificate prompt, or an X11 display problem.
+
+To choose a keyboard layout explicitly, use `-k`, for example:
+
+	% rdesktop -k ja server
+
 ### `failed to open X11 display`
 
 rdesktop is an X11 client. If startup fails with:
