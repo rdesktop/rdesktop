@@ -4,6 +4,7 @@
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2005-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
    Copyright 2017-2018 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2026 Marco Fortina <marco_fortina@hotmail.it>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -588,6 +589,7 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 	uint32 cacert_len, cert_len, flags;
 	RDSSL_CERT *cacert, *server_cert;
 	RDSSL_RKEY *server_public_key;
+	RD_BOOL have_public_key = False;
 	uint16 tag, length;
 	size_t next_tag;
 
@@ -644,6 +646,7 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 						       "sec_parse_crypt_info(), invalid public key");
 						return False;
 					}
+					have_public_key = True;
 					logger(Protocol, Debug,
 					       "sec_parse_crypt_info(), got public key");
 
@@ -665,6 +668,13 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 			}
 
 			s_seek(s, next_tag);
+		}
+
+		if (!have_public_key)
+		{
+			logger(Protocol, Error,
+			       "sec_parse_crypt_info(), server did not send an RSA public key");
+			return False;
 		}
 	}
 	else
