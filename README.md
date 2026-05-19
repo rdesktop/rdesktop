@@ -47,7 +47,9 @@ Connect to an RDP server with:
 
 	% rdesktop server
 
-where `server` is the name of the Terminal Services machine. If you receive
+where `server` is the name of the Terminal Services machine. By default,
+rdesktop connects to the standard RDP TCP port 3389; use `server:port` to
+connect to a non-standard port. If you receive
 "Connection refused", this probably means that the server does not have
 Terminal Services enabled, or there is a firewall blocking access.
 
