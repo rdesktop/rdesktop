@@ -5,6 +5,7 @@
    Copyright 2002-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
    Copyright 2010-2018 Henrik Andersson <hean01@cendio.se> for Cendio AB
    Copyright 2017-2018 Alexander Zakharov <uglym8@gmail.com>
+   Copyright 2026 Marco Fortina <marco_fortina@hotmail.it>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -1415,6 +1416,7 @@ main(int argc, char *argv[])
 		rdp_main_loop(&deactivated, &ext_disc_reason);
 
 		tcp_run_ui(False);
+		ui_release_keyboard();
 
 		logger(Core, Verbose, "Disconnecting...");
 		rdp_disconnect();

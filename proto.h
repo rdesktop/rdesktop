@@ -1,6 +1,7 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    Copyright (C) Matthew Chapman 1999-2008
+   Copyright 2026 Marco Fortina <marco_fortina@hotmail.it>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -273,6 +274,7 @@ void ui_deinit(void);
 RD_BOOL ui_create_window(uint32 width, uint32 height);
 void ui_resize_window(uint32 width, uint32 height);
 void ui_destroy_window(void);
+void ui_release_keyboard(void);
 void ui_update_window_sizehints(uint32 width, uint32 height);
 RD_BOOL ui_have_window(void);
 void xwin_toggle_fullscreen(void);

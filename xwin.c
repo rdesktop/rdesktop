@@ -2399,6 +2399,16 @@ ui_destroy_window(void)
 }
 
 void
+ui_release_keyboard(void)
+{
+	if (g_display == NULL)
+		return;
+
+	XUngrabKeyboard(g_display, CurrentTime);
+	XFlush(g_display);
+}
+
+void
 xwin_toggle_fullscreen(void)
 {
 	uint32 x, y, width, height;
