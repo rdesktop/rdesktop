@@ -5,6 +5,7 @@
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2003-2008 Peter Astrand <astrand@cendio.se> for Cendio AB
    Copyright 2014-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2026 Marco Fortina <marco_fortina@hotmail.it>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -37,7 +38,7 @@
 
 extern Display *g_display;
 extern Window g_wnd;
-extern char g_keymapname[16];
+extern char g_keymapname[PATH_MAX];
 extern unsigned int g_keylayout;
 extern int g_keyboard_type;
 extern int g_keyboard_subtype;
