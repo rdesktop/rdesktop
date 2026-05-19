@@ -286,8 +286,9 @@ Enable clipboard redirection. 'PRIMARYCLIPBOARD' looks at both PRIMARY and
 CLIPBOARD when sending data to server. 'CLIPBOARD' looks at only 'CLIPBOARD'.
 .TP
 .BR "-0"
-Attach to the console of the server (requires Windows Server 2003
-or newer).
+Attach to the console/admin session of the server (requires Windows Server
+2003 or newer). The aliases `--admin` and `/admin` are also accepted for
+users familiar with mstsc or FreeRDP syntax.
 .TP
 .BR "-4"
 Use RDP version 4.

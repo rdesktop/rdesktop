@@ -253,7 +253,7 @@ usage(char *program)
 	fprintf(stderr,
 		"                   \"AKS\"              -> Device vendor name                 \n");
 #endif
-	fprintf(stderr, "   -0: attach to console\n");
+	fprintf(stderr, "   -0, --admin, /admin: attach to console/admin session\n");
 	fprintf(stderr, "   -4: use RDP version 4\n");
 	fprintf(stderr, "   -5: use RDP version 5 (default)\n");
 #ifdef WITH_SCARD
@@ -1107,6 +1107,12 @@ main(int argc, char *argv[])
 	g_embed_wnd = 0;
 
 	g_num_devices = 0;
+
+	for (c = 1; c < argc; c++)
+	{
+		if (!strcmp(argv[c], "--admin") || !strcmp(argv[c], "/admin"))
+			argv[c] = "-0";
+	}
 
 	while ((c = getopt(argc, argv,
 			   "A:V:u:L:d:s:c:p:n:k:g:o:fbBeEitmMzCDKS:T:w:NX:a:x:Pr:R045vh?")) != -1)
