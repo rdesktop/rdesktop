@@ -20,9 +20,9 @@ mcs_send(STREAM s)
 }
 
 STREAM
-mcs_recv(uint16 * channel, uint8 * rdpver)
+mcs_recv(uint16 * channel, RD_BOOL * is_fastpath, uint8 * fastpath_hdr)
 {
-  return (STREAM)mock(channel, rdpver);
+  return (STREAM)mock(channel, is_fastpath, fastpath_hdr);
 }
 
 RD_BOOL
@@ -39,9 +39,9 @@ mcs_connect_finalize(STREAM s)
 }
 
 void
-mcs_disconnect(void)
+mcs_disconnect(int reason)
 {
-  mock();
+  mock(reason);
 }
 
 void
