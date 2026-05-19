@@ -555,6 +555,282 @@ read_password(char *password, int size)
 	return ret;
 }
 
+
+static char *
+trim_rdp_value(char *value)
+{
+	char *end;
+
+	while (*value && isspace((unsigned char) *value))
+		value++;
+
+	end = value + strlen(value);
+	while (end > value && isspace((unsigned char) *(end - 1)))
+		*(--end) = '\0';
+
+	return value;
+}
+
+static RD_BOOL
+rdp_key_equals(const char *a, const char *b)
+{
+	while (*a && *b)
+	{
+		if (tolower((unsigned char) *a) != tolower((unsigned char) *b))
+			return False;
+		a++;
+		b++;
+	}
+
+	return *a == '\0' && *b == '\0';
+}
+
+static RD_BOOL
+rdp_file_line_value(char *line, char **key, char *type, char **value)
+{
+	char *first_colon, *second_colon;
+
+	/* Strip UTF-8 BOM from the first line if present. */
+	if ((uint8) line[0] == 0xef && (uint8) line[1] == 0xbb && (uint8) line[2] == 0xbf)
+		line += 3;
+
+	line = trim_rdp_value(line);
+	if (*line == '\0')
+		return False;
+
+	first_colon = strchr(line, ':');
+	if (first_colon == NULL || first_colon[1] == '\0' || first_colon[2] != ':')
+		return False;
+
+	second_colon = first_colon + 2;
+	*first_colon = '\0';
+	*second_colon = '\0';
+
+	*key = trim_rdp_value(line);
+	*type = first_colon[1];
+	*value = trim_rdp_value(second_colon + 1);
+
+	return True;
+}
+
+static RD_BOOL
+read_rdp_file_line(FILE *fp, RD_BOOL utf16_le, RD_BOOL utf16_be, char *line, size_t size);
+
+static RD_BOOL
+parse_rdp_file(const char *filename, char *server, size_t server_size, char *domain,
+	       size_t domain_size, char *shell, size_t shell_size, char *directory,
+	       size_t directory_size, RD_BOOL username_option, RD_BOOL password_option,
+	       RD_BOOL domain_option, RD_BOOL shell_option, RD_BOOL directory_option,
+	       RD_BOOL keymap_option, RD_BOOL geometry_option, RD_BOOL fullscreen_option,
+	       RD_BOOL depth_option)
+{
+	FILE *fp;
+	char line[1024];
+	RD_BOOL have_server = False;
+	RD_BOOL utf16_le = False, utf16_be = False;
+	int bom1, bom2;
+	RD_BOOL have_width = False, have_height = False;
+	uint32 width = 0, height = 0;
+
+	fp = fopen(filename, "rb");
+	if (fp == NULL)
+	{
+		logger(Core, Error, "failed to open RDP file '%s': %s", filename, strerror(errno));
+		return False;
+	}
+
+	bom1 = fgetc(fp);
+	bom2 = fgetc(fp);
+	if (bom1 == 0xff && bom2 == 0xfe)
+		utf16_le = True;
+	else if (bom1 == 0xfe && bom2 == 0xff)
+		utf16_be = True;
+	else
+	{
+		if (bom2 != EOF)
+			ungetc(bom2, fp);
+		if (bom1 != EOF)
+			ungetc(bom1, fp);
+	}
+
+	while (read_rdp_file_line(fp, utf16_le, utf16_be, line, sizeof(line)))
+	{
+		char *key, *value;
+		char type;
+		char *endptr;
+		long number;
+
+		if (!rdp_file_line_value(line, &key, &type, &value))
+			continue;
+
+		if (type == 's')
+		{
+			if (rdp_key_equals(key, "full address"))
+			{
+				STRNCPY(server, value, server_size);
+				have_server = server[0] != '\0';
+			}
+			else if (!username_option && rdp_key_equals(key, "username"))
+			{
+				xfree(g_username);
+				g_username = (char *) xmalloc(strlen(value) + 1);
+				strcpy(g_username, value);
+			}
+			else if (!domain_option && rdp_key_equals(key, "domain"))
+			{
+				STRNCPY(domain, value, domain_size);
+			}
+			else if (!shell_option && rdp_key_equals(key, "alternate shell"))
+			{
+				STRNCPY(shell, value, shell_size);
+			}
+			else if (!directory_option && rdp_key_equals(key, "shell working directory"))
+			{
+				STRNCPY(directory, value, directory_size);
+			}
+			else if (!keymap_option && rdp_key_equals(key, "keyboard layout"))
+			{
+				STRNCPY(g_keymapname, value, sizeof(g_keymapname));
+			}
+			else if (!password_option && rdp_key_equals(key, "password"))
+			{
+				STRNCPY(g_password, value, sizeof(g_password));
+			}
+		}
+		else if (type == 'i')
+		{
+			errno = 0;
+			number = strtol(value, &endptr, 10);
+			if (errno != 0 || endptr == value)
+				continue;
+
+			if (rdp_key_equals(key, "server port"))
+			{
+				if (number > 0 && number <= 65535)
+					g_tcp_port_rdp = number;
+			}
+			else if (!depth_option && rdp_key_equals(key, "session bpp"))
+			{
+				if (number == 8 || number == 15 || number == 16 || number == 24 || number == 32)
+					g_server_depth = number;
+			}
+			else if (!geometry_option && !fullscreen_option &&
+				 rdp_key_equals(key, "desktopwidth"))
+			{
+				if (number > 0)
+				{
+					width = number;
+					have_width = True;
+				}
+			}
+			else if (!geometry_option && !fullscreen_option &&
+				 rdp_key_equals(key, "desktopheight"))
+			{
+				if (number > 0)
+				{
+					height = number;
+					have_height = True;
+				}
+			}
+			else if (!fullscreen_option && !geometry_option &&
+				 rdp_key_equals(key, "screen mode id"))
+			{
+				if (number == 2)
+				{
+					g_window_size_type = Fullscreen;
+					g_fullscreen = True;
+				}
+			}
+			else if (rdp_key_equals(key, "redirectclipboard"))
+			{
+				g_rdpclip = number != 0;
+			}
+		}
+	}
+
+	if (ferror(fp))
+	{
+		logger(Core, Error, "failed to read RDP file '%s': %s", filename, strerror(errno));
+		fclose(fp);
+		return False;
+	}
+
+	fclose(fp);
+
+	if (!geometry_option && !fullscreen_option && !g_fullscreen && have_width && have_height)
+	{
+		g_requested_session_width = width;
+		g_requested_session_height = height;
+		g_window_size_type = Fixed;
+	}
+
+	if (!have_server)
+	{
+		logger(Core, Error, "RDP file '%s' does not contain 'full address'", filename);
+		return False;
+	}
+
+	return True;
+}
+
+static RD_BOOL
+filename_has_rdp_suffix(const char *filename)
+{
+	size_t len;
+	const char *suffix;
+
+	len = strlen(filename);
+	if (len < 4)
+		return False;
+
+	suffix = filename + len - 4;
+	return rdp_key_equals(suffix, ".rdp");
+}
+
+
+static RD_BOOL
+read_rdp_file_line(FILE *fp, RD_BOOL utf16_le, RD_BOOL utf16_be, char *line, size_t size)
+{
+	size_t pos = 0;
+	RD_BOOL got_data = False;
+
+	while (1)
+	{
+		int ch;
+
+		if (utf16_le || utf16_be)
+		{
+			int first = fgetc(fp);
+			int second;
+
+			if (first == EOF)
+				break;
+			second = fgetc(fp);
+			if (second == EOF)
+				break;
+
+			ch = utf16_le ? first : second;
+		}
+		else
+		{
+			ch = fgetc(fp);
+			if (ch == EOF)
+				break;
+		}
+
+		got_data = True;
+		if (ch == '\r')
+			continue;
+		if (ch == '\n')
+			break;
+		if (pos + 1 < size)
+			line[pos++] = ch;
+	}
+
+	line[pos] = '\0';
+	return got_data;
+}
+
 static void
 parse_server_and_port(char *server)
 {
@@ -785,8 +1061,15 @@ main(int argc, char *argv[])
 	char *p;
 	int c;
 	char *locale = NULL;
-	int username_option = 0;
+	RD_BOOL username_option = False;
+	RD_BOOL password_option = False;
+	RD_BOOL domain_option = False;
+	RD_BOOL shell_option = False;
+	RD_BOOL directory_option = False;
+	RD_BOOL keymap_option = False;
 	RD_BOOL geometry_option = False;
+	RD_BOOL fullscreen_option = False;
+	RD_BOOL depth_option = False;
 #ifdef WITH_RDPSND
 	char *rdpsnd_optarg = NULL;
 #endif
@@ -839,7 +1122,7 @@ main(int argc, char *argv[])
 			case 'u':
 				g_username = (char *) xmalloc(strlen(optarg) + 1);
 				strcpy(g_username, optarg);
-				username_option = 1;
+				username_option = True;
 				break;
 
 			case 'L':
@@ -848,15 +1131,18 @@ main(int argc, char *argv[])
 
 			case 'd':
 				STRNCPY(domain, optarg, sizeof(domain));
+				domain_option = True;
 				break;
 
 			case 's':
 				STRNCPY(shell, optarg, sizeof(shell));
+				shell_option = True;
 				g_seamless_persistent_mode = False;
 				break;
 
 			case 'c':
 				STRNCPY(directory, optarg, sizeof(directory));
+				directory_option = True;
 				break;
 
 			case 'p':
@@ -867,6 +1153,7 @@ main(int argc, char *argv[])
 				}
 
 				STRNCPY(g_password, optarg, sizeof(g_password));
+				password_option = True;
 				flags |= RDP_INFO_AUTOLOGON;
 
 				/* try to overwrite argument so it won't appear in ps */
@@ -890,6 +1177,7 @@ main(int argc, char *argv[])
 
 			case 'k':
 				STRNCPY(g_keymapname, optarg, sizeof(g_keymapname));
+				keymap_option = True;
 				break;
 
 			case 'g':
@@ -904,6 +1192,7 @@ main(int argc, char *argv[])
 			case 'f':
 				g_window_size_type = Fullscreen;
 				g_fullscreen = True;
+				fullscreen_option = True;
 				break;
 
 			case 'b':
@@ -974,6 +1263,7 @@ main(int argc, char *argv[])
 
 			case 'a':
 				g_server_depth = strtol(optarg, NULL, 10);
+				depth_option = True;
 				if (g_server_depth != 8 &&
 				    g_server_depth != 16 &&
 				    g_server_depth != 15 && g_server_depth != 24
@@ -1191,7 +1481,17 @@ main(int argc, char *argv[])
 	}
 
 	STRNCPY(server, argv[optind], sizeof(server));
+	if (filename_has_rdp_suffix(server))
+	{
+		if (!parse_rdp_file(server, server, sizeof(server), domain, sizeof(domain), shell,
+				    sizeof(shell), directory, sizeof(directory), username_option,
+				    password_option, domain_option, shell_option, directory_option,
+				    keymap_option, geometry_option, fullscreen_option, depth_option))
+			return EX_USAGE;
+	}
 	parse_server_and_port(server);
+	if (g_password[0])
+		flags |= RDP_INFO_AUTOLOGON;
 
 	if (g_seamless_rdp)
 	{

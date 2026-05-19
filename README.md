@@ -85,6 +85,17 @@ Terminal Services enabled, or there is a firewall blocking access.
 You can also specify a number of options on the command line.  These are listed
 in the rdesktop manual page (run `man rdesktop`).
 
+rdesktop can also read a Microsoft `.rdp` file when the file path is used
+instead of `server[:port]`:
+
+	% rdesktop connection.rdp
+
+The parser applies common settings such as `full address`, `server port`,
+`username`, `domain`, desktop size, colour depth, startup shell, working
+directory, keyboard layout and clipboard redirection. Explicit command-line
+options override matching settings read from the file.
+
+
 
 ## Documentation
 

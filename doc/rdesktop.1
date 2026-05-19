@@ -5,12 +5,17 @@
 .SH SYNOPSIS
 .B rdesktop [options] server[:port]
 .br
+.B rdesktop [options] file.rdp
+.br
 .SH DESCRIPTION
 .I rdesktop
 is a client for Remote Desktop Protocol (RDP), used in a number of Microsoft products.
 It is known to work with Microsoft Windows server versions ranging from NT 4 terminal
 server to Windows Server 2012 R2.
 If no port is specified, rdesktop connects to the standard RDP TCP port 3389.
+As an alternative to specifying a server directly, rdesktop can read common
+connection settings from a Microsoft .rdp file. Command-line options override
+matching settings read from the file.
 
 .SH OPTIONS
 .TP

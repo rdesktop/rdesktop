@@ -1,16 +1,7 @@
-#include <cgreen/cgreen.h>
-#include <cgreen/mocks.h>
 #include "../rdesktop.h"
 #include "../proto.h"
 #include <locale.h>
 #include <langinfo.h>
-
-#define always_expect_error_log() always_expect(logger, when(lvl, is_equal_to(Error)))
-
-/* Boilerplate */
-Describe(ParseGeometry);
-BeforeEach(ParseGeometry) {};
-AfterEach(ParseGeometry) {};
 
 /* Global Variables.. :( */
 int g_tcp_port_rdp;
@@ -22,6 +13,16 @@ RD_BOOL g_using_full_workarea;
 #define PACKAGE_VERSION "test"
 
 #include "../rdesktop.c"
+
+#include <cgreen/cgreen.h>
+#include <cgreen/mocks.h>
+
+#define always_expect_error_log() always_expect(logger, when(lvl, is_equal_to(Error)))
+
+/* Boilerplate */
+Describe(ParseGeometry);
+BeforeEach(ParseGeometry) {};
+AfterEach(ParseGeometry) {};
 
 
 Ensure(ParseGeometry, HandlesWxH)
@@ -227,3 +228,121 @@ Ensure(ParseGeometry, FailsOnGarbageAtEndOfString)
   assert_that(parse_geometry_string("1235%x123%@123+1-2asdkjfasdf"), is_equal_to(-1));
 }
 
+
+static void
+write_test_rdp_file(char *path, size_t path_size, const char *contents)
+{
+  int fd;
+  FILE *fp;
+
+  STRNCPY(path, "/tmp/rdesktop-rdp-file-test-XXXXXX", path_size);
+  fd = mkstemp(path);
+  assert_that(fd, is_greater_than(-1));
+
+  fp = fdopen(fd, "w");
+  assert_that(fp, is_not_null);
+  fputs(contents, fp);
+  fclose(fp);
+}
+
+Ensure(ParseGeometry, ParsesRdpFileSettings)
+{
+  char path[64];
+  char server[256] = "";
+  char domain[256] = "";
+  char shell[256] = "";
+  char directory[256] = "";
+
+  g_username = NULL;
+  g_password[0] = 0;
+  g_keymapname[0] = 0;
+  g_tcp_port_rdp = 3389;
+  g_server_depth = -1;
+  g_requested_session_width = 0;
+  g_requested_session_height = 0;
+  g_window_size_type = Fixed;
+  g_fullscreen = False;
+  g_rdpclip = True;
+
+  write_test_rdp_file(path, sizeof(path),
+                      "full address:s:rdp.example.com\\n"
+                      "server port:i:3390\\n"
+                      "username:s:alice\\n"
+                      "domain:s:EXAMPLE\\n"
+                      "desktopwidth:i:1280\\n"
+                      "desktopheight:i:720\\n"
+                      "session bpp:i:24\\n"
+                      "alternate shell:s:notepad.exe\\n"
+                      "shell working directory:s:C:\\\\Temp\\n"
+                      "keyboard layout:s:en-us\\n"
+                      "redirectclipboard:i:0\\n");
+
+  assert_that(parse_rdp_file(path, server, sizeof(server), domain, sizeof(domain), shell,
+                             sizeof(shell), directory, sizeof(directory), False, False,
+                             False, False, False, False, False, False, False),
+              is_equal_to(True));
+
+  assert_that(server, is_equal_to_string("rdp.example.com"));
+  assert_that(g_tcp_port_rdp, is_equal_to(3390));
+  assert_that(g_username, is_equal_to_string("alice"));
+  assert_that(domain, is_equal_to_string("EXAMPLE"));
+  assert_that(shell, is_equal_to_string("notepad.exe"));
+  assert_that(directory, is_equal_to_string("C:\\Temp"));
+  assert_that(g_keymapname, is_equal_to_string("en-us"));
+  assert_that(g_requested_session_width, is_equal_to(1280));
+  assert_that(g_requested_session_height, is_equal_to(720));
+  assert_that(g_server_depth, is_equal_to(24));
+  assert_that(g_rdpclip, is_equal_to(False));
+
+  unlink(path);
+  xfree(g_username);
+  g_username = NULL;
+}
+
+Ensure(ParseGeometry, RdpFileDoesNotOverrideExplicitOptions)
+{
+  char path[64];
+  char server[256] = "";
+  char domain[256] = "cli-domain";
+  char shell[256] = "cli-shell";
+  char directory[256] = "cli-dir";
+
+  g_username = xstrdup("cli-user");
+  g_password[0] = 0;
+  STRNCPY(g_keymapname, "cli-keymap", sizeof(g_keymapname));
+  g_server_depth = 16;
+  g_requested_session_width = 1024;
+  g_requested_session_height = 768;
+  g_window_size_type = Fixed;
+  g_fullscreen = False;
+
+  write_test_rdp_file(path, sizeof(path),
+                      "full address:s:rdp.example.com\\n"
+                      "username:s:file-user\\n"
+                      "domain:s:FILE\\n"
+                      "desktopwidth:i:1280\\n"
+                      "desktopheight:i:720\\n"
+                      "session bpp:i:24\\n"
+                      "alternate shell:s:file-shell\\n"
+                      "shell working directory:s:file-dir\\n"
+                      "keyboard layout:s:file-keymap\\n");
+
+  assert_that(parse_rdp_file(path, server, sizeof(server), domain, sizeof(domain), shell,
+                             sizeof(shell), directory, sizeof(directory), True, False,
+                             True, True, True, True, True, False, True),
+              is_equal_to(True));
+
+  assert_that(server, is_equal_to_string("rdp.example.com"));
+  assert_that(g_username, is_equal_to_string("cli-user"));
+  assert_that(domain, is_equal_to_string("cli-domain"));
+  assert_that(shell, is_equal_to_string("cli-shell"));
+  assert_that(directory, is_equal_to_string("cli-dir"));
+  assert_that(g_keymapname, is_equal_to_string("cli-keymap"));
+  assert_that(g_requested_session_width, is_equal_to(1024));
+  assert_that(g_requested_session_height, is_equal_to(768));
+  assert_that(g_server_depth, is_equal_to(16));
+
+  unlink(path);
+  xfree(g_username);
+  g_username = NULL;
+}
