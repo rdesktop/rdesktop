@@ -6,6 +6,7 @@
    Copyright 2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
    Copyright 2017 Karl Mikaelsson <derfian@cendio.se> for Cendio AB
    Copyright 2017 Alexander Zakharov <uglym8@gmail.com>
+   Copyright 2026 Marco Fortina <marco_fortina@hotmail.it>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -743,6 +744,7 @@ disk_set_information(RD_NTHANDLE handle, uint32 info_class, STREAM in, STREAM ou
 {
 	UNUSED(out);
 	uint32 length, file_attributes, ft_high, ft_low;
+	uint64 file_size, free_space;
 	char *newname, fullpath[PATH_MAX];
 	struct fileinfo *pfinfo;
 	int mode;
@@ -927,14 +929,17 @@ disk_set_information(RD_NTHANDLE handle, uint32 info_class, STREAM in, STREAM ou
 
 		case FileEndOfFileInformation:
 			in_uint8s(in, 28);	/* unknown */
-			in_uint32_le(in, length);	/* file size */
+			in_uint64_le(in, file_size);	/* file size */
 
 			/* prevents start of writing if not enough space left on device */
 			if (STATFS_FN(pfinfo->path, &stat_fs) == 0)
-				if (stat_fs.f_bfree * stat_fs.f_bsize < length)
+			{
+				free_space = (uint64) stat_fs.f_bfree * (uint64) stat_fs.f_bsize;
+				if (free_space < file_size)
 					return RD_STATUS_DISK_FULL;
+			}
 
-			if (ftruncate_growable(handle, length) != 0)
+			if (ftruncate_growable(handle, (off_t) file_size) != 0)
 			{
 				return RD_STATUS_DISK_FULL;
 			}
