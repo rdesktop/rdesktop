@@ -938,7 +938,7 @@ _utils_cert_store_get_filename(char *out, size_t size)
 	return 0;
 }
 
-#define TRUST_CERT_PROMPT_TEXT "Do you trust this certificate (yes/no)? "
+#define TRUST_CERT_PROMPT_TEXT "Do you trust this certificate (yes/no/y/n)? "
 #define REVIEW_CERT_TEXT \
 	"Review the following certificate info before you trust it to be added as an exception.\n" \
 	"If you do not trust the certificate the connection atempt will be aborted:"
@@ -1045,9 +1045,10 @@ utils_cert_handle_exception(gnutls_session_t session, unsigned int status,
 	}
 
 	/* show dialog */
-	response = util_dialog_choice(message, "no", "yes", NULL);
-	if (strcmp(response, "no") == 0 || response == NULL)
+	response = util_dialog_choice(message, "no", "n", "yes", "y", NULL);
+	if (response == NULL || strcmp(response, "no") == 0 || strcmp(response, "n") == 0)
 	{
+		gnutls_x509_crt_deinit(cert);
 		return 1;
 	}
 
@@ -1058,8 +1059,10 @@ utils_cert_handle_exception(gnutls_session_t session, unsigned int status,
 	if (rv != GNUTLS_E_SUCCESS)
 	{
 		logger(Core, Error, "%s(), failed to store certificate. error = 0x%x (%s)", __func__, rv, gnutls_strerror(rv));
+		gnutls_x509_crt_deinit(cert);
 		return 1;
 	}
 
+	gnutls_x509_crt_deinit(cert);
 	return 0;
 }
