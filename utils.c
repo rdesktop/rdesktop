@@ -2,6 +2,7 @@
    rdesktop: A Remote Desktop Protocol client.
    Generic utility functions
    Copyright 2013-2019 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2026 Marco Fortina <marco_fortina@hotmail.it>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -192,7 +193,7 @@ utils_mkdir_p(const char *path, int mask)
 int
 utils_locale_to_utf8(const char *src, size_t is, char *dest, size_t os)
 {
-	static iconv_t *iconv_h = (iconv_t) - 1;
+	static iconv_t iconv_h = (iconv_t) - 1;
 	if (strncmp(g_codepage, "UTF-8", strlen("UTF-8")) == 0)
 		goto pass_trough_as_is;
 
