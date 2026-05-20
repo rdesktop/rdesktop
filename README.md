@@ -68,7 +68,9 @@ rdesktop supports CredSSP/NLA over TLS. Password-based NLA uses the built-in
 NTLMv2/SPNEGO client, which avoids requiring a pre-existing Kerberos ticket for
 common Windows and RDS deployments. Kerberos-based CredSSP remains available
 when rdesktop is built with optional GSSAPI/Kerberos support and the user has a
-valid TGT.
+valid TGT. Sensitive NTLM/CredSSP byte previews are hidden by default; set
+`RDESKTOP_CREDSSP_TRACE=1` together with `RDESKTOP_DEBUG=Core,Protocol` only
+when collecting diagnostic logs.
 
 
 ## Note for users building from source

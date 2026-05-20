@@ -88,12 +88,29 @@ ntlmssp_hmac_md5(const uint8 *key, size_t key_len, const uint8 *data, size_t dat
 	rdssl_hmac_md5(key, key_len, data, data_len, out);
 }
 
+static RD_BOOL
+ntlmssp_sensitive_trace_enabled(void)
+{
+	static int enabled = -1;
+	const char *env;
+
+	if (enabled >= 0)
+		return enabled ? True : False;
+
+	env = getenv("RDESKTOP_CREDSSP_TRACE");
+	enabled = (env && env[0] && strcmp(env, "0") != 0) ? 1 : 0;
+	return enabled ? True : False;
+}
+
 static void
 ntlmssp_debug_bytes(const char *label, const uint8 *data, size_t len)
 {
 	uint8 first[8];
 	uint8 last[8];
 	size_t first_len, last_len, last_pos;
+
+	if (!ntlmssp_sensitive_trace_enabled())
+		return;
 
 	memset(first, 0, sizeof(first));
 	memset(last, 0, sizeof(last));
