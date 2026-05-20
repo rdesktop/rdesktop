@@ -3924,9 +3924,26 @@ ui_screenblt(uint8 opcode,
 	SET_FUNCTION(opcode);
 	if (g_ownbackstore)
 	{
-		XCopyArea(g_display, g_Unobscured ? g_wnd : g_backstore,
-			  g_wnd, g_gc, srcx, srcy, cx, cy, x, y);
-		XCopyArea(g_display, g_backstore, g_backstore, g_gc, srcx, srcy, cx, cy, x, y);
+		/*
+		 * Keep the visible-window fast path for unobscured ScreenBlt
+		 * operations, but mirror the resulting destination back into our
+		 * private backstore.  Using the backstore as the source while the
+		 * window is unobscured can copy stale or uninitialised pixels on
+		 * composited/Xwayland desktops.  The old code updated the visible
+		 * window correctly but left the backstore stale; expose/repaint then
+		 * reintroduced old pixels.
+		 */
+		if (g_Unobscured)
+		{
+			XCopyArea(g_display, g_wnd, g_wnd, g_gc, srcx, srcy, cx, cy, x, y);
+			XCopyArea(g_display, g_wnd, g_backstore, g_gc, x, y, cx, cy, x, y);
+		}
+		else
+		{
+			XCopyArea(g_display, g_backstore, g_backstore, g_gc,
+				  srcx, srcy, cx, cy, x, y);
+			XCopyArea(g_display, g_backstore, g_wnd, g_gc, x, y, cx, cy, x, y);
+		}
 	}
 	else
 	{
