@@ -2611,12 +2611,16 @@ handle_button_event(XEvent xevent, RD_BOOL down)
 		}
 	}
 
-	/* Ignore mouse scroll button release event which will be handled as an additional
-	 * scrolldown event on the Windows side.
+	/*
+	 * Wheel events encode the wheel delta in the low bits and must not carry
+	 * the normal mouse-button DOWN flag.  Also ignore X11 wheel button-release
+	 * events, which would otherwise be sent as a second wheel movement.
 	 */
-	if (!down && (button == MOUSE_FLAG_BUTTON4 || button == MOUSE_FLAG_BUTTON5))
+	if (button == MOUSE_FLAG_BUTTON4 || button == MOUSE_FLAG_BUTTON5)
 	{
-		return;
+		if (!down)
+			return;
+		flags &= ~MOUSE_FLAG_DOWN;
 	}
 
 	if (xevent.xmotion.window == g_wnd)
