@@ -4304,11 +4304,10 @@ ui_draw_text(uint8 font, uint8 flags, uint8 opcode, int mixmode, int x, int y,
 	     int boxx, int boxy, int boxcx, int boxcy, BRUSH * brush,
 	     uint32 bgcolour, uint32 fgcolour, uint8 * text, uint8 length)
 {
-	XWindowAttributes attr;
+	uint32 wnd_width = g_window_width ? g_window_width : g_session_width;
+
 	UNUSED(opcode);
 	UNUSED(brush);
-
-	XGetWindowAttributes(g_display, g_wnd, &attr);
 
 	/* TODO: use brush appropriately */
 
@@ -4321,8 +4320,8 @@ ui_draw_text(uint8 font, uint8 flags, uint8 opcode, int mixmode, int x, int y,
 	/* Sometimes, the boxcx value is something really large, like
 	   32691. This makes XCopyArea fail with Xvnc. The code below
 	   is a quick fix. */
-	if (boxx + boxcx > attr.width)
-		boxcx = attr.width - boxx;
+	if (wnd_width > 0 && boxx + boxcx > (int) wnd_width)
+		boxcx = wnd_width - boxx;
 
 	if (boxcx > 1)
 	{
