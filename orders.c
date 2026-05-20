@@ -2,6 +2,7 @@
    rdesktop: A Remote Desktop Protocol client.
    RDP order processing
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
+   Copyright 2026 Marco Fortina <marco_fortina@hotmail.it>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -1051,18 +1052,27 @@ process_bmpcache2(STREAM s, uint16 flags, RD_BOOL compressed)
 			       &data[y * (width * Bpp)], width * Bpp);
 	}
 
-	bitmap = ui_create_bitmap(width, height, bmpdata);
-
-	if (bitmap)
+	bitmap = cache_get_bitmap_for_update(cache_id, cache_idx, width, height);
+	if (bitmap && ui_update_bitmap(bitmap, width, height, bmpdata))
 	{
-		cache_put_bitmap(cache_id, cache_idx, bitmap);
-		if (flags & PERSIST)
-			pstcache_save_bitmap(cache_id, cache_idx, bitmap_id, width, height,
-					     width * height * Bpp, bmpdata);
+		logger(Graphics, Debug,
+		       "process_bmpcache2(), updated cached bitmap id=%d idx=%d",
+		       cache_id, cache_idx);
 	}
 	else
 	{
-		logger(Graphics, Error, "process_bmpcache2(), ui_create_bitmap(), failed");
+		bitmap = ui_create_bitmap(width, height, bmpdata);
+		if (bitmap)
+		{
+			cache_put_bitmap_with_dimensions(cache_id, cache_idx, bitmap, width, height);
+			if (flags & PERSIST)
+				pstcache_save_bitmap(cache_id, cache_idx, bitmap_id, width, height,
+						     width * height * Bpp, bmpdata);
+		}
+		else
+		{
+			logger(Graphics, Error, "process_bmpcache2(), ui_create_bitmap(), failed");
+		}
 	}
 
 	xfree(bmpdata);

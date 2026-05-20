@@ -4,6 +4,7 @@
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright (C) Jeroen Meijer <jeroen@oldambt7.com> 2005
    Copyright 2003-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
+   Copyright 2026 Marco Fortina <marco_fortina@hotmail.it>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -47,6 +48,8 @@ struct bmpcache_entry
 
 static struct bmpcache_entry g_bmpcache[3][0xa00];
 static RD_HBITMAP g_volatile_bc[3];
+static int g_volatile_bc_width[3];
+static int g_volatile_bc_height[3];
 
 static int g_bmpcache_lru[3] = { NOT_SET, NOT_SET, NOT_SET };
 static int g_bmpcache_mru[3] = { NOT_SET, NOT_SET, NOT_SET };
@@ -216,6 +219,18 @@ cache_get_bitmap(uint8 id, uint16 idx)
 	return NULL;
 }
 
+RD_HBITMAP
+cache_get_bitmap_for_update(uint8 id, uint16 idx, int width, int height)
+{
+	if ((id < NUM_ELEMENTS(g_volatile_bc)) && (idx == 0x7fff) && g_volatile_bc[id] &&
+	    g_volatile_bc_width[id] == width && g_volatile_bc_height[id] == height)
+	{
+		return g_volatile_bc[id];
+	}
+
+	return NULL;
+}
+
 /* Store a bitmap in the cache */
 void
 cache_put_bitmap(uint8 id, uint16 idx, RD_HBITMAP bitmap)
@@ -245,10 +260,24 @@ cache_put_bitmap(uint8 id, uint16 idx, RD_HBITMAP bitmap)
 		if (old != NULL)
 			ui_destroy_bitmap(old);
 		g_volatile_bc[id] = bitmap;
+		g_volatile_bc_width[id] = 0;
+		g_volatile_bc_height[id] = 0;
 	}
 	else
 	{
 		logger(Core, Error, "cache_put_bitmap(), failed, id=%d, idx=%d\n", id, idx);
+	}
+}
+
+void
+cache_put_bitmap_with_dimensions(uint8 id, uint16 idx, RD_HBITMAP bitmap, int width, int height)
+{
+	cache_put_bitmap(id, idx, bitmap);
+
+	if ((id < NUM_ELEMENTS(g_volatile_bc)) && (idx == 0x7fff) && g_volatile_bc[id] == bitmap)
+	{
+		g_volatile_bc_width[id] = width;
+		g_volatile_bc_height[id] = height;
 	}
 }
 

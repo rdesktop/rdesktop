@@ -38,7 +38,9 @@ void cache_rebuild_bmpcache_linked_list(uint8 id, sint16 * idx, int count);
 void cache_bump_bitmap(uint8 id, uint16 idx, int bump);
 void cache_evict_bitmap(uint8 id);
 RD_HBITMAP cache_get_bitmap(uint8 id, uint16 idx);
+RD_HBITMAP cache_get_bitmap_for_update(uint8 id, uint16 idx, int width, int height);
 void cache_put_bitmap(uint8 id, uint16 idx, RD_HBITMAP bitmap);
+void cache_put_bitmap_with_dimensions(uint8 id, uint16 idx, RD_HBITMAP bitmap, int width, int height);
 void cache_save_state(void);
 FONTGLYPH *cache_get_font(uint8 font, uint16 character);
 void cache_put_font(uint8 font, uint16 character, uint16 offset, uint16 baseline, uint16 width,
@@ -287,6 +289,7 @@ void xwin_toggle_fullscreen(void);
 void ui_select(int rdp_socket);
 void ui_move_pointer(int x, int y);
 RD_HBITMAP ui_create_bitmap(int width, int height, uint8 * data);
+RD_BOOL ui_update_bitmap(RD_HBITMAP bmp, int width, int height, uint8 * data);
 void ui_paint_bitmap(int x, int y, int cx, int cy, int width, int height, uint8 * data);
 void ui_destroy_bitmap(RD_HBITMAP bmp);
 RD_HGLYPH ui_create_glyph(int width, int height, uint8 * data);
