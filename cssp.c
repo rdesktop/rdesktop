@@ -2,6 +2,7 @@
    rdesktop: A Remote Desktop Protocol client.
    CredSSP layer and Kerberos support.
    Copyright 2012-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2026 Marco Fortina <marco_fortina@hotmail.it>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -17,8 +18,13 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifdef WITH_GSSAPI_CREDSSP
 #include <gssapi/gssapi.h>
+#endif
+#include <nettle/sha2.h>
 #include "rdesktop.h"
+#include "ntlmssp.h"
+#include "spnego.h"
 
 extern RD_BOOL g_use_password_as_pin;
 
@@ -27,8 +33,10 @@ extern char *g_sc_reader_name;
 extern char *g_sc_card_name;
 extern char *g_sc_container_name;
 
+#ifdef WITH_GSSAPI_CREDSSP
 static gss_OID_desc _gss_spnego_krb5_mechanism_oid_desc =
 	{ 9, (void *) "\x2a\x86\x48\x86\xf7\x12\x01\x02\x02" };
+#endif
 
 static STREAM
 ber_wrap_hdr_data(int tagval, STREAM in)
@@ -45,6 +53,7 @@ ber_wrap_hdr_data(int tagval, STREAM in)
 }
 
 
+#ifdef WITH_GSSAPI_CREDSSP
 static void
 cssp_gss_report_error(OM_uint32 code, char *str, OM_uint32 major_status, OM_uint32 minor_status)
 {
@@ -215,6 +224,8 @@ cssp_gss_unwrap(gss_ctx_id_t ctx, STREAM in)
 	return out;
 }
 
+
+#endif
 
 static STREAM
 cssp_encode_tspasswordcreds(char *username, char *password, char *domain)
@@ -502,8 +513,100 @@ cssp_encode_tscredentials(char *username, char *password, char *domain)
 	return out;
 }
 
-RD_BOOL
-cssp_send_tsrequest(STREAM token, STREAM auth, STREAM pubkey)
+#define CSSP_CLIENT_VERSION 6
+#define CSSP_BINDING_HASH_SIZE 32
+#define CSSP_NONCE_SIZE 32
+
+static uint32 g_cssp_peer_version = 2;
+
+static uint32
+cssp_peer_version(void)
+{
+	if (g_cssp_peer_version > CSSP_CLIENT_VERSION)
+		return CSSP_CLIENT_VERSION;
+	return g_cssp_peer_version;
+}
+
+static uint32
+cssp_read_integer(STREAM s, int length)
+{
+	uint32 value;
+	uint8 byte;
+	int i;
+
+	value = 0;
+	for (i = 0; i < length; i++)
+	{
+		in_uint8(s, byte);
+		value = (value << 8) | byte;
+	}
+	return value;
+}
+
+static STREAM
+cssp_build_pubkey_binding(STREAM pubkey, const uint8 *nonce, RD_BOOL client_to_server)
+{
+	STREAM out;
+	struct sha256_ctx sha256;
+	uint8 digest[CSSP_BINDING_HASH_SIZE];
+	const char *magic;
+
+	if (cssp_peer_version() < 5)
+	{
+		out = s_alloc(s_length(pubkey));
+		out_stream(out, pubkey);
+		s_mark_end(out);
+		s_seek(out, 0);
+		return out;
+	}
+
+	magic = client_to_server ? "CredSSP Client-To-Server Binding Hash" :
+		"CredSSP Server-To-Client Binding Hash";
+	/*
+	 * FreeRDP/OpenSSL hashes i2d_PublicKey() output for RSA, which matches the
+	 * SubjectPublicKey BIT STRING payload bytes, not the enclosing BIT STRING TLV.
+	 */
+	logger(Core, Debug, "cssp_build_pubkey_binding(), publicKey=%u", (unsigned) s_length(pubkey));
+	sha256_init(&sha256);
+	sha256_update(&sha256, strlen(magic) + 1, (const uint8 *) magic);
+	sha256_update(&sha256, CSSP_NONCE_SIZE, nonce);
+	sha256_update(&sha256, s_length(pubkey), pubkey->data);
+	sha256_digest(&sha256, sizeof(digest), digest);
+
+	out = s_alloc(sizeof(digest));
+	out_uint8a(out, digest, sizeof(digest));
+	s_mark_end(out);
+	s_seek(out, 0);
+	return out;
+}
+
+static RD_BOOL
+cssp_validate_pubkey_response(STREAM pubkey, const uint8 *nonce, STREAM response)
+{
+	STREAM expected;
+	uint8 first_byte;
+	RD_BOOL ok;
+
+	if (cssp_peer_version() >= 5)
+	{
+		expected = cssp_build_pubkey_binding(pubkey, nonce, False);
+		ok = (s_length(expected) == s_length(response) &&
+		      memcmp(expected->data, response->data, s_length(expected)) == 0);
+		s_free(expected);
+		return ok;
+	}
+
+	in_uint8(response, first_byte);
+	s_seek(response, 0);
+	out_uint8(response, first_byte - 1);
+	s_seek(response, 0);
+
+	return (s_length(pubkey) == s_length(response) &&
+		memcmp(pubkey->data, response->data, s_length(pubkey)) == 0);
+}
+
+static RD_BOOL
+cssp_send_tsrequest(STREAM token, STREAM auth, STREAM pubkey, const uint8 *nonce)
 {
 	STREAM s;
 	STREAM h1, h2, h3, h4, h5;
@@ -517,7 +620,11 @@ cssp_send_tsrequest(STREAM token, STREAM auth, STREAM pubkey)
 	// version [0]
 	s_realloc(&tmp, sizeof(uint8));
 	s_reset(&tmp);
-	out_uint8(&tmp, 2);
+	out_uint8(&tmp, CSSP_CLIENT_VERSION);
+	logger(Core, Debug, "cssp_send_tsrequest(), version=%u peer=%u token=%u auth=%u pubkey=%u nonce=%u",
+	       CSSP_CLIENT_VERSION, cssp_peer_version(), token ? (unsigned) s_length(token) : 0,
+	       auth ? (unsigned) s_length(auth) : 0, pubkey ? (unsigned) s_length(pubkey) : 0,
+	       (nonce && CSSP_CLIENT_VERSION >= 5) ? CSSP_NONCE_SIZE : 0);
 	s_mark_end(&tmp);
 	h2 = ber_wrap_hdr_data(BER_TAG_INTEGER, &tmp);
 	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 0, h2);
@@ -553,6 +660,7 @@ cssp_send_tsrequest(STREAM token, STREAM auth, STREAM pubkey)
 
 		s_realloc(&message, s_length(&message) + s_length(h1));
 		out_stream(&message, h1);
+		s_mark_end(&message);
 
 		s_free(h2);
 		s_free(h1);
@@ -570,11 +678,29 @@ cssp_send_tsrequest(STREAM token, STREAM auth, STREAM pubkey)
 		s_free(h2);
 		s_free(h1);
 	}
+
+	// clientNonce [5]
+	if (nonce && CSSP_CLIENT_VERSION >= 5)
+	{
+		s_reset(&tmp);
+		s_realloc(&tmp, CSSP_NONCE_SIZE);
+		out_uint8a(&tmp, nonce, CSSP_NONCE_SIZE);
+		s_mark_end(&tmp);
+		h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
+		h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 5, h2);
+		s_realloc(&message, s_length(&message) + s_length(h1));
+		out_stream(&message, h1);
+		s_mark_end(&message);
+		s_free(h2);
+		s_free(h1);
+	}
+
 	s_mark_end(&message);
 
 	// Construct ASN.1 Message
-	// Todo: can h1 be send directly instead of tcp_init() approach
 	h1 = ber_wrap_hdr_data(BER_TAG_SEQUENCE | BER_TAG_CONSTRUCTED, &message);
+	logger(Core, Debug, "cssp_send_tsrequest(), der=%u payload=%u", (unsigned) s_length(h1),
+	       (unsigned) s_length(&message));
 	s = tcp_init(s_length(h1));
 	out_stream(s, h1);
 	s_mark_end(s);
@@ -590,99 +716,130 @@ cssp_send_tsrequest(STREAM token, STREAM auth, STREAM pubkey)
 	return True;
 }
 
+static RD_BOOL
+cssp_parse_negodata_token(STREAM s, STREAM *out)
+{
+	int length;
+	int tagval;
 
-STREAM
+	if (!ber_in_header(s, &tagval, &length) ||
+	    tagval != (BER_TAG_SEQUENCE | BER_TAG_CONSTRUCTED))
+		return False;
+	if (!ber_in_header(s, &tagval, &length) ||
+	    tagval != (BER_TAG_SEQUENCE | BER_TAG_CONSTRUCTED))
+		return False;
+	if (!ber_in_header(s, &tagval, &length) ||
+	    tagval != (BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 0))
+		return False;
+	if (!ber_in_header(s, &tagval, &length) || tagval != BER_TAG_OCTET_STRING)
+		return False;
+	if (!s_check_rem(s, length))
+		return False;
+
+	*out = s_alloc(length);
+	out_uint8stream(*out, s, length);
+	s_mark_end(*out);
+	s_seek(*out, 0);
+	return True;
+}
+
+static STREAM
 cssp_read_tsrequest(RD_BOOL pubkey)
 {
 	STREAM s, out;
 	int length;
 	int tagval;
 	struct stream packet;
+	struct stream field;
 
+	out = NULL;
 	s = tcp_recv(NULL, 4);
 
 	if (s == NULL)
 		return NULL;
 
-	// get and verify the header
 	if (!ber_in_header(s, &tagval, &length) ||
 	    tagval != (BER_TAG_SEQUENCE | BER_TAG_CONSTRUCTED))
 		return NULL;
 
-	// We've already read 4 bytes, but the header might have been
-	// less than that, so we need to adjust the length
 	length -= s_remaining(s);
-
-	// receive the remainings of message
 	s = tcp_recv(s, length);
 	if (s == NULL)
 		return NULL;
 	packet = *s;
+	logger(Core, Debug, "cssp_read_tsrequest(), received der=%u pubkey_mode=%d",
+	       (unsigned) s_length(s), pubkey);
 
-	// version [0]
-	if (!ber_in_header(s, &tagval, &length) ||
-	    tagval != (BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 0))
-		return NULL;
-
-	if (!s_check_rem(s, length))
+	while (s_check_rem(s, 2))
 	{
-		 rdp_protocol_error("consume of version from stream would overrun",
-				    &packet);
-	}
-	in_uint8s(s, length);
-
-	// negoToken [1]
-	if (!pubkey)
-	{
-		if (!ber_in_header(s, &tagval, &length)
-		    || tagval != (BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 1))
+		if (!ber_in_header(s, &tagval, &length))
 			return NULL;
-		if (!ber_in_header(s, &tagval, &length)
-		    || tagval != (BER_TAG_SEQUENCE | BER_TAG_CONSTRUCTED))
-			return NULL;
-		if (!ber_in_header(s, &tagval, &length)
-		    || tagval != (BER_TAG_SEQUENCE | BER_TAG_CONSTRUCTED))
-			return NULL;
-		if (!ber_in_header(s, &tagval, &length)
-		    || tagval != (BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 0))
-			return NULL;
-
-		if (!ber_in_header(s, &tagval, &length) || tagval != BER_TAG_OCTET_STRING)
-			return NULL;
-
 		if (!s_check_rem(s, length))
 		{
-			rdp_protocol_error("consume of token from stream would overrun",
-					   &packet);
+			rdp_protocol_error("consume of TSRequest field would overrun", &packet);
 		}
 
-		out = s_alloc(length);
-		out_uint8stream(out, s, length);
-		s_mark_end(out);
-		s_seek(out, 0);
+		field = *s;
+		field.end = field.p + length;
+		field.size = length;
+		s->p += length;
+
+		switch (tagval)
+		{
+			case BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 0:
+				if (!ber_in_header(&field, &tagval, &length) || tagval != BER_TAG_INTEGER)
+					return NULL;
+				if (!s_check_rem(&field, length))
+					return NULL;
+				g_cssp_peer_version = cssp_read_integer(&field, length);
+				logger(Core, Debug, "cssp_read_tsrequest(), peer version=%u", g_cssp_peer_version);
+				break;
+
+			case BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 1:
+				if (!pubkey && !out && !cssp_parse_negodata_token(&field, &out))
+					return NULL;
+				if (out)
+					logger(Core, Debug, "cssp_read_tsrequest(), negoToken len=%u",
+					       (unsigned) s_length(out));
+				break;
+
+			case BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 3:
+				if (pubkey && !out)
+				{
+					if (!ber_in_header(&field, &tagval, &length) || tagval != BER_TAG_OCTET_STRING)
+						return NULL;
+					if (!s_check_rem(&field, length))
+						return NULL;
+					out = s_alloc(length);
+					out_uint8stream(out, &field, length);
+					s_mark_end(out);
+					s_seek(out, 0);
+					logger(Core, Debug, "cssp_read_tsrequest(), pubKeyAuth len=%u",
+					       (unsigned) s_length(out));
+				}
+				break;
+
+			case BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 4:
+				if (!ber_in_header(&field, &tagval, &length) || tagval != BER_TAG_INTEGER)
+					return NULL;
+				if (!s_check_rem(&field, length))
+					return NULL;
+				logger(Core, Error, "cssp_read_tsrequest(), server returned NTSTATUS 0x%08x",
+				       cssp_read_integer(&field, length));
+				return NULL;
+		}
 	}
-	// pubKey [3]
-	else
-	{
-		if (!ber_in_header(s, &tagval, &length)
-		    || tagval != (BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 3))
-			return NULL;
 
-		if (!ber_in_header(s, &tagval, &length) || tagval != BER_TAG_OCTET_STRING)
-			return NULL;
-
-		out = s_alloc(length);
-		out_uint8stream(out, s, length);
-		s_mark_end(out);
-		s_seek(out, 0);
-	}
-
-
+	logger(Core, Debug, "cssp_read_tsrequest(), returning %s len=%u peer=%u",
+	       pubkey ? "pubKeyAuth" : "negoToken", out ? (unsigned) s_length(out) : 0,
+	       g_cssp_peer_version);
 	return out;
 }
 
-RD_BOOL
-cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
+
+#ifdef WITH_GSSAPI_CREDSSP
+static RD_BOOL
+cssp_connect_gss(char *server, char *user, char *domain, char *password, STREAM s)
 {
 	UNUSED(s);
 	OM_uint32 actual_time;
@@ -697,32 +854,28 @@ cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 	STREAM ts_creds;
 	STREAM token;
 	STREAM pubkey, pubkey_cmp;
-	unsigned char *pubkey_data;
-	unsigned char *pubkey_cmp_data;
-	unsigned char first_byte;
+	uint8 client_nonce[CSSP_NONCE_SIZE];
+	STREAM plain_pubkey;
 
 	RD_BOOL ret;
 	STREAM blob;
 
-	// Verify that system gss support spnego
 	if (!cssp_gss_mech_available(desired_mech))
 	{
 		logger(Core, Debug,
-		       "cssp_connect(), system doesn't have support for desired authentication mechanism");
+		       "cssp_connect_gss(), system doesn't have support for desired authentication mechanism");
 		return False;
 	}
 
-	// Get service name
 	if (!cssp_gss_get_service_name(server, &target_name))
 	{
-		logger(Core, Debug, "cssp_connect(), failed to get target service name");
+		logger(Core, Debug, "cssp_connect_gss(), failed to get target service name");
 		return False;
 	}
 
-	// Establish TLS connection to server
 	if (!tcp_tls_connect())
 	{
-		logger(Core, Debug, "cssp_connect(), failed to establish TLS connection");
+		logger(Core, Debug, "cssp_connect_gss(), failed to establish TLS connection");
 		return False;
 	}
 
@@ -730,8 +883,8 @@ cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 	if (pubkey == NULL)
 		return False;
 	pubkey_cmp = NULL;
+	generate_random(client_nonce);
 
-	// Enter the spnego loop
 	OM_uint32 actual_services;
 	gss_OID actual_mech;
 
@@ -759,8 +912,6 @@ cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 						    &actual_mech,
 						    &output_tok, &actual_services, &actual_time);
 
-		// input_tok might have pointed to token's data,
-		// but it's safe to free it now after the call
 		s_free(token);
 		token = NULL;
 
@@ -768,31 +919,42 @@ cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 		{
 			if (i == 0)
 				logger(Core, Notice,
-				       "Failed to initialize NLA, do you have correct Kerberos TGT initialized ?");
+				       "Failed to initialize NLA with Kerberos, do you have a valid TGT?");
 			else
-				logger(Core, Error, "cssp_connect(), negotiation failed");
+				logger(Core, Error, "cssp_connect_gss(), negotiation failed");
 
-			cssp_gss_report_error(GSS_C_GSS_CODE, "cssp_connect(), negotiation failed.",
+			cssp_gss_report_error(GSS_C_GSS_CODE, "cssp_connect_gss(), negotiation failed.",
 					      major_status, minor_status);
 			goto bail_out;
 		}
 
-		// validate required services
 		if (!(actual_services & GSS_C_CONF_FLAG))
 		{
 			logger(Core, Error,
-			       "cssp_connect(), confidentiality service required but is not available");
+			       "cssp_connect_gss(), confidentiality service required but is not available");
 			goto bail_out;
 		}
 
-		// Send token to server
 		if (output_tok.length != 0)
 		{
 			token = s_alloc(output_tok.length);
 			out_uint8a(token, output_tok.value, output_tok.length);
 			s_mark_end(token);
 
-			ret = cssp_send_tsrequest(token, NULL, NULL);
+			if ((major_status & GSS_S_CONTINUE_NEEDED) == 0)
+			{
+				plain_pubkey = cssp_build_pubkey_binding(pubkey, client_nonce, True);
+				blob = cssp_gss_wrap(gss_ctx, plain_pubkey);
+				s_free(plain_pubkey);
+				if (blob == NULL)
+					goto bail_out;
+				ret = cssp_send_tsrequest(token, NULL, blob, client_nonce);
+				s_free(blob);
+			}
+			else
+			{
+				ret = cssp_send_tsrequest(token, NULL, NULL, NULL);
+			}
 
 			s_free(token);
 			token = NULL;
@@ -802,7 +964,6 @@ cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 				goto bail_out;
 		}
 
-		// Read token from server
 		if (major_status & GSS_S_CONTINUE_NEEDED)
 		{
 			token = cssp_read_tsrequest(False);
@@ -814,20 +975,6 @@ cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 		}
 		else
 		{
-			// Send encrypted pubkey for verification to server
-			context_established = 1;
-
-			blob = cssp_gss_wrap(gss_ctx, pubkey);
-			if (blob == NULL)
-				goto bail_out;
-
-			ret = cssp_send_tsrequest(NULL, NULL, blob);
-
-			s_free(blob);
-
-			if (!ret)
-				goto bail_out;
-
 			context_established = 1;
 		}
 
@@ -838,7 +985,6 @@ cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 
 	s_free(token);
 
-	// read tsrequest response and decrypt for public key validation
 	blob = cssp_read_tsrequest(True);
 	if (blob == NULL)
 		goto bail_out;
@@ -848,40 +994,26 @@ cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 	if (pubkey_cmp == NULL)
 		goto bail_out;
 
-	// the first byte gets 1 added before being sent by the server
-	// in order to protect against replays of the data sent earlier
-	// by the client
-	in_uint8(pubkey_cmp, first_byte);
-	s_seek(pubkey_cmp, 0);
-	out_uint8(pubkey_cmp, first_byte - 1);
-	s_seek(pubkey_cmp, 0);
-
-	// validate public key
-	in_uint8p(pubkey, pubkey_data, s_length(pubkey));
-	in_uint8p(pubkey_cmp, pubkey_cmp_data, s_length(pubkey_cmp));
-	if ((s_length(pubkey) != s_length(pubkey_cmp)) ||
-	    (memcmp(pubkey_data, pubkey_cmp_data, s_length(pubkey)) != 0))
+	if (!cssp_validate_pubkey_response(pubkey, client_nonce, pubkey_cmp))
 	{
 		logger(Core, Error,
-		       "cssp_connect(), public key mismatch, cannot guarantee integrity of server connection");
+		       "cssp_connect_gss(), public key binding mismatch, cannot guarantee integrity of server connection");
 		goto bail_out;
 	}
 
 	s_free(pubkey);
 	s_free(pubkey_cmp);
+	pubkey = NULL;
+	pubkey_cmp = NULL;
 
-	// Send TSCredentials
 	ts_creds = cssp_encode_tscredentials(user, password, domain);
-
 	blob = cssp_gss_wrap(gss_ctx, ts_creds);
-
 	s_free(ts_creds);
 
 	if (blob == NULL)
 		goto bail_out;
 
-	ret = cssp_send_tsrequest(NULL, blob, NULL);
-
+	ret = cssp_send_tsrequest(NULL, blob, NULL, NULL);
 	s_free(blob);
 
 	if (!ret)
@@ -894,4 +1026,143 @@ cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 	s_free(pubkey);
 	s_free(pubkey_cmp);
 	return False;
+}
+#endif
+
+static RD_BOOL
+cssp_connect_ntlm(char *server, char *user, char *domain, char *password)
+{
+	UNUSED(server);
+	NTLMSSP_CONTEXT ntlm;
+	STREAM negotiate, negotiate_raw;
+	STREAM challenge_spnego, challenge;
+	STREAM authenticate;
+	STREAM ts_creds;
+	STREAM pubkey, pubkey_plain, pubkey_wrapped;
+	STREAM pubkey_response, pubkey_response_plain;
+	STREAM creds_wrapped;
+	uint8 client_nonce[CSSP_NONCE_SIZE];
+	RD_BOOL ret;
+
+	if (password == NULL || password[0] == 0 || g_use_password_as_pin)
+		return False;
+
+	if (!tcp_tls_connect())
+	{
+		logger(Core, Debug, "cssp_connect_ntlm(), failed to establish TLS connection");
+		return False;
+	}
+
+	pubkey = tcp_tls_get_server_pubkey();
+	if (pubkey == NULL)
+		return False;
+
+	generate_random(client_nonce);
+	ntlmssp_init(&ntlm);
+	negotiate = ntlmssp_build_negotiate();
+	negotiate_raw = s_alloc(s_length(negotiate));
+	out_uint8a(negotiate_raw, negotiate->data, s_length(negotiate));
+	s_mark_end(negotiate_raw);
+	s_seek(negotiate_raw, 0);
+	logger(Core, Debug, "cssp_connect_ntlm(), sending raw NTLM negotiate");
+	ret = cssp_send_tsrequest(negotiate, NULL, NULL, client_nonce);
+	s_free(negotiate);
+	if (!ret)
+		goto fail;
+
+	challenge_spnego = cssp_read_tsrequest(False);
+	if (challenge_spnego == NULL)
+		goto fail;
+	challenge = spnego_extract_ntlm_token(challenge_spnego);
+	s_free(challenge_spnego);
+	if (challenge == NULL)
+		goto fail;
+
+	if (!ntlmssp_build_authenticate(&ntlm, negotiate_raw, challenge, user, domain, password,
+					   server, &authenticate))
+	{
+		s_free(challenge);
+		goto fail;
+	}
+	s_free(challenge);
+	s_free(negotiate_raw);
+	negotiate_raw = NULL;
+
+	pubkey_plain = cssp_build_pubkey_binding(pubkey, client_nonce, True);
+	pubkey_wrapped = ntlmssp_wrap(&ntlm, pubkey_plain);
+	s_free(pubkey_plain);
+	if (pubkey_wrapped == NULL)
+	{
+		s_free(authenticate);
+		goto fail;
+	}
+
+	logger(Core, Debug,
+	       "cssp_connect_ntlm(), sending raw NTLM authenticate and pubKeyAuth in one TSRequest");
+	ret = cssp_send_tsrequest(authenticate, NULL, pubkey_wrapped, client_nonce);
+	s_free(authenticate);
+	s_free(pubkey_wrapped);
+	if (!ret)
+		goto fail;
+
+	logger(Core, Debug, "cssp_connect_ntlm(), waiting for server pubKeyAuth response");
+	pubkey_response = cssp_read_tsrequest(True);
+	if (pubkey_response == NULL)
+		goto fail;
+	pubkey_response_plain = ntlmssp_unwrap(&ntlm, pubkey_response);
+	s_free(pubkey_response);
+	if (pubkey_response_plain == NULL)
+		goto fail;
+
+	if (!cssp_validate_pubkey_response(pubkey, client_nonce, pubkey_response_plain))
+	{
+		s_free(pubkey_response_plain);
+		logger(Core, Error,
+		       "cssp_connect_ntlm(), public key binding mismatch, cannot guarantee integrity of server connection");
+		goto fail;
+	}
+	s_free(pubkey_response_plain);
+	s_free(pubkey);
+	pubkey = NULL;
+
+	ts_creds = cssp_encode_tscredentials(user, password, domain);
+	creds_wrapped = ntlmssp_wrap(&ntlm, ts_creds);
+	s_free(ts_creds);
+	if (creds_wrapped == NULL)
+		goto fail;
+
+	logger(Core, Debug, "cssp_connect_ntlm(), sending encrypted TSCredentials");
+	ret = cssp_send_tsrequest(NULL, creds_wrapped, NULL, client_nonce);
+	s_free(creds_wrapped);
+	if (!ret)
+		goto fail;
+
+	logger(Core, Verbose, "CredSSP NTLMv2 authentication completed.");
+	return True;
+
+fail:
+	s_free(negotiate_raw);
+	s_free(pubkey);
+	return False;
+}
+
+RD_BOOL
+cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
+{
+	UNUSED(s);
+	g_cssp_peer_version = 2;
+
+	if (!g_use_password_as_pin && password && password[0])
+	{
+		logger(Core, Verbose, "Trying NLA using internal NTLMv2 CredSSP.");
+		return cssp_connect_ntlm(server, user, domain, password);
+	}
+
+#ifdef WITH_GSSAPI_CREDSSP
+	logger(Core, Verbose, "Trying NLA using GSSAPI/Kerberos CredSSP.");
+	return cssp_connect_gss(server, user, domain, password, s);
+#else
+	logger(Core, Error, "CredSSP requires either a password for internal NTLMv2 or optional GSSAPI/Kerberos support.");
+	return False;
+#endif
 }

@@ -83,9 +83,14 @@ AC_ARG_ENABLE([address-sanitizer], AS_HELP_STRING([--enable-address-sanitizer], 
 dnl CredSSP feature
 AC_ARG_ENABLE([credssp], AS_HELP_STRING([--disable-credssp], [disable support for CredSSP]))
 AS_IF([test "x$enable_credssp" != "xno"], [
+	CREDSSPOBJ="cssp.o ntlmssp.o spnego.o"
+	AC_DEFINE(WITH_CREDSSP)
+
+	dnl GSSAPI/Kerberos is optional now.  CredSSP can use the internal NTLMv2
+	dnl client when no Kerberos mechanism is available.
 	case "$OSTYPE" in
 	     darwin*)
-		AC_CHECK_HEADER(Kerberos/gssapi_krb5.h, [WITH_CREDSSP=1], [WITH_CREDSSP=0])
+		AC_CHECK_HEADER(Kerberos/gssapi_krb5.h, [WITH_GSSAPI_CREDSSP=1], [WITH_GSSAPI_CREDSSP=0])
 		GSSAPI_CFLAGS=""
 		GSSAPI_LIBS="-framework Kerberos"
 		;;
@@ -95,34 +100,23 @@ AS_IF([test "x$enable_credssp" != "xno"], [
 			case "$host" in
 				*-*-freebsd*)
 				if test -n "$PKG_CONFIG"; then
-					RD_PKG_CHECK_MODULES(GSSAPI, gss, [WITH_CREDSSP=1], [WITH_CREDSSP=0])
+					RD_PKG_CHECK_MODULES(GSSAPI, gss, [WITH_GSSAPI_CREDSSP=1], [WITH_GSSAPI_CREDSSP=0])
 				fi
-				;;
-			*)
 				;;
 			esac
 		else
 			if test -n "$PKG_CONFIG"; then
-				RD_PKG_CHECK_MODULES(GSSAPI, krb5-gssapi, [WITH_CREDSSP=1], [WITH_CREDSSP=0])
+				RD_PKG_CHECK_MODULES(GSSAPI, krb5-gssapi, [WITH_GSSAPI_CREDSSP=1], [WITH_GSSAPI_CREDSSP=0])
 			fi
 		fi
 		;;
 	esac
 
-
-	  if test x"$WITH_CREDSSP" = "x1"; then
-	      CREDSSPOBJ="cssp.o"
-	      CFLAGS="$CFLAGS $GSSAPI_CFLAGS"
-	      LIBS="$LIBS $GSSAPI_LIBS"
-
-	      AC_DEFINE(WITH_CREDSSP)
-	  else
-		echo
-		echo "CredSSP support requires GSSAPI, install the dependency"
-		echo "or disable the feature using --disable-credssp."
-		echo
-		exit 1
-	  fi
+	if test x"$WITH_GSSAPI_CREDSSP" = "x1"; then
+		CFLAGS="$CFLAGS $GSSAPI_CFLAGS"
+		LIBS="$LIBS $GSSAPI_LIBS"
+		AC_DEFINE(WITH_GSSAPI_CREDSSP)
+	fi
 ])
 AC_SUBST(CREDSSPOBJ)
 

@@ -4,6 +4,7 @@
    Copyright (C) Matthew Chapman 1999-2008
    Copyright 2016 Alexander Zakharov <uglym8@gmail.com>
    Copyright 2017-2018 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2026 Marco Fortina <marco_fortina@hotmail.it>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -83,7 +84,8 @@ enum RDP_NEG_REQ_CODE
 {
 	PROTOCOL_RDP = 0,
 	PROTOCOL_SSL = 1,
-	PROTOCOL_HYBRID = 2
+	PROTOCOL_HYBRID = 2,
+	PROTOCOL_HYBRID_EX = 8
 };
 
 enum RDP_NEG_FAILURE_CODE

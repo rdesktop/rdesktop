@@ -47,7 +47,7 @@ script and Makefile templates.
 Optional features need additional dependencies:
 
 - smart-card support: PCSC-lite headers and library;
-- CredSSP support: GSSAPI/Kerberos headers and library;
+- CredSSP support: internal NTLMv2 is built by default; GSSAPI/Kerberos headers and library are optional for Kerberos NLA;
 - sound support: one or more supported audio backends such as ALSA, PulseAudio,
   libao or OSS, plus libsamplerate when available.
 
@@ -61,6 +61,14 @@ Add optional packages when enabling those features, for example:
 
 	% sudo apt-get install libpcsclite-dev libkrb5-dev libasound2-dev \
 		libpulse-dev libao-dev libsamplerate0-dev
+
+## CredSSP / NLA login
+
+rdesktop supports CredSSP/NLA over TLS. Password-based NLA uses the built-in
+NTLMv2/SPNEGO client, which avoids requiring a pre-existing Kerberos ticket for
+common Windows and RDS deployments. Kerberos-based CredSSP remains available
+when rdesktop is built with optional GSSAPI/Kerberos support and the user has a
+valid TGT.
 
 
 ## Note for users building from source

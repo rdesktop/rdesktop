@@ -4,6 +4,7 @@
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2005-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
    Copyright 2012-2018 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2026 Marco Fortina <marco_fortina@hotmail.it>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -366,8 +367,9 @@ iso_connect(char *server, char *username, char *domain, char *password,
 			logger(Core, Notice, "Connection established using SSL.");
 		}
 #ifdef WITH_CREDSSP
-		else if (data == PROTOCOL_HYBRID)
+		else if (data == PROTOCOL_HYBRID || data == PROTOCOL_HYBRID_EX)
 		{
+			logger(Core, Debug, "iso_connect(), server selected CredSSP protocol 0x%x", data);
 			if (!cssp_connect(server, username, domain, password, s))
 			{
 				/* failed to connect using cssp, let retry with plain TLS */

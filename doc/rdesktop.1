@@ -301,6 +301,12 @@ Use RDP version 5 (default).
 Enable verbose output
 .PP
 
+.SH "CredSSP / NLA authentication"
+rdesktop supports CredSSP/NLA over TLS. Password-based NLA uses an internal
+NTLMv2/SPNEGO client and does not require a pre-existing Kerberos ticket.
+Kerberos-based CredSSP remains available when rdesktop is built with optional
+GSSAPI/Kerberos support and the user has a valid TGT.
+.PP
 .SH "CredSSP Smartcard options"
 .TP
 .BR "--sc-csp-name <name>"
