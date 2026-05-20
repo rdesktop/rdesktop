@@ -145,6 +145,16 @@ else
     exit 1
 fi
 
+# Xfixes is optional and used for reliable local clipboard owner change tracking.
+if test -n "$PKG_CONFIG"; then
+    RD_PKG_CHECK_MODULES(XFIXES, xfixes, [HAVE_XFIXES=1], [HAVE_XFIXES=0])
+fi
+if test x"$HAVE_XFIXES" = "x1"; then
+    CFLAGS="$CFLAGS $XFIXES_CFLAGS"
+    LIBS="$LIBS $XFIXES_LIBS"
+    AC_DEFINE(HAVE_XFIXES)
+fi
+
 # libtasn1
 if test -n "$PKG_CONFIG"; then
     RD_PKG_CHECK_MODULES(LIBTASN1, libtasn1, [HAVE_LIBTASN1=1], [HAVE_LIBTASN1=0])

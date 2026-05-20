@@ -2709,6 +2709,9 @@ xwin_process_events(void)
 			/* Ignore events between ui_destroy_window and ui_create_window */
 			continue;
 
+		if (xclip_handle_XFixesSelectionNotify(&xevent))
+			continue;
+
 		/*
 		 * Ignore root window events except those that rdesktop explicitly
 		 * subscribes to. The clipboard backend selects PropertyNotify on the
