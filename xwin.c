@@ -68,6 +68,26 @@ extern RD_BOOL g_sendmotion;
 extern RD_BOOL g_fullscreen;
 extern RD_BOOL g_grab_keyboard;
 extern RD_BOOL g_hide_decorations;
+
+#define UNGRAB_MOD_LCTRL  (1 << 0)
+#define UNGRAB_MOD_RCTRL  (1 << 1)
+#define UNGRAB_MOD_LALT   (1 << 2)
+#define UNGRAB_MOD_RALT   (1 << 3)
+#define UNGRAB_MOD_LSHIFT (1 << 4)
+#define UNGRAB_MOD_RSHIFT (1 << 5)
+#define UNGRAB_MOD_LSUPER (1 << 6)
+#define UNGRAB_MOD_RSUPER (1 << 7)
+
+#define UNGRAB_REQ_CTRL   (1 << 8)
+#define UNGRAB_REQ_ALT    (1 << 9)
+#define UNGRAB_REQ_SHIFT  (1 << 10)
+#define UNGRAB_REQ_SUPER  (1 << 11)
+
+static uint16 g_keyboard_ungrab_combo = 0;
+static uint16 g_keyboard_ungrab_down = 0;
+static uint16 g_keyboard_ungrab_seen = 0;
+static RD_BOOL g_keyboard_ungrab_tracking = False;
+static RD_BOOL g_keyboard_ungrabbed_by_hotkey = False;
 extern RD_BOOL g_pending_resize;
 extern RD_BOOL g_pending_resize_defer;
 extern struct timeval g_pending_resize_defer_timer;
@@ -2133,6 +2153,216 @@ get_window_attribs_seamless(XSetWindowAttributes * attribs)
 	return (get_window_attribs(attribs) & ~CWOverrideRedirect);
 }
 
+static uint16
+keysym_to_ungrab_mod(KeySym keysym)
+{
+	switch (keysym)
+	{
+		case XK_Control_L:
+			return UNGRAB_MOD_LCTRL;
+		case XK_Control_R:
+			return UNGRAB_MOD_RCTRL;
+		case XK_Alt_L:
+		case XK_Meta_L:
+			return UNGRAB_MOD_LALT;
+		case XK_Alt_R:
+		case XK_Meta_R:
+		case XK_Mode_switch:
+		case XK_ISO_Level3_Shift:
+			return UNGRAB_MOD_RALT;
+		case XK_Shift_L:
+			return UNGRAB_MOD_LSHIFT;
+		case XK_Shift_R:
+			return UNGRAB_MOD_RSHIFT;
+		case XK_Super_L:
+		case XK_Hyper_L:
+			return UNGRAB_MOD_LSUPER;
+		case XK_Super_R:
+		case XK_Hyper_R:
+			return UNGRAB_MOD_RSUPER;
+	}
+	return 0;
+}
+
+static uint16
+ungrab_exact_to_group(uint16 mod)
+{
+	uint16 group = 0;
+
+	if (mod & (UNGRAB_MOD_LCTRL | UNGRAB_MOD_RCTRL))
+		group |= UNGRAB_REQ_CTRL;
+	if (mod & (UNGRAB_MOD_LALT | UNGRAB_MOD_RALT))
+		group |= UNGRAB_REQ_ALT;
+	if (mod & (UNGRAB_MOD_LSHIFT | UNGRAB_MOD_RSHIFT))
+		group |= UNGRAB_REQ_SHIFT;
+	if (mod & (UNGRAB_MOD_LSUPER | UNGRAB_MOD_RSUPER))
+		group |= UNGRAB_REQ_SUPER;
+	return group;
+}
+
+static RD_BOOL
+ungrab_combo_satisfied(uint16 down)
+{
+	uint16 groups = ungrab_exact_to_group(down);
+
+	if ((g_keyboard_ungrab_combo & UNGRAB_REQ_CTRL) && !(groups & UNGRAB_REQ_CTRL))
+		return False;
+	if ((g_keyboard_ungrab_combo & UNGRAB_REQ_ALT) && !(groups & UNGRAB_REQ_ALT))
+		return False;
+	if ((g_keyboard_ungrab_combo & UNGRAB_REQ_SHIFT) && !(groups & UNGRAB_REQ_SHIFT))
+		return False;
+	if ((g_keyboard_ungrab_combo & UNGRAB_REQ_SUPER) && !(groups & UNGRAB_REQ_SUPER))
+		return False;
+	if ((g_keyboard_ungrab_combo & UNGRAB_MOD_LCTRL) && !(down & UNGRAB_MOD_LCTRL))
+		return False;
+	if ((g_keyboard_ungrab_combo & UNGRAB_MOD_RCTRL) && !(down & UNGRAB_MOD_RCTRL))
+		return False;
+	if ((g_keyboard_ungrab_combo & UNGRAB_MOD_LALT) && !(down & UNGRAB_MOD_LALT))
+		return False;
+	if ((g_keyboard_ungrab_combo & UNGRAB_MOD_RALT) && !(down & UNGRAB_MOD_RALT))
+		return False;
+	if ((g_keyboard_ungrab_combo & UNGRAB_MOD_LSHIFT) && !(down & UNGRAB_MOD_LSHIFT))
+		return False;
+	if ((g_keyboard_ungrab_combo & UNGRAB_MOD_RSHIFT) && !(down & UNGRAB_MOD_RSHIFT))
+		return False;
+	if ((g_keyboard_ungrab_combo & UNGRAB_MOD_LSUPER) && !(down & UNGRAB_MOD_LSUPER))
+		return False;
+	if ((g_keyboard_ungrab_combo & UNGRAB_MOD_RSUPER) && !(down & UNGRAB_MOD_RSUPER))
+		return False;
+	return True;
+}
+
+static uint16
+ungrab_combo_relevant_mask(void)
+{
+	uint16 mask = 0;
+
+	if (g_keyboard_ungrab_combo & UNGRAB_REQ_CTRL)
+		mask |= UNGRAB_MOD_LCTRL | UNGRAB_MOD_RCTRL;
+	if (g_keyboard_ungrab_combo & UNGRAB_REQ_ALT)
+		mask |= UNGRAB_MOD_LALT | UNGRAB_MOD_RALT;
+	if (g_keyboard_ungrab_combo & UNGRAB_REQ_SHIFT)
+		mask |= UNGRAB_MOD_LSHIFT | UNGRAB_MOD_RSHIFT;
+	if (g_keyboard_ungrab_combo & UNGRAB_REQ_SUPER)
+		mask |= UNGRAB_MOD_LSUPER | UNGRAB_MOD_RSUPER;
+	mask |= g_keyboard_ungrab_combo & (UNGRAB_MOD_LCTRL | UNGRAB_MOD_RCTRL |
+		UNGRAB_MOD_LALT | UNGRAB_MOD_RALT | UNGRAB_MOD_LSHIFT | UNGRAB_MOD_RSHIFT |
+		UNGRAB_MOD_LSUPER | UNGRAB_MOD_RSUPER);
+	return mask;
+}
+
+static void
+keyboard_ungrab_reset_state(void)
+{
+	g_keyboard_ungrab_down = 0;
+	g_keyboard_ungrab_seen = 0;
+	g_keyboard_ungrab_tracking = False;
+}
+
+RD_BOOL
+xwin_parse_keyboard_ungrab_combo(const char *combo)
+{
+	char buf[128];
+	char *token;
+	uint16 parsed = 0;
+
+	if (combo == NULL || combo[0] == '\0' || !strcasecmp(combo, "off") ||
+	    !strcasecmp(combo, "none"))
+	{
+		g_keyboard_ungrab_combo = 0;
+		keyboard_ungrab_reset_state();
+		return True;
+	}
+
+	STRNCPY(buf, combo, sizeof(buf));
+	for (token = strtok(buf, "_+"); token; token = strtok(NULL, "_+"))
+	{
+		if (!strcasecmp(token, "ctrl"))
+			parsed |= UNGRAB_REQ_CTRL;
+		else if (!strcasecmp(token, "alt"))
+			parsed |= UNGRAB_REQ_ALT;
+		else if (!strcasecmp(token, "shift"))
+			parsed |= UNGRAB_REQ_SHIFT;
+		else if (!strcasecmp(token, "super") || !strcasecmp(token, "win"))
+			parsed |= UNGRAB_REQ_SUPER;
+		else if (!strcasecmp(token, "lctrl"))
+			parsed |= UNGRAB_MOD_LCTRL;
+		else if (!strcasecmp(token, "rctrl"))
+			parsed |= UNGRAB_MOD_RCTRL;
+		else if (!strcasecmp(token, "lalt"))
+			parsed |= UNGRAB_MOD_LALT;
+		else if (!strcasecmp(token, "ralt") || !strcasecmp(token, "altgr"))
+			parsed |= UNGRAB_MOD_RALT;
+		else if (!strcasecmp(token, "lshift"))
+			parsed |= UNGRAB_MOD_LSHIFT;
+		else if (!strcasecmp(token, "rshift"))
+			parsed |= UNGRAB_MOD_RSHIFT;
+		else if (!strcasecmp(token, "lsuper") || !strcasecmp(token, "lwin"))
+			parsed |= UNGRAB_MOD_LSUPER;
+		else if (!strcasecmp(token, "rsuper") || !strcasecmp(token, "rwin"))
+			parsed |= UNGRAB_MOD_RSUPER;
+		else
+		{
+			logger(Core, Error, "invalid keyboard ungrab modifier '%s'", token);
+			return False;
+		}
+	}
+
+	if (parsed == 0)
+		return False;
+
+	g_keyboard_ungrab_combo = parsed;
+	keyboard_ungrab_reset_state();
+	return True;
+}
+
+static RD_BOOL
+handle_keyboard_ungrab(KeySym keysym, RD_BOOL pressed)
+{
+	uint16 mod, relevant;
+
+	if (!g_grab_keyboard || g_keyboard_ungrab_combo == 0)
+		return False;
+
+	mod = keysym_to_ungrab_mod(keysym);
+	if (mod == 0)
+	{
+		if (g_keyboard_ungrab_tracking)
+			keyboard_ungrab_reset_state();
+		return False;
+	}
+
+	relevant = ungrab_combo_relevant_mask();
+	if (!(mod & relevant))
+	{
+		if (g_keyboard_ungrab_tracking)
+			keyboard_ungrab_reset_state();
+		return False;
+	}
+
+	g_keyboard_ungrab_tracking = True;
+	if (pressed)
+	{
+		g_keyboard_ungrab_down |= mod;
+		if (ungrab_combo_satisfied(g_keyboard_ungrab_down))
+			g_keyboard_ungrab_seen = g_keyboard_ungrab_combo;
+	}
+	else
+	{
+		g_keyboard_ungrab_down &= ~mod;
+		if (g_keyboard_ungrab_seen == g_keyboard_ungrab_combo &&
+		    (g_keyboard_ungrab_down & relevant) == 0)
+		{
+			logger(Keyboard, Notice, "Keyboard ungrab hotkey released");
+			XUngrabKeyboard(g_display, CurrentTime);
+			g_keyboard_ungrabbed_by_hotkey = True;
+			keyboard_ungrab_reset_state();
+		}
+	}
+
+	return True;
+}
+
 static void
 get_input_mask(long *input_mask)
 {
@@ -2799,6 +3029,8 @@ xwin_process_events(void)
 
 				set_keypress_keysym(xevent.xkey.keycode, keysym);
 				ev_time = time(NULL);
+				if (handle_keyboard_ungrab(keysym, True))
+					break;
 				if (handle_special_keys(keysym, xevent.xkey.state, ev_time, True))
 					break;
 
@@ -2816,6 +3048,8 @@ xwin_process_events(void)
 
 				keysym = reset_keypress_keysym(xevent.xkey.keycode, keysym);
 				ev_time = time(NULL);
+				if (handle_keyboard_ungrab(keysym, False))
+					break;
 				if (handle_special_keys(keysym, xevent.xkey.state, ev_time, False))
 					break;
 
@@ -2824,6 +3058,12 @@ xwin_process_events(void)
 				break;
 
 			case ButtonPress:
+				if (g_keyboard_ungrabbed_by_hotkey && g_grab_keyboard && g_focused)
+				{
+					XGrabKeyboard(g_display, g_wnd, True,
+						      GrabModeAsync, GrabModeAsync, CurrentTime);
+					g_keyboard_ungrabbed_by_hotkey = False;
+				}
 				handle_button_event(xevent, True);
 				break;
 
@@ -2864,8 +3104,11 @@ xwin_process_events(void)
 				g_focused = True;
 				reset_modifier_keys();
 				if (g_grab_keyboard && g_mouse_in_wnd)
+				{
 					XGrabKeyboard(g_display, g_wnd, True,
 						      GrabModeAsync, GrabModeAsync, CurrentTime);
+					g_keyboard_ungrabbed_by_hotkey = False;
+				}
 
 				sw = sw_get_window_by_wnd(xevent.xfocus.window);
 				if (!sw)
@@ -2912,8 +3155,11 @@ xwin_process_events(void)
 					break;
 				}
 				if (g_focused)
+				{
 					XGrabKeyboard(g_display, g_wnd, True,
 						      GrabModeAsync, GrabModeAsync, CurrentTime);
+					g_keyboard_ungrabbed_by_hotkey = False;
+				}
 				break;
 
 			case LeaveNotify:

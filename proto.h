@@ -286,6 +286,7 @@ void ui_update_window_sizehints(uint32 width, uint32 height);
 RD_BOOL ui_have_window(void);
 void xwin_iconify_window(void);
 void xwin_toggle_fullscreen(void);
+RD_BOOL xwin_parse_keyboard_ungrab_combo(const char *combo);
 void ui_select(int rdp_socket);
 void ui_move_pointer(int x, int y);
 RD_HBITMAP ui_create_bitmap(int width, int height, uint8 * data);

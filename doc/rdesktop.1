@@ -166,6 +166,15 @@ Hide window manager decorations, by using MWM hints.
 Do not override window manager key bindings.  By default rdesktop attempts
 to grab all keyboard input when it is in focus.
 .TP
+.BR "-J <modifier combination>"
+Configure a modifier-only hotkey that releases the active keyboard grab when
+the modifiers are pressed and released.  This can be used to temporarily return
+keyboard shortcuts such as workspace switching to the local window manager
+without disabling normal keyboard grabbing with -K.  The combination uses
+underscore or plus separated modifiers, for example ctrl_alt, lctrl_ralt,
+super, or off.  After ungrabbing, click in the rdesktop window to grab the
+keyboard again.
+.TP
 .BR "-S <button size>"
 Enable single application mode. This option can be used when running a
 single, maximized application (via -s). When the minimize button of

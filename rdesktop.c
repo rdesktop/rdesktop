@@ -198,6 +198,7 @@ usage(char *program)
 	fprintf(stderr, "   -C: use private colour map\n");
 	fprintf(stderr, "   -D: hide window manager decorations\n");
 	fprintf(stderr, "   -K: keep window manager key bindings\n");
+	fprintf(stderr, "   -J: modifier combination to ungrab keyboard (example: ctrl_alt)\n");
 	fprintf(stderr, "   -S: caption button size (single application mode)\n");
 	fprintf(stderr, "   -T: window title\n");
 	fprintf(stderr, "   -w: WM_CLASS name\n");
@@ -1115,7 +1116,7 @@ main(int argc, char *argv[])
 	}
 
 	while ((c = getopt(argc, argv,
-			   "A:V:u:L:d:s:c:p:n:k:g:o:fbBeEitmMzCDKS:T:w:NX:a:x:Pr:R045vh?")) != -1)
+			   "A:V:u:L:d:s:c:p:n:k:g:o:fbBeEitmMzCDKJ:S:T:w:NX:a:x:Pr:R045vh?")) != -1)
 	{
 		switch (c)
 		{
@@ -1235,6 +1236,14 @@ main(int argc, char *argv[])
 
 			case 'K':
 				g_grab_keyboard = False;
+				break;
+
+			case 'J':
+				if (!xwin_parse_keyboard_ungrab_combo(optarg))
+				{
+					logger(Core, Error, "invalid -J keyboard ungrab combination: %s", optarg);
+					return EX_USAGE;
+				}
 				break;
 
 			case 'S':
