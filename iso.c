@@ -272,6 +272,17 @@ iso_connect(char *server, char *username, char *domain, char *password,
 	if (s == NULL)
 		return False;
 
+	if (is_fastpath)
+	{
+		logger(Protocol, Error,
+		       "iso_connect(), expected ISO connection confirm, got non-TPKT/fast-path header 0x%x",
+		       fastpath_hdr);
+		logger(Protocol, Error,
+		       "iso_connect(), check that the target host and port are an RDP listener, not a gateway, proxy, or closed service");
+		tcp_disconnect();
+		return False;
+	}
+
 	if (code != ISO_PDU_CC)
 	{
 		logger(Protocol, Error, "iso_connect(), expected ISO_PDU_CC, got 0x%x", code);
