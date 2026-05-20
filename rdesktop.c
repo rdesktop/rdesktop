@@ -1625,6 +1625,11 @@ main(int argc, char *argv[])
 		strncat(g_title, server, sizeof(g_title) - sizeof("rdesktop - "));
 	}
 
+#ifdef WITH_SCARD
+	if (g_use_password_as_pin && g_sc_reader_name == NULL)
+		scard_auto_select_reader(&g_sc_reader_name);
+#endif
+
 	/* Only startup ctrl functionality is seamless are used for now. */
 	if (g_use_ctrl && g_seamless_rdp)
 	{

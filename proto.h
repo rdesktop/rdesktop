@@ -375,6 +375,7 @@ unsigned int seamless_send_persistent(RD_BOOL);
 void scard_lock(int lock);
 void scard_unlock(int lock);
 int scard_enum_devices(uint32 * id, char *optarg);
+RD_BOOL scard_auto_select_reader(char **reader_name);
 void scardSetInfo(uint32 epoch, uint32 device, uint32 id, uint32 bytes_out);
 void scard_reset_state();
 void scard_release_all_contexts(void);

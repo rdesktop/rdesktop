@@ -282,6 +282,67 @@ scard_enum_devices(uint32 * id, char *optarg)
 	return count;
 }
 
+RD_BOOL
+scard_auto_select_reader(char **reader_name)
+{
+#define autoReaderArraySize 1024
+	MYPCSC_DWORD rv;
+	SCARDCONTEXT hContext;
+	MYPCSC_DWORD cchReaders = autoReaderArraySize;
+	char readers[autoReaderArraySize];
+	char *cur;
+	char *selected = NULL;
+	int count = 0;
+
+	if (reader_name == NULL || *reader_name != NULL)
+		return True;
+
+	rv = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &hContext);
+	if (rv != SCARD_S_SUCCESS)
+	{
+		logger(SmartCard, Warning,
+		       "scard_auto_select_reader(), PCSC service not available: %s (0x%08x)",
+		       pcsc_stringify_error(rv), (unsigned int) rv);
+		return False;
+	}
+
+	memset(readers, 0, sizeof(readers));
+	rv = SCardListReaders(hContext, NULL, readers, &cchReaders);
+	SCardReleaseContext(hContext);
+
+	if (rv != SCARD_S_SUCCESS)
+	{
+		logger(SmartCard, Warning,
+		       "scard_auto_select_reader(), failed to list readers: %s (0x%08x)",
+		       pcsc_stringify_error(rv), (unsigned int) rv);
+		return False;
+	}
+
+	cur = readers;
+	while (*cur)
+	{
+		count++;
+		selected = cur;
+		cur += strlen(cur) + 1;
+	}
+
+	if (count == 1 && selected)
+	{
+		*reader_name = strdup(selected);
+		logger(SmartCard, Notice, "Auto-selected smartcard reader '%s'", *reader_name);
+		return *reader_name != NULL;
+	}
+
+	if (count == 0)
+		logger(SmartCard, Warning, "scard_auto_select_reader(), no smartcard reader found");
+	else
+		logger(SmartCard, Warning,
+		       "scard_auto_select_reader(), %d readers found; use -o sc-reader-name=<reader>",
+		       count);
+	return False;
+#undef autoReaderArraySize
+}
+
 typedef struct _scard_handle_list_t
 {
 	struct _scard_handle_list_t *next;
@@ -518,6 +579,12 @@ hasAlias(char *name)
 	return 0;
 }
 
+static RD_BOOL
+scard_has_explicit_reader_filter(void)
+{
+	return nameMapCount > 0;
+}
+
 static void
 inRepos(STREAM in, unsigned int read)
 {
@@ -590,35 +657,53 @@ outForceAlignment(STREAM out, unsigned int seed)
 static unsigned int
 inString(PMEM_HANDLE * handle, STREAM in, char **destination, SERVER_DWORD dataLength, RD_BOOL wide)
 {
-	unsigned int Result = (wide) ? (2 * dataLength) : (dataLength);
 	PMEM_HANDLE lcHandle = NULL;
-	char *buffer = SC_xmalloc(&lcHandle, Result + 2);
+	char *buffer;
 	char *reader;
+	unsigned int chars;
+	unsigned int i;
 
-	/* code segment */
+	buffer = SC_xmalloc(&lcHandle, dataLength + 2);
+	if (!buffer)
+	{
+		*destination = NULL;
+		return 0;
+	}
+	memset(buffer, 0, dataLength + 2);
+
+	/* dataLength is the on-wire byte count. Do not double it for wide strings. */
+	in_uint8a(in, buffer, dataLength);
 
 	if (wide)
 	{
-		unsigned int i;
-		in_uint8a(in, buffer, 2 * dataLength);
-		for (i = 0; i < dataLength; i++)
-			if ((buffer[2 * i] < 0) || (buffer[2 * i + 1] != 0))
-				buffer[i] = '?';
-			else
-				buffer[i] = buffer[2 * i];
+		chars = dataLength / 2;
+		if (dataLength % 2)
+		{
+			logger(SmartCard, Warning,
+			       "inString(), ignoring odd trailing byte in wide reader name length %u",
+			       (unsigned) dataLength);
+		}
+
+		for (i = 0; i < chars; i++)
+		{
+			uint8 lo = (uint8) buffer[2 * i];
+			uint8 hi = (uint8) buffer[2 * i + 1];
+			buffer[i] = hi ? '?' : (char) lo;
+		}
+		buffer[chars] = '\0';
 	}
 	else
 	{
-		in_uint8a(in, buffer, dataLength);
+		buffer[dataLength] = '\0';
 	}
 
-	buffer[dataLength] = '\0';
 	reader = getName(buffer);
 	*destination = SC_xmalloc(handle, strlen(reader) + 1);
-	strcpy(*destination, reader);
+	if (*destination)
+		strcpy(*destination, reader);
 
 	SC_xfreeallmemory(&lcHandle);
-	return Result;
+	return dataLength;
 }
 
 static unsigned int
@@ -863,24 +948,31 @@ TS_SCardListReaders(STREAM in, STREAM out, RD_BOOL wide)
 
 		for (i = 0, tmpMap = nameMapList; i < nameMapCount; i++, tmpMap++)
 		{
+			logger(SmartCard, Debug, "TS_SCardListReaders(), configured '%s'",
+			       tmpMap->alias);
 			dataLength += outString(out, tmpMap->alias, wide);
 		}
 
-		int lenSC = strlen(cur);
-		if (lenSC == 0)
-			dataLength += outString(out, "\0", wide);
-		else
-			while (lenSC > 0)
-			{
-				if (!hasAlias(cur))
+		if (!scard_has_explicit_reader_filter())
+		{
+			int lenSC = strlen(cur);
+			if (lenSC == 0)
+				dataLength += outString(out, "\0", wide);
+			else
+				while (lenSC > 0)
 				{
 					logger(SmartCard, Debug, "TS_SCardListReaders(),    '%s'",
 					       cur);
 					dataLength += outString(out, cur, wide);
+					cur = (void *) ((unsigned char *) cur + lenSC + 1);
+					lenSC = strlen(cur);
 				}
-				cur = (void *) ((unsigned char *) cur + lenSC + 1);
-				lenSC = strlen(cur);
-			}
+		}
+		else
+		{
+			logger(SmartCard, Debug,
+			       "TS_SCardListReaders(), hiding unconfigured local readers");
+		}
 	}
 
 	dataLength += outString(out, "\0", wide);
