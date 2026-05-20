@@ -3168,9 +3168,13 @@ process_fds(int rdp_socket, int ms)
 		rdpsnd_check_fds(&rfds, &wfds);
 #endif
 
-		/* Abort serial read calls */
-		if (s_timeout)
-			rdpdr_check_fds(&rfds, &wfds, (RD_BOOL) True);
+		/*
+		 * On select timeout we still need to poll non-selectable rdpdr
+		 * requests such as serial wait-on-mask events.  s_timeout keeps its
+		 * old meaning: abort read calls that reached their real timeout.
+		 */
+		if (ret == 0 || s_timeout)
+			rdpdr_check_fds(&rfds, &wfds, s_timeout);
 		return False;
 	}
 
