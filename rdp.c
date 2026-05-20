@@ -6,6 +6,7 @@
    Copyright 2011-2018 Henrik Andersson <hean01@cendio.se> for Cendio AB
    Copyright 2016 Alexander Zakharov <uglym8gmail.com>
    Copyright 2017 Karl Mikaelsson <derfian@cendio.se> for Cendio AB
+   Copyright 2026 Marco Fortina <marco_fortina@hotmail.it>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -266,8 +267,8 @@ rdp_out_unistr(STREAM s, char *string, int len)
 	static iconv_t icv_local_to_utf16;
 	size_t ibl, obl;
 	char *pin;
-	unsigned char *pout;
-
+	char *pout;
+	unsigned char *outbuf;
 
 	if (string == NULL || len == 0)
 		return;
@@ -288,12 +289,16 @@ rdp_out_unistr(STREAM s, char *string, int len)
 	ibl = strlen(string);
 	obl = len + 2;
 	pin = string;
-	out_uint8p(s, pout, len + 2);
 
-	memset(pout, 0, len + 2);
+	/* Reserve the UTF-16 output field in the stream. out_uint8p()
+	 * initializes outbuf to the reserved stream area and advances s->p.
+	 * iconv() then advances the separate pout cursor while writing there.
+	 */
+	out_uint8p(s, outbuf, len + 2);
+	memset(outbuf, 0, len + 2);
+	pout = (char *) outbuf;
 
-
-	if (iconv(icv_local_to_utf16, (char **) &pin, &ibl, (char **)&pout, &obl) == (size_t) - 1)
+	if (iconv(icv_local_to_utf16, (char **) &pin, &ibl, &pout, &obl) == (size_t) - 1)
 	{
 		logger(Protocol, Error, "rdp_out_unistr(), iconv(2) fail, errno %d", errno);
 		abort();
