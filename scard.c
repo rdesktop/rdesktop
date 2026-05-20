@@ -7,6 +7,7 @@
    Copyright 2015 Rostislav Kondratenko <r.kondratenk@wwpass.com>
    Copyright 2017 Karl Mikaelsson <derfian@cendio.se> for Cendio AB
    Copyright 2016-2018 Alexander Zakharov <uglym8@gmail.com>
+   Copyright 2026 Marco Fortina <marco_fortina@hotmail.it>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -80,6 +81,7 @@ static PThreadListElement threadList = NULL;
 
 
 static PSCThreadData queueFirst = NULL, queueLast = NULL;
+static RD_BOOL scard_queue_initialized = False;
 static int threadCount = 0;
 
 static PSCHCardRec hcardFirst = NULL;
@@ -88,13 +90,30 @@ static void *queue_handler_function(void *data);
 
 /* code segment */
 
+static void
+scard_invalidate_state(void)
+{
+	if (scard_queue_initialized)
+		pthread_mutex_lock(&queueAccess);
+	curEpoch++;
+	curDevice = 0;
+	curId = 0;
+	curBytesOut = 0;
+	if (scard_queue_initialized)
+		pthread_mutex_unlock(&queueAccess);
+}
+
 void
 scardSetInfo(uint32 epoch, uint32 device, uint32 id, uint32 bytes_out)
 {
+	if (scard_queue_initialized)
+		pthread_mutex_lock(&queueAccess);
 	curDevice = device;
 	curId = id;
 	curBytesOut = bytes_out;
 	curEpoch = epoch;
+	if (scard_queue_initialized)
+		pthread_mutex_unlock(&queueAccess);
 }
 
 static RD_NTSTATUS
@@ -196,6 +215,7 @@ scard_enum_devices(uint32 * id, char *optarg)
 		       "scard_enum_devices(), can't create queue handling thread");
 		return 0;
 	}
+	scard_queue_initialized = True;
 
 	strncpy(g_rdpdr_device[*id].name, "SCARD\0\0\0", 8);
 	toupper_str(g_rdpdr_device[*id].name);
@@ -2523,13 +2543,24 @@ SC_addToQueue(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 		return NULL;
 	else
 	{
+		uint32 device, id, epoch, bytes_out;
+
+		if (scard_queue_initialized)
+			pthread_mutex_lock(&queueAccess);
+		device = curDevice;
+		id = curId;
+		epoch = curEpoch;
+		bytes_out = curBytesOut;
+		if (scard_queue_initialized)
+			pthread_mutex_unlock(&queueAccess);
+
 		data->memHandle = lcHandle;
-		data->device = curDevice;
-		data->id = curId;
-		data->epoch = curEpoch;
+		data->device = device;
+		data->id = id;
+		data->epoch = epoch;
 		data->handle = handle;
 		data->request = request;
-		data->srv_buf_len = curBytesOut - 0x14;
+		data->srv_buf_len = bytes_out - 0x14;
 		data->in = duplicateStream(&(data->memHandle), in, 0, SC_TRUE);
 		if (data->in == NULL)
 		{
@@ -2537,7 +2568,7 @@ SC_addToQueue(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 			return NULL;
 		}
 		data->out =
-			duplicateStream(&(data->memHandle), out, OUT_STREAM_SIZE + curBytesOut,
+			duplicateStream(&(data->memHandle), out, OUT_STREAM_SIZE + bytes_out,
 					SC_FALSE);
 		if (data->out == NULL)
 		{
@@ -2604,12 +2635,30 @@ SC_deviceControl(PSCThreadData data)
 	/* if iorequest belongs to another epoch, don't send response
 	   back to server due to it's considered as abandoned.
 	 */
-	if (data->epoch == curEpoch)
 	{
-		uint8 *buf;
-		s_seek(data->out, 0);
-		in_uint8p(data->out, buf, buffer_len);
-		rdpdr_send_completion(data->device, data->id, status, buffer_len, buf, buffer_len);
+		RD_BOOL current;
+		uint32 current_epoch;
+
+		if (scard_queue_initialized)
+			pthread_mutex_lock(&queueAccess);
+		current_epoch = curEpoch;
+		current = data->epoch == current_epoch;
+		if (scard_queue_initialized)
+			pthread_mutex_unlock(&queueAccess);
+
+		if (current)
+		{
+			uint8 *buf;
+			s_seek(data->out, 0);
+			in_uint8p(data->out, buf, buffer_len);
+			rdpdr_send_completion(data->device, data->id, status, buffer_len, buf, buffer_len);
+		}
+		else
+		{
+			logger(SmartCard, Debug,
+			       "SC_deviceControl(), dropping stale smart card response epoch=%u current=%u",
+			       data->epoch, current_epoch);
+		}
 	}
 
 	SC_destroyThreadData(data);
@@ -2760,11 +2809,13 @@ scard_unlock(int lock)
 void
 scard_reset_state()
 {
-	curDevice = 0;
-	curId = 0;
-	curBytesOut = 0;
-
-	queueFirst = queueLast = NULL;
+	/*
+	 * Outstanding smart card calls can complete after the RDP connection has
+	 * been reset.  Invalidate the current epoch instead of discarding the queue
+	 * so worker threads can drain stale requests without sending completions on
+	 * the wrong connection.
+	 */
+	scard_invalidate_state();
 }
 
 void
@@ -2772,6 +2823,7 @@ scard_release_all_contexts(void)
 {
 	_scard_handle_list_t *item, *next;
 
+	scard_invalidate_state();
 	item = g_scard_handle_list;
 
 	while (item)
