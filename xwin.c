@@ -2654,9 +2654,17 @@ xwin_process_events(void)
 			/* Ignore events between ui_destroy_window and ui_create_window */
 			continue;
 
-		/* Also ignore root window events except ConfigureNotify */
-		if (xevent.type != ConfigureNotify
-		    && xevent.xany.window == DefaultRootWindow(g_display))
+		/*
+		 * Ignore root window events except those that rdesktop explicitly
+		 * subscribes to. The clipboard backend selects PropertyNotify on the
+		 * root window for _RDESKTOP_SELECTION_NOTIFY; dropping those events here
+		 * prevents clipboard state changes from being propagated after focus
+		 * changes, which is especially visible when keyboard grabbing is disabled
+		 * with -K.
+		 */
+		if (xevent.xany.window == DefaultRootWindow(g_display)
+		    && xevent.type != ConfigureNotify
+		    && xevent.type != PropertyNotify)
 			continue;
 
 		if ((g_IC != NULL) && (XFilterEvent(&xevent, None) == True))
