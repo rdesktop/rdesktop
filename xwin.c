@@ -2192,6 +2192,57 @@ ui_update_window_sizehints(uint32 width, uint32 height)
 	}
 }
 
+static void
+xwin_update_main_window_position(void)
+{
+	Window child;
+	int xpos, ypos;
+
+	if (!g_wnd || g_embed_wnd || g_fullscreen || g_seamless_rdp)
+		return;
+
+	if (!XTranslateCoordinates(g_display, g_wnd, DefaultRootWindow(g_display), 0, 0,
+	                           &xpos, &ypos, &child))
+		return;
+
+	if (g_xpos != xpos || g_ypos != ypos)
+	{
+		logger(GUI, Debug,
+		       "xwin_update_main_window_position(), window position changed to +%d+%d",
+		       xpos, ypos);
+		g_xpos = xpos;
+		g_ypos = ypos;
+	}
+}
+
+static void
+xwin_request_resize_if_session_mismatch(const char *source)
+{
+	uint32 width, height;
+
+	if (!g_dynamic_session_resize || g_seamless_rdp)
+		return;
+
+	width = g_window_width;
+	height = g_window_height;
+	utils_apply_session_size_limitations(&width, &height);
+
+	logger(GUI, Debug,
+	       "%s: session: %dx%d, window: %dx%d (adj: %dx%d)",
+	       source, g_session_width, g_session_height, g_window_width, g_window_height,
+	       width, height);
+
+	if (g_session_width != width || g_session_height != height)
+	{
+		gettimeofday(&g_resize_timer, NULL);
+		g_pending_resize = True;
+	}
+	else
+	{
+		g_pending_resize = False;
+	}
+}
+
 void request_wm_fullscreen(Display *dpy, Window win)
 {
 	Atom atom = XInternAtom(dpy, "_NET_WM_STATE_FULLSCREEN", False);
@@ -2957,12 +3008,14 @@ xwin_process_events(void)
 					XGetWindowAttributes(g_display, g_wnd, &attr);
 					g_window_width = attr.width;
 					g_window_height = attr.height;
+					xwin_update_main_window_position();
 
 					logger(GUI, Debug,
 					       "xwin_process_events(), Window mapped with size %dx%d",
 					       g_window_width, g_window_height);
 
 					is_g_wnd_mapped = True;
+					xwin_request_resize_if_session_mismatch("xwin_process_events(), MapNotify");
 				}
 
 				if (!g_seamless_active)
@@ -3020,40 +3073,16 @@ xwin_process_events(void)
 				}
 				else
 #endif
-				if (xevent.xconfigure.window == g_wnd && !g_seamless_rdp
-					    && is_g_wnd_mapped)
+				if (xevent.xconfigure.window == g_wnd && !g_seamless_rdp)
 				{
-
-					/* Update window size */
+					/* Update window geometry. Some WMs send ConfigureNotify before MapNotify. */
 					g_window_width = xevent.xconfigure.width;
 					g_window_height = xevent.xconfigure.height;
+					xwin_update_main_window_position();
 
-					uint32 w, h;
-					w = g_window_width;
-					h = g_window_height;
-
-					utils_apply_session_size_limitations(&w, &h);
-
-					logger(GUI, Debug,
-					       "xwin_process_events(), ConfigureNotify: session: %dx%d, new window: %dx%d (adj: %dx%d)",
-					       g_session_width, g_session_height, g_window_width,
-					       g_window_height, w, h);
-
-					if (g_session_width != w || g_session_height != h)
-					{
-						logger(GUI, Debug,
-						       "xwin_process_events(), ConfigureNotify: session: %dx%d, new window: %dx%d",
-						       g_session_width, g_session_height,
-						       g_window_width, g_window_height);
-
-						/* perform a resize */
-						gettimeofday(&g_resize_timer, NULL);
-						g_pending_resize = True;
-					}
-					else
-					{
-						g_pending_resize = False;
-					}
+					if (is_g_wnd_mapped)
+						xwin_request_resize_if_session_mismatch(
+							"xwin_process_events(), ConfigureNotify");
 				}
 
 				if (!g_seamless_active)
