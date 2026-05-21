@@ -36,6 +36,7 @@ extern RD_BOOL g_licence_issued;
 extern RD_BOOL g_licence_error_result;
 extern RDP_VERSION g_rdp_version;
 extern RD_BOOL g_console_session;
+extern RD_BOOL g_shadow_session;
 extern uint32 g_redirect_session_id;
 extern int g_server_depth;
 extern VCHANNEL g_channels[];
@@ -490,7 +491,7 @@ sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 	cluster_flags |= SEC_CC_REDIRECTION_SUPPORTED;
 	cluster_flags |= (SEC_CC_REDIRECT_VERSION_4 << 2);
 
-	if (g_console_session || g_redirect_session_id != 0)
+	if (g_console_session || g_shadow_session || g_redirect_session_id != 0)
 		cluster_flags |= SEC_CC_REDIRECT_SESSIONID_FIELD_VALID;
 
 	out_uint32_le(s, cluster_flags);

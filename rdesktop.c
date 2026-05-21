@@ -108,6 +108,7 @@ RD_BOOL g_hide_decorations = False;
 RDP_VERSION g_rdp_version = RDP_V5;	/* Default to version 5 */
 RD_BOOL g_rdpclip = True;
 RD_BOOL g_console_session = False;
+RD_BOOL g_shadow_session = False;
 RD_BOOL g_restricted_admin = False;
 RD_BOOL g_numlock_sync = False;
 RD_BOOL g_lspci_enabled = False;
@@ -137,6 +138,7 @@ uint8 *g_redirect_cookie;
 uint32 g_redirect_cookie_len;
 uint32 g_redirect_flags = 0;
 uint32 g_redirect_session_id = 0;
+uint32 g_shadow_session_id = 0;
 
 uint32 g_reconnect_logonid = 0;
 char g_reconnect_random[16];
@@ -258,6 +260,7 @@ usage(char *program)
 		"                   \"AKS\"              -> Device vendor name                 \n");
 #endif
 	fprintf(stderr, "   -0, --admin, /admin: attach to console/admin session\n");
+	fprintf(stderr, "       --shadow <id>, /shadow:<id>: shadow an existing session id\n");
 	fprintf(stderr, "   --restricted-admin, /restrictedAdmin: use Restricted Admin mode (implies -0)\n");
 	fprintf(stderr, "   -4: use RDP version 4\n");
 	fprintf(stderr, "   -5: use RDP version 5 (default)\n");
@@ -1117,6 +1120,44 @@ main(int argc, char *argv[])
 	{
 		if (!strcmp(argv[c], "--admin") || !strcmp(argv[c], "/admin"))
 			argv[c] = "-0";
+		else if (!strcmp(argv[c], "--shadow"))
+		{
+			char *endptr;
+
+			if (c + 1 >= argc)
+			{
+				logger(Core, Error, "--shadow requires a session id");
+				return EX_USAGE;
+			}
+
+			g_shadow_session_id = strtoul(argv[c + 1], &endptr, 10);
+			if (*endptr != '\0' || g_shadow_session_id == 0)
+			{
+				logger(Core, Error, "invalid shadow session id '%s'", argv[c + 1]);
+				return EX_USAGE;
+			}
+
+			g_shadow_session = True;
+			g_redirect_session_id = g_shadow_session_id;
+			argv[c] = "-5";
+			argv[++c] = "-5";
+		}
+		else if (!strncmp(argv[c], "--shadow:", 9) || !strncmp(argv[c], "/shadow:", 8))
+		{
+			char *endptr;
+			char *value = argv[c] + (argv[c][1] == '-' ? 9 : 8);
+
+			g_shadow_session_id = strtoul(value, &endptr, 10);
+			if (*endptr != '\0' || g_shadow_session_id == 0)
+			{
+				logger(Core, Error, "invalid shadow session id '%s'", value);
+				return EX_USAGE;
+			}
+
+			g_shadow_session = True;
+			g_redirect_session_id = g_shadow_session_id;
+			argv[c] = "-5";
+		}
 		else if (!strcmp(argv[c], "--restricted-admin") ||
 		         !strcmp(argv[c], "/restrictedAdmin"))
 		{
@@ -1531,6 +1572,12 @@ main(int argc, char *argv[])
 	if (g_password[0])
 		flags |= RDP_INFO_AUTOLOGON;
 
+	if (g_shadow_session && g_console_session)
+	{
+		logger(Core, Error, "Shadow session mode cannot be combined with console/admin session mode");
+		return EX_USAGE;
+	}
+
 	if (g_seamless_rdp)
 	{
 		if (shell[0])
@@ -1735,6 +1782,12 @@ main(int argc, char *argv[])
 
 		utils_apply_session_size_limitations(&g_requested_session_width,
 						     &g_requested_session_height);
+
+		if (g_shadow_session)
+		{
+			g_redirect_session_id = g_shadow_session_id;
+			logger(Core, Notice, "Requesting shadow session %u.", g_shadow_session_id);
+		}
 
 		pstcache_set_namespace(server, g_tcp_port_rdp, domain, g_username);
 

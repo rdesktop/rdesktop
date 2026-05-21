@@ -308,6 +308,13 @@ Attach to the console/admin session of the server (requires Windows Server
 2003 or newer). The aliases `--admin` and `/admin` are also accepted for
 users familiar with mstsc or FreeRDP syntax.
 .TP
+.BR "--shadow" " " "session-id" ", " "/shadow:" "session-id"
+Request attachment to an existing server-side session id. This uses the RDP
+client cluster session id field and is intended for Terminal Server shadowing
+workflows where the target server is configured to allow remote control or
+view-only shadow sessions. The session id must be obtained from the server, for
+example with Windows tools such as Bquery sessionR or BqwinstaR.
+.TP
 .BR "--restricted-admin" ", " "/restrictedAdmin"
 Request Restricted Admin mode over CredSSP. In this mode rdesktop authenticates
 to CredSSP locally but sends empty logon credentials to the remote host. This
