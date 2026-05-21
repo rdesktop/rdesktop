@@ -19,6 +19,10 @@
 
 #include "rdesktop.h"
 
+#include <sys/wait.h>
+#include <errno.h>
+#include <unistd.h>
+
 #define RDPEAR_CHANNEL_NAME "Microsoft::Windows::RDS::AuthRedirection"
 
 #define RDPEAR_PROTOCOL_MAGIC 0x4eacc3c8
@@ -33,6 +37,7 @@
 #define RDPEAR_STATUS_NOT_SUPPORTED 0xc00000bb
 
 extern RD_BOOL g_remote_guard;
+extern char *g_remote_guard_helper;
 
 typedef struct rdpear_inner_packet_t
 {
@@ -40,6 +45,63 @@ typedef struct rdpear_inner_packet_t
 	char package_name[64];
 	STREAM buffer;
 } rdpear_inner_packet_t;
+
+
+static RD_BOOL
+rdpear_write_all(int fd, const uint8 *data, size_t length)
+{
+	while (length > 0)
+	{
+		ssize_t n = write(fd, data, length);
+		if (n < 0)
+		{
+			if (errno == EINTR)
+				continue;
+			return False;
+		}
+		if (n == 0)
+			return False;
+		data += n;
+		length -= n;
+	}
+	return True;
+}
+
+static RD_BOOL
+rdpear_read_all(int fd, uint8 *data, size_t length)
+{
+	while (length > 0)
+	{
+		ssize_t n = read(fd, data, length);
+		if (n < 0)
+		{
+			if (errno == EINTR)
+				continue;
+			return False;
+		}
+		if (n == 0)
+			return False;
+		data += n;
+		length -= n;
+	}
+	return True;
+}
+
+static void
+rdpear_put_uint32_le(uint8 out[4], uint32 value)
+{
+	out[0] = value & 0xff;
+	out[1] = (value >> 8) & 0xff;
+	out[2] = (value >> 16) & 0xff;
+	out[3] = (value >> 24) & 0xff;
+}
+
+static uint32
+rdpear_get_uint32_le(const uint8 in[4])
+{
+	return ((uint32) in[0]) | ((uint32) in[1] << 8) |
+		((uint32) in[2] << 16) | ((uint32) in[3] << 24);
+}
 
 static STREAM
 rdpear_ber_wrap_hdr_data(int tagval, STREAM in)
@@ -496,6 +558,123 @@ rdpear_encode_status_output(uint16 call_id, RD_BOOL wide_call_id, uint32 status)
 	return out;
 }
 
+
+static STREAM
+rdpear_call_helper(const char *package_name, STREAM request)
+{
+	int inpipe[2], outpipe[2];
+	pid_t pid;
+	uint8 hdr[8];
+	uint32 package_len, request_len, status, response_len;
+	STREAM response;
+	int child_status;
+
+	if (g_remote_guard_helper == NULL || g_remote_guard_helper[0] == 0)
+		return NULL;
+
+	if (pipe(inpipe) < 0 || pipe(outpipe) < 0)
+	{
+		logger(Core, Warning, "rdpear_call_helper(), pipe failed: %s", strerror(errno));
+		return NULL;
+	}
+
+	pid = fork();
+	if (pid < 0)
+	{
+		logger(Core, Warning, "rdpear_call_helper(), fork failed: %s", strerror(errno));
+		close(inpipe[0]);
+		close(inpipe[1]);
+		close(outpipe[0]);
+		close(outpipe[1]);
+		return NULL;
+	}
+
+	if (pid == 0)
+	{
+		dup2(inpipe[0], STDIN_FILENO);
+		dup2(outpipe[1], STDOUT_FILENO);
+		close(inpipe[0]);
+		close(inpipe[1]);
+		close(outpipe[0]);
+		close(outpipe[1]);
+		execl("/bin/sh", "sh", "-c", g_remote_guard_helper, (char *) NULL);
+		_exit(127);
+	}
+
+	close(inpipe[0]);
+	close(outpipe[1]);
+
+	package_len = strlen(package_name);
+	request_len = s_length(request);
+	rdpear_put_uint32_le(hdr, package_len);
+	rdpear_put_uint32_le(hdr + 4, request_len);
+
+	if (!rdpear_write_all(inpipe[1], hdr, sizeof(hdr)) ||
+	    !rdpear_write_all(inpipe[1], (const uint8 *) package_name, package_len) ||
+	    !rdpear_write_all(inpipe[1], request->data, request_len))
+	{
+		logger(Core, Warning, "rdpear_call_helper(), failed to write helper request");
+		close(inpipe[1]);
+		close(outpipe[0]);
+		waitpid(pid, &child_status, 0);
+		return NULL;
+	}
+	close(inpipe[1]);
+
+	if (!rdpear_read_all(outpipe[0], hdr, sizeof(hdr)))
+	{
+		logger(Core, Warning, "rdpear_call_helper(), failed to read helper response header");
+		close(outpipe[0]);
+		waitpid(pid, &child_status, 0);
+		return NULL;
+	}
+
+	status = rdpear_get_uint32_le(hdr);
+	response_len = rdpear_get_uint32_le(hdr + 4);
+
+	if (response_len > 1024 * 1024)
+	{
+		logger(Core, Warning,
+		       "rdpear_call_helper(), refusing oversized helper response %u", response_len);
+		close(outpipe[0]);
+		waitpid(pid, &child_status, 0);
+		return NULL;
+	}
+
+	response = s_alloc(response_len);
+	if (response_len > 0 && !rdpear_read_all(outpipe[0], response->data, response_len))
+	{
+		logger(Core, Warning, "rdpear_call_helper(), failed to read helper response payload");
+		s_free(response);
+		close(outpipe[0]);
+		waitpid(pid, &child_status, 0);
+		return NULL;
+	}
+	response->p = response->data + response_len;
+	s_mark_end(response);
+	response->p = response->data;
+
+	close(outpipe[0]);
+	waitpid(pid, &child_status, 0);
+
+	if (!WIFEXITED(child_status) || WEXITSTATUS(child_status) != 0)
+	{
+		logger(Core, Warning, "rdpear_call_helper(), helper exited unsuccessfully");
+		s_free(response);
+		return NULL;
+	}
+
+	if (status != RDPEAR_STATUS_SUCCESS)
+	{
+		logger(Core, Warning,
+		       "rdpear_call_helper(), helper returned NTSTATUS 0x%08x", status);
+		s_free(response);
+		return NULL;
+	}
+
+	return response;
+}
+
 static STREAM
 rdpear_process_package_buffer(const char *package_name, STREAM buffer)
 {
@@ -546,10 +725,16 @@ rdpear_process_package_buffer(const char *package_name, STREAM buffer)
 			return rdpear_encode_negotiate_version_output(call_id, wide_call_id);
 
 		default:
-			logger(Core, Warning,
-			       "rdpear_process_package_buffer(), unsupported Remote Guard package call 0x%04x for '%s'",
-			       call_id, package_name);
-			return rdpear_encode_status_output(call_id, wide_call_id, RDPEAR_STATUS_NOT_SUPPORTED);
+			{
+				STREAM helper_response = rdpear_call_helper(package_name, buffer);
+				if (helper_response != NULL)
+					return helper_response;
+
+				logger(Core, Warning,
+				       "rdpear_process_package_buffer(), unsupported Remote Guard package call 0x%04x for '%s'",
+				       call_id, package_name);
+				return rdpear_encode_status_output(call_id, wide_call_id, RDPEAR_STATUS_NOT_SUPPORTED);
+			}
 	}
 }
 

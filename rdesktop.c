@@ -117,6 +117,7 @@ RD_BOOL g_console_session = False;
 RD_BOOL g_shadow_session = False;
 RD_BOOL g_restricted_admin = False;
 RD_BOOL g_remote_guard = False;
+char *g_remote_guard_helper = NULL;
 char *g_window_icon_file = NULL;
 RD_BOOL g_numlock_sync = False;
 RD_BOOL g_lspci_enabled = False;
@@ -275,6 +276,7 @@ usage(char *program)
 	fprintf(stderr, "       --shadow <id>, /shadow:<id>: shadow an existing session id\n");
 	fprintf(stderr, "   --restricted-admin, /restrictedAdmin: use Restricted Admin mode (implies -0)\n");
 	fprintf(stderr, "   --remote-guard, /remoteGuard: request Remote Credential Guard over CredSSP\n");
+	fprintf(stderr, "   --remote-guard-helper <cmd>: helper for RDPEAR package calls\n");
 	fprintf(stderr, "   -4: use RDP version 4\n");
 	fprintf(stderr, "   -5: use RDP version 5 (default)\n");
 #ifdef WITH_SCARD
@@ -1248,6 +1250,19 @@ main(int argc, char *argv[])
 		{
 			g_remote_guard = True;
 			argv[c] = "-5";
+		}
+		else if (!strcmp(argv[c], "--remote-guard-helper"))
+		{
+			if (c + 1 >= argc)
+			{
+				logger(Core, Error, "--remote-guard-helper requires a command");
+				return EX_USAGE;
+			}
+
+			g_remote_guard = True;
+			g_remote_guard_helper = argv[c + 1];
+			argv[c] = "-5";
+			argv[++c] = "-5";
 		}
 	}
 

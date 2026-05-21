@@ -366,9 +366,15 @@ Request Remote Credential Guard negotiation over CredSSP. This requires
 Kerberos/GSSAPI CredSSP support and a server that advertises redirected
 authentication support. rdesktop also registers the RDPEAR authentication
 redirection channel and handles Remote Guard protocol framing and version
-negotiation. Non-negotiation Kerberos/NTLM package calls require local
-credential package handling and will fail cleanly until that backend is
-available.
+negotiation.
+.TP
+.BR "--remote-guard-helper" " " "command"
+Use an external helper for RDPEAR Kerberos/NTLM package calls that rdesktop
+cannot satisfy internally. The helper receives a little-endian binary request
+on stdin: 32-bit package-name length, package-name bytes, 32-bit request length,
+request bytes. It must reply on stdout with 32-bit NTSTATUS, 32-bit response
+length, response bytes. Supplying this option implies
+.BR --remote-guard .
 .TP
 .BR "-4"
 Use RDP version 4.
