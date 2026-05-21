@@ -9,6 +9,8 @@
 .br
 .B rdesktop
 .br
+.B rdesktop [options] rdp://full%20address=s:server[:port][&option=type:value]
+.br
 .SH DESCRIPTION
 .I rdesktop
 is a client for Remote Desktop Protocol (RDP), used in a number of Microsoft products.
@@ -45,6 +47,15 @@ The launcher also honours the optional X resources
 Brdesktop.launcher.smallFontR for site or user overrides. They are not
 required for normal use.
 
+.TP
+.BR "rdp:// URI"
+rdesktop accepts Remote Desktop client URI settings in the form
+.BR "rdp://full%20address=s:server:3389&desktopwidth=i:1024" .
+The URI parser understands the same core setting names as the .rdp file parser,
+including full address, username, domain, password, alternate shell, shell
+working directory, keyboard layout, server port, session bpp, desktopwidth,
+desktopheight, screen mode id and redirectclipboard.
+.PP
 .TP
 .BR "-u <username>"
 Username for authentication on the server.

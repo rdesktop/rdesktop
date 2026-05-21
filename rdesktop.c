@@ -831,6 +831,220 @@ filename_has_rdp_suffix(const char *filename)
 	return rdp_key_equals(suffix, ".rdp");
 }
 
+static RD_BOOL
+string_has_rdp_uri_scheme(const char *value)
+{
+	return value != NULL && str_startswith(value, "rdp://");
+}
+
+static RD_BOOL
+rdp_uri_hex_value(char ch, uint8 *value)
+{
+	if (ch >= '0' && ch <= '9')
+	{
+		*value = ch - '0';
+		return True;
+	}
+	if (ch >= 'a' && ch <= 'f')
+	{
+		*value = ch - 'a' + 10;
+		return True;
+	}
+	if (ch >= 'A' && ch <= 'F')
+	{
+		*value = ch - 'A' + 10;
+		return True;
+	}
+	return False;
+}
+
+static RD_BOOL
+rdp_uri_percent_decode(const char *src, char *dst, size_t dst_size)
+{
+	size_t di = 0;
+
+	if (dst_size == 0)
+		return False;
+
+	while (*src != '\0')
+	{
+		uint8 high, low;
+
+		if (di + 1 >= dst_size)
+			return False;
+
+		if (*src == '%' && src[1] != '\0' && src[2] != '\0' &&
+		    rdp_uri_hex_value(src[1], &high) && rdp_uri_hex_value(src[2], &low))
+		{
+			dst[di++] = (char) ((high << 4) | low);
+			src += 3;
+		}
+		else if (*src == '+')
+		{
+			dst[di++] = ' ';
+			src++;
+		}
+		else
+		{
+			dst[di++] = *src++;
+		}
+	}
+
+	dst[di] = '\0';
+	return True;
+}
+
+static void
+rdp_uri_apply_integer_setting(const char *key, long number, char *geometry, size_t geometry_size,
+                              RD_BOOL geometry_option, RD_BOOL fullscreen_option,
+                              RD_BOOL depth_option, RD_BOOL *have_width, RD_BOOL *have_height,
+                              uint32 *width, uint32 *height)
+{
+	if (rdp_key_equals(key, "server port"))
+	{
+		if (number > 0 && number <= 65535)
+			g_tcp_port_rdp = number;
+	}
+	else if (!depth_option && rdp_key_equals(key, "session bpp"))
+	{
+		if (number == 8 || number == 15 || number == 16 || number == 24 || number == 32)
+			g_server_depth = number;
+	}
+	else if (!geometry_option && !fullscreen_option && rdp_key_equals(key, "desktopwidth"))
+	{
+		if (number > 0)
+		{
+			*width = number;
+			*have_width = True;
+		}
+	}
+	else if (!geometry_option && !fullscreen_option && rdp_key_equals(key, "desktopheight"))
+	{
+		if (number > 0)
+		{
+			*height = number;
+			*have_height = True;
+		}
+	}
+	else if (!fullscreen_option && !geometry_option && rdp_key_equals(key, "screen mode id"))
+	{
+		if (number == 2)
+		{
+			g_window_size_type = Fullscreen;
+			g_fullscreen = True;
+		}
+	}
+	else if (rdp_key_equals(key, "redirectclipboard"))
+	{
+		g_rdpclip = number != 0;
+	}
+}
+
+static RD_BOOL
+parse_rdp_uri(const char *uri, char *server, size_t server_size, char *domain,
+              size_t domain_size, char *shell, size_t shell_size, char *directory,
+              size_t directory_size, RD_BOOL username_option, RD_BOOL password_option,
+              RD_BOOL domain_option, RD_BOOL shell_option, RD_BOOL directory_option,
+              RD_BOOL keymap_option, RD_BOOL geometry_option, RD_BOOL fullscreen_option,
+              RD_BOOL depth_option)
+{
+	char uri_copy[4096];
+	char *cursor;
+	RD_BOOL have_server = False;
+	RD_BOOL have_width = False, have_height = False;
+	uint32 width = 0, height = 0;
+
+	if (!string_has_rdp_uri_scheme(uri))
+		return False;
+
+	if (!rdp_uri_percent_decode(uri + 6, uri_copy, sizeof(uri_copy)))
+	{
+		logger(Core, Error, "RDP URI is too long");
+		return False;
+	}
+
+	cursor = uri_copy;
+	while (cursor != NULL && *cursor != '\0')
+	{
+		char *next;
+		char *key, *value;
+		char type;
+		char *endptr;
+		long number;
+
+		next = strchr(cursor, '&');
+		if (next != NULL)
+			*next++ = '\0';
+
+		if (!rdp_file_line_value(cursor, &key, &type, &value))
+		{
+			cursor = next;
+			continue;
+		}
+
+		if (type == 's')
+		{
+			if (rdp_key_equals(key, "full address"))
+			{
+				STRNCPY(server, value, server_size);
+				have_server = server[0] != '\0';
+			}
+			else if (!username_option && rdp_key_equals(key, "username"))
+			{
+				xfree(g_username);
+				g_username = (char *) xmalloc(strlen(value) + 1);
+				strcpy(g_username, value);
+			}
+			else if (!domain_option && rdp_key_equals(key, "domain"))
+			{
+				STRNCPY(domain, value, domain_size);
+			}
+			else if (!shell_option && rdp_key_equals(key, "alternate shell"))
+			{
+				STRNCPY(shell, value, shell_size);
+			}
+			else if (!directory_option && rdp_key_equals(key, "shell working directory"))
+			{
+				STRNCPY(directory, value, directory_size);
+			}
+			else if (!keymap_option && rdp_key_equals(key, "keyboard layout"))
+			{
+				STRNCPY(g_keymapname, value, sizeof(g_keymapname));
+			}
+			else if (!password_option && rdp_key_equals(key, "password"))
+			{
+				STRNCPY(g_password, value, sizeof(g_password));
+			}
+		}
+		else if (type == 'i')
+		{
+			errno = 0;
+			number = strtol(value, &endptr, 10);
+			if (errno == 0 && endptr != value)
+				rdp_uri_apply_integer_setting(key, number, NULL, 0, geometry_option,
+				                              fullscreen_option, depth_option,
+				                              &have_width, &have_height, &width, &height);
+		}
+
+		cursor = next;
+	}
+
+	if (!geometry_option && !fullscreen_option && !g_fullscreen && have_width && have_height)
+	{
+		g_requested_session_width = width;
+		g_requested_session_height = height;
+		g_window_size_type = Fixed;
+	}
+
+	if (!have_server)
+	{
+		logger(Core, Error, "RDP URI does not contain 'full address'");
+		return False;
+	}
+
+	return True;
+}
+
 
 static RD_BOOL
 read_rdp_file_line(FILE *fp, RD_BOOL utf16_le, RD_BOOL utf16_be, char *line, size_t size)
@@ -1660,7 +1874,15 @@ main(int argc, char *argv[])
 	}
 
 	STRNCPY(server, argv[optind], sizeof(server));
-	if (filename_has_rdp_suffix(server))
+	if (string_has_rdp_uri_scheme(server))
+	{
+		if (!parse_rdp_uri(server, server, sizeof(server), domain, sizeof(domain), shell,
+				   sizeof(shell), directory, sizeof(directory), username_option,
+				   password_option, domain_option, shell_option, directory_option,
+				   keymap_option, geometry_option, fullscreen_option, depth_option))
+			return EX_USAGE;
+	}
+	else if (filename_has_rdp_suffix(server))
 	{
 		if (!parse_rdp_file(server, server, sizeof(server), domain, sizeof(domain), shell,
 				    sizeof(shell), directory, sizeof(directory), username_option,
