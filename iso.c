@@ -28,6 +28,7 @@ extern RDP_VERSION g_rdp_version;
 extern RD_BOOL g_use_password_as_pin;
 extern RD_BOOL g_restricted_admin;
 extern RD_BOOL g_extended_client_data_supported;
+extern RD_BOOL g_remote_guard;
 
 static RD_BOOL g_negotiate_rdp_protocol = True;
 
@@ -94,6 +95,8 @@ iso_send_connection_request(char *username, uint32 neg_proto)
 		/* optional RDP protocol negotiation request for RDPv5 */
 		if (g_restricted_admin)
 			neg_flags |= RESTRICTED_ADMIN_MODE_REQUIRED;
+		if (g_remote_guard)
+			neg_flags |= REDIRECTED_AUTHENTICATION_MODE_REQUIRED;
 
 		out_uint8(s, RDP_NEG_REQ);
 		out_uint8(s, neg_flags);
@@ -253,7 +256,9 @@ iso_connect(char *server, char *username, char *domain, char *password,
 	neg_proto = PROTOCOL_SSL;
 
 #ifdef WITH_CREDSSP
-	if (g_restricted_admin)
+	if (g_remote_guard)
+		neg_proto |= PROTOCOL_HYBRID | PROTOCOL_HYBRID_EX;
+	else if (g_restricted_admin)
 		neg_proto |= PROTOCOL_HYBRID;
 	else if (!g_use_password_as_pin)
 		neg_proto |= PROTOCOL_HYBRID;
@@ -263,6 +268,11 @@ iso_connect(char *server, char *username, char *domain, char *password,
 		logger(Core, Warning,
 		       "iso_connect(), missing smartcard information for SSO, disabling CredSSP");
 #else
+	if (g_remote_guard)
+	{
+		logger(Core, Error, "Remote Credential Guard requires CredSSP support");
+		return False;
+	}
 	if (g_restricted_admin)
 	{
 		logger(Core, Error, "Restricted Admin mode requires CredSSP support");
@@ -385,6 +395,16 @@ iso_connect(char *server, char *username, char *domain, char *password,
 			tcp_disconnect();
 			logger(Core, Error,
 			       "Restricted Admin mode was requested, but the server did not negotiate compatible CredSSP support");
+			return False;
+		}
+
+		if (g_remote_guard &&
+		    ((neg_flags & REDIRECTED_AUTHENTICATION_MODE_SUPPORTED) == 0 ||
+		     (data != PROTOCOL_HYBRID && data != PROTOCOL_HYBRID_EX)))
+		{
+			tcp_disconnect();
+			logger(Core, Error,
+			       "Remote Credential Guard was requested, but the server did not negotiate redirected CredSSP support");
 			return False;
 		}
 

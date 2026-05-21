@@ -116,6 +116,7 @@ RD_BOOL g_rdpclip = True;
 RD_BOOL g_console_session = False;
 RD_BOOL g_shadow_session = False;
 RD_BOOL g_restricted_admin = False;
+RD_BOOL g_remote_guard = False;
 char *g_window_icon_file = NULL;
 RD_BOOL g_numlock_sync = False;
 RD_BOOL g_lspci_enabled = False;
@@ -273,6 +274,7 @@ usage(char *program)
 	fprintf(stderr, "   -0, --admin, /admin: attach to console/admin session\n");
 	fprintf(stderr, "       --shadow <id>, /shadow:<id>: shadow an existing session id\n");
 	fprintf(stderr, "   --restricted-admin, /restrictedAdmin: use Restricted Admin mode (implies -0)\n");
+	fprintf(stderr, "   --remote-guard, /remoteGuard: request Remote Credential Guard over CredSSP\n");
 	fprintf(stderr, "   -4: use RDP version 4\n");
 	fprintf(stderr, "   -5: use RDP version 5 (default)\n");
 #ifdef WITH_SCARD
@@ -1241,6 +1243,12 @@ main(int argc, char *argv[])
 			g_console_session = True;
 			argv[c] = "-0";
 		}
+		else if (!strcmp(argv[c], "--remote-guard") ||
+		         !strcmp(argv[c], "/remoteGuard"))
+		{
+			g_remote_guard = True;
+			argv[c] = "-5";
+		}
 	}
 
 	while ((c = getopt(argc, argv,
@@ -1783,6 +1791,18 @@ main(int argc, char *argv[])
 	{
 		strcpy(g_title, "rdesktop - ");
 		strncat(g_title, server, sizeof(g_title) - sizeof("rdesktop - "));
+	}
+
+	if (g_restricted_admin && g_remote_guard)
+	{
+		logger(Core, Error, "Restricted Admin mode and Remote Credential Guard are mutually exclusive");
+		return EX_USAGE;
+	}
+
+	if (g_remote_guard && g_use_password_as_pin)
+	{
+		logger(Core, Error, "Remote Credential Guard cannot be used with smartcard PIN authentication");
+		return EX_USAGE;
 	}
 
 #ifdef WITH_SCARD

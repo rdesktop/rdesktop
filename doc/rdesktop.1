@@ -361,6 +361,13 @@ to CredSSP locally but sends empty logon credentials to the remote host. This
 prevents forwarding the supplied domain credentials to the server and implies
 .BR -0 .
 .TP
+.BR "--remote-guard" ", " "/remoteGuard"
+Request Remote Credential Guard negotiation over CredSSP. This requires
+Kerberos/GSSAPI CredSSP support and a server that advertises redirected
+authentication support. This option is experimental and only provides the
+initial negotiation and TSRemoteGuardCreds plumbing; full Remote Guard
+interoperability also requires the RDPEAR authentication redirection channel.
+.TP
 .BR "-4"
 Use RDP version 4.
 .TP

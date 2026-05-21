@@ -28,6 +28,7 @@
 
 extern RD_BOOL g_use_password_as_pin;
 extern RD_BOOL g_restricted_admin;
+extern RD_BOOL g_remote_guard;
 
 extern char *g_sc_csp_name;
 extern char *g_sc_reader_name;
@@ -385,6 +386,72 @@ cssp_encode_tscspdatadetail(unsigned char keyspec, char *card, char *reader, cha
 }
 
 static STREAM
+cssp_encode_tsremoteguard_packagecreds(const char *package_name, STREAM cred_buffer)
+{
+	STREAM out, h1, h2;
+	struct stream tmp = { 0 };
+	struct stream message = { 0 };
+
+	s_realloc(&tmp, 512 * 4);
+
+	/* packageName [0] */
+	s_reset(&tmp);
+	out_utf16s(&tmp, package_name);
+	s_mark_end(&tmp);
+	h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, &tmp);
+	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 0, h2);
+	s_realloc(&message, s_length(&message) + s_length(h1));
+	out_stream(&message, h1);
+	s_mark_end(&message);
+	s_free(h2);
+	s_free(h1);
+
+	/* credBuffer [1] */
+	h2 = ber_wrap_hdr_data(BER_TAG_OCTET_STRING, cred_buffer);
+	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 1, h2);
+	s_realloc(&message, s_length(&message) + s_length(h1));
+	out_stream(&message, h1);
+	s_mark_end(&message);
+	s_free(h2);
+	s_free(h1);
+
+	s_mark_end(&message);
+	out = ber_wrap_hdr_data(BER_TAG_SEQUENCE | BER_TAG_CONSTRUCTED, &message);
+
+	free(tmp.data);
+	free(message.data);
+	return out;
+}
+
+static STREAM
+cssp_encode_tsremoteguardcreds(void)
+{
+	STREAM out, h2, h3;
+	struct stream empty = { 0 };
+	struct stream message = { 0 };
+
+	s_realloc(&empty, 1);
+	s_reset(&empty);
+	s_mark_end(&empty);
+
+	/* logonCred [0] -- placeholder until RDPEAR/auth package export is implemented. */
+	h3 = cssp_encode_tsremoteguard_packagecreds("Kerberos", &empty);
+	h2 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 0, h3);
+	s_realloc(&message, s_length(&message) + s_length(h2));
+	out_stream(&message, h2);
+	s_mark_end(&message);
+	s_free(h3);
+	s_free(h2);
+
+	s_mark_end(&message);
+	out = ber_wrap_hdr_data(BER_TAG_SEQUENCE | BER_TAG_CONSTRUCTED, &message);
+
+	free(empty.data);
+	free(message.data);
+	return out;
+}
+
+static STREAM
 cssp_encode_tssmartcardcreds(char *username, char *password, char *domain)
 {
 	STREAM out, h1, h2;
@@ -467,7 +534,11 @@ cssp_encode_tscredentials(char *username, char *password, char *domain)
 	// credType [0]
 	s_realloc(&tmp, sizeof(uint8));
 	s_reset(&tmp);
-	if (g_use_password_as_pin == False || g_restricted_admin)
+	if (g_remote_guard)
+	{
+		out_uint8(&tmp, 6);	// TSRemoteGuardCreds
+	}
+	else if (g_use_password_as_pin == False || g_restricted_admin)
 	{
 		out_uint8(&tmp, 1);	// TSPasswordCreds
 	}
@@ -486,7 +557,12 @@ cssp_encode_tscredentials(char *username, char *password, char *domain)
 	s_free(h1);
 
 	// credentials [1]
-	if (g_restricted_admin)
+	if (g_remote_guard)
+	{
+		/* Remote Guard uses redirected credentials instead of password or smartcard creds. */
+		h3 = cssp_encode_tsremoteguardcreds();
+	}
+	else if (g_restricted_admin)
 	{
 		/* Restricted Admin authenticates CredSSP locally, then sends empty logon credentials. */
 		h3 = cssp_encode_tspasswordcreds("", "", "");
@@ -1157,6 +1233,17 @@ cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 {
 	UNUSED(s);
 	g_cssp_peer_version = 2;
+
+	if (g_remote_guard)
+	{
+#ifdef WITH_GSSAPI_CREDSSP
+		logger(Core, Verbose, "Trying NLA using GSSAPI/Kerberos CredSSP for Remote Credential Guard.");
+		return cssp_connect_gss(server, user, domain, password, s);
+#else
+		logger(Core, Error, "Remote Credential Guard requires optional GSSAPI/Kerberos CredSSP support.");
+		return False;
+#endif
+	}
 
 	if (!g_use_password_as_pin && password && password[0])
 	{

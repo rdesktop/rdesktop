@@ -37,6 +37,7 @@ extern uint16 g_mcs_userid;
 extern char *g_username;
 extern char g_password[64];
 extern RD_BOOL g_restricted_admin;
+extern RD_BOOL g_remote_guard;
 extern char g_codepage[16];
 extern RD_BOOL g_orders;
 extern RD_BOOL g_encryption;
@@ -526,7 +527,7 @@ rdp_send_client_info_pdu(uint32 flags, char *domain, char *user,
 	time_t tzone;
 	uint8 security_verifier[16];
 
-	if (g_restricted_admin)
+	if (g_restricted_admin || g_remote_guard)
 	{
 		flags &= ~RDP_INFO_AUTOLOGON;
 		client_info_password = "";
