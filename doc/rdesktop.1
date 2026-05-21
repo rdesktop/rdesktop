@@ -365,18 +365,21 @@ prevents forwarding the supplied domain credentials to the server and implies
 Request Remote Credential Guard negotiation over CredSSP. This requires
 Kerberos/GSSAPI CredSSP support and a server that advertises redirected
 authentication support. rdesktop also registers the RDPEAR authentication
-redirection channel and handles Remote Guard protocol framing and version
-negotiation.
+redirection channel, handles Remote Guard protocol framing, obtains the initial
+Negotiate logon credential from the RDPEAR helper, and routes Kerberos/NTLM
+package calls through the helper. Without an explicit helper command, rdesktop
+uses the installed \fBrdesktop-rdpear-helper\fR from PATH.
 .TP
 .BR "--remote-guard-helper" " " "command"
-Use an external helper for RDPEAR Kerberos/NTLM package calls that rdesktop
-cannot satisfy internally. The installed \fBrdesktop-rdpear-helper\fR command implements
-the helper transport contract and safe version/status responses. More complete
-site-specific helpers can use the same contract to call local credential-package
-facilities. The helper receives a little-endian binary request on stdin: 32-bit
-package-name length, package-name bytes, 32-bit request length, request bytes. It
-must reply on stdout with 32-bit helper transport status, 32-bit response length,
-response bytes. Supplying this option implies
+Use a specific helper command for RDPEAR Kerberos/NTLM package calls. The
+installed \fBrdesktop-rdpear-helper\fR command implements the helper transport
+contract, loads the initial Remote Guard logon credential from
+\fBRDESKTOP_RDPEAR_LOGON_CRED_FILE\fR or
+\fBRDESKTOP_RDPEAR_LOGON_CRED_HEX\fR, and returns safe version/status responses.
+The helper receives a little-endian binary request on stdin: 32-bit package-name
+length, package-name bytes, 32-bit request length, request bytes. It must reply
+on stdout with 32-bit helper transport status, 32-bit response length, response
+bytes. Supplying this option implies
 .BR --remote-guard .
 .TP
 .BR "-4"

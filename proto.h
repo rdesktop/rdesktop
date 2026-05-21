@@ -100,6 +100,7 @@ RD_BOOL cssp_connect(char *server, char *user, char *domain, char *password, STR
 RD_BOOL cssp_remote_guard_has_security_context(void);
 STREAM cssp_remote_guard_wrap(STREAM in);
 STREAM cssp_remote_guard_unwrap(STREAM in);
+STREAM rdpear_call_helper(const char *package_name, STREAM request);
 /* licence.c */
 void licence_process(STREAM s);
 /* mcs.c */

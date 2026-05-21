@@ -18,6 +18,7 @@
 */
 
 #include <errno.h>
+#include <ctype.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,6 +34,7 @@
 #define RDPEAR_STATUS_NOT_SUPPORTED 0xc00000bbU
 #define RDPEAR_TRANSPORT_STATUS_SUCCESS 0x00000000U
 #define RDPEAR_MAX_PAYLOAD_LENGTH (1024U * 1024U)
+#define RDPEAR_LOGON_CRED_PACKAGE "__rdesktop_remote_guard_logon_cred__"
 
 static uint32_t
 get_uint32_le(const uint8_t in[4])
@@ -197,12 +199,139 @@ encode_negotiate_version(uint16_t call_id, int wide_call_id, uint32_t *out_len)
 	return out;
 }
 
+static int
+hex_value(int c)
+{
+	if (c >= '0' && c <= '9')
+		return c - '0';
+	if (c >= 'a' && c <= 'f')
+		return c - 'a' + 10;
+	if (c >= 'A' && c <= 'F')
+		return c - 'A' + 10;
+	return -1;
+}
+
+static uint8_t *
+decode_hex_blob(const char *hex, uint32_t *out_len)
+{
+	uint8_t *out;
+	size_t digits = 0, i = 0;
+	const char *p;
+
+	for (p = hex; *p; p++)
+	{
+		if (isspace((unsigned char) *p) || *p == ':' || *p == '-')
+			continue;
+		if (hex_value((unsigned char) *p) < 0)
+			return NULL;
+		digits++;
+	}
+
+	if (digits == 0 || (digits % 2) != 0 || digits / 2 > RDPEAR_MAX_PAYLOAD_LENGTH)
+		return NULL;
+
+	out = malloc(digits / 2);
+	if (out == NULL)
+		return NULL;
+
+	for (p = hex; *p;)
+	{
+		int hi, lo;
+		while (*p && (isspace((unsigned char) *p) || *p == ':' || *p == '-'))
+			p++;
+		if (!*p)
+			break;
+		hi = hex_value((unsigned char) *p++);
+		while (*p && (isspace((unsigned char) *p) || *p == ':' || *p == '-'))
+			p++;
+		if (!*p)
+		{
+			free(out);
+			return NULL;
+		}
+		lo = hex_value((unsigned char) *p++);
+		if (hi < 0 || lo < 0)
+		{
+			free(out);
+			return NULL;
+		}
+		out[i++] = (uint8_t) ((hi << 4) | lo);
+	}
+
+	*out_len = (uint32_t) i;
+	return out;
+}
+
+static uint8_t *
+read_file_blob(const char *path, uint32_t *out_len)
+{
+	FILE *fp;
+	long size;
+	uint8_t *out;
+
+	fp = fopen(path, "rb");
+	if (fp == NULL)
+		return NULL;
+
+	if (fseek(fp, 0, SEEK_END) != 0)
+	{
+		fclose(fp);
+		return NULL;
+	}
+	size = ftell(fp);
+	if (size <= 0 || size > (long) RDPEAR_MAX_PAYLOAD_LENGTH || fseek(fp, 0, SEEK_SET) != 0)
+	{
+		fclose(fp);
+		return NULL;
+	}
+
+	out = malloc((size_t) size);
+	if (out == NULL)
+	{
+		fclose(fp);
+		return NULL;
+	}
+
+	if (fread(out, 1, (size_t) size, fp) != (size_t) size)
+	{
+		free(out);
+		fclose(fp);
+		return NULL;
+	}
+
+	fclose(fp);
+	*out_len = (uint32_t) size;
+	return out;
+}
+
+static uint8_t *
+load_logon_credential(uint32_t *response_len)
+{
+	const char *hex = getenv("RDESKTOP_RDPEAR_LOGON_CRED_HEX");
+	const char *path = getenv("RDESKTOP_RDPEAR_LOGON_CRED_FILE");
+	uint8_t *blob = NULL;
+
+	if (hex != NULL && *hex != 0)
+		blob = decode_hex_blob(hex, response_len);
+	else if (path != NULL && *path != 0)
+		blob = read_file_blob(path, response_len);
+
+	return blob;
+}
+
 static uint8_t *
 process_request(const char *package_name, const uint8_t *request, uint32_t request_len,
                 uint32_t *response_len)
 {
 	uint16_t call_id;
 	int wide_call_id;
+
+	if (strcmp(package_name, RDPEAR_LOGON_CRED_PACKAGE) == 0)
+	{
+		if (request_len != 0)
+			return NULL;
+		return load_logon_credential(response_len);
+	}
 
 	if (!valid_package_buffer(request, request_len))
 		return NULL;

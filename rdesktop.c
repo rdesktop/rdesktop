@@ -1820,6 +1820,9 @@ main(int argc, char *argv[])
 		return EX_USAGE;
 	}
 
+	if (g_remote_guard && (g_remote_guard_helper == NULL || g_remote_guard_helper[0] == 0))
+		g_remote_guard_helper = "rdesktop-rdpear-helper";
+
 #ifdef WITH_SCARD
 	if (g_restricted_admin && g_use_password_as_pin)
 	{

@@ -559,7 +559,7 @@ rdpear_encode_status_output(uint16 call_id, RD_BOOL wide_call_id, uint32 status)
 }
 
 
-static STREAM
+STREAM
 rdpear_call_helper(const char *package_name, STREAM request)
 {
 	int inpipe[2], outpipe[2];
