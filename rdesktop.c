@@ -108,6 +108,7 @@ RD_BOOL g_hide_decorations = False;
 RDP_VERSION g_rdp_version = RDP_V5;	/* Default to version 5 */
 RD_BOOL g_rdpclip = True;
 RD_BOOL g_console_session = False;
+RD_BOOL g_restricted_admin = False;
 RD_BOOL g_numlock_sync = False;
 RD_BOOL g_lspci_enabled = False;
 RD_BOOL g_owncolmap = False;
@@ -255,6 +256,7 @@ usage(char *program)
 		"                   \"AKS\"              -> Device vendor name                 \n");
 #endif
 	fprintf(stderr, "   -0, --admin, /admin: attach to console/admin session\n");
+	fprintf(stderr, "   --restricted-admin, /restrictedAdmin: use Restricted Admin mode (implies -0)\n");
 	fprintf(stderr, "   -4: use RDP version 4\n");
 	fprintf(stderr, "   -5: use RDP version 5 (default)\n");
 #ifdef WITH_SCARD
@@ -1113,6 +1115,13 @@ main(int argc, char *argv[])
 	{
 		if (!strcmp(argv[c], "--admin") || !strcmp(argv[c], "/admin"))
 			argv[c] = "-0";
+		else if (!strcmp(argv[c], "--restricted-admin") ||
+		         !strcmp(argv[c], "/restrictedAdmin"))
+		{
+			g_restricted_admin = True;
+			g_console_session = True;
+			argv[c] = "-0";
+		}
 	}
 
 	while ((c = getopt(argc, argv,
@@ -1635,6 +1644,12 @@ main(int argc, char *argv[])
 	}
 
 #ifdef WITH_SCARD
+	if (g_restricted_admin && g_use_password_as_pin)
+	{
+		logger(Core, Error, "Restricted Admin mode cannot be used with smartcard PIN authentication");
+		return EX_USAGE;
+	}
+
 	if (g_use_password_as_pin && g_sc_reader_name == NULL)
 		scard_auto_select_reader(&g_sc_reader_name);
 #endif

@@ -26,6 +26,7 @@ extern RD_BOOL g_encryption;
 extern RD_BOOL g_encryption_initial;
 extern RDP_VERSION g_rdp_version;
 extern RD_BOOL g_use_password_as_pin;
+extern RD_BOOL g_restricted_admin;
 
 static RD_BOOL g_negotiate_rdp_protocol = True;
 
@@ -63,6 +64,7 @@ static void
 iso_send_connection_request(char *username, uint32 neg_proto)
 {
 	STREAM s;
+	uint8 neg_flags = 0;
 	int length = 30 + strlen(username);
 
 	if (g_rdp_version >= RDP_V5 && g_negotiate_rdp_protocol)
@@ -89,8 +91,11 @@ iso_send_connection_request(char *username, uint32 neg_proto)
 	if (g_rdp_version >= RDP_V5 && g_negotiate_rdp_protocol)
 	{
 		/* optional RDP protocol negotiation request for RDPv5 */
+		if (g_restricted_admin)
+			neg_flags |= RESTRICTED_ADMIN_MODE_REQUIRED;
+
 		out_uint8(s, RDP_NEG_REQ);
-		out_uint8(s, 0);
+		out_uint8(s, neg_flags);
 		out_uint16(s, 8);
 		out_uint32(s, neg_proto);
 	}
@@ -246,13 +251,21 @@ iso_connect(char *server, char *username, char *domain, char *password,
 	neg_proto = PROTOCOL_SSL;
 
 #ifdef WITH_CREDSSP
-	if (!g_use_password_as_pin)
+	if (g_restricted_admin)
+		neg_proto |= PROTOCOL_HYBRID;
+	else if (!g_use_password_as_pin)
 		neg_proto |= PROTOCOL_HYBRID;
 	else if (g_sc_csp_name || g_sc_reader_name || g_sc_card_name || g_sc_container_name)
 		neg_proto |= PROTOCOL_HYBRID;
 	else
 		logger(Core, Warning,
 		       "iso_connect(), missing smartcard information for SSO, disabling CredSSP");
+#else
+	if (g_restricted_admin)
+	{
+		logger(Core, Error, "Restricted Admin mode requires CredSSP support");
+		return False;
+	}
 #endif
 	if (neg_proto & PROTOCOL_HYBRID)
 		logger(Core, Verbose, "Connecting to server using NLA...");
@@ -296,10 +309,11 @@ iso_connect(char *server, char *username, char *domain, char *password,
 		const char *reason = NULL;
 
 		uint8 type = 0;
+		uint8 neg_flags = 0;
 		uint32 data = 0;
 
 		in_uint8(s, type);
-		in_uint8s(s, 1);	/* skip flags */
+		in_uint8(s, neg_flags);
 		in_uint8s(s, 2);	/* skip length */
 		in_uint32(s, data);
 
@@ -358,6 +372,16 @@ iso_connect(char *server, char *username, char *domain, char *password,
 			tcp_disconnect();
 			logger(Protocol, Error, "iso_connect(), expected RDP_NEG_RSP, got 0x%x",
 			       type);
+			return False;
+		}
+
+		if (g_restricted_admin &&
+		    ((neg_flags & RESTRICTED_ADMIN_MODE_SUPPORTED) == 0 ||
+		     (data != PROTOCOL_HYBRID && data != PROTOCOL_HYBRID_EX)))
+		{
+			tcp_disconnect();
+			logger(Core, Error,
+			       "Restricted Admin mode was requested, but the server did not negotiate compatible CredSSP support");
 			return False;
 		}
 

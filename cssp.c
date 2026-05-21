@@ -27,6 +27,7 @@
 #include "spnego.h"
 
 extern RD_BOOL g_use_password_as_pin;
+extern RD_BOOL g_restricted_admin;
 
 extern char *g_sc_csp_name;
 extern char *g_sc_reader_name;
@@ -466,7 +467,7 @@ cssp_encode_tscredentials(char *username, char *password, char *domain)
 	// credType [0]
 	s_realloc(&tmp, sizeof(uint8));
 	s_reset(&tmp);
-	if (g_use_password_as_pin == False)
+	if (g_use_password_as_pin == False || g_restricted_admin)
 	{
 		out_uint8(&tmp, 1);	// TSPasswordCreds
 	}
@@ -485,7 +486,12 @@ cssp_encode_tscredentials(char *username, char *password, char *domain)
 	s_free(h1);
 
 	// credentials [1]
-	if (g_use_password_as_pin == False)
+	if (g_restricted_admin)
+	{
+		/* Restricted Admin authenticates CredSSP locally, then sends empty logon credentials. */
+		h3 = cssp_encode_tspasswordcreds("", "", "");
+	}
+	else if (g_use_password_as_pin == False)
 	{
 		h3 = cssp_encode_tspasswordcreds(username, password, domain);
 	}

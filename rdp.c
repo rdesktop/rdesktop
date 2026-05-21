@@ -36,6 +36,7 @@
 extern uint16 g_mcs_userid;
 extern char *g_username;
 extern char g_password[64];
+extern RD_BOOL g_restricted_admin;
 extern char g_codepage[16];
 extern RD_BOOL g_orders;
 extern RD_BOOL g_encryption;
@@ -398,16 +399,17 @@ rdp_send_client_info_pdu(uint32 flags, char *domain, char *user,
 			 char *password, char *program, char *directory)
 {
 	char *ipaddr = tcp_get_address();
+	char *client_info_password = password;
 	/* length of string in TS_INFO_PACKET excludes null terminator */
-	int len_domain = 2 * strlen(domain);
-	int len_user = 2 * strlen(user);
-	int len_password = 2 * strlen(password);
-	int len_program = 2 * strlen(program);
-	int len_directory = 2 * strlen(directory);
+	int len_domain;
+	int len_user;
+	int len_password;
+	int len_program;
+	int len_directory;
 
 	/* length of strings in TS_EXTENDED_PACKET includes null terminator */
-	int len_ip = 2 * strlen(ipaddr) + 2;
-	int len_dll = 2 * strlen("C:\\WINNT\\System32\\mstscax.dll") + 2;
+	int len_ip;
+	int len_dll;
 
 	int packetlen = 0;
 	uint32 sec_flags = g_encryption ? (SEC_INFO_PKT | SEC_ENCRYPT) : SEC_INFO_PKT;
@@ -415,6 +417,20 @@ rdp_send_client_info_pdu(uint32 flags, char *domain, char *user,
 	time_t t = time(NULL);
 	time_t tzone;
 	uint8 security_verifier[16];
+
+	if (g_restricted_admin)
+	{
+		flags &= ~RDP_INFO_AUTOLOGON;
+		client_info_password = "";
+	}
+
+	len_domain = 2 * strlen(domain);
+	len_user = 2 * strlen(user);
+	len_password = 2 * strlen(client_info_password);
+	len_program = 2 * strlen(program);
+	len_directory = 2 * strlen(directory);
+	len_ip = 2 * strlen(ipaddr) + 2;
+	len_dll = 2 * strlen("C:\\WINNT\\System32\\mstscax.dll") + 2;
 
 	if (g_rdp_version == RDP_V4 || 1 == g_server_rdp_version)
 	{
@@ -433,7 +449,7 @@ rdp_send_client_info_pdu(uint32 flags, char *domain, char *user,
 
 		rdp_out_unistr_mandatory_null(s, domain, len_domain);
 		rdp_out_unistr_mandatory_null(s, user, len_user);
-		rdp_out_unistr_mandatory_null(s, password, len_password);
+		rdp_out_unistr_mandatory_null(s, client_info_password, len_password);
 		rdp_out_unistr_mandatory_null(s, program, len_program);
 		rdp_out_unistr_mandatory_null(s, directory, len_directory);
 	}
@@ -511,7 +527,7 @@ rdp_send_client_info_pdu(uint32 flags, char *domain, char *user,
 		}
 		else
 		{
-			rdp_out_unistr_mandatory_null(s, password, len_password);
+			rdp_out_unistr_mandatory_null(s, client_info_password, len_password);
 		}
 
 
