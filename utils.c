@@ -24,6 +24,7 @@
 #include <errno.h>
 #include <iconv.h>
 #include <stdarg.h>
+#include <unistd.h>
 #include "rdesktop.h"
 
 #include "utils.h"
@@ -279,10 +280,22 @@ utils_apply_session_size_limitations(uint32 * width, uint32 * height)
 }
 
 #define MAX_CHOICES 10
+#define MAX_CHOICE_ATTEMPTS 3
+
+static void
+util_drain_stdin_line(void)
+{
+	int ch;
+
+	while ((ch = getchar()) != '\n' && ch != EOF)
+		;
+}
+
 const char *
 util_dialog_choice(const char *message, ...)
 {
 	int i;
+	int attempts = 0;
 	va_list ap;
 	char *p;
 	const char *choice;
@@ -296,14 +309,23 @@ util_dialog_choice(const char *message, ...)
 		choices[i] = va_arg(ap, const char *);
 		if (choices[i] == NULL)
 			break;
-    }
-    va_end(ap);
+	}
+	va_end(ap);
+
+	if (choices[0] == NULL)
+		return NULL;
+
+	if (!isatty(STDIN_FILENO))
+	{
+		logger(Core, Error, "Refusing interactive prompt on non-interactive stdin");
+		return choices[0];
+	}
 
 	choice = NULL;
-	while (choice == NULL)
+	while (choice == NULL && attempts < MAX_CHOICE_ATTEMPTS)
 	{
 		/* display message */
-		fprintf(stderr,"\n%s", message);
+		fprintf(stderr, "\n%s", message);
 
 		/* read input */
 		if (fgets(response, sizeof(response), stdin) != NULL)
@@ -311,7 +333,16 @@ util_dialog_choice(const char *message, ...)
 			/* strip final newline */
 			p = strchr(response, '\n');
 			if (p != NULL)
+			{
 				*p = 0;
+			}
+			else
+			{
+				logger(Core, Warning, "Ignoring overlong prompt response");
+				util_drain_stdin_line();
+				attempts++;
+				continue;
+			}
 
 			for (i = 0; i < MAX_CHOICES; i++)
 			{
@@ -324,12 +355,21 @@ util_dialog_choice(const char *message, ...)
 					break;
 				}
 			}
+
+			if (choice == NULL)
+				attempts++;
 		}
 		else
 		{
 			logger(Core, Error, "Failed to read response from stdin");
 			break;
 		}
+	}
+
+	if (choice == NULL)
+	{
+		logger(Core, Error, "No valid prompt response received, using default choice");
+		return choices[0];
 	}
 
 	return choice;
