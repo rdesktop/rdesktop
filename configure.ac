@@ -155,6 +155,21 @@ if test x"$HAVE_XFIXES" = "x1"; then
     AC_DEFINE(HAVE_XFIXES)
 fi
 
+# Xft is optional and used by the X11 launcher for modern desktop fonts.
+if test -n "$PKG_CONFIG"; then
+    RD_PKG_CHECK_MODULES(XFT, xft, [HAVE_XFT=1], [HAVE_XFT=0])
+fi
+if test x"$HAVE_XFT" = "x1"; then
+    CFLAGS="$CFLAGS $XFT_CFLAGS"
+    LIBS="$LIBS $XFT_LIBS"
+    AC_DEFINE(HAVE_XFT)
+else
+    echo
+    echo "Xft/fontconfig not found: the X11 launcher will use legacy X core fonts."
+    echo "Install the Xft development package and rerun configure for modern UI fonts."
+    echo
+fi
+
 if test -n "$PKG_CONFIG"; then
     RD_PKG_CHECK_MODULES(LIBPNG, libpng, [HAVE_LIBPNG=1], [HAVE_LIBPNG=0])
 fi

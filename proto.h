@@ -282,6 +282,11 @@ unsigned int read_keyboard_state(void);
 uint16 ui_get_numlock_state(unsigned int state);
 void reset_modifier_keys(void);
 void rdp_send_scancode(uint32 time, uint16 flags, uint8 scancode);
+/* xgui.c */
+int xgui_startup(int *argc, char ***argv);
+RD_BOOL xgui_choice_dialog(const char *title, const char *message, const char *accept_label,
+                           const char *reject_label);
+
 /* xwin.c */
 RD_BOOL get_key_state(unsigned int state, uint32 keysym);
 RD_BOOL ui_init(void);

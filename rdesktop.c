@@ -103,6 +103,9 @@ RD_BOOL g_desktop_save = True;	/* desktop save order */
 RD_BOOL g_polygon_ellipse_orders = True;	/* polygon / ellipse orders */
 RD_BOOL g_fullscreen = False;
 RD_BOOL g_multimon = False;
+RD_BOOL g_use_gui_prompts = False;
+RD_BOOL g_gui_prompt_cancelled = False;
+static const char *g_launcher_program = NULL;
 RD_BOOL g_extended_client_data_supported = False;
 RD_BOOL g_grab_keyboard = True;
 RD_BOOL g_local_cursor = False;
@@ -180,6 +183,8 @@ usage(char *program)
 	fprintf(stderr, "See http://www.rdesktop.org/ for more information.\n\n");
 
 	fprintf(stderr, "Usage: %s [options] server[:port]\n", program);
+	fprintf(stderr, "       %s [options] file.rdp\n", program);
+	fprintf(stderr, "       %s without arguments opens the X11 connection launcher.\n", program);
 	fprintf(stderr, "   -u: user name\n");
 	fprintf(stderr, "   -d: domain\n");
 	fprintf(stderr, "   -s: shell / seamless application to start remotely\n");
@@ -1090,6 +1095,8 @@ main(int argc, char *argv[])
 	char *rdpsnd_optarg = NULL;
 #endif
 
+	g_launcher_program = argv[0];
+
 	/* setup debug logging from environment */
 	logger_set_subjects(getenv("RDESKTOP_DEBUG"));
 
@@ -1110,6 +1117,20 @@ main(int argc, char *argv[])
 	sigemptyset(&act.sa_mask);
 	act.sa_flags = 0;
 	sigaction(SIGPIPE, &act, NULL);
+
+	if (argc == 1)
+	{
+		int gui_result = xgui_startup(&argc, &argv);
+
+		if (gui_result == 0)
+			return EX_OK;
+		if (gui_result < 0)
+		{
+			usage(argv[0]);
+			return EX_USAGE;
+		}
+		g_use_gui_prompts = True;
+	}
 
 	/* setup default flags for TS_INFO_PACKET */
 	flags = RDP_INFO_MOUSE | RDP_INFO_DISABLECTRLALTDEL
@@ -1840,11 +1861,25 @@ main(int argc, char *argv[])
 
 		pstcache_set_namespace(server, g_tcp_port_rdp, domain, g_username);
 
+		g_gui_prompt_cancelled = False;
 		if (!rdp_connect
 		    (server, flags, domain, g_password, shell, directory, g_reconnect_loop))
 		{
 
 			g_network_error = False;
+
+			if (g_use_gui_prompts && g_gui_prompt_cancelled)
+			{
+				char *launcher_argv[2];
+
+				logger(Core, Notice,
+				       "Certificate prompt cancelled from launcher, reopening connection launcher.");
+				launcher_argv[0] = (char *) g_launcher_program;
+				launcher_argv[1] = NULL;
+				execvp(launcher_argv[0], launcher_argv);
+				logger(Core, Error, "Failed to reopen connection launcher");
+				return EX_PROTOCOL;
+			}
 
 			if (g_reconnect_loop == False)
 			{

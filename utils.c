@@ -30,6 +30,8 @@
 #include "utils.h"
 
 extern char g_codepage[16];
+extern RD_BOOL g_use_gui_prompts;
+extern RD_BOOL g_gui_prompt_cancelled;
 
 static RD_BOOL g_iconv_works = True;
 
@@ -318,6 +320,17 @@ util_dialog_choice(const char *message, ...)
 	if (!isatty(STDIN_FILENO))
 	{
 		logger(Core, Error, "Refusing interactive prompt on non-interactive stdin");
+		return choices[0];
+	}
+
+	if (g_use_gui_prompts && choices[0] != NULL && choices[1] != NULL && choices[2] != NULL &&
+	    (!strcmp(choices[0], "no") || !strcmp(choices[0], "n")) &&
+	    (!strcmp(choices[2], "yes") || !strcmp(choices[2], "y")))
+	{
+		if (xgui_choice_dialog("rdesktop certificate warning", message, "Trust", "Cancel"))
+			return choices[2];
+
+		g_gui_prompt_cancelled = True;
 		return choices[0];
 	}
 
