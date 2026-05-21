@@ -46,6 +46,7 @@ extern int g_win_button_size;
 extern RD_BOOL g_enable_compose;
 extern RD_BOOL g_seamless_rdp;
 extern RD_BOOL g_seamless_active;
+extern RD_BOOL g_fullscreen_toggle;
 extern RDP_VERSION g_rdp_version;
 extern RD_BOOL g_numlock_sync;
 
@@ -647,10 +648,11 @@ handle_special_keys(uint32 keysym, unsigned int state, uint32 ev_time, RD_BOOL p
 				/* Ctrl-Alt-Enter: toggle full screen */
 				if (pressed)
 				{
-					if (!g_seamless_rdp)
+					if (!g_seamless_rdp && g_fullscreen_toggle)
 					{
 						/* only allow toggle fullscreen when not running
-						   rdesktop in seamless mode */
+						   rdesktop in seamless mode and it was not disabled
+						   by option */
 						xwin_toggle_fullscreen();
 					}
 					else
