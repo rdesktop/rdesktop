@@ -1858,6 +1858,8 @@ main(int argc, char *argv[])
 	rdpdr_init();
 
 	dvc_init();
+	if (!rdpear_init())
+		return EX_PROTOCOL;
 #ifdef WITH_RDPSND
 	rdpsnd_input_init();
 #endif

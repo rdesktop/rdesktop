@@ -97,6 +97,9 @@ void iso_disconnect(void);
 void iso_reset_state(void);
 /* cssp.c */
 RD_BOOL cssp_connect(char *server, char *user, char *domain, char *password, STREAM s);
+RD_BOOL cssp_remote_guard_has_security_context(void);
+STREAM cssp_remote_guard_wrap(STREAM in);
+STREAM cssp_remote_guard_unwrap(STREAM in);
 /* licence.c */
 void licence_process(STREAM s);
 /* mcs.c */
@@ -381,6 +384,8 @@ RD_BOOL dvc_init(void);
 RD_BOOL dvc_channels_register(const char *name, dvc_channel_process_fn handler);
 RD_BOOL dvc_channels_is_available(const char *name);
 void dvc_send(const char *name, STREAM s);
+/* rdpear.c */
+RD_BOOL rdpear_init(void);
 /* seamless.c */
 RD_BOOL seamless_init(void);
 void seamless_reset_state(void);

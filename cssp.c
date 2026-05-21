@@ -38,6 +38,7 @@ extern char *g_sc_container_name;
 #ifdef WITH_GSSAPI_CREDSSP
 static gss_OID_desc _gss_spnego_krb5_mechanism_oid_desc =
 	{ 9, (void *) "\x2a\x86\x48\x86\xf7\x12\x01\x02\x02" };
+static gss_ctx_id_t g_remote_guard_gss_ctx = GSS_C_NO_CONTEXT;
 #endif
 
 static STREAM
@@ -226,6 +227,30 @@ cssp_gss_unwrap(gss_ctx_id_t ctx, STREAM in)
 	return out;
 }
 
+
+RD_BOOL
+cssp_remote_guard_has_security_context(void)
+{
+	return g_remote_guard_gss_ctx != GSS_C_NO_CONTEXT;
+}
+
+STREAM
+cssp_remote_guard_wrap(STREAM in)
+{
+	if (g_remote_guard_gss_ctx == GSS_C_NO_CONTEXT)
+		return NULL;
+
+	return cssp_gss_wrap(g_remote_guard_gss_ctx, in);
+}
+
+STREAM
+cssp_remote_guard_unwrap(STREAM in)
+{
+	if (g_remote_guard_gss_ctx == GSS_C_NO_CONTEXT)
+		return NULL;
+
+	return cssp_gss_unwrap(g_remote_guard_gss_ctx, in);
+}
 
 #endif
 
@@ -1101,6 +1126,9 @@ cssp_connect_gss(char *server, char *user, char *domain, char *password, STREAM 
 	if (!ret)
 		goto bail_out;
 
+	if (g_remote_guard)
+		g_remote_guard_gss_ctx = gss_ctx;
+
 	return True;
 
       bail_out:
@@ -1227,6 +1255,29 @@ fail:
 	s_free(pubkey);
 	return False;
 }
+
+
+#ifndef WITH_GSSAPI_CREDSSP
+RD_BOOL
+cssp_remote_guard_has_security_context(void)
+{
+	return False;
+}
+
+STREAM
+cssp_remote_guard_wrap(STREAM in)
+{
+	UNUSED(in);
+	return NULL;
+}
+
+STREAM
+cssp_remote_guard_unwrap(STREAM in)
+{
+	UNUSED(in);
+	return NULL;
+}
+#endif
 
 RD_BOOL
 cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
