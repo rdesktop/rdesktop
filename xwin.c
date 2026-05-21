@@ -120,6 +120,8 @@ RD_BOOL g_dynamic_session_resize = True;
 /* These are the last known window sizes. They are updated whenever the window size is changed. */
 static uint32 g_window_width;
 static uint32 g_window_height;
+static RD_BOOL g_main_window_initial_positioned = False;
+static RD_BOOL g_main_window_use_position_hint = False;
 
 /* SeamlessRDP support */
 typedef struct _seamless_group
@@ -2541,9 +2543,21 @@ get_sizehints(XSizeHints * sizehints, uint32 width, uint32 height)
 	if (sizehints == NULL)
 		return;
 
-	/* user specified position, this is needed to override the choice of
-	   window position by window manager when a window is mapped. */
-	sizehints->flags = USPosition;
+	sizehints->flags = 0;
+	if (g_pos != 0)
+	{
+		/* A geometry position was requested by the user; mark it as authoritative. */
+		sizehints->flags |= USPosition;
+		sizehints->x = g_xpos;
+		sizehints->y = g_ypos;
+	}
+	else if (g_main_window_use_position_hint)
+	{
+		/* The client suggests an initial position, but the WM may still override it. */
+		sizehints->flags |= PPosition;
+		sizehints->x = g_xpos;
+		sizehints->y = g_ypos;
+	}
 
 	/* set minimal size of rdesktop main window */
 	sizehints->flags |= PMinSize;
@@ -2750,6 +2764,30 @@ xwin_read_png_icon(const char *filename, uint32 *width, uint32 *height, char **r
 #endif
 
 static void
+xwin_center_initial_window(uint32 width, uint32 height)
+{
+	int screen_width, screen_height;
+
+	if (g_main_window_initial_positioned)
+		return;
+
+	g_main_window_initial_positioned = True;
+
+	if (g_pos != 0 || g_embed_wnd || g_fullscreen || g_seamless_rdp)
+		return;
+
+	screen_width = WidthOfScreen(g_screen);
+	screen_height = HeightOfScreen(g_screen);
+
+	g_xpos = ((int) width < screen_width) ? (screen_width - (int) width) / 2 : 0;
+	g_ypos = ((int) height < screen_height) ? (screen_height - (int) height) / 2 : 0;
+	g_main_window_use_position_hint = True;
+
+	logger(GUI, Debug, "xwin_center_initial_window(), initial window position +%d+%d",
+	       g_xpos, g_ypos);
+}
+
+static void
 xwin_apply_window_icon(Window wnd)
 {
 	uint32 width, height;
@@ -2789,6 +2827,8 @@ ui_create_window(uint32 width, uint32 height)
 	g_window_height = 0;
 
 	logger(GUI, Debug, "ui_create_window() width = %d, height = %d", width, height);
+
+	xwin_center_initial_window(width, height);
 
 	/* Handle -x-y portion of geometry string */
 	if (g_xpos < 0 || (g_xpos == 0 && (g_pos & 2)))
@@ -2871,6 +2911,7 @@ ui_create_window(uint32 width, uint32 height)
 		request_wm_fullscreen(g_display, g_wnd);
 	}
 	XMapWindow(g_display, g_wnd);
+	g_main_window_use_position_hint = False;
 
 	/* wait for VisibilityNotify */
 	do
