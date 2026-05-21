@@ -370,10 +370,13 @@ negotiation.
 .TP
 .BR "--remote-guard-helper" " " "command"
 Use an external helper for RDPEAR Kerberos/NTLM package calls that rdesktop
-cannot satisfy internally. The helper receives a little-endian binary request
-on stdin: 32-bit package-name length, package-name bytes, 32-bit request length,
-request bytes. It must reply on stdout with 32-bit NTSTATUS, 32-bit response
-length, response bytes. Supplying this option implies
+cannot satisfy internally. The installed \fBrdesktop-rdpear-helper\fR command implements
+the helper transport contract and safe version/status responses. More complete
+site-specific helpers can use the same contract to call local credential-package
+facilities. The helper receives a little-endian binary request on stdin: 32-bit
+package-name length, package-name bytes, 32-bit request length, request bytes. It
+must reply on stdout with 32-bit helper transport status, 32-bit response length,
+response bytes. Supplying this option implies
 .BR --remote-guard .
 .TP
 .BR "-4"
