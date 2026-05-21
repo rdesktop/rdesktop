@@ -1739,11 +1739,30 @@ xgui_build_argv(xgui_state_t *gui, int *argc_out, char ***argv_out)
 	int argc = 0;
 	unsigned int i;
 	const char *server;
+	const char *username;
+	const char *password;
 
 	server = gui->fields[0].text;
 	if (!xgui_nonempty(server))
 	{
 		STRNCPY(gui->error, "Computer name is required.", sizeof(gui->error));
+		xgui_focus_field(gui, 0);
+		return False;
+	}
+
+	username = gui->fields[1].text;
+	if (!xgui_nonempty(username))
+	{
+		STRNCPY(gui->error, "User name is required.", sizeof(gui->error));
+		xgui_focus_field(gui, 1);
+		return False;
+	}
+
+	password = gui->fields[2].text;
+	if (!xgui_nonempty(password))
+	{
+		STRNCPY(gui->error, "Password is required.", sizeof(gui->error));
+		xgui_focus_field(gui, 2);
 		return False;
 	}
 
@@ -2080,6 +2099,7 @@ static void
 xgui_dialog_redraw(xgui_state_t *gui,
                    char lines[XGUI_DIALOG_MAX_LINES][XGUI_DIALOG_LINE_CHARS + 1],
                    int line_count, int scroll, int max_visible,
+                   const char *dialog_title, const char *dialog_subtitle,
                    const char *accept_label, const char *reject_label,
                    int accept_x, int reject_x, int button_y)
 {
@@ -2094,9 +2114,8 @@ xgui_dialog_redraw(xgui_state_t *gui,
 	XFillRectangle(gui->display, gui->drawable, gui->gc, 0, 0,
 	               XGUI_DIALOG_WIDTH, 70);
 	XSetForeground(gui->display, gui->gc, gui->white);
-	xgui_draw_string_font(gui, gui->title_font, 24, 42, "Server certificate warning");
-	xgui_draw_string_font(gui, gui->small_font, 24, 62,
-	                      "Review the certificate before adding a local trust exception.");
+	xgui_draw_string_font(gui, gui->title_font, 24, 42, dialog_title);
+	xgui_draw_string_font(gui, gui->small_font, 24, 62, dialog_subtitle);
 
 	XSetForeground(gui->display, gui->gc, gui->panel);
 	XFillRectangle(gui->display, gui->drawable, gui->gc, 24, 88,
@@ -2124,8 +2143,11 @@ xgui_dialog_redraw(xgui_state_t *gui,
 
 	xgui_draw_button(gui, accept_x, button_y, 120, XGUI_BUTTON_HEIGHT,
 	                 accept_label, XGUI_BUTTON_CONNECT, False);
-	xgui_draw_button(gui, reject_x, button_y, 120, XGUI_BUTTON_HEIGHT,
-	                 reject_label, XGUI_BUTTON_EXIT, False);
+	if (reject_label != NULL)
+	{
+		xgui_draw_button(gui, reject_x, button_y, 120, XGUI_BUTTON_HEIGHT,
+		                 reject_label, XGUI_BUTTON_EXIT, False);
+	}
 }
 
 RD_BOOL
@@ -2140,6 +2162,8 @@ xgui_choice_dialog(const char *title, const char *message, const char *accept_la
 	RD_BOOL accepted;
 	RD_BOOL dirty;
 	char lines[XGUI_DIALOG_MAX_LINES][XGUI_DIALOG_LINE_CHARS + 1];
+	const char *dialog_title;
+	const char *dialog_subtitle;
 	int line_count;
 	int scroll;
 	int max_visible;
@@ -2170,7 +2194,7 @@ xgui_choice_dialog(const char *title, const char *message, const char *accept_la
 	gui.width = XGUI_DIALOG_WIDTH;
 	gui.height = XGUI_DIALOG_HEIGHT;
 	gui.focus_type = XGUI_FOCUS_BUTTON;
-	gui.active_button = XGUI_BUTTON_EXIT;
+	gui.active_button = reject_label != NULL ? XGUI_BUTTON_EXIT : XGUI_BUTTON_CONNECT;
 	gui.active_field = -1;
 	gui.active_check = -1;
 	gui.active_reveal_field = -1;
@@ -2236,10 +2260,22 @@ xgui_choice_dialog(const char *title, const char *message, const char *accept_la
 	XSetWMNormalHints(gui.display, gui.window, &hints);
 
 	line_count = xgui_dialog_wrap_message(message, lines);
+	dialog_title = title != NULL ? title : "rdesktop message";
+	dialog_subtitle = reject_label != NULL ?
+	                  "Review the certificate before adding a local trust exception." :
+	                  "Review the connection message before returning to the launcher.";
 	scroll = 0;
 	max_visible = 25;
-	accept_x = XGUI_DIALOG_WIDTH - 300;
-	reject_x = XGUI_DIALOG_WIDTH - 160;
+	if (reject_label != NULL)
+	{
+		accept_x = XGUI_DIALOG_WIDTH - 300;
+		reject_x = XGUI_DIALOG_WIDTH - 160;
+	}
+	else
+	{
+		accept_x = XGUI_DIALOG_WIDTH - 160;
+		reject_x = 0;
+	}
 	button_y = XGUI_DIALOG_HEIGHT - 58;
 
 	XMapWindow(gui.display, gui.window);
@@ -2251,6 +2287,7 @@ xgui_choice_dialog(const char *title, const char *message, const char *accept_la
 		if (dirty)
 		{
 			xgui_dialog_redraw(&gui, lines, line_count, scroll, max_visible,
+			                   dialog_title, dialog_subtitle,
 			                   accept_label, reject_label, accept_x, reject_x, button_y);
 			dirty = False;
 		}
@@ -2269,7 +2306,8 @@ xgui_choice_dialog(const char *title, const char *message, const char *accept_la
 					accepted = True;
 					running = False;
 				}
-				else if (event.xbutton.y >= button_y && event.xbutton.y <= button_y + XGUI_BUTTON_HEIGHT &&
+				else if (reject_label != NULL && event.xbutton.y >= button_y &&
+				         event.xbutton.y <= button_y + XGUI_BUTTON_HEIGHT &&
 				         event.xbutton.x >= reject_x && event.xbutton.x <= reject_x + 120)
 				{
 					gui.active_button = XGUI_BUTTON_EXIT;
@@ -2281,7 +2319,8 @@ xgui_choice_dialog(const char *title, const char *message, const char *accept_la
 				{
 					KeySym keysym;
 					XLookupString(&event.xkey, NULL, 0, &keysym, NULL);
-					if (keysym == XK_Tab || keysym == XK_Left || keysym == XK_Right)
+					if (reject_label != NULL &&
+					    (keysym == XK_Tab || keysym == XK_Left || keysym == XK_Right))
 					{
 						gui.active_button = gui.active_button == XGUI_BUTTON_CONNECT ?
 						                    XGUI_BUTTON_EXIT : XGUI_BUTTON_CONNECT;
@@ -2326,4 +2365,10 @@ xgui_choice_dialog(const char *title, const char *message, const char *accept_la
 
 	xgui_close(&gui);
 	return accepted;
+}
+
+void
+xgui_message_dialog(const char *title, const char *message, const char *button_label)
+{
+	(void) xgui_choice_dialog(title, message, button_label != NULL ? button_label : "OK", NULL);
 }

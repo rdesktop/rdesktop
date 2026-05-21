@@ -286,6 +286,7 @@ void rdp_send_scancode(uint32 time, uint16 flags, uint8 scancode);
 int xgui_startup(int *argc, char ***argv);
 RD_BOOL xgui_choice_dialog(const char *title, const char *message, const char *accept_label,
                            const char *reject_label);
+void xgui_message_dialog(const char *title, const char *message, const char *button_label);
 
 /* xwin.c */
 RD_BOOL get_key_state(unsigned int state, uint32 keysym);

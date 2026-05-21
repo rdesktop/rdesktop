@@ -106,6 +106,7 @@ RD_BOOL g_multimon = False;
 RD_BOOL g_use_gui_prompts = False;
 RD_BOOL g_gui_prompt_cancelled = False;
 static const char *g_launcher_program = NULL;
+static const char *g_last_disconnect_reason_text = "Unknown reason";
 RD_BOOL g_extended_client_data_supported = False;
 RD_BOOL g_grab_keyboard = True;
 RD_BOOL g_local_cursor = False;
@@ -512,7 +513,24 @@ handle_disconnect_reason(RD_BOOL deactivated, uint16 reason)
 		fprintf(stderr, "disconnect: %s.\n", text);
 	}
 
+	g_last_disconnect_reason_text = text;
 	return retval;
+}
+
+static int
+reopen_launcher_from_gui(const char *title, const char *message)
+{
+	char *launcher_argv[2];
+
+	if (message != NULL && *message != '\0')
+		xgui_message_dialog(title != NULL ? title : "rdesktop connection error", message, "OK");
+
+	logger(Core, Notice, "Reopening connection launcher.");
+	launcher_argv[0] = (char *) (g_launcher_program != NULL ? g_launcher_program : "rdesktop");
+	launcher_argv[1] = NULL;
+	execvp(launcher_argv[0], launcher_argv);
+	logger(Core, Error, "Failed to reopen connection launcher");
+	return EX_PROTOCOL;
 }
 
 static void
@@ -1865,20 +1883,20 @@ main(int argc, char *argv[])
 		if (!rdp_connect
 		    (server, flags, domain, g_password, shell, directory, g_reconnect_loop))
 		{
+			char message[512];
 
 			g_network_error = False;
 
-			if (g_use_gui_prompts && g_gui_prompt_cancelled)
+			if (g_use_gui_prompts)
 			{
-				char *launcher_argv[2];
+				if (g_gui_prompt_cancelled)
+					return reopen_launcher_from_gui(NULL, NULL);
 
-				logger(Core, Notice,
-				       "Certificate prompt cancelled from launcher, reopening connection launcher.");
-				launcher_argv[0] = (char *) g_launcher_program;
-				launcher_argv[1] = NULL;
-				execvp(launcher_argv[0], launcher_argv);
-				logger(Core, Error, "Failed to reopen connection launcher");
-				return EX_PROTOCOL;
+				snprintf(message, sizeof(message),
+				         "Unable to establish the Remote Desktop connection.\n\n"
+				         "Check the computer name, user name, password and selected options, "
+				         "then try again.");
+				return reopen_launcher_from_gui("rdesktop connection failed", message);
 			}
 
 			if (g_reconnect_loop == False)
@@ -2033,7 +2051,28 @@ main(int argc, char *argv[])
 	if (g_user_quit)
 		return EXRD_WINDOW_CLOSED;
 
-	return handle_disconnect_reason(deactivated, ext_disc_reason);
+	{
+		int retval;
+
+		retval = handle_disconnect_reason(deactivated, ext_disc_reason);
+		if (g_use_gui_prompts && retval != EX_OK && retval != EXRD_WINDOW_CLOSED &&
+		    ext_disc_reason != ERRINFO_LOGOFF_BYUSER &&
+		    ext_disc_reason != ERRINFO_RPC_INITIATED_DISCONNECT_BYUSER)
+		{
+			char message[512];
+
+			snprintf(message, sizeof(message),
+			         "The Remote Desktop connection ended with an error.\n\n"
+			         "%s.\n\n"
+			         "The connection launcher will reopen so you can update the "
+			         "server, credentials or connection options.",
+			         g_last_disconnect_reason_text != NULL ?
+			         g_last_disconnect_reason_text : "Unknown reason");
+			return reopen_launcher_from_gui("rdesktop connection error", message);
+		}
+
+		return retval;
+	}
 
 	if (g_redirect_username)
 		xfree(g_redirect_username);
