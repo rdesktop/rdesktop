@@ -38,6 +38,7 @@
 
 extern RD_BOOL g_remote_guard;
 extern char *g_remote_guard_helper;
+extern char *g_remote_guard_server;
 
 typedef struct rdpear_inner_packet_t
 {
@@ -591,6 +592,9 @@ rdpear_call_helper(const char *package_name, STREAM request)
 
 	if (pid == 0)
 	{
+		if (g_remote_guard_server != NULL && g_remote_guard_server[0] != 0)
+			setenv("RDESKTOP_RDPEAR_SERVER", g_remote_guard_server, 0);
+
 		dup2(inpipe[0], STDIN_FILENO);
 		dup2(outpipe[1], STDOUT_FILENO);
 		close(inpipe[0]);

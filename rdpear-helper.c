@@ -26,6 +26,10 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#ifdef WITH_GSSAPI_CREDSSP
+#include <gssapi/gssapi.h>
+#endif
+
 #define RDPEAR_PACKAGE_BUFFER_HEADER_LENGTH 16
 #define RDPEAR_CALL_ID_OFFSET RDPEAR_PACKAGE_BUFFER_HEADER_LENGTH
 
@@ -36,6 +40,7 @@
 #define RDPEAR_TRANSPORT_STATUS_SUCCESS 0x00000000U
 #define RDPEAR_MAX_PAYLOAD_LENGTH (1024U * 1024U)
 #define RDPEAR_LOGON_CRED_PACKAGE "__rdesktop_remote_guard_logon_cred__"
+#define RDPEAR_GSS_SERVICE_PREFIX "TERMSRV@"
 
 static uint32_t
 get_uint32_le(const uint8_t in[4])
@@ -263,6 +268,190 @@ decode_hex_blob(const char *hex, uint32_t *out_len)
 	return out;
 }
 
+
+#ifdef WITH_GSSAPI_CREDSSP
+static void
+report_gss_error(const char *prefix, OM_uint32 code_type, OM_uint32 status)
+{
+	OM_uint32 minor_status = 0;
+	OM_uint32 message_context = 0;
+	gss_buffer_desc status_string = GSS_C_EMPTY_BUFFER;
+
+	do
+	{
+		OM_uint32 major_status = gss_display_status(&minor_status, status, code_type,
+							      GSS_C_NO_OID, &message_context,
+							      &status_string);
+		if (major_status == GSS_S_COMPLETE && status_string.length != 0)
+		{
+			fprintf(stderr, "%s: %.*s\n", prefix, (int) status_string.length,
+				(char *) status_string.value);
+			gss_release_buffer(&minor_status, &status_string);
+		}
+	} while (message_context != 0);
+}
+
+static char *
+build_gss_service_name(void)
+{
+	const char *server = getenv("RDESKTOP_RDPEAR_SERVER");
+	char *service_name;
+	size_t length;
+
+	if (server == NULL || *server == 0)
+		return NULL;
+
+	length = strlen(RDPEAR_GSS_SERVICE_PREFIX) + strlen(server) + 1;
+	service_name = malloc(length);
+	if (service_name == NULL)
+		return NULL;
+
+	snprintf(service_name, length, "%s%s", RDPEAR_GSS_SERVICE_PREFIX, server);
+	return service_name;
+}
+
+static uint8_t *
+gssapi_init_token(const uint8_t *input, uint32_t input_len, uint32_t *response_len)
+{
+	char *service = NULL;
+	gss_buffer_desc name_buf = GSS_C_EMPTY_BUFFER;
+	gss_buffer_desc input_token = GSS_C_EMPTY_BUFFER;
+	gss_buffer_desc output_token = GSS_C_EMPTY_BUFFER;
+	gss_name_t target_name = GSS_C_NO_NAME;
+	gss_ctx_id_t context = GSS_C_NO_CONTEXT;
+	OM_uint32 major_status, minor_status;
+	uint8_t *out = NULL;
+
+	service = build_gss_service_name();
+	if (service == NULL)
+	{
+		fprintf(stderr, "rdesktop-rdpear-helper: RDESKTOP_RDPEAR_SERVER is required for built-in GSSAPI Remote Guard backend\n");
+		return NULL;
+	}
+
+	name_buf.value = service;
+	name_buf.length = strlen(service);
+	major_status = gss_import_name(&minor_status, &name_buf,
+					 (gss_OID) GSS_C_NT_HOSTBASED_SERVICE, &target_name);
+	if (major_status != GSS_S_COMPLETE)
+	{
+		report_gss_error("rdesktop-rdpear-helper: gss_import_name failed",
+				 GSS_C_GSS_CODE, major_status);
+		report_gss_error("rdesktop-rdpear-helper: gss_import_name failed",
+				 GSS_C_MECH_CODE, minor_status);
+		free(service);
+		return NULL;
+	}
+
+	if (input != NULL && input_len != 0)
+	{
+		input_token.value = (void *) input;
+		input_token.length = input_len;
+	}
+
+	major_status = gss_init_sec_context(&minor_status,
+					      GSS_C_NO_CREDENTIAL,
+					      &context,
+					      target_name,
+					      GSS_C_NO_OID,
+					      GSS_C_MUTUAL_FLAG | GSS_C_REPLAY_FLAG |
+					      GSS_C_SEQUENCE_FLAG | GSS_C_CONF_FLAG,
+					      GSS_C_INDEFINITE,
+					      GSS_C_NO_CHANNEL_BINDINGS,
+					      input_len != 0 ? &input_token : GSS_C_NO_BUFFER,
+					      NULL,
+					      &output_token,
+					      NULL,
+					      NULL);
+
+	if (context != GSS_C_NO_CONTEXT)
+		gss_delete_sec_context(&minor_status, &context, GSS_C_NO_BUFFER);
+	gss_release_name(&minor_status, &target_name);
+	free(service);
+
+	if (major_status != GSS_S_COMPLETE && major_status != GSS_S_CONTINUE_NEEDED)
+	{
+		report_gss_error("rdesktop-rdpear-helper: gss_init_sec_context failed",
+				 GSS_C_GSS_CODE, major_status);
+		report_gss_error("rdesktop-rdpear-helper: gss_init_sec_context failed",
+				 GSS_C_MECH_CODE, minor_status);
+		return NULL;
+	}
+
+	if (output_token.length == 0 || output_token.length > RDPEAR_MAX_PAYLOAD_LENGTH)
+	{
+		gss_release_buffer(&minor_status, &output_token);
+		return NULL;
+	}
+
+	out = malloc(output_token.length);
+	if (out == NULL)
+	{
+		gss_release_buffer(&minor_status, &output_token);
+		return NULL;
+	}
+
+	memcpy(out, output_token.value, output_token.length);
+	*response_len = (uint32_t) output_token.length;
+	gss_release_buffer(&minor_status, &output_token);
+	return out;
+}
+#else
+static uint8_t *
+gssapi_init_token(const uint8_t *input, uint32_t input_len, uint32_t *response_len)
+{
+	(void) input;
+	(void) input_len;
+	(void) response_len;
+	return NULL;
+}
+#endif
+
+static uint8_t *
+request_payload_token(const uint8_t *request, uint32_t request_len, uint32_t *token_len)
+{
+	uint32_t offset;
+
+	if (request_len <= RDPEAR_CALL_ID_OFFSET + 4)
+		return NULL;
+
+	offset = RDPEAR_CALL_ID_OFFSET + 4;
+	*token_len = request_len - offset;
+	return (uint8_t *) request + offset;
+}
+
+static uint8_t *
+encode_package_blob(uint16_t call_id, int wide_call_id, const uint8_t *blob, uint32_t blob_len,
+		    uint32_t *out_len)
+{
+	uint8_t *out;
+	uint32_t size = RDPEAR_PACKAGE_BUFFER_HEADER_LENGTH + 8 + blob_len;
+
+	if (blob_len > RDPEAR_MAX_PAYLOAD_LENGTH)
+		return NULL;
+
+	out = calloc(1, size);
+	if (out == NULL)
+		return NULL;
+
+	put_uint16_le(out, 1);
+	if (wide_call_id)
+	{
+		put_uint32_le(out + RDPEAR_CALL_ID_OFFSET, call_id);
+	}
+	else
+	{
+		put_uint16_le(out + RDPEAR_CALL_ID_OFFSET, call_id);
+		put_uint16_le(out + RDPEAR_CALL_ID_OFFSET + 2, 0);
+	}
+	put_uint32_le(out + RDPEAR_CALL_ID_OFFSET + 4, RDPEAR_STATUS_SUCCESS);
+	if (blob_len != 0)
+		memcpy(out + RDPEAR_CALL_ID_OFFSET + 8, blob, blob_len);
+
+	*out_len = size;
+	return out;
+}
+
 static uint8_t *
 read_file_blob(const char *path, uint32_t *out_len)
 {
@@ -426,7 +615,11 @@ load_logon_credential(uint32_t *response_len)
 	else if (path != NULL && *path != 0)
 		blob = read_file_blob(path, response_len);
 	else
-		blob = call_backend(RDPEAR_LOGON_CRED_PACKAGE, NULL, 0, response_len);
+	{
+		blob = gssapi_init_token(NULL, 0, response_len);
+		if (blob == NULL)
+			blob = call_backend(RDPEAR_LOGON_CRED_PACKAGE, NULL, 0, response_len);
+	}
 
 	return blob;
 }
@@ -458,6 +651,22 @@ process_request(const char *package_name, const uint8_t *request, uint32_t reque
 	    call_id == RDPEAR_REMOTE_CALL_NTLM_NEGOTIATE_VERSION)
 		return encode_negotiate_version(call_id, wide_call_id, response_len);
 
+	if (strcmp(package_name, "Kerberos") == 0 || strcmp(package_name, "Negotiate") == 0)
+	{
+		uint32_t token_len = 0, gss_len = 0;
+		uint8_t *token = request_payload_token(request, request_len, &token_len);
+		uint8_t *gss_response = gssapi_init_token(token, token_len, &gss_len);
+
+		if (gss_response != NULL)
+		{
+			uint8_t *encoded = encode_package_blob(call_id, wide_call_id, gss_response,
+			                                      gss_len, response_len);
+			free(gss_response);
+			if (encoded != NULL)
+				return encoded;
+		}
+	}
+
 	{
 		uint8_t *backend_response = call_backend(package_name, request, request_len, response_len);
 		if (backend_response != NULL)
@@ -487,12 +696,12 @@ run_once(void)
 		goto out;
 
 	package_name = calloc(1, package_len + 1);
-	request = malloc(request_len);
-	if (package_name == NULL || request == NULL)
+	request = request_len == 0 ? NULL : malloc(request_len);
+	if (package_name == NULL || (request_len != 0 && request == NULL))
 		goto out;
 
 	if (!read_all(STDIN_FILENO, (uint8_t *) package_name, package_len) ||
-	    !read_all(STDIN_FILENO, request, request_len))
+	    (request_len != 0 && !read_all(STDIN_FILENO, request, request_len)))
 		goto out;
 
 	response = process_request(package_name, request, request_len, &response_len);

@@ -18,6 +18,7 @@ CC          = @CC@
 INSTALL     = @INSTALL@
 CFLAGS      = @CFLAGS@ @X_CFLAGS@ @DEFS@ -DKEYMAP_PATH=\"$(KEYMAP_PATH)\"
 LDFLAGS     = @LDFLAGS@ @LIBS@ @X_LIBS@ @X_EXTRA_LIBS@
+GSSAPI_LIBS  = @GSSAPI_LIBS@
 STRIP       = @STRIP@
 
 TARGETS     = rdesktop rdesktop-rdpear-helper
@@ -35,7 +36,7 @@ rdesktop: $(X11OBJ) $(SOUNDOBJ) $(RDPOBJ) $(SCARDOBJ) $(CREDSSPOBJ)
 	$(CC) $(CFLAGS) -o rdesktop $(X11OBJ) $(SOUNDOBJ) $(RDPOBJ) $(SCARDOBJ) $(CREDSSPOBJ) $(LDFLAGS) -lX11
 
 rdesktop-rdpear-helper: rdpear-helper.o
-	$(CC) $(CFLAGS) -o rdesktop-rdpear-helper rdpear-helper.o
+	$(CC) $(CFLAGS) -o rdesktop-rdpear-helper rdpear-helper.o $(GSSAPI_LIBS)
 
 .PHONY: install
 install: installbin installkeymaps installman

@@ -366,23 +366,26 @@ Request Remote Credential Guard negotiation over CredSSP. This requires
 Kerberos/GSSAPI CredSSP support and a server that advertises redirected
 authentication support. rdesktop also registers the RDPEAR authentication
 redirection channel, handles Remote Guard protocol framing, obtains the initial
-Negotiate logon credential from the RDPEAR helper, and routes Kerberos/NTLM
-package calls through the helper. Without an explicit helper command, rdesktop
-uses the installed \fBrdesktop-rdpear-helper\fR from PATH.
+Negotiate logon credential from the in-tree RDPEAR helper, and routes
+Kerberos/NTLM package calls through the helper. Without an explicit helper
+command, rdesktop uses the installed \fBrdesktop-rdpear-helper\fR from PATH.
+The default helper uses the local Kerberos credential cache to produce GSSAPI
+Remote Guard tokens for the target TERMSRV service.
 .TP
 .BR "--remote-guard-helper" " " "command"
 Use a specific helper command for RDPEAR Kerberos/NTLM package calls. The
 installed \fBrdesktop-rdpear-helper\fR command implements the helper transport
-contract, loads the initial Remote Guard logon credential from
+contract, uses the local Kerberos credential cache by default, and still allows
+overriding the initial Remote Guard logon credential with
 \fBRDESKTOP_RDPEAR_LOGON_CRED_FILE\fR or
-\fBRDESKTOP_RDPEAR_LOGON_CRED_HEX\fR, and can delegate package-specific calls to
-the command named by \fBRDESKTOP_RDPEAR_BACKEND\fR using the same binary
-transport contract. Built-in handling still answers Kerberos/NTLM version
-negotiation safely when no backend is configured. The helper receives a
-little-endian binary request on stdin: 32-bit package-name
-length, package-name bytes, 32-bit request length, request bytes. It must reply
-on stdout with 32-bit helper transport status, 32-bit response length, response
-bytes. Supplying this option implies
+\fBRDESKTOP_RDPEAR_LOGON_CRED_HEX\fR. It can also delegate package-specific calls
+to the command named by \fBRDESKTOP_RDPEAR_BACKEND\fR using the same binary
+transport contract. Built-in handling answers Kerberos/NTLM version negotiation
+and uses GSSAPI for Kerberos/Negotiate token generation before falling back to an
+explicit backend. The helper receives a little-endian binary request on stdin:
+32-bit package-name length, package-name bytes, 32-bit request length, request
+bytes. It must reply on stdout with 32-bit helper transport status, 32-bit
+response length, response bytes. Supplying this option implies
 .BR --remote-guard .
 .TP
 .BR "-4"

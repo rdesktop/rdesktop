@@ -118,6 +118,7 @@ AS_IF([test "x$enable_credssp" != "xno"], [
 		AC_DEFINE(WITH_GSSAPI_CREDSSP)
 	fi
 ])
+AC_SUBST(GSSAPI_LIBS)
 AC_SUBST(CREDSSPOBJ)
 
 # xrandr

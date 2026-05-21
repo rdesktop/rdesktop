@@ -118,6 +118,7 @@ RD_BOOL g_shadow_session = False;
 RD_BOOL g_restricted_admin = False;
 RD_BOOL g_remote_guard = False;
 char *g_remote_guard_helper = NULL;
+char *g_remote_guard_server = NULL;
 char *g_window_icon_file = NULL;
 RD_BOOL g_numlock_sync = False;
 RD_BOOL g_lspci_enabled = False;
@@ -1910,6 +1911,12 @@ main(int argc, char *argv[])
 
 		utils_apply_session_size_limitations(&g_requested_session_width,
 						     &g_requested_session_height);
+
+		if (g_remote_guard)
+		{
+			xfree(g_remote_guard_server);
+			g_remote_guard_server = xstrdup(server);
+		}
 
 		if (g_shadow_session)
 		{
