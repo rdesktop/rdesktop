@@ -110,6 +110,7 @@ RD_BOOL g_rdpclip = True;
 RD_BOOL g_console_session = False;
 RD_BOOL g_shadow_session = False;
 RD_BOOL g_restricted_admin = False;
+char *g_window_icon_file = NULL;
 RD_BOOL g_numlock_sync = False;
 RD_BOOL g_lspci_enabled = False;
 RD_BOOL g_owncolmap = False;
@@ -205,6 +206,7 @@ usage(char *program)
 	fprintf(stderr, "   -S: caption button size (single application mode)\n");
 	fprintf(stderr, "   -T: window title\n");
 	fprintf(stderr, "   -w: WM_CLASS name\n");
+	fprintf(stderr, "   --window-icon: PNG file to use as the X11 window icon\n");
 	fprintf(stderr, "   -t: disable use of remote ctrl\n");
 	fprintf(stderr, "   -N: enable numlock synchronization\n");
 	fprintf(stderr, "   -X: embed into another window with a given id.\n");
@@ -1156,6 +1158,31 @@ main(int argc, char *argv[])
 
 			g_shadow_session = True;
 			g_redirect_session_id = g_shadow_session_id;
+			argv[c] = "-5";
+		}
+		else if (!strcmp(argv[c], "--window-icon"))
+		{
+			if (c + 1 >= argc)
+			{
+				logger(Core, Error, "--window-icon requires a PNG file");
+				return EX_USAGE;
+			}
+
+			g_window_icon_file = argv[c + 1];
+			argv[c] = "-5";
+			argv[++c] = "-5";
+		}
+		else if (!strncmp(argv[c], "--window-icon=", 14) || !strncmp(argv[c], "/icon:", 6))
+		{
+			char *value = argv[c] + (argv[c][1] == '-' ? 14 : 6);
+
+			if (*value == '\0')
+			{
+				logger(Core, Error, "--window-icon requires a PNG file");
+				return EX_USAGE;
+			}
+
+			g_window_icon_file = value;
 			argv[c] = "-5";
 		}
 		else if (!strcmp(argv[c], "--restricted-admin") ||

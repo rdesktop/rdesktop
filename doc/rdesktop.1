@@ -190,6 +190,11 @@ Sets the window title. The title must be specified using an UTF-8 string.
 Sets the X11 WM_CLASS name. This is useful for window manager rules, desktop
 launchers and distinguishing multiple rdesktop or SeamlessRDP applications.
 .TP
+.BR "--window-icon" " " "file.png" ", " "/icon:" "file.png"
+Load a PNG file and use it as the X11 window icon. This is useful when
+launching multiple rdesktop sessions from desktop files or scripts and assigning
+different window-manager icons to each connection.
+.TP
 .BR "-N"
 Enable numlock synchronization between the Xserver and the remote RDP
 session.  This is useful with applications that looks at the numlock

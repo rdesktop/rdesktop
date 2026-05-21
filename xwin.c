@@ -38,6 +38,9 @@
 #ifdef HAVE_XRANDR
 #include <X11/extensions/Xrandr.h>
 #endif
+#ifdef HAVE_LIBPNG
+#include <png.h>
+#endif
 
 #ifdef __APPLE__
 #include <sys/param.h>
@@ -68,6 +71,7 @@ extern RD_BOOL g_sendmotion;
 extern RD_BOOL g_fullscreen;
 extern RD_BOOL g_grab_keyboard;
 extern RD_BOOL g_hide_decorations;
+extern char *g_window_icon_file;
 
 #define UNGRAB_MOD_LCTRL  (1 << 0)
 #define UNGRAB_MOD_RCTRL  (1 << 1)
@@ -2480,6 +2484,141 @@ void request_wm_fullscreen(Display *dpy, Window win)
 	XFlush(dpy);
 }
 
+#ifdef HAVE_LIBPNG
+static RD_BOOL
+xwin_read_png_icon(const char *filename, uint32 *width, uint32 *height, char **rgba_data)
+{
+	FILE *fp;
+	png_byte header[8];
+	png_structp png_ptr;
+	png_infop info_ptr;
+	png_bytep *rows;
+	png_bytep image;
+	png_uint_32 png_width, png_height;
+	int bit_depth, color_type;
+	uint32 y;
+	size_t rowbytes, image_size;
+
+	fp = fopen(filename, "rb");
+	if (fp == NULL)
+	{
+		logger(GUI, Warning, "Failed to open window icon '%s': %s", filename, strerror(errno));
+		return False;
+	}
+
+	if (fread(header, 1, sizeof(header), fp) != sizeof(header) || png_sig_cmp(header, 0, sizeof(header)))
+	{
+		logger(GUI, Warning, "Window icon '%s' is not a PNG file", filename);
+		fclose(fp);
+		return False;
+	}
+
+	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+	if (png_ptr == NULL)
+	{
+		fclose(fp);
+		return False;
+	}
+
+	info_ptr = png_create_info_struct(png_ptr);
+	if (info_ptr == NULL)
+	{
+		png_destroy_read_struct(&png_ptr, NULL, NULL);
+		fclose(fp);
+		return False;
+	}
+
+	if (setjmp(png_jmpbuf(png_ptr)))
+	{
+		png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+		fclose(fp);
+		return False;
+	}
+
+	png_init_io(png_ptr, fp);
+	png_set_sig_bytes(png_ptr, sizeof(header));
+	png_read_info(png_ptr, info_ptr);
+
+	png_get_IHDR(png_ptr, info_ptr, &png_width, &png_height, &bit_depth, &color_type,
+	             NULL, NULL, NULL);
+
+	if (png_width == 0 || png_height == 0 || png_width > 4096 || png_height > 4096)
+	{
+		logger(GUI, Warning, "Window icon '%s' has unsupported dimensions %lux%lu",
+		       filename, (unsigned long) png_width, (unsigned long) png_height);
+		png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+		fclose(fp);
+		return False;
+	}
+
+	if (bit_depth == 16)
+		png_set_strip_16(png_ptr);
+	if (color_type == PNG_COLOR_TYPE_PALETTE)
+		png_set_palette_to_rgb(png_ptr);
+	if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8)
+		png_set_expand_gray_1_2_4_to_8(png_ptr);
+	if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS))
+		png_set_tRNS_to_alpha(png_ptr);
+	if (color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
+		png_set_gray_to_rgb(png_ptr);
+	if (!(color_type & PNG_COLOR_MASK_ALPHA))
+		png_set_add_alpha(png_ptr, 0xff, PNG_FILLER_AFTER);
+
+	png_read_update_info(png_ptr, info_ptr);
+	rowbytes = png_get_rowbytes(png_ptr, info_ptr);
+	if (rowbytes < png_width * 4)
+	{
+		png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+		fclose(fp);
+		return False;
+	}
+
+	image_size = rowbytes * png_height;
+	image = xmalloc(image_size);
+	rows = xmalloc(sizeof(png_bytep) * png_height);
+	for (y = 0; y < png_height; y++)
+		rows[y] = image + y * rowbytes;
+
+	png_read_image(png_ptr, rows);
+	png_read_end(png_ptr, NULL);
+
+	*rgba_data = xmalloc(png_width * png_height * 4);
+	for (y = 0; y < png_height; y++)
+		memcpy(*rgba_data + y * png_width * 4, rows[y], png_width * 4);
+
+	xfree(rows);
+	xfree(image);
+	png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+	fclose(fp);
+
+	*width = png_width;
+	*height = png_height;
+	return True;
+}
+#endif
+
+static void
+xwin_apply_window_icon(Window wnd)
+{
+	uint32 width, height;
+	char *rgba_data;
+
+	if (g_window_icon_file == NULL)
+		return;
+
+#ifdef HAVE_LIBPNG
+	rgba_data = NULL;
+	if (!xwin_read_png_icon(g_window_icon_file, &width, &height, &rgba_data))
+		return;
+
+	ewmh_set_icon(wnd, width, height, rgba_data);
+	xfree(rgba_data);
+	logger(GUI, Debug, "Loaded window icon '%s' (%ux%u)", g_window_icon_file, width, height);
+#else
+	logger(GUI, Warning, "Custom window icons require libpng support");
+#endif
+}
+
 RD_BOOL
 ui_create_window(uint32 width, uint32 height)
 {
@@ -2533,6 +2672,7 @@ ui_create_window(uint32 width, uint32 height)
 
 	XStoreName(g_display, g_wnd, g_title);
 	ewmh_set_wm_name(g_wnd, g_title);
+	xwin_apply_window_icon(g_wnd);
 
 	if (g_hide_decorations)
 		mwm_hide_decorations(g_wnd);

@@ -155,6 +155,15 @@ if test x"$HAVE_XFIXES" = "x1"; then
     AC_DEFINE(HAVE_XFIXES)
 fi
 
+if test -n "$PKG_CONFIG"; then
+    RD_PKG_CHECK_MODULES(LIBPNG, libpng, [HAVE_LIBPNG=1], [HAVE_LIBPNG=0])
+fi
+if test x"$HAVE_LIBPNG" = "x1"; then
+    CFLAGS="$CFLAGS $LIBPNG_CFLAGS"
+    LIBS="$LIBS $LIBPNG_LIBS"
+    AC_DEFINE(HAVE_LIBPNG)
+fi
+
 # libtasn1
 if test -n "$PKG_CONFIG"; then
     RD_PKG_CHECK_MODULES(LIBTASN1, libtasn1, [HAVE_LIBTASN1=1], [HAVE_LIBTASN1=0])
