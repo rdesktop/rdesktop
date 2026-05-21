@@ -48,6 +48,7 @@ extern RD_BOOL g_seamless_rdp;
 extern RD_BOOL g_seamless_active;
 extern RDP_VERSION g_rdp_version;
 extern RD_BOOL g_numlock_sync;
+extern RD_BOOL g_fullscreen;
 
 static RD_BOOL keymap_loaded;
 static key_translation_entry *keymap[KEYMAP_SIZE];
@@ -647,7 +648,14 @@ handle_special_keys(uint32 keysym, unsigned int state, uint32 ev_time, RD_BOOL p
 				/* Ctrl-Alt-Enter: toggle full screen */
 				if (pressed)
 				{
-					if (!g_seamless_rdp)
+					if (get_key_state(state, XK_Shift_L) || get_key_state(state, XK_Shift_R))
+					{
+						/* Can only iconify if not fullscreen */
+						if (g_fullscreen)
+							xwin_toggle_fullscreen();
+						xwin_toggle_iconified();
+					}						
+					else if (!g_seamless_rdp)
 					{
 						/* only allow toggle fullscreen when not running
 						   rdesktop in seamless mode */
