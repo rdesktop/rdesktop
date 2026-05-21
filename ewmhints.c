@@ -102,7 +102,7 @@ get_property_value(Window wnd, char *propname, long max_length,
    Get current desktop number
    Returns -1 on error
 */
-static int
+int
 get_current_desktop(void)
 {
 	unsigned long nitems_return;

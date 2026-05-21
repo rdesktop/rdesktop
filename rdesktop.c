@@ -32,6 +32,7 @@
 #include <limits.h>
 #include <errno.h>
 #include <signal.h>
+#include <stdlib.h>		/* strtol */
 
 #include "rdesktop.h"
 
@@ -100,7 +101,9 @@ RD_BOOL g_packet_encryption = True;
 RD_BOOL g_desktop_save = True;	/* desktop save order */
 RD_BOOL g_polygon_ellipse_orders = True;	/* polygon / ellipse orders */
 RD_BOOL g_fullscreen = False;
+int g_fullscreen_monitor = -1;  /* -1 means use all monitors (default) */
 RD_BOOL g_grab_keyboard = True;
+RD_BOOL g_grab_keyboard_except_workspace = False;
 RD_BOOL g_local_cursor = False;
 RD_BOOL g_hide_decorations = False;
 RDP_VERSION g_rdp_version = RDP_V5;	/* Default to version 5 */
@@ -181,7 +184,7 @@ usage(char *program)
 #ifdef WITH_SCARD
 	fprintf(stderr, "   -i: enables smartcard authentication, password is used as pin\n");
 #endif
-	fprintf(stderr, "   -f: full-screen mode\n");
+	fprintf(stderr, "   -f[N]: full-screen mode (N = monitor number, default: all monitors)\n");
 	fprintf(stderr, "   -b: force bitmap updates\n");
 	fprintf(stderr, "   -L: local codepage\n");
 	fprintf(stderr, "   -A: path to SeamlessRDP shell, this enables SeamlessRDP mode\n");
@@ -193,6 +196,7 @@ usage(char *program)
 	fprintf(stderr, "   -M: use local mouse cursor\n");
 	fprintf(stderr, "   -C: use private colour map\n");
 	fprintf(stderr, "   -D: hide window manager decorations\n");
+	fprintf(stderr, "   -G: grab keyboard (release grab on CTRL+ALT+LEFT/RIGHT)\n");
 	fprintf(stderr, "   -K: keep window manager key bindings\n");
 	fprintf(stderr, "   -S: caption button size (single application mode)\n");
 	fprintf(stderr, "   -T: window title\n");
@@ -820,7 +824,7 @@ main(int argc, char *argv[])
 	g_num_devices = 0;
 
 	while ((c = getopt(argc, argv,
-			   "A:V:u:L:d:s:c:p:n:k:g:o:fbBeEitmMzCDKS:T:NX:a:x:Pr:045vh?")) != -1)
+			   "A:V:u:L:d:s:c:p:n:k:g:o:f::bBeEitmMzCDKGS:T:NX:a:x:Pr:045vh?")) != -1)
 	{
 		switch (c)
 		{
@@ -901,6 +905,22 @@ main(int argc, char *argv[])
 			case 'f':
 				g_window_size_type = Fullscreen;
 				g_fullscreen = True;
+				
+				/* Check for optional monitor number */
+				if (optarg)
+				{
+					char *endptr;
+					long monitor = strtol(optarg, &endptr, 10);
+					if (*endptr == '\0' && monitor >= 0 && monitor <= 99)
+					{
+						g_fullscreen_monitor = (int)monitor;
+					}
+					else
+					{
+						fprintf(stderr, "Invalid monitor number: %s\n", optarg);
+						return EX_USAGE;
+					}
+				}
 				break;
 
 			case 'b':
@@ -934,6 +954,11 @@ main(int argc, char *argv[])
 
 			case 'K':
 				g_grab_keyboard = False;
+				break;
+
+			case 'G':
+				g_grab_keyboard_except_workspace = True;
+				g_grab_keyboard = True;
 				break;
 
 			case 'S':

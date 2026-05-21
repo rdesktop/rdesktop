@@ -37,6 +37,10 @@
 #ifdef HAVE_XRANDR
 #include <X11/extensions/Xrandr.h>
 #endif
+#include <X11/extensions/xtestext1.h>
+
+/* XTest function declaration */
+extern int XTestFakeKeyEvent(Display *dpy, unsigned int keycode, Bool is_press, unsigned long delay);
 
 #ifdef __APPLE__
 #include <sys/param.h>
@@ -65,7 +69,9 @@ extern int g_ypos;
 extern int g_pos;
 extern RD_BOOL g_sendmotion;
 extern RD_BOOL g_fullscreen;
+extern int g_fullscreen_monitor;
 extern RD_BOOL g_grab_keyboard;
+extern RD_BOOL g_grab_keyboard_except_workspace;
 extern RD_BOOL g_hide_decorations;
 extern RD_BOOL g_pending_resize;
 extern RD_BOOL g_pending_resize_defer;
@@ -2043,9 +2049,80 @@ ui_init(void)
 	return True;
 }
 
+#ifdef HAVE_XRANDR
+/* Get information about a specific monitor using XRandR */
+static RD_BOOL
+get_monitor_geometry(int monitor_num, int *x, int *y, int *width, int *height)
+{
+	XRRScreenResources *resources;
+	XRRCrtcInfo *crtc_info;
+	int num_active_monitors = 0;
+	int current_monitor = 0;
+	RD_BOOL found = False;
+	int i;
+
+	resources = XRRGetScreenResources(g_display, DefaultRootWindow(g_display));
+	if (!resources)
+		return False;
+
+	/* Count active monitors and find the requested one */
+	for (i = 0; i < resources->ncrtc; i++)
+	{
+		crtc_info = XRRGetCrtcInfo(g_display, resources, resources->crtcs[i]);
+		if (crtc_info)
+		{
+			/* Check if this CRTC is active (has a mode) */
+			if (crtc_info->mode != None && crtc_info->width > 0 && crtc_info->height > 0)
+			{
+				if (current_monitor == monitor_num)
+				{
+					*x = crtc_info->x;
+					*y = crtc_info->y;
+					*width = crtc_info->width;
+					*height = crtc_info->height;
+					found = True;
+				}
+				current_monitor++;
+				num_active_monitors++;
+			}
+			XRRFreeCrtcInfo(crtc_info);
+			if (found)
+				break;
+		}
+	}
+
+	XRRFreeScreenResources(resources);
+	
+	if (!found && monitor_num > 0)
+	{
+		logger(GUI, Warning, 
+		       "Monitor %d not found (only %d monitor(s) available)\n", 
+		       monitor_num, num_active_monitors);
+	}
+	
+	return found;
+}
+#endif
+
 void
 ui_get_screen_size(uint32 * width, uint32 * height)
 {
+#ifdef HAVE_XRANDR
+	/* If fullscreen on a specific monitor is requested, use that monitor's size */
+	if (g_fullscreen && g_fullscreen_monitor >= 0)
+	{
+		int x, y, w, h;
+		if (get_monitor_geometry(g_fullscreen_monitor, &x, &y, &w, &h))
+		{
+			*width = w;
+			*height = h;
+			return;
+		}
+		/* Fall back to full screen if monitor not found */
+	}
+#endif
+	
+	/* Default behavior: use entire screen */
 	*width = WidthOfScreen(g_screen);
 	*height = HeightOfScreen(g_screen);
 }
@@ -2133,9 +2210,9 @@ get_input_mask(long *input_mask)
 		*input_mask |= PointerMotionMask;
 	if (g_ownbackstore)
 		*input_mask |= ExposureMask;
-	if (g_fullscreen || g_grab_keyboard)
+	if (g_fullscreen || g_grab_keyboard || g_grab_keyboard_except_workspace)
 		*input_mask |= EnterWindowMask;
-	if (g_grab_keyboard)
+	if (g_grab_keyboard || g_grab_keyboard_except_workspace)
 		*input_mask |= LeaveWindowMask;
 }
 
@@ -2208,11 +2285,32 @@ ui_create_window(uint32 width, uint32 height)
 
 	logger(GUI, Debug, "ui_create_window() width = %d, height = %d", width, height);
 
+#ifdef HAVE_XRANDR
+	/* If fullscreen on a specific monitor, position window on that monitor */
+	if (g_fullscreen && g_fullscreen_monitor >= 0)
+	{
+		int mon_x, mon_y, mon_w, mon_h;
+		if (get_monitor_geometry(g_fullscreen_monitor, &mon_x, &mon_y, &mon_w, &mon_h))
+		{
+			g_xpos = mon_x;
+			g_ypos = mon_y;
+			/* Ensure window size matches monitor size */
+			width = mon_w;
+			height = mon_h;
+			logger(GUI, Debug, "ui_create_window() positioning on monitor %d: %dx%d+%d+%d", 
+			       g_fullscreen_monitor, width, height, g_xpos, g_ypos);
+		}
+	}
+#endif
+
 	/* Handle -x-y portion of geometry string */
-	if (g_xpos < 0 || (g_xpos == 0 && (g_pos & 2)))
-		g_xpos = WidthOfScreen(g_screen) + g_xpos - width;
-	if (g_ypos < 0 || (g_ypos == 0 && (g_pos & 4)))
-		g_ypos = HeightOfScreen(g_screen) + g_ypos - height;
+	if (!g_fullscreen)
+	{
+		if (g_xpos < 0 || (g_xpos == 0 && (g_pos & 2)))
+			g_xpos = WidthOfScreen(g_screen) + g_xpos - width;
+		if (g_ypos < 0 || (g_ypos == 0 && (g_pos & 4)))
+			g_ypos = HeightOfScreen(g_screen) + g_ypos - height;
+	}
 
 	value_mask = get_window_attribs(&attribs);
 
@@ -2444,10 +2542,34 @@ xwin_toggle_fullscreen(void)
 	if (g_fullscreen)
 	{
 		/* Since we need to create a fullscreen window we need to know screen size */
-		x = 0;
-		y = 0;
-		width = WidthOfScreen(g_screen);
-		height = HeightOfScreen(g_screen);
+#ifdef HAVE_XRANDR
+		if (g_fullscreen_monitor >= 0)
+		{
+			int mon_x, mon_y, mon_w, mon_h;
+			if (get_monitor_geometry(g_fullscreen_monitor, &mon_x, &mon_y, &mon_w, &mon_h))
+			{
+				x = mon_x;
+				y = mon_y;
+				width = mon_w;
+				height = mon_h;
+			}
+			else
+			{
+				/* Fallback to full screen */
+				x = 0;
+				y = 0;
+				width = WidthOfScreen(g_screen);
+				height = HeightOfScreen(g_screen);
+			}
+		}
+		else
+#endif
+		{
+			x = 0;
+			y = 0;
+			width = WidthOfScreen(g_screen);
+			height = HeightOfScreen(g_screen);
+		}
 	}
 	else
 	{
@@ -2674,6 +2796,66 @@ xwin_process_events(void)
 
 			case KeyPress:
 				g_last_gesturetime = xevent.xkey.time;
+				
+				/* Handle workspace switching keys when using -G flag - check early */
+				if (g_grab_keyboard_except_workspace)
+				{
+					/* Only check for Ctrl+Alt first to minimize interference */
+					if ((xevent.xkey.state & ControlMask) && (xevent.xkey.state & Mod1Mask))
+					{
+						/* Now check if it's Left or Right arrow */
+						KeySym temp_keysym = XLookupKeysym(&xevent.xkey, 0);
+						if (temp_keysym == XK_Left || temp_keysym == XK_Right)
+						{
+							logger(Keyboard, Warning, "Workspace switch - Ctrl+Alt+%s detected, trying EWMH approach", 
+							       temp_keysym == XK_Left ? "Left" : "Right");
+							
+							/* Ungrab keyboard completely */
+							XUngrabKeyboard(g_display, CurrentTime);
+							XSync(g_display, False);
+							
+							/* Try EWMH desktop switching instead */
+							int current_desktop = get_current_desktop();
+							if (current_desktop >= 0)
+							{
+								int new_desktop = current_desktop + (temp_keysym == XK_Left ? -1 : 1);
+								if (new_desktop < 0) new_desktop = 0; /* Don't go negative */
+								
+								logger(Keyboard, Warning, "Switching from desktop %d to %d", current_desktop, new_desktop);
+								
+								/* Send desktop switch message */
+								XEvent switch_event;
+								switch_event.type = ClientMessage;
+								switch_event.xclient.window = DefaultRootWindow(g_display);
+								switch_event.xclient.message_type = XInternAtom(g_display, "_NET_CURRENT_DESKTOP", False);
+								switch_event.xclient.format = 32;
+								switch_event.xclient.data.l[0] = new_desktop;
+								switch_event.xclient.data.l[1] = CurrentTime;
+								switch_event.xclient.data.l[2] = 0;
+								switch_event.xclient.data.l[3] = 0;
+								switch_event.xclient.data.l[4] = 0;
+								
+								XSendEvent(g_display, DefaultRootWindow(g_display), False,
+									   SubstructureNotifyMask | SubstructureRedirectMask, &switch_event);
+								XFlush(g_display);
+							}
+							
+							/* Very small delay to ensure X11 processes the event */
+							XSync(g_display, False);
+							
+							/* Re-grab keyboard */
+							if (g_focused && g_mouse_in_wnd)
+							{
+								XGrabKeyboard(g_display, g_wnd, True,
+									      GrabModeAsync, GrabModeAsync, CurrentTime);
+							}
+							
+							/* Don't process this key */
+							break;
+						}
+					}
+				}
+				
 				if (g_IC != NULL)
 					/* Multi_key compatible version */
 				{
@@ -2699,7 +2881,7 @@ xwin_process_events(void)
 
 				logger(Keyboard, Debug, "KeyPress for keysym (0x%lx, %s)", keysym,
 				       get_ksname(keysym));
-
+				
 				set_keypress_keysym(xevent.xkey.keycode, keysym);
 				ev_time = time(NULL);
 				if (handle_special_keys(keysym, xevent.xkey.state, ev_time, True))
@@ -2711,12 +2893,27 @@ xwin_process_events(void)
 
 			case KeyRelease:
 				g_last_gesturetime = xevent.xkey.time;
+				
+				/* Skip workspace switch key releases */
+				if (g_grab_keyboard_except_workspace)
+				{
+					if ((xevent.xkey.state & ControlMask) && (xevent.xkey.state & Mod1Mask))
+					{
+						KeySym temp_keysym = XLookupKeysym(&xevent.xkey, 0);
+						if (temp_keysym == XK_Left || temp_keysym == XK_Right)
+						{
+							logger(Keyboard, Debug, "Ignoring workspace switch key release");
+							break;
+						}
+					}
+				}
+				
 				XLookupString((XKeyEvent *) & xevent, str,
 					      sizeof(str), &keysym, NULL);
 
 				logger(Keyboard, Debug, "KeyRelease for keysym (0x%lx, %s)", keysym,
 				       get_ksname(keysym));
-
+				
 				keysym = reset_keypress_keysym(xevent.xkey.keycode, keysym);
 				ev_time = time(NULL);
 				if (handle_special_keys(keysym, xevent.xkey.state, ev_time, False))
@@ -2766,7 +2963,7 @@ xwin_process_events(void)
 					break;
 				g_focused = True;
 				reset_modifier_keys();
-				if (g_grab_keyboard && g_mouse_in_wnd)
+				if ((g_grab_keyboard || g_grab_keyboard_except_workspace) && g_mouse_in_wnd)
 					XGrabKeyboard(g_display, g_wnd, True,
 						      GrabModeAsync, GrabModeAsync, CurrentTime);
 
@@ -2814,7 +3011,7 @@ xwin_process_events(void)
 						       CurrentTime);
 					break;
 				}
-				if (g_focused)
+				if (g_focused && (g_grab_keyboard || g_grab_keyboard_except_workspace))
 					XGrabKeyboard(g_display, g_wnd, True,
 						      GrabModeAsync, GrabModeAsync, CurrentTime);
 				break;
