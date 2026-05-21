@@ -10,9 +10,26 @@ if test "$GCC" = yes; then
 fi
 
 AC_PROG_INSTALL
-AC_LANG_C
-AC_HEADER_STDC
-AC_C_BIGENDIAN([AC_DEFINE(B_ENDIAN)], [AC_DEFINE(L_ENDIAN)])
+AC_LANG([C])
+
+AC_CACHE_CHECK([whether byte ordering is bigendian], [rd_cv_c_bigendian], [
+	AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#if !defined(__BYTE_ORDER__) || !defined(__ORDER_BIG_ENDIAN__) || (__BYTE_ORDER__ != __ORDER_BIG_ENDIAN__)
+# error not big endian
+#endif]], [[]])],
+		[rd_cv_c_bigendian=yes],
+		[AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#if !defined(__BYTE_ORDER__) || !defined(__ORDER_LITTLE_ENDIAN__) || (__BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__)
+# error not little endian
+#endif]], [[]])],
+			[rd_cv_c_bigendian=no],
+			[AC_RUN_IFELSE([AC_LANG_PROGRAM([], [[int i = 1; return (*((char *)&i) == 1) ? 0 : 1;]])],
+				[rd_cv_c_bigendian=no],
+				[rd_cv_c_bigendian=yes],
+				[AC_MSG_WARN([assuming little endian when cross compiling])
+				 rd_cv_c_bigendian=no])])])
+])
+AS_IF([test "x$rd_cv_c_bigendian" = "xyes"],
+	[AC_DEFINE([B_ENDIAN], [1], [Define to 1 on big-endian systems.])],
+	[AC_DEFINE([L_ENDIAN], [1], [Define to 1 on little-endian systems.])])
 AC_PATH_XTRA
 if test "$no_x" = "yes"; then
     echo
@@ -75,8 +92,9 @@ AC_ARG_ENABLE([address-sanitizer], AS_HELP_STRING([--enable-address-sanitizer], 
                memory allocation and deallocation errors]), \
               [AC_DEFINE(HAVE_ADDRESS_SANITIZER, 1, [enable AddressSanitizer])
               CFLAGS="$CFLAGS -fsanitize=address -fno-omit-frame-pointer"
-              AC_TRY_COMPILE([],[const int i=0;],[AC_MSG_NOTICE([Address Sanitizer Enabled])],
-                                                 [AC_MSG_ERROR([Address Sanitizer not available])])
+              AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [[const int i=0;]])],
+	                        [AC_MSG_NOTICE([Address Sanitizer Enabled])],
+	                        [AC_MSG_ERROR([Address Sanitizer not available])])
               ])
 
 
@@ -271,7 +289,7 @@ AS_IF([test "x$enable_smartcard" != "xno"], [
 	AC_DEFINE(WITH_PNP_NOTIFICATIONS)
 
 	AC_MSG_CHECKING([for old version of PCSC])
-	AC_TRY_LINK([
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 		#include <stdlib.h>
 		#ifdef __APPLE__
 		#include <PCSC/wintypes.h>
@@ -279,8 +297,8 @@ AS_IF([test "x$enable_smartcard" != "xno"], [
 		#else
 		#include <winscard.h>
 		#endif
-		],
-		[SCardControl(NULL, NULL, 0, NULL, NULL);],
+		]],
+		[[SCardControl(NULL, NULL, 0, NULL, NULL);]])],
 		[AC_MSG_RESULT(yes) AC_DEFINE(WITH_PCSC120, 1, [old version of PCSC])],
 		[AC_MSG_RESULT(no)])
 ])
@@ -290,7 +308,7 @@ AC_SUBST(SCARDOBJ)
 # Alignment
 #
 AC_MSG_CHECKING([if architecture needs alignment])
-AC_TRY_RUN([
+AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #include <stdlib.h>
 #include <signal.h>
 int main(int argc, char **argv)
@@ -303,7 +321,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 	return 0;
-}],
+}]])],
  [AC_MSG_RESULT(no)],
  [AC_MSG_RESULT(yes)
   AC_DEFINE(NEED_ALIGN)],
@@ -528,12 +546,9 @@ AC_DEFUN([UTILS_FUNC_DIRFD],
 	for ac_expr in d_fd dd_fd; do
 
 	  CFLAGS="$CFLAGS -DDIR_FD_MEMBER_NAME=$ac_expr"
-	  AC_TRY_COMPILE(
-	    [$dirfd_headers
-	    ],
-	    [DIR *dir_p = opendir("."); (void) dir_p->DIR_FD_MEMBER_NAME;],
-	    dir_fd_found=yes
-	  )
+	  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([$dirfd_headers
+	    ], [[DIR *dir_p = opendir("."); (void) dir_p->DIR_FD_MEMBER_NAME;]])],
+	    [dir_fd_found=yes])
 	  CFLAGS=$dirfd_save_CFLAGS
 	  test "$dir_fd_found" = yes && break
 	done
@@ -585,22 +600,22 @@ AC_DEFUN([UTILS_FUNC_ICONV],
   AC_CACHE_CHECK(for iconv, am_cv_func_iconv, [
     am_cv_func_iconv="no, consider installing GNU libiconv"
     am_cv_lib_iconv=no
-    AC_TRY_LINK([#include <stdlib.h>
-#include <iconv.h>],
-      [iconv_t cd = iconv_open("","");
+    AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <stdlib.h>
+#include <iconv.h>]],
+      [[iconv_t cd = iconv_open("","");
        iconv(cd,NULL,NULL,NULL,NULL);
-       iconv_close(cd);],
-      am_cv_func_iconv=yes)
+       iconv_close(cd);]])],
+      [am_cv_func_iconv=yes])
     if test "$am_cv_func_iconv" != yes; then
       am_save_LIBS="$LIBS"
       LIBS="$LIBS -liconv"
-      AC_TRY_LINK([#include <stdlib.h>
-#include <iconv.h>],
-        [iconv_t cd = iconv_open("","");
+      AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <stdlib.h>
+#include <iconv.h>]],
+        [[iconv_t cd = iconv_open("","");
          iconv(cd,NULL,NULL,NULL,NULL);
-         iconv_close(cd);],
-        am_cv_lib_iconv=yes
-        am_cv_func_iconv=yes)
+         iconv_close(cd);]])],
+        [am_cv_lib_iconv=yes
+        am_cv_func_iconv=yes])
       LIBS="$am_save_LIBS"
     fi
   ])
@@ -608,7 +623,7 @@ AC_DEFUN([UTILS_FUNC_ICONV],
     AC_DEFINE(HAVE_ICONV, 1, [Define if you have the iconv() function.])
     AC_MSG_CHECKING([for iconv declaration])
     AC_CACHE_VAL(am_cv_proto_iconv, [
-      AC_TRY_COMPILE([
+      AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 #include <stdlib.h>
 #include <iconv.h>
 extern
@@ -620,7 +635,7 @@ size_t iconv (iconv_t cd, char * *inbuf, size_t *inbytesleft, char * *outbuf, si
 #else
 size_t iconv();
 #endif
-], [], am_cv_proto_iconv_arg1="", am_cv_proto_iconv_arg1="const")
+]], [[]])], [am_cv_proto_iconv_arg1=""], [am_cv_proto_iconv_arg1="const"])
       am_cv_proto_iconv="extern size_t iconv (iconv_t cd, $am_cv_proto_iconv_arg1 char * *inbuf, size_t *inbytesleft, char * *outbuf, size_t *outbytesleft);"])
     am_cv_proto_iconv=`echo "[$]am_cv_proto_iconv" | tr -s ' ' | sed -e 's/( /(/'`
     AC_MSG_RESULT([$]{ac_t:-
@@ -657,15 +672,15 @@ AC_DEFUN([TYPE_SOCKLEN_T],
          socklen_t_cv_equiv=
          for arg2 in "struct sockaddr" void; do
             for t in int size_t unsigned long "unsigned long"; do
-               AC_TRY_COMPILE([
+               AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
                   #include <sys/types.h>
                   #include <sys/socket.h>
 
                   int getpeername (int, $arg2 *, $t *);
-               ],[
+               ]], [[
                   $t len;
                   getpeername(0,0,&len);
-               ],[
+               ]])], [
                   socklen_t_cv_equiv="$t"
                   break
                ])
@@ -704,24 +719,24 @@ AC_CHECK_HEADERS(sys/mount.h,,,[$mount_includes])
 
 #################################################
 # these tests are taken from the GNU fileutils package
-AC_CHECKING(how to get filesystem space usage)
+AC_MSG_NOTICE([checking how to get filesystem space usage])
 space=no
 
 # Test for statvfs64.
 if test $space = no; then
   # SVR4
   AC_CACHE_CHECK([statvfs64 function (SVR4)], fu_cv_sys_stat_statvfs64,
-  [AC_TRY_RUN([
+  [AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #if defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
 #include <sys/types.h>
 #include <sys/statvfs.h>
-  main ()
+  int main ()
   {
     struct statvfs64 fsd;
     exit (statvfs64 (".", &fsd));
-  }],
+  }]])],
   fu_cv_sys_stat_statvfs64=yes,
   fu_cv_sys_stat_statvfs64=no,
   fu_cv_sys_stat_statvfs64=cross)])
@@ -740,11 +755,11 @@ fi
 if test $space = no; then
   # SVR4
   AC_CACHE_CHECK([statvfs function (SVR4)], fu_cv_sys_stat_statvfs,
-                 [AC_TRY_LINK([#include <sys/types.h>
-#include <sys/statvfs.h>],
-                              [struct statvfs fsd; statvfs (0, &fsd);],
-                              fu_cv_sys_stat_statvfs=yes,
-                              fu_cv_sys_stat_statvfs=no)])
+                 [AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
+#include <sys/statvfs.h>]],
+                              [[struct statvfs fsd; statvfs (0, &fsd);]])],
+                              [fu_cv_sys_stat_statvfs=yes],
+                              [fu_cv_sys_stat_statvfs=no])])
   if test $fu_cv_sys_stat_statvfs = yes; then
     space=yes
     AC_DEFINE(STAT_STATVFS,1,[Whether statvfs() is available])
@@ -755,16 +770,16 @@ if test $space = no; then
   # DEC Alpha running OSF/1
   AC_MSG_CHECKING([for 3-argument statfs function (DEC OSF/1)])
   AC_CACHE_VAL(fu_cv_sys_stat_statfs3_osf1,
-  [AC_TRY_RUN([
+  [AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/mount.h>
-  main ()
+  int main ()
   {
     struct statfs fsd;
     fsd.f_fsize = 0;
     exit (statfs (".", &fsd, sizeof (struct statfs)));
-  }],
+  }]])],
   fu_cv_sys_stat_statfs3_osf1=yes,
   fu_cv_sys_stat_statfs3_osf1=no,
   fu_cv_sys_stat_statfs3_osf1=no)])
@@ -782,7 +797,7 @@ if test $space = no; then
   AC_MSG_CHECKING([for two-argument statfs with statfs.bsize dnl
 member (AIX, 4.3BSD)])
   AC_CACHE_VAL(fu_cv_sys_stat_statfs2_bsize,
-  [AC_TRY_RUN([
+  [AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
 #endif
@@ -792,12 +807,12 @@ member (AIX, 4.3BSD)])
 #ifdef HAVE_SYS_VFS_H
 #include <sys/vfs.h>
 #endif
-  main ()
+  int main ()
   {
   struct statfs fsd;
   fsd.f_bsize = 0;
   exit (statfs (".", &fsd));
-  }],
+  }]])],
   fu_cv_sys_stat_statfs2_bsize=yes,
   fu_cv_sys_stat_statfs2_bsize=no,
   fu_cv_sys_stat_statfs2_bsize=no)])
@@ -812,13 +827,13 @@ if test $space = no; then
 # SVR3
   AC_MSG_CHECKING([for four-argument statfs (AIX-3.2.5, SVR3)])
   AC_CACHE_VAL(fu_cv_sys_stat_statfs4,
-  [AC_TRY_RUN([#include <sys/types.h>
+  [AC_RUN_IFELSE([AC_LANG_SOURCE([[#include <sys/types.h>
 #include <sys/statfs.h>
-  main ()
+  int main ()
   {
   struct statfs fsd;
   exit (statfs (".", &fsd, sizeof fsd, 0));
-  }],
+  }]])],
     fu_cv_sys_stat_statfs4=yes,
     fu_cv_sys_stat_statfs4=no,
     fu_cv_sys_stat_statfs4=no)])
@@ -834,19 +849,19 @@ if test $space = no; then
   AC_MSG_CHECKING([for two-argument statfs with statfs.fsize dnl
 member (4.4BSD and NetBSD)])
   AC_CACHE_VAL(fu_cv_sys_stat_statfs2_fsize,
-  [AC_TRY_RUN([#include <sys/types.h>
+  [AC_RUN_IFELSE([AC_LANG_SOURCE([[#include <sys/types.h>
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
 #endif
 #ifdef HAVE_SYS_MOUNT_H
 #include <sys/mount.h>
 #endif
-  main ()
+  int main ()
   {
   struct statfs fsd;
   fsd.f_fsize = 0;
   exit (statfs (".", &fsd));
-  }],
+  }]])],
   fu_cv_sys_stat_statfs2_fsize=yes,
   fu_cv_sys_stat_statfs2_fsize=no,
   fu_cv_sys_stat_statfs2_fsize=no)])
@@ -861,7 +876,7 @@ if test $space = no; then
   # Ultrix
   AC_MSG_CHECKING([for two-argument statfs with struct fs_data (Ultrix)])
   AC_CACHE_VAL(fu_cv_sys_stat_fs_data,
-  [AC_TRY_RUN([#include <sys/types.h>
+  [AC_RUN_IFELSE([AC_LANG_SOURCE([[#include <sys/types.h>
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
 #endif
@@ -877,7 +892,7 @@ if test $space = no; then
   /* Ultrix's statfs returns 1 for success,
      0 for not mounted, -1 for failure.  */
   exit (statfs (".", &fsd) != 1);
-  }],
+  }]])],
   fu_cv_sys_stat_fs_data=yes,
   fu_cv_sys_stat_fs_data=no,
   fu_cv_sys_stat_fs_data=no)])
@@ -951,7 +966,8 @@ case "$host" in
     ;;
 esac
 
-AC_OUTPUT(Makefile)
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT
 
 dnl Local Variables:
 dnl comment-start: "dnl "

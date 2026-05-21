@@ -23,6 +23,8 @@
 #ifndef _STREAM_H
 #define _STREAM_H
 
+#include <stddef.h>
+
 /* Parser state */
 typedef struct stream
 {
@@ -72,11 +74,16 @@ size_t in_ansi_string(STREAM s, char *string, size_t len);
 /* Returns number of bytes that can still be read from STREAM */
 #define s_remaining(s)		(size_t)((s)->end - (s)->p)
 /* True if at least n bytes can still be read */
-#define s_check_rem(s,n)	(((s)->p <= (s)->end) && ((size_t)n <= s_remaining(s)))
+static inline int
+s_check_rem_fn(STREAM s, size_t n)
+{
+	return (s->p <= s->end) && (n <= s_remaining(s));
+}
+#define s_check_rem(s,n)	s_check_rem_fn((s), (size_t)(n))
 /* True if all data has been read */
 #define s_check_end(s)		((s)->p == (s)->end)
 /* Return the total number of bytes that can be read */
-#define s_length(s)		((s)->end - (s)->data)
+#define s_length(s)		(size_t)((s)->end - (s)->data)
 /* Return the number of bytes that can still be written */
 #define s_left(s)		((s)->size - (size_t)((s)->p - (s)->data))
 

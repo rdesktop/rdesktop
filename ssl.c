@@ -113,7 +113,7 @@ rdssl_rsa_encrypt(uint8 * out, uint8 * in, int len, uint32 modulus_size, uint8 *
 	mpz_clear(exp);
 	mpz_clear(mod);
 
-	if (outlen < (int) modulus_size)
+	if (outlen < (size_t) modulus_size)
 		memset(out + outlen, 0, modulus_size - outlen);
 }
 
@@ -184,14 +184,15 @@ rdssl_cert_to_rkey(RDSSL_CERT * cert, uint32 * key_len)
 	RDSSL_RKEY *pkey;
 	gnutls_datum_t m, e;
 
-	unsigned int algo, bits;
+	int algo;
+	unsigned int bits;
 	char oid[64];
 	size_t oid_size = sizeof(oid);
 
 	uint8_t data[2048];
 	size_t len;
 
-	algo = gnutls_x509_crt_get_pk_algorithm(*cert, &bits);
+	algo = (int) gnutls_x509_crt_get_pk_algorithm(*cert, &bits);
 
 	/* By some reason, Microsoft sets the OID of the Public RSA key to
 	   the oid for "MD5 with RSA Encryption" instead of "RSA Encryption"

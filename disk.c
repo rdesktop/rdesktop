@@ -352,6 +352,7 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 	    uint32 flags_and_attributes, char *filename, RD_NTHANDLE * phandle)
 {
 	int handle;
+	size_t path_len;
 	DIR *dirp;
 	int flags, mode;
 	char path[PATH_MAX];
@@ -520,7 +521,11 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 	g_fileinfo[handle].device_id = device_id;
 	g_fileinfo[handle].flags_and_attributes = flags_and_attributes;
 	g_fileinfo[handle].accessmask = accessmask;
-	strncpy(g_fileinfo[handle].path, path, PATH_MAX - 1);
+	path_len = strlen(path);
+	if (path_len >= sizeof(g_fileinfo[handle].path))
+		path_len = sizeof(g_fileinfo[handle].path) - 1;
+	memcpy(g_fileinfo[handle].path, path, path_len);
+	g_fileinfo[handle].path[path_len] = '\0';
 	g_fileinfo[handle].delete_on_close = False;
 
 	if (accessmask & GENERIC_ALL || accessmask & GENERIC_WRITE)
@@ -1098,20 +1103,24 @@ FsVolumeInfo(char *fpath)
 					if (strstr(e->mnt_opts, "vfat"))
 						 /*FAT*/
 					{
-						strcpy(info.type, "vfat");
-						read(fd, buf, sizeof(buf));
-						info.serial =
-							(buf[42] << 24) + (buf[41] << 16) +
-							(buf[40] << 8) + buf[39];
-						strncpy(info.label, (char *) buf + 43, 10);
-						info.label[10] = '\0';
+						if (read(fd, buf, sizeof(buf)) == (ssize_t) sizeof(buf))
+						{
+							strcpy(info.type, "vfat");
+							info.serial =
+								(buf[42] << 24) + (buf[41] << 16) +
+								(buf[40] << 8) + buf[39];
+							strncpy(info.label, (char *) buf + 43, 10);
+							info.label[10] = '\0';
+						}
 					}
 					else if (lseek(fd, 32767, SEEK_SET) >= 0)	/* ISO9660 */
 					{
-						read(fd, buf, sizeof(buf));
-						strncpy(info.label, (char *) buf + 41, 32);
-						info.label[32] = '\0';
-						/* info.Serial = (buf[128]<<24)+(buf[127]<<16)+(buf[126]<<8)+buf[125]; */
+						if (read(fd, buf, sizeof(buf)) == (ssize_t) sizeof(buf))
+						{
+							strncpy(info.label, (char *) buf + 41, 32);
+							info.label[32] = '\0';
+							/* info.Serial = (buf[128]<<24)+(buf[127]<<16)+(buf[126]<<8)+buf[125]; */
+						}
 					}
 					close(fd);
 				}

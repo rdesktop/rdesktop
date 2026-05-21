@@ -566,19 +566,6 @@ getAlias(char *name)
 	return name;
 }
 
-static int
-hasAlias(char *name)
-{
-	int i;
-	PSCNameMapRec tmpMap;
-	for (i = 0, tmpMap = nameMapList; i < nameMapCount; i++, tmpMap++)
-	{
-		if (strcmp(tmpMap->name, name) == 0)
-			return 1;
-	}
-	return 0;
-}
-
 static RD_BOOL
 scard_has_explicit_reader_filter(void)
 {

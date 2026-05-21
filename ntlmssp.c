@@ -360,27 +360,6 @@ ntlmssp_parse_challenge(STREAM challenge, uint32 *flags, uint8 *server_challenge
 	return True;
 }
 
-static RD_BOOL
-ntlmssp_target_info_has_eol(uint8 *target_info, uint16 target_info_len)
-{
-	size_t pos;
-	uint16 avid, avlen;
-
-	pos = 0;
-	while (pos + 4 <= target_info_len)
-	{
-		avid = target_info[pos] | (target_info[pos + 1] << 8);
-		avlen = target_info[pos + 2] | (target_info[pos + 3] << 8);
-		if (avid == 0)
-			return True;
-		pos += 4;
-		if (avlen > target_info_len - pos)
-			return False;
-		pos += avlen;
-	}
-	return False;
-}
-
 static uint16
 ntlmssp_target_info_len_with_auth_av_pairs(uint8 *target_info, uint16 target_info_len,
                                            uint16 target_name_len)

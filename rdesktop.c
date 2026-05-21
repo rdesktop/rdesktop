@@ -895,9 +895,9 @@ rdp_uri_percent_decode(const char *src, char *dst, size_t dst_size)
 }
 
 static void
-rdp_uri_apply_integer_setting(const char *key, long number, char *geometry, size_t geometry_size,
-                              RD_BOOL geometry_option, RD_BOOL fullscreen_option,
-                              RD_BOOL depth_option, RD_BOOL *have_width, RD_BOOL *have_height,
+rdp_uri_apply_integer_setting(const char *key, long number, RD_BOOL geometry_option,
+                              RD_BOOL fullscreen_option, RD_BOOL depth_option,
+                              RD_BOOL *have_width, RD_BOOL *have_height,
                               uint32 *width, uint32 *height)
 {
 	if (rdp_key_equals(key, "server port"))
@@ -1020,10 +1020,10 @@ parse_rdp_uri(const char *uri, char *server, size_t server_size, char *domain,
 		{
 			errno = 0;
 			number = strtol(value, &endptr, 10);
-			if (errno == 0 && endptr != value)
-				rdp_uri_apply_integer_setting(key, number, NULL, 0, geometry_option,
-				                              fullscreen_option, depth_option,
-				                              &have_width, &have_height, &width, &height);
+			if (errno == 0 && endptr != value && *endptr == '\0')
+				rdp_uri_apply_integer_setting(key, number, geometry_option, fullscreen_option,
+				                              depth_option, &have_width, &have_height,
+				                              &width, &height);
 		}
 
 		cursor = next;
@@ -1317,6 +1317,7 @@ main(int argc, char *argv[])
 	struct passwd *pw;
 	uint32 flags, ext_disc_reason = 0;
 	char *p;
+	size_t title_len;
 	int c;
 	char *locale = NULL;
 	RD_BOOL username_option = False;
@@ -2027,8 +2028,14 @@ main(int argc, char *argv[])
 
 	if (g_title[0] == 0)
 	{
-		strcpy(g_title, "rdesktop - ");
-		strncat(g_title, server, sizeof(g_title) - sizeof("rdesktop - "));
+		static const char title_prefix[] = "rdesktop - ";
+
+		title_len = strlen(server);
+		if (title_len > sizeof(g_title) - sizeof(title_prefix))
+			title_len = sizeof(g_title) - sizeof(title_prefix);
+		memcpy(g_title, title_prefix, sizeof(title_prefix) - 1);
+		memcpy(g_title + sizeof(title_prefix) - 1, server, title_len);
+		g_title[sizeof(title_prefix) - 1 + title_len] = '\0';
 	}
 
 	if (g_restricted_admin && g_remote_guard)
@@ -2805,6 +2812,7 @@ save_licence(unsigned char *data, int length)
 {
 	uint8 ho[20], hi[16];
 	char *home, path[PATH_MAX], tmppath[PATH_MAX], hash[41];
+	size_t path_len;
 	int fd;
 
 	home = getenv("HOME");
@@ -2829,8 +2837,14 @@ save_licence(unsigned char *data, int length)
 	snprintf(path, PATH_MAX, "%s" RDESKTOP_LICENSE_STORE "/%s.cal", home, hash);
 	path[sizeof(path) - 1] = '\0';
 
-	snprintf(tmppath, PATH_MAX, "%s.new", path);
-	path[sizeof(path) - 1] = '\0';
+	path_len = strlen(path);
+	if (path_len + sizeof(".new") > sizeof(tmppath))
+	{
+		logger(Core, Error, "save_license(), license path is too long");
+		return;
+	}
+	memcpy(tmppath, path, path_len);
+	memcpy(tmppath + path_len, ".new", sizeof(".new"));
 
 	fd = open(tmppath, O_WRONLY | O_CREAT | O_TRUNC, 0600);
 	if (fd == -1)
