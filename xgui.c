@@ -2128,8 +2128,8 @@ xgui_dialog_redraw(xgui_state_t *gui,
 	y = 112;
 	for (i = scroll; i < line_count && i < scroll + max_visible; i++)
 	{
-		xgui_draw_string_font(gui, gui->small_font, 40, y, lines[i]);
-		y += 18;
+		xgui_draw_string_font(gui, gui->font, 40, y, lines[i]);
+		y += 19;
 	}
 
 	if (line_count > max_visible)
@@ -2265,7 +2265,7 @@ xgui_choice_dialog(const char *title, const char *message, const char *accept_la
 	                  "Review the certificate before adding a local trust exception." :
 	                  "Review the connection message before returning to the launcher.";
 	scroll = 0;
-	max_visible = 25;
+	max_visible = 23;
 	if (reject_label != NULL)
 	{
 		accept_x = XGUI_DIALOG_WIDTH - 300;

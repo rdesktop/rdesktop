@@ -413,7 +413,9 @@ tcp_tls_connect(void)
 
 		if (err == GNUTLS_E_CERTIFICATE_ERROR)
 		{
-			gnutls_fatal("Certificate error during TLS handshake", err);
+			logger(Core, Error, "Certificate error during TLS handshake: %s",
+			       gnutls_strerror(err));
+			goto fail;
 		}
 
 		/* Handshake failed with unknown error, lets log */
