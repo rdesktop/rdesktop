@@ -668,12 +668,13 @@ if test $space = no; then
   # SVR4
   AC_CACHE_CHECK([statvfs64 function (SVR4)], fu_cv_sys_stat_statvfs64,
   [AC_TRY_RUN([
+#include <stdlib.h>
 #if defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
 #include <sys/types.h>
 #include <sys/statvfs.h>
-  main ()
+  int main (void)
   {
     struct statvfs64 fsd;
     exit (statvfs64 (".", &fsd));
