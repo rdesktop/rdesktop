@@ -34,6 +34,7 @@ extern char *g_sc_card_name;
 extern char *g_sc_container_name;
 extern char g_tls_version[];
 
+extern RD_BOOL g_restricted_admin_mode;
 
 /* Send a self-contained ISO PDU */
 static void
@@ -59,7 +60,7 @@ iso_send_msg(uint8 code)
 }
 
 static void
-iso_send_connection_request(char *username, uint32 neg_proto)
+iso_send_connection_request(char *username, uint8 flags, uint32 neg_proto)
 {
 	STREAM s;
 	int length = 30 + strlen(username);
@@ -89,7 +90,7 @@ iso_send_connection_request(char *username, uint32 neg_proto)
 	{
 		/* optional RDP protocol negotiation request for RDPv5 */
 		out_uint8(s, RDP_NEG_REQ);
-		out_uint8(s, 0);
+		out_uint8(s, flags);
 		out_uint16(s, 8);
 		out_uint32(s, neg_proto);
 	}
@@ -239,6 +240,7 @@ iso_connect(char *server, char *username, char *domain, char *password,
 	uint32 neg_proto;
 	RD_BOOL is_fastpath;
 	uint8 fastpath_hdr;
+	uint8 flags;
 
 	g_negotiate_rdp_protocol = True;
 
@@ -258,6 +260,10 @@ iso_connect(char *server, char *username, char *domain, char *password,
 	else
 		logger(Core, Verbose, "Connecting to server using SSL...");
 
+	flags = 0;
+	if (g_restricted_admin_mode)
+		flags |= RESTRICTED_ADMIN_MODE_REQUIRED;
+
       retry:
 	*selected_protocol = PROTOCOL_RDP;
 	code = 0;
@@ -265,7 +271,7 @@ iso_connect(char *server, char *username, char *domain, char *password,
 	if (!tcp_connect(server))
 		return False;
 
-	iso_send_connection_request(username, neg_proto);
+	iso_send_connection_request(username, flags, neg_proto);
 
 	s = iso_recv_msg(&code, &is_fastpath, &fastpath_hdr);
 	if (s == NULL)
