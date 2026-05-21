@@ -1985,8 +1985,11 @@ save_licence(unsigned char *data, int length)
 	snprintf(path, PATH_MAX, "%s" RDESKTOP_LICENSE_STORE "/%s.cal", home, hash);
 	path[sizeof(path) - 1] = '\0';
 
-	snprintf(tmppath, PATH_MAX, "%s.new", path);
-	path[sizeof(path) - 1] = '\0';
+	if (snprintf(tmppath, PATH_MAX, "%s.new", path) < 0) {
+		return;
+	}
+
+	tmppath[sizeof(path) - 1] = '\0';
 
 	fd = open(tmppath, O_WRONLY | O_CREAT | O_TRUNC, 0600);
 	if (fd == -1)
