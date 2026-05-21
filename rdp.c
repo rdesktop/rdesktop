@@ -1842,6 +1842,58 @@ process_ts_logon_info_extended(STREAM s)
 	}
 }
 
+static void
+process_ts_logon_info(STREAM s)
+{
+	uint32 cb_domain, cb_user;
+
+	if (!s_check_rem(s, 576 + 4 + 4))
+	{
+		logger(Protocol, Warning,
+		       "process_ts_logon_info(), short Logon Info Version 1 payload");
+		return;
+	}
+
+	in_uint8s(s, 576);	/* Domain/UserName fixed fields are not used. */
+	in_uint32_le(s, cb_domain);
+	in_uint32_le(s, cb_user);
+
+	if (cb_domain && s_check_rem(s, cb_domain))
+		in_uint8s(s, cb_domain);
+	if (cb_user && s_check_rem(s, cb_user))
+		in_uint8s(s, cb_user);
+}
+
+static void
+process_ts_logon_info_version_2(STREAM s)
+{
+	uint16 version;
+	uint32 size, session_id, cb_domain, cb_user;
+
+	if (!s_check_rem(s, 2 + 4 + 4 + 4 + 4 + 558))
+	{
+		logger(Protocol, Warning,
+		       "process_ts_logon_info_version_2(), short Logon Info Version 2 payload");
+		return;
+	}
+
+	in_uint16_le(s, version);
+	in_uint32_le(s, size);
+	in_uint32_le(s, session_id);
+	in_uint32_le(s, cb_domain);
+	in_uint32_le(s, cb_user);
+	in_uint8s(s, 558);	/* Pad */
+
+	logger(Protocol, Debug,
+	       "process_ts_logon_info_version_2(), version=%u size=%u session=%u",
+	       version, size, session_id);
+
+	if (cb_domain && s_check_rem(s, cb_domain))
+		in_uint8s(s, cb_domain);
+	if (cb_user && s_check_rem(s, cb_user))
+		in_uint8s(s, cb_user);
+}
+
 /* Process TS_SAVE_SESSION_INFO_PDU_DATA data structure */
 void
 process_pdu_logon(STREAM s)
@@ -1851,6 +1903,18 @@ process_pdu_logon(STREAM s)
 
 	switch (infotype)
 	{
+		case INFOTYPE_LOGON:	/* TS_LOGON_INFO */
+			logger(Protocol, Debug,
+			       "process_pdu_logon(), Received TS_LOGON_INFO");
+			process_ts_logon_info(s);
+			break;
+
+		case INFOTYPE_LOGON_LONG:	/* TS_LOGON_INFO_VERSION_2 */
+			logger(Protocol, Debug,
+			       "process_pdu_logon(), Received TS_LOGON_INFO_VERSION_2");
+			process_ts_logon_info_version_2(s);
+			break;
+
 		case INFOTYPE_LOGON_PLAINNOTIFY:	/* TS_PLAIN_NOTIFY */
 			logger(Protocol, Debug,
 			       "process_pdu_logon(), Received TS_LOGIN_PLAIN_NOTIFY");
