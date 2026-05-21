@@ -105,6 +105,12 @@ rdesktop window to fully cover the current screen.  Fullscreen mode can be
 toggled at any time using Ctrl-Alt-Enter. The rdesktop window can be
 iconified using Ctrl-Alt-Shift-Enter.
 .TP
+.BR "--multimon" ", " "/multimon"
+Use the local XRandR monitor layout for fullscreen sessions and advertise it to
+the server as an RDP monitor layout. This prevents servers from treating a
+spanned desktop as one oversized monitor when multiple local monitors are used.
+It cannot be combined with B-gR.
+.TP
 .BR "-b"
 Force the server to send screen updates as bitmaps rather than using
 higher-level drawing operations.

@@ -2084,6 +2084,158 @@ ui_get_screen_size(uint32 * width, uint32 * height)
 	*height = HeightOfScreen(g_screen);
 }
 
+static void
+xwin_normalize_monitor_layout(RDP_MONITOR_LAYOUT *monitors, uint32 monitor_count,
+                              uint32 *desktop_width, uint32 *desktop_height)
+{
+	uint32 i, primary;
+	sint32 origin_x, origin_y, min_left, min_top, max_right, max_bottom;
+
+	primary = 0;
+	for (i = 0; i < monitor_count; i++)
+	{
+		if (monitors[i].left <= 0 && monitors[i].right >= 0 &&
+		    monitors[i].top <= 0 && monitors[i].bottom >= 0)
+		{
+			primary = i;
+			break;
+		}
+	}
+
+	origin_x = monitors[primary].left;
+	origin_y = monitors[primary].top;
+
+	min_left = monitors[0].left - origin_x;
+	max_right = monitors[0].right - origin_x;
+	min_top = monitors[0].top - origin_y;
+	max_bottom = monitors[0].bottom - origin_y;
+
+	for (i = 0; i < monitor_count; i++)
+	{
+		monitors[i].left -= origin_x;
+		monitors[i].right -= origin_x;
+		monitors[i].top -= origin_y;
+		monitors[i].bottom -= origin_y;
+		monitors[i].flags = (i == primary) ? RDESKTOP_MONITOR_PRIMARY : 0;
+
+		min_left = MIN(min_left, monitors[i].left);
+		min_top = MIN(min_top, monitors[i].top);
+		max_right = MAX(max_right, monitors[i].right);
+		max_bottom = MAX(max_bottom, monitors[i].bottom);
+	}
+
+	*desktop_width = max_right - min_left + 1;
+	*desktop_height = max_bottom - min_top + 1;
+}
+
+#ifdef HAVE_XRANDR
+static RD_BOOL
+xwin_get_xrandr_monitor_layout(RDP_MONITOR_LAYOUT *monitors, uint32 max_monitors,
+                               uint32 *monitor_count, uint32 *desktop_width,
+                               uint32 *desktop_height)
+{
+	Window root;
+	XRRScreenResources *resources;
+	RRCrtc seen_crtcs[RDESKTOP_MAX_MONITORS];
+	uint32 count, i, j;
+
+	root = RootWindowOfScreen(g_screen);
+	resources = XRRGetScreenResourcesCurrent(g_display, root);
+	if (resources == NULL)
+		return False;
+
+	count = 0;
+	memset(seen_crtcs, 0, sizeof(seen_crtcs));
+	for (i = 0; i < (uint32) resources->noutput && count < max_monitors; i++)
+	{
+		XRROutputInfo *output;
+		XRRCrtcInfo *crtc;
+		RD_BOOL duplicate;
+
+		output = XRRGetOutputInfo(g_display, resources, resources->outputs[i]);
+		if (output == NULL)
+			continue;
+
+		if (output->connection != RR_Connected || output->crtc == None)
+		{
+			XRRFreeOutputInfo(output);
+			continue;
+		}
+
+		duplicate = False;
+		for (j = 0; j < count; j++)
+		{
+			if (seen_crtcs[j] == output->crtc)
+			{
+				duplicate = True;
+				break;
+			}
+		}
+		if (duplicate)
+		{
+			XRRFreeOutputInfo(output);
+			continue;
+		}
+
+		crtc = XRRGetCrtcInfo(g_display, resources, output->crtc);
+		if (crtc == NULL)
+		{
+			XRRFreeOutputInfo(output);
+			continue;
+		}
+
+		if (crtc->width > 0 && crtc->height > 0)
+		{
+			monitors[count].left = crtc->x;
+			monitors[count].top = crtc->y;
+			monitors[count].right = crtc->x + crtc->width - 1;
+			monitors[count].bottom = crtc->y + crtc->height - 1;
+			monitors[count].flags = 0;
+			seen_crtcs[count] = output->crtc;
+			count++;
+		}
+
+		XRRFreeCrtcInfo(crtc);
+		XRRFreeOutputInfo(output);
+	}
+
+	XRRFreeScreenResources(resources);
+
+	if (count == 0)
+		return False;
+
+	xwin_normalize_monitor_layout(monitors, count, desktop_width, desktop_height);
+	*monitor_count = count;
+	return True;
+}
+#endif
+
+RD_BOOL
+ui_get_monitor_layout(RDP_MONITOR_LAYOUT *monitors, uint32 max_monitors,
+                      uint32 *monitor_count, uint32 *desktop_width,
+                      uint32 *desktop_height)
+{
+	if (monitors == NULL || max_monitors == 0 || monitor_count == NULL ||
+	    desktop_width == NULL || desktop_height == NULL)
+		return False;
+
+#ifdef HAVE_XRANDR
+	if (xwin_get_xrandr_monitor_layout(monitors, max_monitors, monitor_count,
+	                                   desktop_width, desktop_height))
+		return True;
+#endif
+
+	monitors[0].left = 0;
+	monitors[0].top = 0;
+	monitors[0].right = WidthOfScreen(g_screen) - 1;
+	monitors[0].bottom = HeightOfScreen(g_screen) - 1;
+	monitors[0].flags = RDESKTOP_MONITOR_PRIMARY;
+	*monitor_count = 1;
+	*desktop_width = WidthOfScreen(g_screen);
+	*desktop_height = HeightOfScreen(g_screen);
+	return True;
+}
+
 void
 ui_get_screen_size_from_percentage(uint32 pw, uint32 ph, uint32 * width, uint32 * height)
 {

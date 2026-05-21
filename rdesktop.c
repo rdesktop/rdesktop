@@ -102,6 +102,8 @@ RD_BOOL g_packet_encryption = True;
 RD_BOOL g_desktop_save = True;	/* desktop save order */
 RD_BOOL g_polygon_ellipse_orders = True;	/* polygon / ellipse orders */
 RD_BOOL g_fullscreen = False;
+RD_BOOL g_multimon = False;
+RD_BOOL g_extended_client_data_supported = False;
 RD_BOOL g_grab_keyboard = True;
 RD_BOOL g_local_cursor = False;
 RD_BOOL g_hide_decorations = False;
@@ -190,6 +192,7 @@ usage(char *program)
 	fprintf(stderr, "   -i: enables smartcard authentication, password is used as pin\n");
 #endif
 	fprintf(stderr, "   -f: full-screen mode\n");
+	fprintf(stderr, "   --multimon: use local multi-monitor layout for fullscreen sessions\n");
 	fprintf(stderr, "   -b: force bitmap updates\n");
 	fprintf(stderr, "   -L: local codepage\n");
 	fprintf(stderr, "   -A: path to SeamlessRDP shell, this enables SeamlessRDP mode\n");
@@ -1160,6 +1163,13 @@ main(int argc, char *argv[])
 			g_redirect_session_id = g_shadow_session_id;
 			argv[c] = "-5";
 		}
+		else if (!strcmp(argv[c], "--multimon") || !strcmp(argv[c], "/multimon"))
+		{
+			g_multimon = True;
+			g_fullscreen = True;
+			g_window_size_type = Fullscreen;
+			argv[c] = "-f";
+		}
 		else if (!strcmp(argv[c], "--window-icon"))
 		{
 			if (c + 1 >= argc)
@@ -1603,6 +1613,18 @@ main(int argc, char *argv[])
 	{
 		logger(Core, Error, "Shadow session mode cannot be combined with console/admin session mode");
 		return EX_USAGE;
+	}
+
+	if (g_multimon && geometry_option)
+	{
+		logger(Core, Error, "You cannot use -g and --multimon at the same time");
+		return EX_USAGE;
+	}
+
+	if (g_multimon)
+	{
+		g_window_size_type = Fullscreen;
+		g_fullscreen = True;
 	}
 
 	if (g_seamless_rdp)

@@ -27,6 +27,7 @@ extern RD_BOOL g_encryption_initial;
 extern RDP_VERSION g_rdp_version;
 extern RD_BOOL g_use_password_as_pin;
 extern RD_BOOL g_restricted_admin;
+extern RD_BOOL g_extended_client_data_supported;
 
 static RD_BOOL g_negotiate_rdp_protocol = True;
 
@@ -246,6 +247,7 @@ iso_connect(char *server, char *username, char *domain, char *password,
 	RD_BOOL is_fastpath;
 	uint8 fastpath_hdr;
 
+	g_extended_client_data_supported = False;
 	g_negotiate_rdp_protocol = True;
 
 	neg_proto = PROTOCOL_SSL;
@@ -314,6 +316,7 @@ iso_connect(char *server, char *username, char *domain, char *password,
 
 		in_uint8(s, type);
 		in_uint8(s, neg_flags);
+		g_extended_client_data_supported = (neg_flags & EXTENDED_CLIENT_DATA_SUPPORTED) != 0;
 		in_uint8s(s, 2);	/* skip length */
 		in_uint32(s, data);
 

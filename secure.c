@@ -37,6 +37,8 @@ extern RD_BOOL g_licence_error_result;
 extern RDP_VERSION g_rdp_version;
 extern RD_BOOL g_console_session;
 extern RD_BOOL g_shadow_session;
+extern RD_BOOL g_multimon;
+extern RD_BOOL g_extended_client_data_supported;
 extern uint32 g_redirect_session_id;
 extern int g_server_depth;
 extern VCHANNEL g_channels[];
@@ -407,6 +409,11 @@ sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 		RNS_UD_CS_SUPPORT_HEARTBEAT_PDU;
 	uint16 colorsupport = RNS_UD_24BPP_SUPPORT | RNS_UD_16BPP_SUPPORT | RNS_UD_32BPP_SUPPORT;
 	uint32 physwidth, physheight, desktopscale, devicescale;
+	RDP_MONITOR_LAYOUT monitors[RDESKTOP_MAX_MONITORS];
+	uint32 monitor_count = 0;
+	uint32 monitor_desktop_width = 0;
+	uint32 monitor_desktop_height = 0;
+	RD_BOOL send_monitor_layout = False;
 
 	logger(Protocol, Debug, "%s()", __func__);
 
@@ -415,6 +422,26 @@ sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 
 	if (g_num_channels > 0)
 		length += g_num_channels * 12 + 8;
+
+	if (g_multimon)
+	{
+		capflags |= RNS_UD_CS_SUPPORT_MONITOR_LAYOUT_PDU;
+
+		if (g_extended_client_data_supported &&
+		    ui_get_monitor_layout(monitors, RDESKTOP_MAX_MONITORS, &monitor_count,
+		                          &monitor_desktop_width, &monitor_desktop_height))
+		{
+			send_monitor_layout = True;
+			g_requested_session_width = monitor_desktop_width;
+			g_requested_session_height = monitor_desktop_height;
+			length += 12 + monitor_count * 20;
+		}
+		else if (!g_extended_client_data_supported)
+		{
+			logger(Protocol, Warning,
+			       "Server did not advertise extended client data support; initial monitor layout will not be sent");
+		}
+	}
 
 	/* Generic Conference Control (T.124) ConferenceCreateRequest */
 	out_uint16_be(s, 5);
@@ -497,6 +524,25 @@ sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 
 	out_uint32_le(s, cluster_flags);
 	out_uint32(s, g_redirect_session_id);
+
+	if (send_monitor_layout)
+	{
+		uint32 monitor_index;
+
+		out_uint16_le(s, CS_MONITOR);    /* header.type */
+		out_uint16_le(s, 12 + monitor_count * 20);  /* length */
+		out_uint32_le(s, 0);     /* flags */
+		out_uint32_le(s, monitor_count);
+
+		for (monitor_index = 0; monitor_index < monitor_count; monitor_index++)
+		{
+			out_uint32_le(s, (uint32) monitors[monitor_index].left);
+			out_uint32_le(s, (uint32) monitors[monitor_index].top);
+			out_uint32_le(s, (uint32) monitors[monitor_index].right);
+			out_uint32_le(s, (uint32) monitors[monitor_index].bottom);
+			out_uint32_le(s, monitors[monitor_index].flags);
+		}
+	}
 
 	/* Client encryption settings (TS_UD_CS_SEC) */
 	out_uint16_le(s, CS_SECURITY);	/* type */

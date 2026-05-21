@@ -286,6 +286,9 @@ void rdp_send_scancode(uint32 time, uint16 flags, uint8 scancode);
 RD_BOOL get_key_state(unsigned int state, uint32 keysym);
 RD_BOOL ui_init(void);
 void ui_get_screen_size(uint32 * width, uint32 * height);
+RD_BOOL ui_get_monitor_layout(RDP_MONITOR_LAYOUT *monitors, uint32 max_monitors,
+                              uint32 *monitor_count, uint32 *desktop_width,
+                              uint32 *desktop_height);
 void ui_get_screen_size_from_percentage(uint32 pw, uint32 ph, uint32 * width, uint32 * height);
 void ui_get_workarea_size(uint32 * width, uint32 * height);
 void ui_deinit(void);
