@@ -364,9 +364,11 @@ prevents forwarding the supplied domain credentials to the server and implies
 .BR "--remote-guard" ", " "/remoteGuard"
 Request Remote Credential Guard negotiation over CredSSP. This requires
 Kerberos/GSSAPI CredSSP support and a server that advertises redirected
-authentication support. This option is experimental and only provides the
-initial negotiation and TSRemoteGuardCreds plumbing; full Remote Guard
-interoperability also requires the RDPEAR authentication redirection channel.
+authentication support. rdesktop also registers the RDPEAR authentication
+redirection channel and handles Remote Guard protocol framing and version
+negotiation. Non-negotiation Kerberos/NTLM package calls require local
+credential package handling and will fail cleanly until that backend is
+available.
 .TP
 .BR "-4"
 Use RDP version 4.
