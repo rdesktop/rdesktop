@@ -30,6 +30,7 @@
 #include "utils.h"
 
 extern char g_codepage[16];
+extern RD_BOOL g_ignore_certificate;
 
 static RD_BOOL g_iconv_works = True;
 
@@ -1004,46 +1005,49 @@ utils_cert_handle_exception(gnutls_session_t session, unsigned int status,
 	gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER);
 	_utils_cert_get_info(cert, cert_info, sizeof(cert_info));
 
-	if (rv == GNUTLS_E_CERTIFICATE_KEY_MISMATCH)
+	if (!g_ignore_certificate)
 	{
-		/* Certificate from server mismatches the one in store */
+		if (rv == GNUTLS_E_CERTIFICATE_KEY_MISMATCH)
+		{
+			/* Certificate from server mismatches the one in store */
 
-		snprintf(message, sizeof(message),
-			"ATTENTION! Found a certificate stored for host '%s', but it does not match the certificate\n"
-			"received from server.\n"
-			REVIEW_CERT_TEXT
-			"\n\n"
-			"%s"
-			"\n\n"
-			TRUST_CERT_PROMPT_TEXT
-			, hostname, cert_info);
+			snprintf(message, sizeof(message),
+				"ATTENTION! Found a certificate stored for host '%s', but it does not match the certificate\n"
+				"received from server.\n"
+				REVIEW_CERT_TEXT
+				"\n\n"
+				"%s"
+				"\n\n"
+				TRUST_CERT_PROMPT_TEXT
+				, hostname, cert_info);
 
 
-	}
-	else if (rv == GNUTLS_E_NO_CERTIFICATE_FOUND)
-	{
-		/* Certificate is not found in store, propose to add an exception */
-		_utils_cert_get_status_report(cert, status, hostname_mismatch, hostname,
-			cert_invalid_reasons, sizeof(cert_invalid_reasons));
+		}
+		else if (rv == GNUTLS_E_NO_CERTIFICATE_FOUND)
+		{
+			/* Certificate is not found in store, propose to add an exception */
+			_utils_cert_get_status_report(cert, status, hostname_mismatch, hostname,
+				cert_invalid_reasons, sizeof(cert_invalid_reasons));
 
-		snprintf(message, sizeof(message),
-			"ATTENTION! The server uses an invalid security certificate which can not be trusted for\n"
-			"the following identified reason(s);\n\n"
-			"%s"
-			"\n"
-			REVIEW_CERT_TEXT
-			"\n\n"
-			"%s"
-			"\n\n"
-			TRUST_CERT_PROMPT_TEXT,
-			cert_invalid_reasons, cert_info);
-	}
+			snprintf(message, sizeof(message),
+				"ATTENTION! The server uses an invalid security certificate which can not be trusted for\n"
+				"the following identified reason(s);\n\n"
+				"%s"
+				"\n"
+				REVIEW_CERT_TEXT
+				"\n\n"
+				"%s"
+				"\n\n"
+				TRUST_CERT_PROMPT_TEXT,
+				cert_invalid_reasons, cert_info);
+		}
 
-	/* show dialog */
-	response = util_dialog_choice(message, "no", "yes", NULL);
-	if (strcmp(response, "no") == 0 || response == NULL)
-	{
-		return 1;
+		/* show dialog */
+		response = util_dialog_choice(message, "no", "yes", NULL);
+		if (strcmp(response, "no") == 0 || response == NULL)
+		{
+			return 1;
+		}
 	}
 
 	/* user responded with yes, lets add certificate to store */
