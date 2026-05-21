@@ -375,8 +375,11 @@ Use a specific helper command for RDPEAR Kerberos/NTLM package calls. The
 installed \fBrdesktop-rdpear-helper\fR command implements the helper transport
 contract, loads the initial Remote Guard logon credential from
 \fBRDESKTOP_RDPEAR_LOGON_CRED_FILE\fR or
-\fBRDESKTOP_RDPEAR_LOGON_CRED_HEX\fR, and returns safe version/status responses.
-The helper receives a little-endian binary request on stdin: 32-bit package-name
+\fBRDESKTOP_RDPEAR_LOGON_CRED_HEX\fR, and can delegate package-specific calls to
+the command named by \fBRDESKTOP_RDPEAR_BACKEND\fR using the same binary
+transport contract. Built-in handling still answers Kerberos/NTLM version
+negotiation safely when no backend is configured. The helper receives a
+little-endian binary request on stdin: 32-bit package-name
 length, package-name bytes, 32-bit request length, request bytes. It must reply
 on stdout with 32-bit helper transport status, 32-bit response length, response
 bytes. Supplying this option implies

@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #define RDPEAR_PACKAGE_BUFFER_HEADER_LENGTH 16
@@ -305,6 +306,115 @@ read_file_blob(const char *path, uint32_t *out_len)
 }
 
 static uint8_t *
+call_backend(const char *package_name, const uint8_t *request, uint32_t request_len,
+             uint32_t *response_len)
+{
+	const char *command = getenv("RDESKTOP_RDPEAR_BACKEND");
+	int inpipe[2], outpipe[2];
+	pid_t pid;
+	uint8_t header[8];
+	uint32_t package_len, status, length;
+	uint8_t *response = NULL;
+	int child_status;
+
+	if (command == NULL || *command == 0)
+		return NULL;
+
+	package_len = (uint32_t) strlen(package_name);
+	if (package_len == 0 || package_len > 256 || request_len > RDPEAR_MAX_PAYLOAD_LENGTH)
+		return NULL;
+
+	if (pipe(inpipe) < 0)
+		return NULL;
+	if (pipe(outpipe) < 0)
+	{
+		close(inpipe[0]);
+		close(inpipe[1]);
+		return NULL;
+	}
+
+	pid = fork();
+	if (pid < 0)
+	{
+		close(inpipe[0]);
+		close(inpipe[1]);
+		close(outpipe[0]);
+		close(outpipe[1]);
+		return NULL;
+	}
+
+	if (pid == 0)
+	{
+		dup2(inpipe[0], STDIN_FILENO);
+		dup2(outpipe[1], STDOUT_FILENO);
+		close(inpipe[0]);
+		close(inpipe[1]);
+		close(outpipe[0]);
+		close(outpipe[1]);
+		execl("/bin/sh", "sh", "-c", command, (char *) NULL);
+		_exit(127);
+	}
+
+	close(inpipe[0]);
+	close(outpipe[1]);
+
+	put_uint32_le(header, package_len);
+	put_uint32_le(header + 4, request_len);
+	if (!write_all(inpipe[1], header, sizeof(header)) ||
+	    !write_all(inpipe[1], (const uint8_t *) package_name, package_len) ||
+	    (request_len != 0 && !write_all(inpipe[1], request, request_len)))
+	{
+		close(inpipe[1]);
+		close(outpipe[0]);
+		waitpid(pid, &child_status, 0);
+		return NULL;
+	}
+	close(inpipe[1]);
+
+	if (!read_all(outpipe[0], header, sizeof(header)))
+	{
+		close(outpipe[0]);
+		waitpid(pid, &child_status, 0);
+		return NULL;
+	}
+
+	status = get_uint32_le(header);
+	length = get_uint32_le(header + 4);
+	if (status != RDPEAR_TRANSPORT_STATUS_SUCCESS || length > RDPEAR_MAX_PAYLOAD_LENGTH)
+	{
+		close(outpipe[0]);
+		waitpid(pid, &child_status, 0);
+		return NULL;
+	}
+
+	response = malloc(length == 0 ? 1 : length);
+	if (response == NULL)
+	{
+		close(outpipe[0]);
+		waitpid(pid, &child_status, 0);
+		return NULL;
+	}
+
+	if (length != 0 && !read_all(outpipe[0], response, length))
+	{
+		free(response);
+		close(outpipe[0]);
+		waitpid(pid, &child_status, 0);
+		return NULL;
+	}
+
+	close(outpipe[0]);
+	if (waitpid(pid, &child_status, 0) < 0 || !WIFEXITED(child_status) || WEXITSTATUS(child_status) != 0)
+	{
+		free(response);
+		return NULL;
+	}
+
+	*response_len = length;
+	return response;
+}
+
+static uint8_t *
 load_logon_credential(uint32_t *response_len)
 {
 	const char *hex = getenv("RDESKTOP_RDPEAR_LOGON_CRED_HEX");
@@ -315,6 +425,8 @@ load_logon_credential(uint32_t *response_len)
 		blob = decode_hex_blob(hex, response_len);
 	else if (path != NULL && *path != 0)
 		blob = read_file_blob(path, response_len);
+	else
+		blob = call_backend(RDPEAR_LOGON_CRED_PACKAGE, NULL, 0, response_len);
 
 	return blob;
 }
@@ -345,6 +457,12 @@ process_request(const char *package_name, const uint8_t *request, uint32_t reque
 	if ((strcmp(package_name, "NTLM") == 0 || strcmp(package_name, "Negotiate") == 0) &&
 	    call_id == RDPEAR_REMOTE_CALL_NTLM_NEGOTIATE_VERSION)
 		return encode_negotiate_version(call_id, wide_call_id, response_len);
+
+	{
+		uint8_t *backend_response = call_backend(package_name, request, request_len, response_len);
+		if (backend_response != NULL)
+			return backend_response;
+	}
 
 	return encode_package_status(call_id, wide_call_id, RDPEAR_STATUS_NOT_SUPPORTED, response_len);
 }
