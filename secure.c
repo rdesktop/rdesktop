@@ -403,7 +403,8 @@ sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 	int length = 162 + 76 + 12 + 4 + (g_dpi > 0 ? 18 : 0);
 	unsigned int i;
 	uint32 rdpversion = RDP_40;
-	uint16 capflags = RNS_UD_CS_SUPPORT_ERRINFO_PDU;
+	uint16 capflags = RNS_UD_CS_SUPPORT_ERRINFO_PDU | RNS_UD_CS_SUPPORT_STATUSINFO_PDU |
+		RNS_UD_CS_SUPPORT_HEARTBEAT_PDU;
 	uint16 colorsupport = RNS_UD_24BPP_SUPPORT | RNS_UD_16BPP_SUPPORT | RNS_UD_32BPP_SUPPORT;
 	uint32 physwidth, physheight, desktopscale, devicescale;
 
@@ -949,6 +950,22 @@ sec_recv(RD_BOOL * is_fastpath)
 					continue;
 				}
 
+				if (sec_flags & SEC_HEARTBEAT)
+				{
+					uint8 period, count1, count2;
+
+					s_seek(s, data_offset);
+					if (!s_check_rem(s, 4))
+						rdp_protocol_error("consume heartbeat PDU from stream would overrun", s);
+
+					in_uint8s(s, 1); /* reserved */
+					in_uint8(s, period);
+					in_uint8(s, count1);
+					in_uint8(s, count2);
+					rdp_process_heartbeat(period, count1, count2);
+					continue;
+				}
+
 				if (sec_flags & SEC_REDIRECTION_PKT)
 				{
 					uint8 swapbyte;
@@ -993,6 +1010,21 @@ sec_recv(RD_BOOL * is_fastpath)
 				if (sec_flags & SEC_LICENSE_PKT)
 				{
 					licence_process(s);
+					continue;
+				}
+
+				if (sec_flags & SEC_HEARTBEAT)
+				{
+					uint8 period, count1, count2;
+
+					if (!s_check_rem(s, 4))
+						rdp_protocol_error("consume heartbeat PDU from stream would overrun", s);
+
+					in_uint8s(s, 1); /* reserved */
+					in_uint8(s, period);
+					in_uint8(s, count1);
+					in_uint8(s, count2);
+					rdp_process_heartbeat(period, count1, count2);
 					continue;
 				}
 			}

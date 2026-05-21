@@ -100,6 +100,112 @@ uint16 g_session_height;
 
 static void rdp_out_unistr(STREAM s, char *string, int len);
 
+static RD_BOOL g_heartbeat_monitoring = False;
+static RD_BOOL g_heartbeat_warned = False;
+static time_t g_heartbeat_last = 0;
+static uint8 g_heartbeat_period = 0;
+static uint8 g_heartbeat_count1 = 0;
+static uint8 g_heartbeat_count2 = 0;
+
+void
+rdp_heartbeat_reset_state(void)
+{
+	g_heartbeat_monitoring = False;
+	g_heartbeat_warned = False;
+	g_heartbeat_last = 0;
+	g_heartbeat_period = 0;
+	g_heartbeat_count1 = 0;
+	g_heartbeat_count2 = 0;
+}
+
+void
+rdp_process_heartbeat(uint8 period, uint8 count1, uint8 count2)
+{
+	if (period == 0)
+	{
+		logger(Protocol, Debug, "Ignoring heartbeat PDU with zero period");
+		return;
+	}
+
+	g_heartbeat_period = period;
+	g_heartbeat_count1 = count1 ? count1 : 3;
+	g_heartbeat_count2 = count2 ? count2 : 3;
+	g_heartbeat_last = time(NULL);
+	g_heartbeat_warned = False;
+	g_heartbeat_monitoring = True;
+
+	logger(Protocol, Debug,
+	       "Received heartbeat period=%u count1=%u count2=%u",
+	       g_heartbeat_period, g_heartbeat_count1, g_heartbeat_count2);
+}
+
+void
+rdp_heartbeat_note_activity(void)
+{
+	if (g_heartbeat_monitoring == False)
+		return;
+
+	g_heartbeat_last = time(NULL);
+	g_heartbeat_warned = False;
+}
+
+int
+rdp_heartbeat_select_timeout(int timeout_ms)
+{
+	time_t now, deadline;
+	int heartbeat_ms;
+
+	if (g_heartbeat_monitoring == False || g_heartbeat_period == 0)
+		return timeout_ms;
+
+	now = time(NULL);
+	deadline = g_heartbeat_last + g_heartbeat_period;
+	if (deadline <= now)
+		heartbeat_ms = 0;
+	else
+		heartbeat_ms = (deadline - now) * 1000;
+
+	if (timeout_ms < 0 || heartbeat_ms < timeout_ms)
+		return heartbeat_ms;
+
+	return timeout_ms;
+}
+
+void
+rdp_heartbeat_check_timeout(void)
+{
+	time_t now;
+	unsigned int elapsed, warn_after, reconnect_after;
+
+	if (g_heartbeat_monitoring == False || g_heartbeat_period == 0)
+		return;
+
+	now = time(NULL);
+	if (now <= g_heartbeat_last)
+		return;
+
+	elapsed = now - g_heartbeat_last;
+	warn_after = g_heartbeat_period * g_heartbeat_count1;
+	reconnect_after = g_heartbeat_period * (g_heartbeat_count1 + g_heartbeat_count2);
+
+	if (reconnect_after > 0 && elapsed >= reconnect_after)
+	{
+		logger(Core, Error,
+		       "Server heartbeat timed out after %u seconds, treating connection as failed",
+		       elapsed);
+		g_network_error = True;
+		g_exit_mainloop = True;
+		return;
+	}
+
+	if (!g_heartbeat_warned && warn_after > 0 && elapsed >= warn_after)
+	{
+		logger(Core, Warning,
+		       "No server heartbeat received for %u seconds", elapsed);
+		g_heartbeat_warned = True;
+	}
+}
+
 /* reads a TS_SHARECONTROLHEADER from stream, returns True of there is
    a PDU available otherwise False */
 static RD_BOOL
@@ -162,6 +268,8 @@ rdp_recv(uint8 * type)
 			rdp_s = sec_recv(&is_fastpath);
 			if (rdp_s == NULL)
 				return NULL;
+
+			rdp_heartbeat_note_activity();
 
 			if (is_fastpath == True)
 			{
@@ -2154,6 +2262,7 @@ rdp_reset_state(void)
 	g_rdp_shareid = 0;
 	g_exit_mainloop = False;
 	g_first_bitmap_caps = True;
+	rdp_heartbeat_reset_state();
 	sec_reset_state();
 }
 

@@ -235,6 +235,8 @@ Retry a fresh connection after network errors for the same timeout window used
 by automatic reconnect. By default, rdesktop only enters the reconnect loop when
 the server supplied an auto-reconnect cookie; this option also retries when no
 cookie is available, which can create a new session depending on server policy.
+When the server advertises RDP heartbeat PDUs, missed heartbeats are also
+treated as network errors and can trigger the same retry logic.
 .TP
 .BR "-r <device>"
 Enable redirection of the specified device on the client, such

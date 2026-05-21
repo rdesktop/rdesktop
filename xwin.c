@@ -3390,6 +3390,7 @@ process_fds(int rdp_socket, int ms)
 	FD_SET(g_x_socket, &rfds);
 
 	/* default timeout */
+	ms = rdp_heartbeat_select_timeout(ms);
 	tv.tv_sec = ms / 1000;
 	tv.tv_usec = (ms - (tv.tv_sec * 1000)) * 1000;
 
@@ -3408,6 +3409,7 @@ process_fds(int rdp_socket, int ms)
 	n++;
 
 	ret = select(n, &rfds, &wfds, NULL, &tv);
+	rdp_heartbeat_check_timeout();
 	if (ret <= 0)
 	{
 		if (ret == -1)

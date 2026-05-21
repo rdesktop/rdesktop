@@ -173,6 +173,11 @@ RD_BOOL rdp_loop(RD_BOOL * deactivated, uint32 * ext_disc_reason);
 RD_BOOL rdp_connect(char *server, uint32 flags, char *domain, char *password, char *command,
 		    char *directory, RD_BOOL reconnect);
 void rdp_reset_state(void);
+void rdp_heartbeat_reset_state(void);
+void rdp_process_heartbeat(uint8 period, uint8 count1, uint8 count2);
+void rdp_heartbeat_note_activity(void);
+int rdp_heartbeat_select_timeout(int timeout_ms);
+void rdp_heartbeat_check_timeout(void);
 void rdp_disconnect(void);
 #define rdp_protocol_error(m, s) _rdp_protocol_error(__FILE__, __LINE__, __func__, m, s)
 void _rdp_protocol_error(const char *file, int line, const char *func,
