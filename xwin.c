@@ -3399,6 +3399,7 @@ process_fds(int rdp_socket, int ms)
 
 	/* add redirection handles */
 	rdpdr_add_fds(&n, &rfds, &wfds, &tv, &s_timeout);
+	addin_add_fds(&n, &rfds, &wfds);
 	seamless_select_timeout(&tv);
 
 	/* add ctrl slaves handles */
@@ -3432,6 +3433,7 @@ process_fds(int rdp_socket, int ms)
 #endif
 
 	rdpdr_check_fds(&rfds, &wfds, (RD_BOOL) False);
+	addin_check_fds(&rfds, &wfds);
 
 	ctrl_check_fds(&rfds, &wfds);
 

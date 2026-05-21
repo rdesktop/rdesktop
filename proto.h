@@ -177,6 +177,12 @@ void rdp_disconnect(void);
 #define rdp_protocol_error(m, s) _rdp_protocol_error(__FILE__, __LINE__, __func__, m, s)
 void _rdp_protocol_error(const char *file, int line, const char *func,
 			 const char *message, STREAM s) NORETURN;
+/* addin.c */
+RD_BOOL addin_parse_option(const char *optarg);
+RD_BOOL addin_init(void);
+void addin_add_fds(int *n, fd_set * rfds, fd_set * wfds);
+void addin_check_fds(fd_set * rfds, fd_set * wfds);
+void addin_deinit(void);
 /* rdpdr.c */
 int get_device_index(RD_NTHANDLE handle);
 void convert_to_unix_filename(char *filename);

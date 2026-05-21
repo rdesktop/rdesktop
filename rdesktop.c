@@ -223,6 +223,8 @@ usage(char *program)
 	fprintf(stderr,
 		"         '-r lptport:LPT1=/dev/lp0': enable parallel redirection of /dev/lp0 to LPT1\n");
 	fprintf(stderr, "             or      LPT1=/dev/lp0,LPT2=/dev/lp1\n");
+	fprintf(stderr,
+		"         '-r addin:CH=command': bridge static virtual channel CH to command\n");
 	fprintf(stderr, "         '-r printer:mydeskjet': enable printer redirection\n");
 	fprintf(stderr,
 		"             or      mydeskjet=\"HP LaserJet IIIP\" to enter server driver as well\n");
@@ -1396,6 +1398,11 @@ main(int argc, char *argv[])
 				{
 					g_lspci_enabled = True;
 				}
+				else if (str_startswith(optarg, "addin"))
+				{
+					if (!addin_parse_option(optarg + 5))
+						return EX_USAGE;
+				}
 				else if (str_startswith(optarg, "lptport"))
 				{
 					parallel_enum_devices(&g_num_devices, optarg + 7);
@@ -1437,7 +1444,7 @@ main(int argc, char *argv[])
 				else
 				{
 					logger(Core, Warning,
-					       "Unknown -r argument '%s'. Possible arguments are: comport, disk, lptport, printer, sound, clipboard, scard",
+					       "Unknown -r argument '%s'. Possible arguments are: addin, comport, disk, lptport, printer, sound, clipboard, scard",
 					       optarg);
 				}
 				break;
@@ -1687,6 +1694,12 @@ main(int argc, char *argv[])
 	if (g_lspci_enabled)
 		lspci_init();
 
+	if (!addin_init())
+	{
+		addin_deinit();
+		return EX_OSERR;
+	}
+
 	rdpdr_init();
 
 	dvc_init();
@@ -1878,6 +1891,7 @@ main(int argc, char *argv[])
 
 	cache_save_state();
 	ui_deinit();
+	addin_deinit();
 
 	if (g_user_quit)
 		return EXRD_WINDOW_CLOSED;

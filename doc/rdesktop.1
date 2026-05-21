@@ -283,6 +283,14 @@ Activates the lspci channel, which allows the server to enumerate the
 clients PCI devices. See the file lspci-channel.txt in the
 documentation for more information.
 .TP
+.BR "-r addin:<channel>=<command>"
+Bridge an out-of-process static virtual channel add-in. The channel name must
+be one to eight alphanumeric characters or underscores. Data received on the
+RDP static virtual channel is written to the command standard input; data read
+from the command standard output is sent back on the same channel. This is
+intended for legacy third-party virtual channel add-ins such as thin-client
+integrations.
+.TP
 .BR "-r scard[:<Scard Name>=<Alias Name>[;<Vendor Name>][,...]]"
 Enables redirection of one or more smart-cards. You can provide
 static name binding between GNU/Linux and Windows. To do this you
