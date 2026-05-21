@@ -24,6 +24,57 @@
 extern size_t g_next_packet;
 static RDP_ORDER_STATE g_order_state;
 extern RDP_VERSION g_rdp_version;
+extern int g_server_depth;
+
+#define NINEGRID_CACHE_ENTRIES 256
+#define TS_ALTSEC_ORDER_MASK 0x03
+#define TS_ALTSEC_ORDER_CLASS 0x02
+#define TS_ALTSEC_ORDER_TYPE_SHIFT 2
+#define TS_STREAM_BITMAP_END 0x01
+#define TS_STREAM_BITMAP_COMPRESSED 0x02
+#define TS_STREAM_BITMAP_TYPE_NINEGRID 0x0001
+#define NINEGRID_FLAG_TILE 0x00000002
+
+typedef struct _NINEGRID_CACHE_ENTRY
+{
+	RD_BOOL present;
+	uint16 width;
+	uint16 height;
+	uint32 flags;
+	uint16 left_width;
+	uint16 right_width;
+	uint16 top_height;
+	uint16 bottom_height;
+	uint32 transparent;
+	uint8 *data;
+}
+NINEGRID_CACHE_ENTRY;
+
+typedef struct _NINEGRID_STREAM_BITMAP
+{
+	RD_BOOL active;
+	uint8 flags;
+	uint8 bpp;
+	uint16 type;
+	uint16 width;
+	uint16 height;
+	uint32 size;
+	uint32 length;
+	uint8 *data;
+}
+NINEGRID_STREAM_BITMAP;
+
+typedef struct _NINEGRID_RECT
+{
+	sint16 left;
+	sint16 top;
+	sint16 width;
+	sint16 height;
+}
+NINEGRID_RECT;
+
+static NINEGRID_CACHE_ENTRY g_ninegrid_cache[NINEGRID_CACHE_ENTRIES];
+static NINEGRID_STREAM_BITMAP g_ninegrid_stream;
 
 /* Read field indicating which parameters are present */
 static void
@@ -86,6 +137,80 @@ parse_delta(uint8 * buffer, int *offset)
 		value = (value << 8) | buffer[(*offset)++];
 
 	return value;
+}
+
+static int
+parse_packed_signed_delta(uint8 * buffer, int size, int *offset)
+{
+	int value;
+	int sign;
+
+	if (*offset >= size)
+		return 0;
+
+	value = buffer[(*offset)++];
+	if (value & 0x80)
+	{
+		value &= 0x7f;
+		if (*offset >= size)
+			return 0;
+		value = (value << 8) | buffer[(*offset)++];
+		sign = value & 0x4000;
+		value &= 0x3fff;
+		if (sign)
+			value = -value;
+	}
+	else
+	{
+		sign = value & 0x40;
+		value &= 0x3f;
+		if (sign)
+			value = -value;
+	}
+
+	return value;
+}
+
+static RD_BOOL
+parse_delta_rectangles(uint8 * buffer, int size, uint8 count, NINEGRID_RECT * rects)
+{
+	int zero_bytes;
+	int offset;
+	int i;
+	sint16 left, top, width, height;
+	uint8 zero_bits;
+	uint8 nibble;
+
+	if (count == 0 || count > 45 || size <= 0)
+		return False;
+
+	zero_bytes = (count + 1) / 2;
+	if (size < zero_bytes)
+		return False;
+
+	offset = zero_bytes;
+	left = top = width = height = 0;
+	for (i = 0; i < count; i++)
+	{
+		zero_bits = buffer[i / 2];
+		nibble = (i & 1) ? (zero_bits & 0x0f) : ((zero_bits >> 4) & 0x0f);
+
+		if (!(nibble & 0x08))
+			left += parse_packed_signed_delta(buffer, size, &offset);
+		if (!(nibble & 0x04))
+			top += parse_packed_signed_delta(buffer, size, &offset);
+		if (!(nibble & 0x02))
+			width += parse_packed_signed_delta(buffer, size, &offset);
+		if (!(nibble & 0x01))
+			height += parse_packed_signed_delta(buffer, size, &offset);
+
+		rects[i].left = left;
+		rects[i].top = top;
+		rects[i].width = width;
+		rects[i].height = height;
+	}
+
+	return True;
 }
 
 /* Read a colour entry */
@@ -170,6 +295,258 @@ setup_brush(BRUSH * out_brush, BRUSH * in_brush)
 		}
 		out_brush->style = 3;
 	}
+}
+
+static int
+ninegrid_bytes_per_pixel(void)
+{
+	int Bpp;
+
+	Bpp = (g_server_depth + 7) / 8;
+	if (Bpp < 1)
+		Bpp = 1;
+	if (Bpp > 4)
+		Bpp = 4;
+	return Bpp;
+}
+
+static void
+ninegrid_free_stream(void)
+{
+	if (g_ninegrid_stream.data != NULL)
+		xfree(g_ninegrid_stream.data);
+	memset(&g_ninegrid_stream, 0, sizeof(g_ninegrid_stream));
+}
+
+static void
+ninegrid_free_cache(void)
+{
+	int i;
+
+	for (i = 0; i < NINEGRID_CACHE_ENTRIES; i++)
+	{
+		if (g_ninegrid_cache[i].data != NULL)
+			xfree(g_ninegrid_cache[i].data);
+	}
+	memset(g_ninegrid_cache, 0, sizeof(g_ninegrid_cache));
+	ninegrid_free_stream();
+}
+
+static RD_BOOL
+ninegrid_stream_append(uint8 *data, uint16 size)
+{
+	uint8 *new_data;
+	uint32 new_length;
+
+	if (size == 0)
+		return True;
+	if (data == NULL)
+		return False;
+
+	new_length = g_ninegrid_stream.length + size;
+	new_data = xmalloc(new_length);
+	if (g_ninegrid_stream.data != NULL)
+	{
+		memcpy(new_data, g_ninegrid_stream.data, g_ninegrid_stream.length);
+		xfree(g_ninegrid_stream.data);
+	}
+	memcpy(new_data + g_ninegrid_stream.length, data, size);
+	g_ninegrid_stream.data = new_data;
+	g_ninegrid_stream.length = new_length;
+	return True;
+}
+
+static RD_BOOL
+ninegrid_finalize_stream(uint8 **data, uint32 *length)
+{
+	uint8 *output;
+	int Bpp;
+	uint32 expected;
+
+	*data = NULL;
+	*length = 0;
+	if (!g_ninegrid_stream.active || g_ninegrid_stream.type != TS_STREAM_BITMAP_TYPE_NINEGRID ||
+	    g_ninegrid_stream.data == NULL)
+		return False;
+
+	Bpp = g_ninegrid_stream.bpp / 8;
+	if (Bpp < 1 || Bpp > 4)
+		return False;
+
+	expected = g_ninegrid_stream.width * g_ninegrid_stream.height * Bpp;
+	if (g_ninegrid_stream.flags & TS_STREAM_BITMAP_COMPRESSED)
+	{
+		output = xmalloc(expected);
+		if (!bitmap_decompress(output, g_ninegrid_stream.width, g_ninegrid_stream.height,
+		                       g_ninegrid_stream.data, g_ninegrid_stream.length, Bpp))
+		{
+			xfree(output);
+			return False;
+		}
+		*data = output;
+		*length = expected;
+		return True;
+	}
+
+	if (g_ninegrid_stream.length < expected)
+		return False;
+	output = xmalloc(expected);
+	memcpy(output, g_ninegrid_stream.data, expected);
+	*data = output;
+	*length = expected;
+	return True;
+}
+
+static uint32
+ninegrid_read_rgb(NINEGRID_CACHE_ENTRY *entry, int x, int y)
+{
+	uint8 *pixel;
+	uint32 r, g, b;
+	int Bpp;
+
+	Bpp = 4;
+	pixel = entry->data + ((y * entry->width) + x) * Bpp;
+	b = pixel[0];
+	g = pixel[1];
+	r = pixel[2];
+	return (r << 16) | (g << 8) | b;
+}
+
+static void
+ninegrid_write_rgb(uint8 *dst, uint32 rgb, int Bpp)
+{
+	uint8 r, g, b;
+	uint16 pixel16;
+
+	r = (rgb >> 16) & 0xff;
+	g = (rgb >> 8) & 0xff;
+	b = rgb & 0xff;
+	switch (Bpp)
+	{
+		case 4:
+			dst[3] = 0;
+			/* fall through */
+		case 3:
+			dst[0] = b;
+			dst[1] = g;
+			dst[2] = r;
+			break;
+		case 2:
+			if (g_server_depth == 15)
+				pixel16 = ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
+			else
+				pixel16 = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
+			dst[0] = pixel16 & 0xff;
+			dst[1] = pixel16 >> 8;
+			break;
+		default:
+			dst[0] = 0;
+			break;
+	}
+}
+
+static void
+ninegrid_render_rect(NINEGRID_CACHE_ENTRY *entry, DRAWNINEGRID_ORDER *order,
+                     sint16 left, sint16 top, sint16 width, sint16 height)
+{
+	uint8 *dst;
+	int Bpp;
+	int x, y;
+	int sx, sy;
+	int src_width, src_height;
+	int dst_left, dst_right, dst_top, dst_bottom;
+	int src_left_width, src_right_width, src_top_height, src_bottom_height;
+	int src_center_width, src_center_height;
+	int dst_center_width, dst_center_height;
+	uint32 rgb;
+
+	if (entry == NULL || !entry->present || entry->data == NULL)
+		return;
+	if (width <= 0 || height <= 0)
+		return;
+	if (order->src_right < order->src_left || order->src_bottom < order->src_top)
+		return;
+
+	src_width = order->src_right - order->src_left + 1;
+	src_height = order->src_bottom - order->src_top + 1;
+	if (src_width <= 0 || src_height <= 0)
+		return;
+
+	src_left_width = entry->left_width;
+	src_right_width = entry->right_width;
+	src_top_height = entry->top_height;
+	src_bottom_height = entry->bottom_height;
+	if (src_left_width + src_right_width > src_width)
+	{
+		src_left_width = src_width / 2;
+		src_right_width = src_width - src_left_width;
+	}
+	if (src_top_height + src_bottom_height > src_height)
+	{
+		src_top_height = src_height / 2;
+		src_bottom_height = src_height - src_top_height;
+	}
+
+	dst_left = src_left_width < width ? src_left_width : width;
+	dst_right = src_right_width < width - dst_left ? src_right_width : width - dst_left;
+	dst_top = src_top_height < height ? src_top_height : height;
+	dst_bottom = src_bottom_height < height - dst_top ? src_bottom_height : height - dst_top;
+	src_center_width = src_width - src_left_width - src_right_width;
+	src_center_height = src_height - src_top_height - src_bottom_height;
+	dst_center_width = width - dst_left - dst_right;
+	dst_center_height = height - dst_top - dst_bottom;
+
+	Bpp = ninegrid_bytes_per_pixel();
+	if (Bpp == 1)
+	{
+		logger(Graphics, Warning,
+		       "ninegrid_render_rect(), 8 bpp rendering is not supported");
+		return;
+	}
+
+	dst = xmalloc(width * height * Bpp);
+	for (y = 0; y < height; y++)
+	{
+		if (y < dst_top)
+			sy = order->src_top + y;
+		else if (y >= height - dst_bottom)
+			sy = order->src_bottom - (height - 1 - y);
+		else if (src_center_height <= 0 || dst_center_height <= 0)
+			sy = order->src_top + src_top_height;
+		else if (entry->flags & NINEGRID_FLAG_TILE)
+			sy = order->src_top + src_top_height + ((y - dst_top) % src_center_height);
+		else
+			sy = order->src_top + src_top_height +
+			     (((y - dst_top) * src_center_height) / dst_center_height);
+		if (sy < 0)
+			sy = 0;
+		if (sy >= entry->height)
+			sy = entry->height - 1;
+		for (x = 0; x < width; x++)
+		{
+			if (x < dst_left)
+				sx = order->src_left + x;
+			else if (x >= width - dst_right)
+				sx = order->src_right - (width - 1 - x);
+			else if (src_center_width <= 0 || dst_center_width <= 0)
+				sx = order->src_left + src_left_width;
+			else if (entry->flags & NINEGRID_FLAG_TILE)
+				sx = order->src_left + src_left_width +
+				     ((x - dst_left) % src_center_width);
+			else
+				sx = order->src_left + src_left_width +
+				     (((x - dst_left) * src_center_width) / dst_center_width);
+			if (sx < 0)
+				sx = 0;
+			if (sx >= entry->width)
+				sx = entry->width - 1;
+			rgb = ninegrid_read_rgb(entry, sx, sy);
+			ninegrid_write_rgb(dst + ((y * width) + x) * Bpp, rgb, Bpp);
+		}
+	}
+
+	ui_paint_bitmap(left, top, width, height, width, height, dst);
+	xfree(dst);
 }
 
 /* Parse a brush */
@@ -287,6 +664,104 @@ process_screenblt(STREAM s, SCREENBLT_ORDER * os, uint32 present, RD_BOOL delta)
 	       os->opcode, os->x, os->y, os->cx, os->cy, os->srcx, os->srcy);
 
 	ui_screenblt(ROP2_S(os->opcode), os->x, os->y, os->cx, os->cy, os->srcx, os->srcy);
+}
+
+static void
+process_drawninegrid(STREAM s, DRAWNINEGRID_ORDER * os, BOUNDS *bounds, uint32 present,
+                     RD_BOOL delta)
+{
+	NINEGRID_CACHE_ENTRY *entry;
+	sint16 left, top, width, height;
+
+	if (present & 0x01)
+		rdp_in_coord(s, &os->src_left, delta);
+	if (present & 0x02)
+		rdp_in_coord(s, &os->src_top, delta);
+	if (present & 0x04)
+		rdp_in_coord(s, &os->src_right, delta);
+	if (present & 0x08)
+		rdp_in_coord(s, &os->src_bottom, delta);
+	if (present & 0x10)
+		in_uint16_le(s, os->bitmap_id);
+
+	logger(Graphics, Debug,
+	       "process_drawninegrid(), bitmap=%d src=%d,%d,%d,%d dst=%d,%d,%d,%d",
+	       os->bitmap_id, os->src_left, os->src_top, os->src_right, os->src_bottom,
+	       bounds->left, bounds->top, bounds->right, bounds->bottom);
+
+	if (os->bitmap_id >= NINEGRID_CACHE_ENTRIES)
+		return;
+	entry = &g_ninegrid_cache[os->bitmap_id];
+	left = bounds->left;
+	top = bounds->top;
+	width = bounds->right - bounds->left + 1;
+	height = bounds->bottom - bounds->top + 1;
+	ninegrid_render_rect(entry, os, left, top, width, height);
+}
+
+static void
+process_multidrawninegrid(STREAM s, MULTI_DRAWNINEGRID_ORDER * os, uint32 present,
+                          RD_BOOL delta)
+{
+	DRAWNINEGRID_ORDER draw;
+	NINEGRID_RECT rects[45];
+	int i;
+	uint16 data_size;
+
+	if (present & 0x01)
+		rdp_in_coord(s, &os->src_left, delta);
+	if (present & 0x02)
+		rdp_in_coord(s, &os->src_top, delta);
+	if (present & 0x04)
+		rdp_in_coord(s, &os->src_right, delta);
+	if (present & 0x08)
+		rdp_in_coord(s, &os->src_bottom, delta);
+	if (present & 0x10)
+		in_uint16_le(s, os->bitmap_id);
+	if (present & 0x20)
+		in_uint8(s, os->n_delta_entries);
+	if (present & 0x40)
+	{
+		in_uint16_le(s, data_size);
+		if (data_size > MAX_DATA)
+		{
+			logger(Graphics, Warning,
+			       "process_multidrawninegrid(), coded delta list too large %d",
+			       data_size);
+			in_uint8s(s, data_size);
+			os->datasize = 0;
+		}
+		else
+		{
+			os->datasize = data_size;
+			in_uint8a(s, os->data, os->datasize);
+		}
+	}
+
+	logger(Graphics, Debug,
+	       "process_multidrawninegrid(), bitmap=%d src=%d,%d,%d,%d rects=%d data=%d",
+	       os->bitmap_id, os->src_left, os->src_top, os->src_right, os->src_bottom,
+	       os->n_delta_entries, os->datasize);
+
+	if (os->bitmap_id >= NINEGRID_CACHE_ENTRIES || os->datasize == 0)
+		return;
+	if (!parse_delta_rectangles(os->data, os->datasize, os->n_delta_entries, rects))
+	{
+		logger(Graphics, Warning,
+		       "process_multidrawninegrid(), failed to parse coded delta rectangles");
+		return;
+	}
+
+	memset(&draw, 0, sizeof(draw));
+	draw.src_left = os->src_left;
+	draw.src_top = os->src_top;
+	draw.src_right = os->src_right;
+	draw.src_bottom = os->src_bottom;
+	draw.bitmap_id = os->bitmap_id;
+	for (i = 0; i < os->n_delta_entries; i++)
+		ninegrid_render_rect(&g_ninegrid_cache[os->bitmap_id], &draw,
+		                     rects[i].left, rects[i].top,
+		                     rects[i].width, rects[i].height);
 }
 
 /* Process a line order */
@@ -1252,6 +1727,192 @@ process_brushcache(STREAM s, uint16 flags)
 	}
 }
 
+static void
+process_altsec_stream_bitmap_first(STREAM s)
+{
+	uint8 flags, bpp;
+	uint16 type, width, height, block_size;
+	uint32 bitmap_size;
+	uint8 *block;
+	uint8 *decoded;
+	uint32 decoded_length;
+
+	in_uint8(s, flags);
+	in_uint8(s, bpp);
+	in_uint16_le(s, type);
+	in_uint16_le(s, width);
+	in_uint16_le(s, height);
+	in_uint32_le(s, bitmap_size);
+	in_uint16_le(s, block_size);
+	in_uint8p(s, block, block_size);
+
+	ninegrid_free_stream();
+	g_ninegrid_stream.active = True;
+	g_ninegrid_stream.flags = flags;
+	g_ninegrid_stream.bpp = bpp;
+	g_ninegrid_stream.type = type;
+	g_ninegrid_stream.width = width;
+	g_ninegrid_stream.height = height;
+	g_ninegrid_stream.size = bitmap_size;
+	ninegrid_stream_append(block, block_size);
+
+	logger(Graphics, Debug,
+	       "process_altsec_stream_bitmap_first(), type=%d bpp=%d width=%d height=%d size=%d block=%d flags=0x%x",
+	       type, bpp, width, height, bitmap_size, block_size, flags);
+
+	if (flags & TS_STREAM_BITMAP_END)
+	{
+		if (!ninegrid_finalize_stream(&decoded, &decoded_length))
+			logger(Graphics, Warning,
+			       "process_altsec_stream_bitmap_first(), failed to decode stream bitmap");
+		else
+		{
+			xfree(g_ninegrid_stream.data);
+			g_ninegrid_stream.data = decoded;
+			g_ninegrid_stream.length = decoded_length;
+			g_ninegrid_stream.flags &= ~TS_STREAM_BITMAP_COMPRESSED;
+		}
+	}
+}
+
+static void
+process_altsec_stream_bitmap_next(STREAM s)
+{
+	uint8 flags;
+	uint16 type, block_size;
+	uint8 *block;
+	uint8 *decoded;
+	uint32 decoded_length;
+
+	in_uint8(s, flags);
+	in_uint16_le(s, type);
+	in_uint16_le(s, block_size);
+	in_uint8p(s, block, block_size);
+
+	if (!g_ninegrid_stream.active || g_ninegrid_stream.type != type)
+	{
+		logger(Graphics, Warning,
+		       "process_altsec_stream_bitmap_next(), no matching active stream for type %d",
+		       type);
+		return;
+	}
+
+	g_ninegrid_stream.flags |= flags;
+	ninegrid_stream_append(block, block_size);
+	logger(Graphics, Debug,
+	       "process_altsec_stream_bitmap_next(), type=%d block=%d flags=0x%x",
+	       type, block_size, flags);
+
+	if (flags & TS_STREAM_BITMAP_END)
+	{
+		if (!ninegrid_finalize_stream(&decoded, &decoded_length))
+			logger(Graphics, Warning,
+			       "process_altsec_stream_bitmap_next(), failed to decode stream bitmap");
+		else
+		{
+			xfree(g_ninegrid_stream.data);
+			g_ninegrid_stream.data = decoded;
+			g_ninegrid_stream.length = decoded_length;
+			g_ninegrid_stream.flags &= ~TS_STREAM_BITMAP_COMPRESSED;
+		}
+	}
+}
+
+static void
+process_altsec_create_ninegrid_bitmap(STREAM s)
+{
+	uint8 bpp;
+	uint16 bitmap_id, width, height;
+	NINEGRID_CACHE_ENTRY *entry;
+	uint32 flags, transparent;
+	uint16 left_width, right_width, top_height, bottom_height;
+	uint8 *data;
+	uint32 length;
+
+	in_uint8(s, bpp);
+	in_uint16_le(s, bitmap_id);
+	in_uint16_le(s, width);
+	in_uint16_le(s, height);
+	in_uint32_le(s, flags);
+	in_uint16_le(s, left_width);
+	in_uint16_le(s, right_width);
+	in_uint16_le(s, top_height);
+	in_uint16_le(s, bottom_height);
+	in_uint32_le(s, transparent);
+
+	logger(Graphics, Debug,
+	       "process_altsec_create_ninegrid_bitmap(), id=%d bpp=%d width=%d height=%d flags=0x%x",
+	       bitmap_id, bpp, width, height, flags);
+
+	if (bitmap_id >= NINEGRID_CACHE_ENTRIES)
+		return;
+	if (bpp != 32)
+	{
+		logger(Graphics, Warning,
+		       "process_altsec_create_ninegrid_bitmap(), unsupported bpp %d", bpp);
+		return;
+	}
+	if (!ninegrid_finalize_stream(&data, &length))
+	{
+		if (!g_ninegrid_stream.active || g_ninegrid_stream.data == NULL)
+		{
+			logger(Graphics, Warning,
+			       "process_altsec_create_ninegrid_bitmap(), missing stream bitmap data");
+			return;
+		}
+		data = xmalloc(g_ninegrid_stream.length);
+		memcpy(data, g_ninegrid_stream.data, g_ninegrid_stream.length);
+		length = g_ninegrid_stream.length;
+	}
+	if (length < width * height * 4)
+	{
+		xfree(data);
+		logger(Graphics, Warning,
+		       "process_altsec_create_ninegrid_bitmap(), short bitmap data %d", length);
+		return;
+	}
+
+	entry = &g_ninegrid_cache[bitmap_id];
+	if (entry->data != NULL)
+		xfree(entry->data);
+	entry->present = True;
+	entry->width = width;
+	entry->height = height;
+	entry->flags = flags;
+	entry->left_width = left_width;
+	entry->right_width = right_width;
+	entry->top_height = top_height;
+	entry->bottom_height = bottom_height;
+	entry->transparent = transparent;
+	entry->data = data;
+	ninegrid_free_stream();
+}
+
+static void
+process_altsec_order(STREAM s, uint8 header)
+{
+	uint8 type;
+
+	type = header >> TS_ALTSEC_ORDER_TYPE_SHIFT;
+	switch (type)
+	{
+		case RDP_ALTSEC_STREAM_BITMAP_FIRST:
+			process_altsec_stream_bitmap_first(s);
+			break;
+		case RDP_ALTSEC_STREAM_BITMAP_NEXT:
+			process_altsec_stream_bitmap_next(s);
+			break;
+		case RDP_ALTSEC_CREATE_NINEGRID_BITMAP:
+			process_altsec_create_ninegrid_bitmap(s);
+			break;
+		default:
+			logger(Graphics, Debug,
+			       "process_altsec_order(), skipping unsupported alternate secondary order %d",
+			       type);
+			break;
+	}
+}
+
 /* Process a secondary order */
 static void
 process_secondary_order(STREAM s)
@@ -1312,8 +1973,11 @@ process_secondary_order(STREAM s)
 			break;
 
 		default:
-			logger(Graphics, Warning,
-			       "process_secondary_order(), unhandled secondary order %d", type);
+			if ((type & TS_ALTSEC_ORDER_MASK) == TS_ALTSEC_ORDER_CLASS)
+				process_altsec_order(s, type);
+			else
+				logger(Graphics, Warning,
+				       "process_secondary_order(), unhandled secondary order %d", type);
 	}
 
 	s_seek(s, next_order);
@@ -1352,6 +2016,11 @@ process_orders(STREAM s, uint16 num_orders)
 
 			switch (os->order_type)
 			{
+				case RDP_ORDER_DRAWNINEGRID:
+				case RDP_ORDER_MULTI_DRAWNINEGRID:
+					size = 1;
+					break;
+
 				case RDP_ORDER_TRIBLT:
 				case RDP_ORDER_TEXT2:
 					size = 3;
@@ -1397,6 +2066,15 @@ process_orders(STREAM s, uint16 num_orders)
 
 				case RDP_ORDER_SCREENBLT:
 					process_screenblt(s, &os->screenblt, present, delta);
+					break;
+
+				case RDP_ORDER_DRAWNINEGRID:
+					process_drawninegrid(s, &os->drawninegrid, &os->bounds,
+					                     present, delta);
+					break;
+
+				case RDP_ORDER_MULTI_DRAWNINEGRID:
+					process_multidrawninegrid(s, &os->multidrawninegrid, present, delta);
 					break;
 
 				case RDP_ORDER_LINE:
@@ -1469,6 +2147,7 @@ process_orders(STREAM s, uint16 num_orders)
 void
 reset_order_state(void)
 {
+	ninegrid_free_cache();
 	memset(&g_order_state, 0, sizeof(g_order_state));
 	g_order_state.order_type = RDP_ORDER_PATBLT;
 }

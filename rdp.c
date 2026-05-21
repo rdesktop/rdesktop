@@ -931,6 +931,7 @@ rdp_out_ts_order_capabilityset(STREAM s)
 	order_caps[TS_NEG_PATBLT_INDEX] = 1;
 	order_caps[TS_NEG_SCRBLT_INDEX] = 1;
 	order_caps[TS_NEG_LINETO_INDEX] = 1;
+	order_caps[TS_NEG_DRAWNINEGRID_INDEX] = 1;
 	order_caps[TS_NEG_MULTI_DRAWNINEGRID_INDEX] = 1;
 	order_caps[TS_NEG_POLYLINE_INDEX] = 1;
 	order_caps[TS_NEG_INDEX_INDEX] = 1;
@@ -1201,6 +1202,16 @@ rdp_out_ts_glyphcache_capabilityset(STREAM s)
 }
 
 static void
+rdp_out_ts_drawninegrid_cache_capabilityset(STREAM s)
+{
+	out_uint16_le(s, RDP_CAPSET_DRAWNINEGRIDCACHE);
+	out_uint16_le(s, RDP_CAPLEN_DRAWNINEGRIDCACHE);
+	out_uint32_le(s, DRAW_NINEGRID_SUPPORTED_REV2);
+	out_uint16_le(s, DRAW_NINEGRID_CACHE_SIZE);
+	out_uint16_le(s, DRAW_NINEGRID_CACHE_ENTRIES);
+}
+
+static void
 rdp_out_ts_multifragmentupdate_capabilityset(STREAM s)
 {
 	out_uint16_le(s, RDP_CAPSET_MULTIFRAGMENTUPDATE);
@@ -1238,6 +1249,7 @@ rdp_send_confirm_active(void)
 		RDP_CAPLEN_FONT +
 		RDP_CAPLEN_SOUND +
 		RDP_CAPLEN_GLYPHCACHE +
+		RDP_CAPLEN_DRAWNINEGRIDCACHE +
 		RDP_CAPLEN_MULTIFRAGMENTUPDATE +
 		RDP_CAPLEN_LARGE_POINTER +
 		RDP_CAPLEN_VC + 4 /* w2k fix, sessionid */ ;
@@ -1267,7 +1279,7 @@ rdp_send_confirm_active(void)
 	out_uint16_le(s, caplen);
 
 	out_uint8a(s, RDP_SOURCE, sizeof(RDP_SOURCE));
-	out_uint16_le(s, 17);	/* num_caps */
+	out_uint16_le(s, 18);	/* num_caps */
 	out_uint8s(s, 2);	/* pad */
 
 	rdp_out_ts_general_capabilityset(s);
@@ -1294,6 +1306,7 @@ rdp_send_confirm_active(void)
 	rdp_out_ts_sound_capabilityset(s);
 	rdp_out_ts_font_capabilityset(s);
 	rdp_out_ts_glyphcache_capabilityset(s);
+	rdp_out_ts_drawninegrid_cache_capabilityset(s);
 	rdp_out_ts_multifragmentupdate_capabilityset(s);
 	rdp_out_ts_large_pointer_capabilityset(s);
 
