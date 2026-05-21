@@ -7,6 +7,8 @@
 .br
 .B rdesktop [options] file.rdp
 .br
+.B rdesktop
+.br
 .SH DESCRIPTION
 .I rdesktop
 is a client for Remote Desktop Protocol (RDP), used in a number of Microsoft products.
@@ -15,9 +17,34 @@ server to Windows Server 2012 R2.
 If no port is specified, rdesktop connects to the standard RDP TCP port 3389.
 As an alternative to specifying a server directly, rdesktop can read common
 connection settings from a Microsoft .rdp file. Command-line options override
-matching settings read from the file.
+matching settings read from the file. When started without arguments on an X11 display,
+rdesktop opens a graphical connection launcher. The launcher maps its fields to the
+same command-line options documented below; starting rdesktop with any argument keeps
+the historical command-line behaviour.
 
 .SH OPTIONS
+.TP
+.B No arguments
+Open the X11 connection launcher. The launcher provides connection fields and
+an Options dialog grouping the command-line options into General, Display, Local
+resources, Performance, Security, and Advanced tabs. The launcher uses a
+built-in raster banner. When Xft is available at build time, launcher text is
+rendered out-of-the-box with fontconfig/Xft. The default fallback list tries
+Ubuntu Sans 11 pt, Adwaita Sans 11 pt, Google Noto Serif 11 pt, Cantarell
+11 pt, DejaVu Sans 11 pt, San Francisco 13 pt, and Segoe UI 9 pt before
+falling back to generic sans-serif fonts. This requires rdesktop to be built
+with Xft/fontconfig development headers available. Without Xft, the launcher
+still works but falls back to legacy X11 core fonts, which look noticeably less
+like a modern desktop UI. If the launcher text does not visually change after
+selecting modern fonts, install the Xft/fontconfig development package and
+common UI font packages, then rerun ./bootstrap and ./configure before
+rebuilding.
+
+The launcher also honours the optional X resources
+Brdesktop.launcher.fontR, Brdesktop.launcher.titleFontR, and
+Brdesktop.launcher.smallFontR for site or user overrides. They are not
+required for normal use.
+
 .TP
 .BR "-u <username>"
 Username for authentication on the server.

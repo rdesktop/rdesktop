@@ -48,6 +48,9 @@ Optional features need additional dependencies:
 
 - smart-card support: PCSC-lite headers and library;
 - CredSSP support: internal NTLMv2 is built by default; GSSAPI/Kerberos headers and library are optional for Kerberos NLA;
+- X11 launcher modern fonts: Xft/fontconfig headers and libraries, plus the
+  desired desktop UI fonts. Without Xft, the launcher still works but falls
+  back to legacy X core fonts, which look noticeably worse;
 - sound support: one or more supported audio backends such as ALSA, PulseAudio,
   libao or OSS, plus libsamplerate when available.
 
@@ -61,6 +64,16 @@ Add optional packages when enabling those features, for example:
 
 	% sudo apt-get install libpcsclite-dev libkrb5-dev libasound2-dev \
 		libpulse-dev libao-dev libsamplerate0-dev
+
+For the built-in X11 launcher to use modern desktop fonts out-of-the-box, also
+install Xft/fontconfig development files and common UI font packages before
+running `./configure`:
+
+	% sudo apt-get install libxft-dev fontconfig fonts-dejavu-core \
+		fonts-noto-core fonts-cantarell
+
+If `./configure` prints "Xft/fontconfig not found", rebuild after installing
+those packages; otherwise the launcher falls back to legacy X core fonts.
 
 ## CredSSP / NLA login
 
