@@ -82,6 +82,43 @@ extern char g_tls_version[];
 static gnutls_session_t g_tls_session;
 static gnutls_certificate_credentials_t g_tls_credentials;
 
+static void
+tcp_set_int_option(int level, int option, int value, const char *name)
+{
+	if (setsockopt(g_sock, level, option, (void *) &value, sizeof(value)) != 0)
+	{
+		logger(Core, Debug, "tcp_set_int_option(), failed to set %s: %s",
+		       name, TCP_STRERROR);
+	}
+}
+
+static void
+tcp_enable_keepalive(void)
+{
+	int value;
+
+	value = 1;
+	tcp_set_int_option(SOL_SOCKET, SO_KEEPALIVE, value, "SO_KEEPALIVE");
+
+#ifdef TCP_KEEPIDLE
+	tcp_set_int_option(IPPROTO_TCP, TCP_KEEPIDLE, 60, "TCP_KEEPIDLE");
+#endif
+#ifdef TCP_KEEPALIVE
+	tcp_set_int_option(IPPROTO_TCP, TCP_KEEPALIVE, 60, "TCP_KEEPALIVE");
+#endif
+#ifdef TCP_KEEPINTVL
+	tcp_set_int_option(IPPROTO_TCP, TCP_KEEPINTVL, 10, "TCP_KEEPINTVL");
+#endif
+#ifdef TCP_KEEPCNT
+	tcp_set_int_option(IPPROTO_TCP, TCP_KEEPCNT, 6, "TCP_KEEPCNT");
+#endif
+#ifdef TCP_USER_TIMEOUT
+	/* Milliseconds. Keep this conservative: enough to survive transient loss,
+	   short enough to avoid an apparently frozen UI on dead links. */
+	tcp_set_int_option(IPPROTO_TCP, TCP_USER_TIMEOUT, 60000, "TCP_USER_TIMEOUT");
+#endif
+}
+
 /* wait till socket is ready to write or timeout */
 static RD_BOOL
 tcp_can_send(int sck, int millis)
@@ -693,6 +730,7 @@ tcp_connect(char *server)
 	option_value = 1;
 	option_len = sizeof(option_value);
 	setsockopt(g_sock, IPPROTO_TCP, TCP_NODELAY, (void *) &option_value, option_len);
+	tcp_enable_keepalive();
 	/* receive buffer must be a least 16 K */
 	if (getsockopt(g_sock, SOL_SOCKET, SO_RCVBUF, (void *) &option_value, &option_len) == 0)
 	{

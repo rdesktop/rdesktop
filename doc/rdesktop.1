@@ -273,6 +273,9 @@ Retry a fresh connection after network errors for the same timeout window used
 by automatic reconnect. By default, rdesktop only enters the reconnect loop when
 the server supplied an auto-reconnect cookie; this option also retries when no
 cookie is available, which can create a new session depending on server policy.
+rdesktop enables TCP keepalive on connected sockets and, where supported by the
+platform, uses conservative TCP keepalive/user-timeout values so broken network
+paths are detected instead of leaving the client apparently frozen indefinitely.
 When the server advertises RDP heartbeat PDUs, missed heartbeats are also
 treated as network errors and can trigger the same retry logic.
 .TP
