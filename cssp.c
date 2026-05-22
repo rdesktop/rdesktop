@@ -655,17 +655,25 @@ cssp_encode_tscredentials(char *username, char *password, char *domain)
 }
 
 #define CSSP_CLIENT_VERSION 6
+#define CSSP_LEGACY_CLIENT_VERSION 2
 #define CSSP_BINDING_HASH_SIZE 32
 #define CSSP_NONCE_SIZE 32
 
+static uint32 g_cssp_client_version = CSSP_CLIENT_VERSION;
 static uint32 g_cssp_peer_version = 2;
 
 static uint32
 cssp_peer_version(void)
 {
-	if (g_cssp_peer_version > CSSP_CLIENT_VERSION)
-		return CSSP_CLIENT_VERSION;
+	if (g_cssp_peer_version > g_cssp_client_version)
+		return g_cssp_client_version;
 	return g_cssp_peer_version;
+}
+
+static void
+cssp_set_client_version(uint32 version)
+{
+	g_cssp_client_version = version;
 }
 
 static uint32
@@ -761,11 +769,11 @@ cssp_send_tsrequest(STREAM token, STREAM auth, STREAM pubkey, const uint8 *nonce
 	// version [0]
 	s_realloc(&tmp, sizeof(uint8));
 	s_reset(&tmp);
-	out_uint8(&tmp, CSSP_CLIENT_VERSION);
+	out_uint8(&tmp, g_cssp_client_version);
 	logger(Core, Debug, "cssp_send_tsrequest(), version=%u peer=%u token=%u auth=%u pubkey=%u nonce=%u",
-	       CSSP_CLIENT_VERSION, cssp_peer_version(), token ? (unsigned) s_length(token) : 0,
+	       g_cssp_client_version, cssp_peer_version(), token ? (unsigned) s_length(token) : 0,
 	       auth ? (unsigned) s_length(auth) : 0, pubkey ? (unsigned) s_length(pubkey) : 0,
-	       (nonce && CSSP_CLIENT_VERSION >= 5) ? CSSP_NONCE_SIZE : 0);
+	       (nonce && cssp_peer_version() >= 5) ? CSSP_NONCE_SIZE : 0);
 	s_mark_end(&tmp);
 	h2 = ber_wrap_hdr_data(BER_TAG_INTEGER, &tmp);
 	h1 = ber_wrap_hdr_data(BER_TAG_CTXT_SPECIFIC | BER_TAG_CONSTRUCTED | 0, h2);
@@ -821,7 +829,7 @@ cssp_send_tsrequest(STREAM token, STREAM auth, STREAM pubkey, const uint8 *nonce
 	}
 
 	// clientNonce [5]
-	if (nonce && CSSP_CLIENT_VERSION >= 5)
+	if (nonce && cssp_peer_version() >= 5)
 	{
 		s_reset(&tmp);
 		s_realloc(&tmp, CSSP_NONCE_SIZE);
@@ -1324,6 +1332,13 @@ cssp_connect(char *server, char *user, char *domain, char *password, STREAM s)
 {
 	UNUSED(s);
 	g_cssp_peer_version = 2;
+	cssp_set_client_version(g_use_password_as_pin ? CSSP_LEGACY_CLIENT_VERSION :
+	                        CSSP_CLIENT_VERSION);
+	if (g_use_password_as_pin)
+	{
+		logger(Core, Debug,
+		       "cssp_connect(), using legacy CredSSP version for smartcard credentials");
+	}
 
 	if (g_remote_guard)
 	{
