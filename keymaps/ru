@@ -22,34 +22,34 @@ KP_Decimal 0x53 numlock
 KP_Separator 0x53 numlock
 KP_Delete 0x53
 
-KP_0 0x52 numlock
+KP_0 0x52 localstate
 KP_Insert 0x52 localstate
 
-KP_1 0x4f numlock
+KP_1 0x4f localstate
 KP_End 0x4f localstate
 
-KP_2 0x50 numlock
+KP_2 0x50 localstate
 KP_Down 0x50 localstate
 
-KP_3 0x51 numlock
+KP_3 0x51 localstate
 KP_Next 0x51 localstate
 
-KP_4 0x4b numlock
+KP_4 0x4b localstate
 KP_Left 0x4b localstate
 
-KP_5 0x4c numlock
+KP_5 0x4c localstate
 KP_Begin 0x4c localstate
 
-KP_6 0x4d numlock
+KP_6 0x4d localstate
 KP_Right 0x4d localstate
 
-KP_7 0x47 numlock
+KP_7 0x47 localstate
 KP_Home 0x47 localstate
 
-KP_8 0x48 numlock
+KP_8 0x48 localstate
 KP_Up 0x48 localstate
 
-KP_9 0x49 numlock
+KP_9 0x49 localstate
 KP_Prior 0x49 localstate
 #
 # Esc and Function keys

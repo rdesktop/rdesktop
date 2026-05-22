@@ -5,6 +5,7 @@
    Copyright 2005-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
    Copyright 2012-2019 Henrik Andersson <hean01@cendio.se> for Cendio AB
    Copyright 2017-2018 Alexander Zakharov <uglym8@gmail.com>
+   Copyright 2026 Marco Fortina <marco_fortina@hotmail.it>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -79,6 +80,44 @@ extern RD_BOOL g_reconnect_loop;
 extern char g_tls_version[];
 
 static gnutls_session_t g_tls_session;
+static gnutls_certificate_credentials_t g_tls_credentials;
+
+static void
+tcp_set_int_option(int level, int option, int value, const char *name)
+{
+	if (setsockopt(g_sock, level, option, (void *) &value, sizeof(value)) != 0)
+	{
+		logger(Core, Debug, "tcp_set_int_option(), failed to set %s: %s",
+		       name, TCP_STRERROR);
+	}
+}
+
+static void
+tcp_enable_keepalive(void)
+{
+	int value;
+
+	value = 1;
+	tcp_set_int_option(SOL_SOCKET, SO_KEEPALIVE, value, "SO_KEEPALIVE");
+
+#ifdef TCP_KEEPIDLE
+	tcp_set_int_option(IPPROTO_TCP, TCP_KEEPIDLE, 60, "TCP_KEEPIDLE");
+#endif
+#ifdef TCP_KEEPALIVE
+	tcp_set_int_option(IPPROTO_TCP, TCP_KEEPALIVE, 60, "TCP_KEEPALIVE");
+#endif
+#ifdef TCP_KEEPINTVL
+	tcp_set_int_option(IPPROTO_TCP, TCP_KEEPINTVL, 10, "TCP_KEEPINTVL");
+#endif
+#ifdef TCP_KEEPCNT
+	tcp_set_int_option(IPPROTO_TCP, TCP_KEEPCNT, 6, "TCP_KEEPCNT");
+#endif
+#ifdef TCP_USER_TIMEOUT
+	/* Milliseconds. Keep this conservative: enough to survive transient loss,
+	   short enough to avoid an apparently frozen UI on dead links. */
+	tcp_set_int_option(IPPROTO_TCP, TCP_USER_TIMEOUT, 60000, "TCP_USER_TIMEOUT");
+#endif
+}
 
 /* wait till socket is ready to write or timeout */
 static RD_BOOL
@@ -348,8 +387,6 @@ tcp_tls_connect(void)
 	int err;
 	const char* priority;
 
-	gnutls_certificate_credentials_t xcred;
-
 	/* Initialize TLS session */
 	if (!g_ssl_initialized)
 	{
@@ -386,20 +423,20 @@ tcp_tls_connect(void)
 		gnutls_fatal("Could not set GnuTLS priority setting", err);
 	}
 
-	err = gnutls_certificate_allocate_credentials(&xcred);
+	err = gnutls_certificate_allocate_credentials(&g_tls_credentials);
 	if (err < 0) {
 		gnutls_fatal("Could not allocate TLS certificate structure", err);
 	}
-	err = gnutls_credentials_set(g_tls_session, GNUTLS_CRD_CERTIFICATE, xcred);
+	err = gnutls_credentials_set(g_tls_session, GNUTLS_CRD_CERTIFICATE, g_tls_credentials);
 	if (err < 0) {
 		gnutls_fatal("Could not set TLS certificate structure", err);
 	}
-	err = gnutls_certificate_set_x509_system_trust(xcred);
+	err = gnutls_certificate_set_x509_system_trust(g_tls_credentials);
 	if (err < 0) {
 		logger(Core, Error, "%s(), Could not load system trust database: %s",
 			   __func__, gnutls_strerror(err));
 	}
-	gnutls_certificate_set_verify_function(xcred, cert_verify_callback);
+	gnutls_certificate_set_verify_function(g_tls_credentials, cert_verify_callback);
 	gnutls_transport_set_int(g_tls_session, g_sock);
 	gnutls_handshake_set_timeout(g_tls_session, GNUTLS_DEFAULT_HANDSHAKE_TIMEOUT);
 
@@ -413,7 +450,9 @@ tcp_tls_connect(void)
 
 		if (err == GNUTLS_E_CERTIFICATE_ERROR)
 		{
-			gnutls_fatal("Certificate error during TLS handshake", err);
+			logger(Core, Error, "Certificate error during TLS handshake: %s",
+			       gnutls_strerror(err));
+			goto fail;
 		}
 
 		/* Handshake failed with unknown error, lets log */
@@ -435,6 +474,11 @@ fail:
 
 	if (g_ssl_initialized) {
 		gnutls_deinit(g_tls_session);
+		if (g_tls_credentials)
+		{
+			gnutls_certificate_free_credentials(g_tls_credentials);
+			g_tls_credentials = NULL;
+		}
 		// Not needed since 3.3.0
 		gnutls_global_deinit();
 
@@ -686,6 +730,7 @@ tcp_connect(char *server)
 	option_value = 1;
 	option_len = sizeof(option_value);
 	setsockopt(g_sock, IPPROTO_TCP, TCP_NODELAY, (void *) &option_value, option_len);
+	tcp_enable_keepalive();
 	/* receive buffer must be a least 16 K */
 	if (getsockopt(g_sock, SOL_SOCKET, SO_RCVBUF, (void *) &option_value, &option_len) == 0)
 	{
@@ -715,6 +760,11 @@ tcp_disconnect(void)
 	if (g_ssl_initialized) {
 		(void)gnutls_bye(g_tls_session, GNUTLS_SHUT_WR);
 		gnutls_deinit(g_tls_session);
+		if (g_tls_credentials)
+		{
+			gnutls_certificate_free_credentials(g_tls_credentials);
+			g_tls_credentials = NULL;
+		}
 		// Not needed since 3.3.0
 		gnutls_global_deinit();
 

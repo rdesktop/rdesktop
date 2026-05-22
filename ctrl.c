@@ -255,6 +255,7 @@ ctrl_init(const char *user, const char *domain, const char *host)
 	struct sockaddr_un saun;
 	char hash[41], path[PATH_MAX];
 	char *home;
+	size_t ctrlsock_len;
 
 	/* check if ctrl already initialized */
 	if (ctrlsock != 0 || _ctrl_is_slave)
@@ -305,7 +306,13 @@ ctrl_init(const char *user, const char *domain, const char *host)
 	/* bind and start listening on server socket */
 	memset(&saun, 0, sizeof(struct sockaddr_un));
 	saun.sun_family = AF_UNIX;
-	strncpy(saun.sun_path, ctrlsock_name, sizeof(saun.sun_path));
+	ctrlsock_len = strlen(ctrlsock_name);
+	if (ctrlsock_len >= sizeof(saun.sun_path))
+	{
+		logger(Core, Error, "ctrl_init(), control socket path is too long");
+		exit(1);
+	}
+	memcpy(saun.sun_path, ctrlsock_name, ctrlsock_len + 1);
 	if (bind(ctrlsock, (struct sockaddr *) &saun, sizeof(struct sockaddr_un)) < 0)
 	{
 		logger(Core, Error, "ctrl_init(), bind() failed: %s", strerror(errno));

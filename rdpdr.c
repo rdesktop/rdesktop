@@ -1050,8 +1050,19 @@ rdpdr_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv, RD_BOOL 
 					break;
 
 				case IRP_MJ_DEVICE_CONTROL:
-					if (select_timeout > 5)
-						select_timeout = 5;	/* serial event queue */
+					/*
+					 * Serial wait-on-mask requests are not selectable.  Wake the
+					 * main loop periodically so rdpdr_check_fds() can poll the
+					 * serial event queue even when there is no network, X11, read,
+					 * or write activity.  Do not set *timeout here: this is only a
+					 * polling wake-up, not an I/O request timeout.
+					 */
+					if (select_timeout == 0 || select_timeout > 5)
+					{
+						select_timeout = 5;
+						tv->tv_sec = 0;
+						tv->tv_usec = select_timeout * 1000;
+					}
 					break;
 
 			}

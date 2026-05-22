@@ -1,4 +1,4 @@
-AC_INIT(rdesktop, 1.9.0)
+AC_INIT(rdesktop, 1.9.1)
 
 AC_CONFIG_SRCDIR([rdesktop.c])
 
@@ -10,9 +10,26 @@ if test "$GCC" = yes; then
 fi
 
 AC_PROG_INSTALL
-AC_LANG_C
-AC_HEADER_STDC
-AC_C_BIGENDIAN([AC_DEFINE(B_ENDIAN)], [AC_DEFINE(L_ENDIAN)])
+AC_LANG([C])
+
+AC_CACHE_CHECK([whether byte ordering is bigendian], [rd_cv_c_bigendian], [
+	AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#if !defined(__BYTE_ORDER__) || !defined(__ORDER_BIG_ENDIAN__) || (__BYTE_ORDER__ != __ORDER_BIG_ENDIAN__)
+# error not big endian
+#endif]], [[]])],
+		[rd_cv_c_bigendian=yes],
+		[AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#if !defined(__BYTE_ORDER__) || !defined(__ORDER_LITTLE_ENDIAN__) || (__BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__)
+# error not little endian
+#endif]], [[]])],
+			[rd_cv_c_bigendian=no],
+			[AC_RUN_IFELSE([AC_LANG_PROGRAM([], [[int i = 1; return (*((char *)&i) == 1) ? 0 : 1;]])],
+				[rd_cv_c_bigendian=no],
+				[rd_cv_c_bigendian=yes],
+				[AC_MSG_WARN([assuming little endian when cross compiling])
+				 rd_cv_c_bigendian=no])])])
+])
+AS_IF([test "x$rd_cv_c_bigendian" = "xyes"],
+	[AC_DEFINE([B_ENDIAN], [1], [Define to 1 on big-endian systems.])],
+	[AC_DEFINE([L_ENDIAN], [1], [Define to 1 on little-endian systems.])])
 AC_PATH_XTRA
 if test "$no_x" = "yes"; then
     echo
@@ -28,6 +45,30 @@ if test "$no_x" = "yes"; then
 fi
 
 AC_PATH_TOOL(PKG_CONFIG, pkg-config)
+
+dnl Prefer pkg.m4 when it is available, but keep configure.ac usable on
+dnl systems where only the pkg-config executable is installed.
+dnl Release tarballs can otherwise warn that pkg-config is unavailable even
+dnl when /usr/bin/pkg-config exists, because PKG_CHECK_MODULES was missing
+dnl when configure was generated.
+m4_ifdef([PKG_CHECK_MODULES], [
+	AC_DEFUN([RD_PKG_CHECK_MODULES], [PKG_CHECK_MODULES([$1], [$2], [$3], [$4])])
+], [
+	AC_DEFUN([RD_PKG_CHECK_MODULES], [
+		AC_MSG_CHECKING([for $2])
+		AS_IF([test -n "$PKG_CONFIG" && "$PKG_CONFIG" --exists "$2"], [
+			AC_MSG_RESULT([yes])
+			$1[]_CFLAGS=`$PKG_CONFIG --cflags "$2"`
+			$1[]_LIBS=`$PKG_CONFIG --libs "$2"`
+			AC_SUBST($1[]_CFLAGS)
+			AC_SUBST($1[]_LIBS)
+			$3
+		], [
+			AC_MSG_RESULT([no])
+			$4
+		])
+	])
+])
 
 # no .pc for GMP
 AC_SEARCH_LIBS([__gmpz_init], [gmp])
@@ -45,32 +86,29 @@ AC_CHECK_HEADER(sysexits.h, AC_DEFINE(HAVE_SYSEXITS_H))
 
 AC_CHECK_TOOL(STRIP, strip, :)
 
-dnl Don't depend on pkg-config
-m4_ifdef([PKG_CHECK_MODULES], [], [
-		m4_errprint([warning: pkg-config checks are not available])
-		m4_defun([PKG_CHECK_MODULES], [
-			AC_MSG_WARN([pkg-config not available, cannot check for $2])
-			$4
-		])
-])
-
 dnl Add option to build with using address sanitizer
 AC_ARG_ENABLE([address-sanitizer], AS_HELP_STRING([--enable-address-sanitizer], \
               [enable AddressSanitizer support for detecting a wide variety of \
                memory allocation and deallocation errors]), \
               [AC_DEFINE(HAVE_ADDRESS_SANITIZER, 1, [enable AddressSanitizer])
               CFLAGS="$CFLAGS -fsanitize=address -fno-omit-frame-pointer"
-              AC_TRY_COMPILE([],[const int i=0;],[AC_MSG_NOTICE([Address Sanitizer Enabled])],
-                                                 [AC_MSG_ERROR([Address Sanitizer not available])])
+              AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [[const int i=0;]])],
+	                        [AC_MSG_NOTICE([Address Sanitizer Enabled])],
+	                        [AC_MSG_ERROR([Address Sanitizer not available])])
               ])
 
 
 dnl CredSSP feature
 AC_ARG_ENABLE([credssp], AS_HELP_STRING([--disable-credssp], [disable support for CredSSP]))
 AS_IF([test "x$enable_credssp" != "xno"], [
+	CREDSSPOBJ="cssp.o ntlmssp.o spnego.o"
+	AC_DEFINE(WITH_CREDSSP)
+
+	dnl GSSAPI/Kerberos is optional now.  CredSSP can use the internal NTLMv2
+	dnl client when no Kerberos mechanism is available.
 	case "$OSTYPE" in
 	     darwin*)
-		AC_CHECK_HEADER(Kerberos/gssapi_krb5.h, [WITH_CREDSSP=1], [WITH_CREDSSP=0])
+		AC_CHECK_HEADER(Kerberos/gssapi_krb5.h, [WITH_GSSAPI_CREDSSP=1], [WITH_GSSAPI_CREDSSP=0])
 		GSSAPI_CFLAGS=""
 		GSSAPI_LIBS="-framework Kerberos"
 		;;
@@ -80,40 +118,30 @@ AS_IF([test "x$enable_credssp" != "xno"], [
 			case "$host" in
 				*-*-freebsd*)
 				if test -n "$PKG_CONFIG"; then
-					PKG_CHECK_MODULES(GSSAPI, gss, [WITH_CREDSSP=1], [WITH_CREDSSP=0])
+					RD_PKG_CHECK_MODULES(GSSAPI, gss, [WITH_GSSAPI_CREDSSP=1], [WITH_GSSAPI_CREDSSP=0])
 				fi
-				;;
-			*)
 				;;
 			esac
 		else
 			if test -n "$PKG_CONFIG"; then
-				PKG_CHECK_MODULES(GSSAPI, krb5-gssapi, [WITH_CREDSSP=1], [WITH_CREDSSP=0])
+				RD_PKG_CHECK_MODULES(GSSAPI, krb5-gssapi, [WITH_GSSAPI_CREDSSP=1], [WITH_GSSAPI_CREDSSP=0])
 			fi
 		fi
 		;;
 	esac
 
-
-	  if test x"$WITH_CREDSSP" = "x1"; then
-	      CREDSSPOBJ="cssp.o"
-	      CFLAGS="$CFLAGS $GSSAPI_CFLAGS"
-	      LIBS="$LIBS $GSSAPI_LIBS"
-
-	      AC_DEFINE(WITH_CREDSSP)
-	  else
-		echo
-		echo "CredSSP support requires GSSAPI, install the dependency"
-		echo "or disable the feature using --disable-credssp."
-		echo
-		exit 1
-	  fi
+	if test x"$WITH_GSSAPI_CREDSSP" = "x1"; then
+		CFLAGS="$CFLAGS $GSSAPI_CFLAGS"
+		LIBS="$LIBS $GSSAPI_LIBS"
+		AC_DEFINE(WITH_GSSAPI_CREDSSP)
+	fi
 ])
+AC_SUBST(GSSAPI_LIBS)
 AC_SUBST(CREDSSPOBJ)
 
 # xrandr
 if test -n "$PKG_CONFIG"; then
-    PKG_CHECK_MODULES(XRANDR, xrandr, [HAVE_XRANDR=1], [HAVE_XRANDR=0])
+    RD_PKG_CHECK_MODULES(XRANDR, xrandr, [HAVE_XRANDR=1], [HAVE_XRANDR=0])
 fi
 if test x"$HAVE_XRANDR" = "x1"; then
     CFLAGS="$CFLAGS $XRANDR_CFLAGS"
@@ -123,7 +151,7 @@ fi
 
 # Xcursor
 if test -n "$PKG_CONFIG"; then
-    PKG_CHECK_MODULES(XCURSOR, xcursor, [HAVE_XCURSOR=1], [HAVE_XCURSOR=0])
+    RD_PKG_CHECK_MODULES(XCURSOR, xcursor, [HAVE_XCURSOR=1], [HAVE_XCURSOR=0])
 fi
 if test x"$HAVE_XCURSOR" = "x1"; then
     CFLAGS="$CFLAGS $XCURSOR_CFLAGS"
@@ -136,9 +164,43 @@ else
     exit 1
 fi
 
+# Xfixes is optional and used for reliable local clipboard owner change tracking.
+if test -n "$PKG_CONFIG"; then
+    RD_PKG_CHECK_MODULES(XFIXES, xfixes, [HAVE_XFIXES=1], [HAVE_XFIXES=0])
+fi
+if test x"$HAVE_XFIXES" = "x1"; then
+    CFLAGS="$CFLAGS $XFIXES_CFLAGS"
+    LIBS="$LIBS $XFIXES_LIBS"
+    AC_DEFINE(HAVE_XFIXES)
+fi
+
+# Xft is optional and used by the X11 launcher for modern desktop fonts.
+if test -n "$PKG_CONFIG"; then
+    RD_PKG_CHECK_MODULES(XFT, xft, [HAVE_XFT=1], [HAVE_XFT=0])
+fi
+if test x"$HAVE_XFT" = "x1"; then
+    CFLAGS="$CFLAGS $XFT_CFLAGS"
+    LIBS="$LIBS $XFT_LIBS"
+    AC_DEFINE(HAVE_XFT)
+else
+    echo
+    echo "Xft/fontconfig not found: the X11 launcher will use legacy X core fonts."
+    echo "Install the Xft development package and rerun configure for modern UI fonts."
+    echo
+fi
+
+if test -n "$PKG_CONFIG"; then
+    RD_PKG_CHECK_MODULES(LIBPNG, libpng, [HAVE_LIBPNG=1], [HAVE_LIBPNG=0])
+fi
+if test x"$HAVE_LIBPNG" = "x1"; then
+    CFLAGS="$CFLAGS $LIBPNG_CFLAGS"
+    LIBS="$LIBS $LIBPNG_LIBS"
+    AC_DEFINE(HAVE_LIBPNG)
+fi
+
 # libtasn1
 if test -n "$PKG_CONFIG"; then
-    PKG_CHECK_MODULES(LIBTASN1, libtasn1, [HAVE_LIBTASN1=1], [HAVE_LIBTASN1=0])
+    RD_PKG_CHECK_MODULES(LIBTASN1, libtasn1, [HAVE_LIBTASN1=1], [HAVE_LIBTASN1=0])
 fi
 if test x"$HAVE_LIBTASN1" = "x1"; then
     CFLAGS="$CFLAGS $LIBTASN1_CFLAGS"
@@ -152,7 +214,7 @@ fi
 
 # nettle
 if test -n "$PKG_CONFIG"; then
-    PKG_CHECK_MODULES(NETTLE, nettle, [HAVE_NETTLE=1], [HAVE_NETTLE=0])
+    RD_PKG_CHECK_MODULES(NETTLE, nettle, [HAVE_NETTLE=1], [HAVE_NETTLE=0])
 fi
 if test x"$HAVE_NETTLE" = "x1"; then
     CFLAGS="$CFLAGS $NETTLE_CFLAGS"
@@ -166,7 +228,7 @@ fi
 
 # hogweed
 if test -n "$PKG_CONFIG"; then
-    PKG_CHECK_MODULES(HOGWEED, hogweed, [HAVE_HOGWEED=1], [HAVE_HOGWEED=0])
+    RD_PKG_CHECK_MODULES(HOGWEED, hogweed, [HAVE_HOGWEED=1], [HAVE_HOGWEED=0])
 fi
 if test x"$HAVE_HOGWEED" = "x1"; then
     CFLAGS="$CFLAGS $HOGWEED_CFLAGS"
@@ -181,7 +243,7 @@ fi
 # GnuTLS
 
 if test -n "$PKG_CONFIG"; then
-    PKG_CHECK_MODULES(GNUTLS, gnutls >= 3.2.0, [HAVE_GNUTLS=1], [HAVE_GNUTLS=0])
+    RD_PKG_CHECK_MODULES(GNUTLS, gnutls >= 3.2.0, [HAVE_GNUTLS=1], [HAVE_GNUTLS=0])
 fi
 if test x"$HAVE_GNUTLS" = "x1"; then
     CFLAGS="$CFLAGS $GNUTLS_CFLAGS"
@@ -204,7 +266,7 @@ AS_IF([test "x$enable_smartcard" != "xno"], [
 		;;
 	     *)
 		if test -n "$PKG_CONFIG"; then
-		   PKG_CHECK_MODULES(PCSCLITE, libpcsclite, [WITH_SCARD=1], [WITH_SCARD=0])
+		   RD_PKG_CHECK_MODULES(PCSCLITE, libpcsclite, [WITH_SCARD=1], [WITH_SCARD=0])
 		fi
 		;;
 	esac
@@ -223,11 +285,11 @@ AS_IF([test "x$enable_smartcard" != "xno"], [
 	fi
 
 	AC_MSG_CHECKING([for PCSC-lite >= 1.6.0 (PnP/Notifications support)])
-	PKG_CHECK_MODULES(PNP_NOTIFICATIONS, libpcsclite >= 1.6.0, [WITH_PNP_NOTIFICATIONS=1], [WITH_PNP_NOTIFICATIONS=0])
+	RD_PKG_CHECK_MODULES(PNP_NOTIFICATIONS, libpcsclite >= 1.6.0, [WITH_PNP_NOTIFICATIONS=1], [WITH_PNP_NOTIFICATIONS=0])
 	AC_DEFINE(WITH_PNP_NOTIFICATIONS)
 
 	AC_MSG_CHECKING([for old version of PCSC])
-	AC_TRY_LINK([
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 		#include <stdlib.h>
 		#ifdef __APPLE__
 		#include <PCSC/wintypes.h>
@@ -235,8 +297,8 @@ AS_IF([test "x$enable_smartcard" != "xno"], [
 		#else
 		#include <winscard.h>
 		#endif
-		],
-		[SCardControl(NULL, NULL, 0, NULL, NULL);],
+		]],
+		[[SCardControl(NULL, NULL, 0, NULL, NULL);]])],
 		[AC_MSG_RESULT(yes) AC_DEFINE(WITH_PCSC120, 1, [old version of PCSC])],
 		[AC_MSG_RESULT(no)])
 ])
@@ -246,7 +308,7 @@ AC_SUBST(SCARDOBJ)
 # Alignment
 #
 AC_MSG_CHECKING([if architecture needs alignment])
-AC_TRY_RUN([
+AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #include <stdlib.h>
 #include <signal.h>
 int main(int argc, char **argv)
@@ -259,7 +321,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 	return 0;
-}],
+}]])],
  [AC_MSG_RESULT(no)],
  [AC_MSG_RESULT(yes)
   AC_DEFINE(NEED_ALIGN)],
@@ -299,10 +361,10 @@ AC_ARG_ENABLE(static-libsamplerate,
     [static_libsamplerate=no])
 
 if test -n "$PKG_CONFIG"; then
-    PKG_CHECK_MODULES(LIBAO, ao, [HAVE_LIBAO=1], [HAVE_LIBAO=0])
-    PKG_CHECK_MODULES(PULSE, libpulse, [HAVE_PULSE=1], [HAVE_PULSE=0])
-    PKG_CHECK_MODULES(ALSA, alsa, [HAVE_ALSA=1], [HAVE_ALSA=0])
-    PKG_CHECK_MODULES(LIBSAMPLERATE, samplerate, [HAVE_LIBSAMPLERATE=1], [HAVE_LIBSAMPLERATE=0])
+    RD_PKG_CHECK_MODULES(LIBAO, ao, [HAVE_LIBAO=1], [HAVE_LIBAO=0])
+    RD_PKG_CHECK_MODULES(PULSE, libpulse, [HAVE_PULSE=1], [HAVE_PULSE=0])
+    RD_PKG_CHECK_MODULES(ALSA, alsa, [HAVE_ALSA=1], [HAVE_ALSA=0])
+    RD_PKG_CHECK_MODULES(LIBSAMPLERATE, samplerate, [HAVE_LIBSAMPLERATE=1], [HAVE_LIBSAMPLERATE=0])
     if test x"$HAVE_LIBSAMPLERATE" = "x1"; then
         AC_DEFINE(HAVE_LIBSAMPLERATE)
         if test x"$static_libsamplerate" = "xyes"; then
@@ -314,7 +376,7 @@ if test -n "$PKG_CONFIG"; then
 fi
 
 if test "$sound" != "no"; then
-    SOUNDOBJ="$SOUNDOBJ rdpsnd.o rdpsnd_dsp.o"
+    SOUNDOBJ="$SOUNDOBJ rdpsnd.o rdpsnd_dsp.o rdpsnd_input.o"
     CFLAGS="$CFLAGS $LIBSAMPLERATE_CFLAGS"
     LIBS="$LIBS $LIBSAMPLERATE_LIBS"
     AC_DEFINE(WITH_RDPSND)
@@ -484,12 +546,9 @@ AC_DEFUN([UTILS_FUNC_DIRFD],
 	for ac_expr in d_fd dd_fd; do
 
 	  CFLAGS="$CFLAGS -DDIR_FD_MEMBER_NAME=$ac_expr"
-	  AC_TRY_COMPILE(
-	    [$dirfd_headers
-	    ],
-	    [DIR *dir_p = opendir("."); (void) dir_p->DIR_FD_MEMBER_NAME;],
-	    dir_fd_found=yes
-	  )
+	  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([$dirfd_headers
+	    ], [[DIR *dir_p = opendir("."); (void) dir_p->DIR_FD_MEMBER_NAME;]])],
+	    [dir_fd_found=yes])
 	  CFLAGS=$dirfd_save_CFLAGS
 	  test "$dir_fd_found" = yes && break
 	done
@@ -541,22 +600,22 @@ AC_DEFUN([UTILS_FUNC_ICONV],
   AC_CACHE_CHECK(for iconv, am_cv_func_iconv, [
     am_cv_func_iconv="no, consider installing GNU libiconv"
     am_cv_lib_iconv=no
-    AC_TRY_LINK([#include <stdlib.h>
-#include <iconv.h>],
-      [iconv_t cd = iconv_open("","");
+    AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <stdlib.h>
+#include <iconv.h>]],
+      [[iconv_t cd = iconv_open("","");
        iconv(cd,NULL,NULL,NULL,NULL);
-       iconv_close(cd);],
-      am_cv_func_iconv=yes)
+       iconv_close(cd);]])],
+      [am_cv_func_iconv=yes])
     if test "$am_cv_func_iconv" != yes; then
       am_save_LIBS="$LIBS"
       LIBS="$LIBS -liconv"
-      AC_TRY_LINK([#include <stdlib.h>
-#include <iconv.h>],
-        [iconv_t cd = iconv_open("","");
+      AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <stdlib.h>
+#include <iconv.h>]],
+        [[iconv_t cd = iconv_open("","");
          iconv(cd,NULL,NULL,NULL,NULL);
-         iconv_close(cd);],
-        am_cv_lib_iconv=yes
-        am_cv_func_iconv=yes)
+         iconv_close(cd);]])],
+        [am_cv_lib_iconv=yes
+        am_cv_func_iconv=yes])
       LIBS="$am_save_LIBS"
     fi
   ])
@@ -564,7 +623,7 @@ AC_DEFUN([UTILS_FUNC_ICONV],
     AC_DEFINE(HAVE_ICONV, 1, [Define if you have the iconv() function.])
     AC_MSG_CHECKING([for iconv declaration])
     AC_CACHE_VAL(am_cv_proto_iconv, [
-      AC_TRY_COMPILE([
+      AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 #include <stdlib.h>
 #include <iconv.h>
 extern
@@ -576,7 +635,7 @@ size_t iconv (iconv_t cd, char * *inbuf, size_t *inbytesleft, char * *outbuf, si
 #else
 size_t iconv();
 #endif
-], [], am_cv_proto_iconv_arg1="", am_cv_proto_iconv_arg1="const")
+]], [[]])], [am_cv_proto_iconv_arg1=""], [am_cv_proto_iconv_arg1="const"])
       am_cv_proto_iconv="extern size_t iconv (iconv_t cd, $am_cv_proto_iconv_arg1 char * *inbuf, size_t *inbytesleft, char * *outbuf, size_t *outbytesleft);"])
     am_cv_proto_iconv=`echo "[$]am_cv_proto_iconv" | tr -s ' ' | sed -e 's/( /(/'`
     AC_MSG_RESULT([$]{ac_t:-
@@ -613,15 +672,15 @@ AC_DEFUN([TYPE_SOCKLEN_T],
          socklen_t_cv_equiv=
          for arg2 in "struct sockaddr" void; do
             for t in int size_t unsigned long "unsigned long"; do
-               AC_TRY_COMPILE([
+               AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
                   #include <sys/types.h>
                   #include <sys/socket.h>
 
                   int getpeername (int, $arg2 *, $t *);
-               ],[
+               ]], [[
                   $t len;
                   getpeername(0,0,&len);
-               ],[
+               ]])], [
                   socklen_t_cv_equiv="$t"
                   break
                ])
@@ -660,24 +719,24 @@ AC_CHECK_HEADERS(sys/mount.h,,,[$mount_includes])
 
 #################################################
 # these tests are taken from the GNU fileutils package
-AC_CHECKING(how to get filesystem space usage)
+AC_MSG_NOTICE([checking how to get filesystem space usage])
 space=no
 
 # Test for statvfs64.
 if test $space = no; then
   # SVR4
   AC_CACHE_CHECK([statvfs64 function (SVR4)], fu_cv_sys_stat_statvfs64,
-  [AC_TRY_RUN([
+  [AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #if defined(HAVE_UNISTD_H)
 #include <unistd.h>
 #endif
 #include <sys/types.h>
 #include <sys/statvfs.h>
-  main ()
+  int main ()
   {
     struct statvfs64 fsd;
     exit (statvfs64 (".", &fsd));
-  }],
+  }]])],
   fu_cv_sys_stat_statvfs64=yes,
   fu_cv_sys_stat_statvfs64=no,
   fu_cv_sys_stat_statvfs64=cross)])
@@ -696,11 +755,11 @@ fi
 if test $space = no; then
   # SVR4
   AC_CACHE_CHECK([statvfs function (SVR4)], fu_cv_sys_stat_statvfs,
-                 [AC_TRY_LINK([#include <sys/types.h>
-#include <sys/statvfs.h>],
-                              [struct statvfs fsd; statvfs (0, &fsd);],
-                              fu_cv_sys_stat_statvfs=yes,
-                              fu_cv_sys_stat_statvfs=no)])
+                 [AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
+#include <sys/statvfs.h>]],
+                              [[struct statvfs fsd; statvfs (0, &fsd);]])],
+                              [fu_cv_sys_stat_statvfs=yes],
+                              [fu_cv_sys_stat_statvfs=no])])
   if test $fu_cv_sys_stat_statvfs = yes; then
     space=yes
     AC_DEFINE(STAT_STATVFS,1,[Whether statvfs() is available])
@@ -711,16 +770,16 @@ if test $space = no; then
   # DEC Alpha running OSF/1
   AC_MSG_CHECKING([for 3-argument statfs function (DEC OSF/1)])
   AC_CACHE_VAL(fu_cv_sys_stat_statfs3_osf1,
-  [AC_TRY_RUN([
+  [AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/mount.h>
-  main ()
+  int main ()
   {
     struct statfs fsd;
     fsd.f_fsize = 0;
     exit (statfs (".", &fsd, sizeof (struct statfs)));
-  }],
+  }]])],
   fu_cv_sys_stat_statfs3_osf1=yes,
   fu_cv_sys_stat_statfs3_osf1=no,
   fu_cv_sys_stat_statfs3_osf1=no)])
@@ -738,7 +797,7 @@ if test $space = no; then
   AC_MSG_CHECKING([for two-argument statfs with statfs.bsize dnl
 member (AIX, 4.3BSD)])
   AC_CACHE_VAL(fu_cv_sys_stat_statfs2_bsize,
-  [AC_TRY_RUN([
+  [AC_RUN_IFELSE([AC_LANG_SOURCE([[
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
 #endif
@@ -748,12 +807,12 @@ member (AIX, 4.3BSD)])
 #ifdef HAVE_SYS_VFS_H
 #include <sys/vfs.h>
 #endif
-  main ()
+  int main ()
   {
   struct statfs fsd;
   fsd.f_bsize = 0;
   exit (statfs (".", &fsd));
-  }],
+  }]])],
   fu_cv_sys_stat_statfs2_bsize=yes,
   fu_cv_sys_stat_statfs2_bsize=no,
   fu_cv_sys_stat_statfs2_bsize=no)])
@@ -768,13 +827,13 @@ if test $space = no; then
 # SVR3
   AC_MSG_CHECKING([for four-argument statfs (AIX-3.2.5, SVR3)])
   AC_CACHE_VAL(fu_cv_sys_stat_statfs4,
-  [AC_TRY_RUN([#include <sys/types.h>
+  [AC_RUN_IFELSE([AC_LANG_SOURCE([[#include <sys/types.h>
 #include <sys/statfs.h>
-  main ()
+  int main ()
   {
   struct statfs fsd;
   exit (statfs (".", &fsd, sizeof fsd, 0));
-  }],
+  }]])],
     fu_cv_sys_stat_statfs4=yes,
     fu_cv_sys_stat_statfs4=no,
     fu_cv_sys_stat_statfs4=no)])
@@ -790,19 +849,19 @@ if test $space = no; then
   AC_MSG_CHECKING([for two-argument statfs with statfs.fsize dnl
 member (4.4BSD and NetBSD)])
   AC_CACHE_VAL(fu_cv_sys_stat_statfs2_fsize,
-  [AC_TRY_RUN([#include <sys/types.h>
+  [AC_RUN_IFELSE([AC_LANG_SOURCE([[#include <sys/types.h>
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
 #endif
 #ifdef HAVE_SYS_MOUNT_H
 #include <sys/mount.h>
 #endif
-  main ()
+  int main ()
   {
   struct statfs fsd;
   fsd.f_fsize = 0;
   exit (statfs (".", &fsd));
-  }],
+  }]])],
   fu_cv_sys_stat_statfs2_fsize=yes,
   fu_cv_sys_stat_statfs2_fsize=no,
   fu_cv_sys_stat_statfs2_fsize=no)])
@@ -817,7 +876,7 @@ if test $space = no; then
   # Ultrix
   AC_MSG_CHECKING([for two-argument statfs with struct fs_data (Ultrix)])
   AC_CACHE_VAL(fu_cv_sys_stat_fs_data,
-  [AC_TRY_RUN([#include <sys/types.h>
+  [AC_RUN_IFELSE([AC_LANG_SOURCE([[#include <sys/types.h>
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
 #endif
@@ -833,7 +892,7 @@ if test $space = no; then
   /* Ultrix's statfs returns 1 for success,
      0 for not mounted, -1 for failure.  */
   exit (statfs (".", &fsd) != 1);
-  }],
+  }]])],
   fu_cv_sys_stat_fs_data=yes,
   fu_cv_sys_stat_fs_data=no,
   fu_cv_sys_stat_fs_data=no)])
@@ -907,7 +966,8 @@ case "$host" in
     ;;
 esac
 
-AC_OUTPUT(Makefile)
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT
 
 dnl Local Variables:
 dnl comment-start: "dnl "

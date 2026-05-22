@@ -4,6 +4,7 @@
    Copyright (C) Matthew Chapman 1999-2008
    Copyright 2016 Alexander Zakharov <uglym8@gmail.com>
    Copyright 2017-2018 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2026 Marco Fortina <marco_fortina@hotmail.it>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -79,11 +80,27 @@ enum RDP_NEG_TYPE_CODE
 	RDP_NEG_FAILURE = 3
 };
 
+enum RDP_NEG_REQ_FLAGS
+{
+	RESTRICTED_ADMIN_MODE_REQUIRED = 0x01,
+	REDIRECTED_AUTHENTICATION_MODE_REQUIRED = 0x02,
+	CORRELATION_INFO_PRESENT = 0x08
+};
+
+enum RDP_NEG_RSP_FLAGS
+{
+	EXTENDED_CLIENT_DATA_SUPPORTED = 0x01,
+	DYNVC_GFX_PROTOCOL_SUPPORTED = 0x02,
+	RESTRICTED_ADMIN_MODE_SUPPORTED = 0x08,
+	REDIRECTED_AUTHENTICATION_MODE_SUPPORTED = 0x10
+};
+
 enum RDP_NEG_REQ_CODE
 {
 	PROTOCOL_RDP = 0,
 	PROTOCOL_SSL = 1,
-	PROTOCOL_HYBRID = 2
+	PROTOCOL_HYBRID = 2,
+	PROTOCOL_HYBRID_EX = 8
 };
 
 enum RDP_NEG_FAILURE_CODE
@@ -169,6 +186,7 @@ enum MCS_DPU_REASON
 #define CS_SECURITY		0xc002
 #define CS_NET			0xc003
 #define CS_CLUSTER		0xc004
+#define CS_MONITOR		0xc005
 
 #define SEC_TAG_PUBKEY		0x0006
 #define SEC_TAG_KEYSIG		0x0008
@@ -307,8 +325,8 @@ enum RDP_INPUT_DEVICE
 #define MOUSE_FLAG_BUTTON1      0x1000
 #define MOUSE_FLAG_BUTTON2      0x2000
 #define MOUSE_FLAG_BUTTON3      0x4000
-#define MOUSE_FLAG_BUTTON4      0x0280
-#define MOUSE_FLAG_BUTTON5      0x0380
+#define MOUSE_FLAG_BUTTON4      0x0278
+#define MOUSE_FLAG_BUTTON5      0x0388
 #define MOUSEX_FLAG_BUTTON1     0x0001
 #define MOUSEX_FLAG_BUTTON2     0x0002
 #define MOUSE_FLAG_DOWN         0x8000
@@ -401,6 +419,12 @@ enum RDP_INPUT_DEVICE
 
 #define RDP_CAPSET_VC	20
 #define RDP_CAPLEN_VC	0x08
+#define RDP_CAPSET_DRAWNINEGRIDCACHE 21
+#define RDP_CAPLEN_DRAWNINEGRIDCACHE 12
+
+#define DRAW_NINEGRID_SUPPORTED_REV2 0x00000002
+#define DRAW_NINEGRID_CACHE_SIZE 2560
+#define DRAW_NINEGRID_CACHE_ENTRIES 256
 
 #define RDP_SOURCE		"MSTSC"
 

@@ -54,6 +54,22 @@ xfree(void *mem)
 
 
 /* Test function */
+Ensure(MCS, should_produce_valid_packet_for_McsSendEDrq)
+{
+  uint8_t content[] = {0x04, 0x01, 0x01, 0x01, 0x01};
+
+  struct stream *s;
+  s = s_alloc(sizeof(content));
+
+  expect(logger);
+  expect(iso_init, will_return(s));
+  expect(iso_send, when(stream->data, is_equal_to_contents_of(content, sizeof(content))));
+
+  mcs_send_edrq();
+  s_free(s);
+}
+
+/* Test function */
 Ensure(MCS, should_produce_valid_packet_for_McsSendCJrq)
 {
   uint16 chan_id;

@@ -177,3 +177,27 @@ Ensure(Utils, ApplySessionSizeLimitationRoundsWidthToClosestSmallerEvenNumber)
   assert_that(width, is_equal_to(200));
   assert_that(height, is_equal_to(201));
 }
+
+Ensure(Utils, DataToHexWritesCompleteOutputWhenBufferFits)
+{
+  uint8 data[] = { 0x00, 0x0f, 0xa5 };
+  char out[7];
+  size_t needed;
+
+  needed = _utils_data_to_hex(data, sizeof(data), out, sizeof(out));
+
+  assert_that(needed, is_equal_to(6));
+  assert_that(out, is_equal_to_string("000fa5"));
+}
+
+Ensure(Utils, DataToHexTruncatesWhenBufferIsTooSmall)
+{
+  uint8 data[] = { 0xde, 0xad, 0xbe, 0xef };
+  char out[5];
+  size_t needed;
+
+  needed = _utils_data_to_hex(data, sizeof(data), out, sizeof(out));
+
+  assert_that(needed, is_equal_to(8));
+  assert_that(out, is_equal_to_string("dead"));
+}

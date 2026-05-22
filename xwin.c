@@ -6,6 +6,7 @@
    Copyright 2002-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
    Copyright 2012-2018 Henrik Andersson <hean01@cendio.se> for Cendio AB
    Copyright 2017-2019 Alexander Zakharov <uglym8@gmail.com>
+   Copyright 2026 Marco Fortina <marco_fortina@hotmail.it>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -37,6 +38,9 @@
 #ifdef HAVE_XRANDR
 #include <X11/extensions/Xrandr.h>
 #endif
+#ifdef HAVE_LIBPNG
+#include <png.h>
+#endif
 
 #ifdef __APPLE__
 #include <sys/param.h>
@@ -67,11 +71,33 @@ extern RD_BOOL g_sendmotion;
 extern RD_BOOL g_fullscreen;
 extern RD_BOOL g_grab_keyboard;
 extern RD_BOOL g_hide_decorations;
+extern char *g_window_icon_file;
+
+#define UNGRAB_MOD_LCTRL  (1 << 0)
+#define UNGRAB_MOD_RCTRL  (1 << 1)
+#define UNGRAB_MOD_LALT   (1 << 2)
+#define UNGRAB_MOD_RALT   (1 << 3)
+#define UNGRAB_MOD_LSHIFT (1 << 4)
+#define UNGRAB_MOD_RSHIFT (1 << 5)
+#define UNGRAB_MOD_LSUPER (1 << 6)
+#define UNGRAB_MOD_RSUPER (1 << 7)
+
+#define UNGRAB_REQ_CTRL   (1 << 8)
+#define UNGRAB_REQ_ALT    (1 << 9)
+#define UNGRAB_REQ_SHIFT  (1 << 10)
+#define UNGRAB_REQ_SUPER  (1 << 11)
+
+static uint16 g_keyboard_ungrab_combo = 0;
+static uint16 g_keyboard_ungrab_down = 0;
+static uint16 g_keyboard_ungrab_seen = 0;
+static RD_BOOL g_keyboard_ungrab_tracking = False;
+static RD_BOOL g_keyboard_ungrabbed_by_hotkey = False;
 extern RD_BOOL g_pending_resize;
 extern RD_BOOL g_pending_resize_defer;
 extern struct timeval g_pending_resize_defer_timer;
 
 extern char g_title[];
+extern char g_wm_class[];
 extern char g_seamless_spawn_cmd[];
 /* Color depth of the RDP session.
    As of RDP 5.1, it may be 8, 15, 16 or 24. */
@@ -94,6 +120,8 @@ RD_BOOL g_dynamic_session_resize = True;
 /* These are the last known window sizes. They are updated whenever the window size is changed. */
 static uint32 g_window_width;
 static uint32 g_window_height;
+static RD_BOOL g_main_window_initial_positioned = False;
+static RD_BOOL g_main_window_use_position_hint = False;
 
 /* SeamlessRDP support */
 typedef struct _seamless_group
@@ -625,6 +653,11 @@ sw_wait_configurenotify(Window wnd, unsigned long serial)
 
 	gettimeofday(&future, NULL);
 	future.tv_usec += 500000;
+	if (future.tv_usec >= 1000000)
+	{
+		future.tv_sec += future.tv_usec / 1000000;
+		future.tv_usec %= 1000000;
+	}
 
 	do
 	{
@@ -1970,7 +2003,10 @@ ui_init(void)
 	g_display = XOpenDisplay(NULL);
 	if (g_display == NULL)
 	{
-		logger(GUI, Error, "ui_init(), failed to open X11 display: %s", XDisplayName(NULL));
+		logger(GUI, Error,
+		       "ui_init(), failed to open X11 display: %s. "
+		       "Make sure rdesktop is running from an X11 session "
+		       "and that DISPLAY is set and accessible.", XDisplayName(NULL));
 		return False;
 	}
 
@@ -2050,6 +2086,158 @@ ui_get_screen_size(uint32 * width, uint32 * height)
 	*height = HeightOfScreen(g_screen);
 }
 
+static void
+xwin_normalize_monitor_layout(RDP_MONITOR_LAYOUT *monitors, uint32 monitor_count,
+                              uint32 *desktop_width, uint32 *desktop_height)
+{
+	uint32 i, primary;
+	sint32 origin_x, origin_y, min_left, min_top, max_right, max_bottom;
+
+	primary = 0;
+	for (i = 0; i < monitor_count; i++)
+	{
+		if (monitors[i].left <= 0 && monitors[i].right >= 0 &&
+		    monitors[i].top <= 0 && monitors[i].bottom >= 0)
+		{
+			primary = i;
+			break;
+		}
+	}
+
+	origin_x = monitors[primary].left;
+	origin_y = monitors[primary].top;
+
+	min_left = monitors[0].left - origin_x;
+	max_right = monitors[0].right - origin_x;
+	min_top = monitors[0].top - origin_y;
+	max_bottom = monitors[0].bottom - origin_y;
+
+	for (i = 0; i < monitor_count; i++)
+	{
+		monitors[i].left -= origin_x;
+		monitors[i].right -= origin_x;
+		monitors[i].top -= origin_y;
+		monitors[i].bottom -= origin_y;
+		monitors[i].flags = (i == primary) ? RDESKTOP_MONITOR_PRIMARY : 0;
+
+		min_left = MIN(min_left, monitors[i].left);
+		min_top = MIN(min_top, monitors[i].top);
+		max_right = MAX(max_right, monitors[i].right);
+		max_bottom = MAX(max_bottom, monitors[i].bottom);
+	}
+
+	*desktop_width = max_right - min_left + 1;
+	*desktop_height = max_bottom - min_top + 1;
+}
+
+#ifdef HAVE_XRANDR
+static RD_BOOL
+xwin_get_xrandr_monitor_layout(RDP_MONITOR_LAYOUT *monitors, uint32 max_monitors,
+                               uint32 *monitor_count, uint32 *desktop_width,
+                               uint32 *desktop_height)
+{
+	Window root;
+	XRRScreenResources *resources;
+	RRCrtc seen_crtcs[RDESKTOP_MAX_MONITORS];
+	uint32 count, i, j;
+
+	root = RootWindowOfScreen(g_screen);
+	resources = XRRGetScreenResourcesCurrent(g_display, root);
+	if (resources == NULL)
+		return False;
+
+	count = 0;
+	memset(seen_crtcs, 0, sizeof(seen_crtcs));
+	for (i = 0; i < (uint32) resources->noutput && count < max_monitors; i++)
+	{
+		XRROutputInfo *output;
+		XRRCrtcInfo *crtc;
+		RD_BOOL duplicate;
+
+		output = XRRGetOutputInfo(g_display, resources, resources->outputs[i]);
+		if (output == NULL)
+			continue;
+
+		if (output->connection != RR_Connected || output->crtc == None)
+		{
+			XRRFreeOutputInfo(output);
+			continue;
+		}
+
+		duplicate = False;
+		for (j = 0; j < count; j++)
+		{
+			if (seen_crtcs[j] == output->crtc)
+			{
+				duplicate = True;
+				break;
+			}
+		}
+		if (duplicate)
+		{
+			XRRFreeOutputInfo(output);
+			continue;
+		}
+
+		crtc = XRRGetCrtcInfo(g_display, resources, output->crtc);
+		if (crtc == NULL)
+		{
+			XRRFreeOutputInfo(output);
+			continue;
+		}
+
+		if (crtc->width > 0 && crtc->height > 0)
+		{
+			monitors[count].left = crtc->x;
+			monitors[count].top = crtc->y;
+			monitors[count].right = crtc->x + crtc->width - 1;
+			monitors[count].bottom = crtc->y + crtc->height - 1;
+			monitors[count].flags = 0;
+			seen_crtcs[count] = output->crtc;
+			count++;
+		}
+
+		XRRFreeCrtcInfo(crtc);
+		XRRFreeOutputInfo(output);
+	}
+
+	XRRFreeScreenResources(resources);
+
+	if (count == 0)
+		return False;
+
+	xwin_normalize_monitor_layout(monitors, count, desktop_width, desktop_height);
+	*monitor_count = count;
+	return True;
+}
+#endif
+
+RD_BOOL
+ui_get_monitor_layout(RDP_MONITOR_LAYOUT *monitors, uint32 max_monitors,
+                      uint32 *monitor_count, uint32 *desktop_width,
+                      uint32 *desktop_height)
+{
+	if (monitors == NULL || max_monitors == 0 || monitor_count == NULL ||
+	    desktop_width == NULL || desktop_height == NULL)
+		return False;
+
+#ifdef HAVE_XRANDR
+	if (xwin_get_xrandr_monitor_layout(monitors, max_monitors, monitor_count,
+	                                   desktop_width, desktop_height))
+		return True;
+#endif
+
+	monitors[0].left = 0;
+	monitors[0].top = 0;
+	monitors[0].right = WidthOfScreen(g_screen) - 1;
+	monitors[0].bottom = HeightOfScreen(g_screen) - 1;
+	monitors[0].flags = RDESKTOP_MONITOR_PRIMARY;
+	*monitor_count = 1;
+	*desktop_width = WidthOfScreen(g_screen);
+	*desktop_height = HeightOfScreen(g_screen);
+	return True;
+}
+
 void
 ui_get_screen_size_from_percentage(uint32 pw, uint32 ph, uint32 * width, uint32 * height)
 {
@@ -2123,6 +2311,216 @@ get_window_attribs_seamless(XSetWindowAttributes * attribs)
 	return (get_window_attribs(attribs) & ~CWOverrideRedirect);
 }
 
+static uint16
+keysym_to_ungrab_mod(KeySym keysym)
+{
+	switch (keysym)
+	{
+		case XK_Control_L:
+			return UNGRAB_MOD_LCTRL;
+		case XK_Control_R:
+			return UNGRAB_MOD_RCTRL;
+		case XK_Alt_L:
+		case XK_Meta_L:
+			return UNGRAB_MOD_LALT;
+		case XK_Alt_R:
+		case XK_Meta_R:
+		case XK_Mode_switch:
+		case XK_ISO_Level3_Shift:
+			return UNGRAB_MOD_RALT;
+		case XK_Shift_L:
+			return UNGRAB_MOD_LSHIFT;
+		case XK_Shift_R:
+			return UNGRAB_MOD_RSHIFT;
+		case XK_Super_L:
+		case XK_Hyper_L:
+			return UNGRAB_MOD_LSUPER;
+		case XK_Super_R:
+		case XK_Hyper_R:
+			return UNGRAB_MOD_RSUPER;
+	}
+	return 0;
+}
+
+static uint16
+ungrab_exact_to_group(uint16 mod)
+{
+	uint16 group = 0;
+
+	if (mod & (UNGRAB_MOD_LCTRL | UNGRAB_MOD_RCTRL))
+		group |= UNGRAB_REQ_CTRL;
+	if (mod & (UNGRAB_MOD_LALT | UNGRAB_MOD_RALT))
+		group |= UNGRAB_REQ_ALT;
+	if (mod & (UNGRAB_MOD_LSHIFT | UNGRAB_MOD_RSHIFT))
+		group |= UNGRAB_REQ_SHIFT;
+	if (mod & (UNGRAB_MOD_LSUPER | UNGRAB_MOD_RSUPER))
+		group |= UNGRAB_REQ_SUPER;
+	return group;
+}
+
+static RD_BOOL
+ungrab_combo_satisfied(uint16 down)
+{
+	uint16 groups = ungrab_exact_to_group(down);
+
+	if ((g_keyboard_ungrab_combo & UNGRAB_REQ_CTRL) && !(groups & UNGRAB_REQ_CTRL))
+		return False;
+	if ((g_keyboard_ungrab_combo & UNGRAB_REQ_ALT) && !(groups & UNGRAB_REQ_ALT))
+		return False;
+	if ((g_keyboard_ungrab_combo & UNGRAB_REQ_SHIFT) && !(groups & UNGRAB_REQ_SHIFT))
+		return False;
+	if ((g_keyboard_ungrab_combo & UNGRAB_REQ_SUPER) && !(groups & UNGRAB_REQ_SUPER))
+		return False;
+	if ((g_keyboard_ungrab_combo & UNGRAB_MOD_LCTRL) && !(down & UNGRAB_MOD_LCTRL))
+		return False;
+	if ((g_keyboard_ungrab_combo & UNGRAB_MOD_RCTRL) && !(down & UNGRAB_MOD_RCTRL))
+		return False;
+	if ((g_keyboard_ungrab_combo & UNGRAB_MOD_LALT) && !(down & UNGRAB_MOD_LALT))
+		return False;
+	if ((g_keyboard_ungrab_combo & UNGRAB_MOD_RALT) && !(down & UNGRAB_MOD_RALT))
+		return False;
+	if ((g_keyboard_ungrab_combo & UNGRAB_MOD_LSHIFT) && !(down & UNGRAB_MOD_LSHIFT))
+		return False;
+	if ((g_keyboard_ungrab_combo & UNGRAB_MOD_RSHIFT) && !(down & UNGRAB_MOD_RSHIFT))
+		return False;
+	if ((g_keyboard_ungrab_combo & UNGRAB_MOD_LSUPER) && !(down & UNGRAB_MOD_LSUPER))
+		return False;
+	if ((g_keyboard_ungrab_combo & UNGRAB_MOD_RSUPER) && !(down & UNGRAB_MOD_RSUPER))
+		return False;
+	return True;
+}
+
+static uint16
+ungrab_combo_relevant_mask(void)
+{
+	uint16 mask = 0;
+
+	if (g_keyboard_ungrab_combo & UNGRAB_REQ_CTRL)
+		mask |= UNGRAB_MOD_LCTRL | UNGRAB_MOD_RCTRL;
+	if (g_keyboard_ungrab_combo & UNGRAB_REQ_ALT)
+		mask |= UNGRAB_MOD_LALT | UNGRAB_MOD_RALT;
+	if (g_keyboard_ungrab_combo & UNGRAB_REQ_SHIFT)
+		mask |= UNGRAB_MOD_LSHIFT | UNGRAB_MOD_RSHIFT;
+	if (g_keyboard_ungrab_combo & UNGRAB_REQ_SUPER)
+		mask |= UNGRAB_MOD_LSUPER | UNGRAB_MOD_RSUPER;
+	mask |= g_keyboard_ungrab_combo & (UNGRAB_MOD_LCTRL | UNGRAB_MOD_RCTRL |
+		UNGRAB_MOD_LALT | UNGRAB_MOD_RALT | UNGRAB_MOD_LSHIFT | UNGRAB_MOD_RSHIFT |
+		UNGRAB_MOD_LSUPER | UNGRAB_MOD_RSUPER);
+	return mask;
+}
+
+static void
+keyboard_ungrab_reset_state(void)
+{
+	g_keyboard_ungrab_down = 0;
+	g_keyboard_ungrab_seen = 0;
+	g_keyboard_ungrab_tracking = False;
+}
+
+RD_BOOL
+xwin_parse_keyboard_ungrab_combo(const char *combo)
+{
+	char buf[128];
+	char *token;
+	uint16 parsed = 0;
+
+	if (combo == NULL || combo[0] == '\0' || !strcasecmp(combo, "off") ||
+	    !strcasecmp(combo, "none"))
+	{
+		g_keyboard_ungrab_combo = 0;
+		keyboard_ungrab_reset_state();
+		return True;
+	}
+
+	STRNCPY(buf, combo, sizeof(buf));
+	for (token = strtok(buf, "_+"); token; token = strtok(NULL, "_+"))
+	{
+		if (!strcasecmp(token, "ctrl"))
+			parsed |= UNGRAB_REQ_CTRL;
+		else if (!strcasecmp(token, "alt"))
+			parsed |= UNGRAB_REQ_ALT;
+		else if (!strcasecmp(token, "shift"))
+			parsed |= UNGRAB_REQ_SHIFT;
+		else if (!strcasecmp(token, "super") || !strcasecmp(token, "win"))
+			parsed |= UNGRAB_REQ_SUPER;
+		else if (!strcasecmp(token, "lctrl"))
+			parsed |= UNGRAB_MOD_LCTRL;
+		else if (!strcasecmp(token, "rctrl"))
+			parsed |= UNGRAB_MOD_RCTRL;
+		else if (!strcasecmp(token, "lalt"))
+			parsed |= UNGRAB_MOD_LALT;
+		else if (!strcasecmp(token, "ralt") || !strcasecmp(token, "altgr"))
+			parsed |= UNGRAB_MOD_RALT;
+		else if (!strcasecmp(token, "lshift"))
+			parsed |= UNGRAB_MOD_LSHIFT;
+		else if (!strcasecmp(token, "rshift"))
+			parsed |= UNGRAB_MOD_RSHIFT;
+		else if (!strcasecmp(token, "lsuper") || !strcasecmp(token, "lwin"))
+			parsed |= UNGRAB_MOD_LSUPER;
+		else if (!strcasecmp(token, "rsuper") || !strcasecmp(token, "rwin"))
+			parsed |= UNGRAB_MOD_RSUPER;
+		else
+		{
+			logger(Core, Error, "invalid keyboard ungrab modifier '%s'", token);
+			return False;
+		}
+	}
+
+	if (parsed == 0)
+		return False;
+
+	g_keyboard_ungrab_combo = parsed;
+	keyboard_ungrab_reset_state();
+	return True;
+}
+
+static RD_BOOL
+handle_keyboard_ungrab(KeySym keysym, RD_BOOL pressed)
+{
+	uint16 mod, relevant;
+
+	if (!g_grab_keyboard || g_keyboard_ungrab_combo == 0)
+		return False;
+
+	mod = keysym_to_ungrab_mod(keysym);
+	if (mod == 0)
+	{
+		if (g_keyboard_ungrab_tracking)
+			keyboard_ungrab_reset_state();
+		return False;
+	}
+
+	relevant = ungrab_combo_relevant_mask();
+	if (!(mod & relevant))
+	{
+		if (g_keyboard_ungrab_tracking)
+			keyboard_ungrab_reset_state();
+		return False;
+	}
+
+	g_keyboard_ungrab_tracking = True;
+	if (pressed)
+	{
+		g_keyboard_ungrab_down |= mod;
+		if (ungrab_combo_satisfied(g_keyboard_ungrab_down))
+			g_keyboard_ungrab_seen = g_keyboard_ungrab_combo;
+	}
+	else
+	{
+		g_keyboard_ungrab_down &= ~mod;
+		if (g_keyboard_ungrab_seen == g_keyboard_ungrab_combo &&
+		    (g_keyboard_ungrab_down & relevant) == 0)
+		{
+			logger(Keyboard, Notice, "Keyboard ungrab hotkey released");
+			XUngrabKeyboard(g_display, CurrentTime);
+			g_keyboard_ungrabbed_by_hotkey = True;
+			keyboard_ungrab_reset_state();
+		}
+	}
+
+	return True;
+}
+
 static void
 get_input_mask(long *input_mask)
 {
@@ -2145,9 +2543,21 @@ get_sizehints(XSizeHints * sizehints, uint32 width, uint32 height)
 	if (sizehints == NULL)
 		return;
 
-	/* user specified position, this is needed to override the choice of
-	   window position by window manager when a window is mapped. */
-	sizehints->flags = USPosition;
+	sizehints->flags = 0;
+	if (g_pos != 0)
+	{
+		/* A geometry position was requested by the user; mark it as authoritative. */
+		sizehints->flags |= USPosition;
+		sizehints->x = g_xpos;
+		sizehints->y = g_ypos;
+	}
+	else if (g_main_window_use_position_hint)
+	{
+		/* The client suggests an initial position, but the WM may still override it. */
+		sizehints->flags |= PPosition;
+		sizehints->x = g_xpos;
+		sizehints->y = g_ypos;
+	}
 
 	/* set minimal size of rdesktop main window */
 	sizehints->flags |= PMinSize;
@@ -2182,11 +2592,221 @@ ui_update_window_sizehints(uint32 width, uint32 height)
 	}
 }
 
+static void
+xwin_update_main_window_position(void)
+{
+	Window child;
+	int xpos, ypos;
+
+	if (!g_wnd || g_embed_wnd || g_fullscreen || g_seamless_rdp)
+		return;
+
+	if (!XTranslateCoordinates(g_display, g_wnd, DefaultRootWindow(g_display), 0, 0,
+	                           &xpos, &ypos, &child))
+		return;
+
+	if (g_xpos != xpos || g_ypos != ypos)
+	{
+		logger(GUI, Debug,
+		       "xwin_update_main_window_position(), window position changed to +%d+%d",
+		       xpos, ypos);
+		g_xpos = xpos;
+		g_ypos = ypos;
+	}
+}
+
+static void
+xwin_request_resize_if_session_mismatch(const char *source)
+{
+	uint32 width, height;
+
+	if (!g_dynamic_session_resize || g_seamless_rdp)
+		return;
+
+	width = g_window_width;
+	height = g_window_height;
+	utils_apply_session_size_limitations(&width, &height);
+
+	logger(GUI, Debug,
+	       "%s: session: %dx%d, window: %dx%d (adj: %dx%d)",
+	       source, g_session_width, g_session_height, g_window_width, g_window_height,
+	       width, height);
+
+	if (g_session_width != width || g_session_height != height)
+	{
+		gettimeofday(&g_resize_timer, NULL);
+		g_pending_resize = True;
+	}
+	else
+	{
+		g_pending_resize = False;
+	}
+}
+
 void request_wm_fullscreen(Display *dpy, Window win)
 {
 	Atom atom = XInternAtom(dpy, "_NET_WM_STATE_FULLSCREEN", False);
 	XChangeProperty(dpy, win, XInternAtom(dpy, "_NET_WM_STATE", False), XA_ATOM, 32, PropModeReplace, (unsigned char *)&atom, 1);
 	XFlush(dpy);
+}
+
+#ifdef HAVE_LIBPNG
+static RD_BOOL
+xwin_read_png_icon(const char *filename, uint32 *width, uint32 *height, char **rgba_data)
+{
+	FILE *fp;
+	png_byte header[8];
+	png_structp png_ptr;
+	png_infop info_ptr;
+	png_bytep *rows;
+	png_bytep image;
+	png_uint_32 png_width, png_height;
+	int bit_depth, color_type;
+	uint32 y;
+	size_t rowbytes, image_size;
+
+	fp = fopen(filename, "rb");
+	if (fp == NULL)
+	{
+		logger(GUI, Warning, "Failed to open window icon '%s': %s", filename, strerror(errno));
+		return False;
+	}
+
+	if (fread(header, 1, sizeof(header), fp) != sizeof(header) || png_sig_cmp(header, 0, sizeof(header)))
+	{
+		logger(GUI, Warning, "Window icon '%s' is not a PNG file", filename);
+		fclose(fp);
+		return False;
+	}
+
+	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+	if (png_ptr == NULL)
+	{
+		fclose(fp);
+		return False;
+	}
+
+	info_ptr = png_create_info_struct(png_ptr);
+	if (info_ptr == NULL)
+	{
+		png_destroy_read_struct(&png_ptr, NULL, NULL);
+		fclose(fp);
+		return False;
+	}
+
+	if (setjmp(png_jmpbuf(png_ptr)))
+	{
+		png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+		fclose(fp);
+		return False;
+	}
+
+	png_init_io(png_ptr, fp);
+	png_set_sig_bytes(png_ptr, sizeof(header));
+	png_read_info(png_ptr, info_ptr);
+
+	png_get_IHDR(png_ptr, info_ptr, &png_width, &png_height, &bit_depth, &color_type,
+	             NULL, NULL, NULL);
+
+	if (png_width == 0 || png_height == 0 || png_width > 4096 || png_height > 4096)
+	{
+		logger(GUI, Warning, "Window icon '%s' has unsupported dimensions %lux%lu",
+		       filename, (unsigned long) png_width, (unsigned long) png_height);
+		png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+		fclose(fp);
+		return False;
+	}
+
+	if (bit_depth == 16)
+		png_set_strip_16(png_ptr);
+	if (color_type == PNG_COLOR_TYPE_PALETTE)
+		png_set_palette_to_rgb(png_ptr);
+	if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8)
+		png_set_expand_gray_1_2_4_to_8(png_ptr);
+	if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS))
+		png_set_tRNS_to_alpha(png_ptr);
+	if (color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
+		png_set_gray_to_rgb(png_ptr);
+	if (!(color_type & PNG_COLOR_MASK_ALPHA))
+		png_set_add_alpha(png_ptr, 0xff, PNG_FILLER_AFTER);
+
+	png_read_update_info(png_ptr, info_ptr);
+	rowbytes = png_get_rowbytes(png_ptr, info_ptr);
+	if (rowbytes < png_width * 4)
+	{
+		png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+		fclose(fp);
+		return False;
+	}
+
+	image_size = rowbytes * png_height;
+	image = xmalloc(image_size);
+	rows = xmalloc(sizeof(png_bytep) * png_height);
+	for (y = 0; y < png_height; y++)
+		rows[y] = image + y * rowbytes;
+
+	png_read_image(png_ptr, rows);
+	png_read_end(png_ptr, NULL);
+
+	*rgba_data = xmalloc(png_width * png_height * 4);
+	for (y = 0; y < png_height; y++)
+		memcpy(*rgba_data + y * png_width * 4, rows[y], png_width * 4);
+
+	xfree(rows);
+	xfree(image);
+	png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
+	fclose(fp);
+
+	*width = png_width;
+	*height = png_height;
+	return True;
+}
+#endif
+
+static void
+xwin_center_initial_window(uint32 width, uint32 height)
+{
+	int screen_width, screen_height;
+
+	if (g_main_window_initial_positioned)
+		return;
+
+	g_main_window_initial_positioned = True;
+
+	if (g_pos != 0 || g_embed_wnd || g_fullscreen || g_seamless_rdp)
+		return;
+
+	screen_width = WidthOfScreen(g_screen);
+	screen_height = HeightOfScreen(g_screen);
+
+	g_xpos = ((int) width < screen_width) ? (screen_width - (int) width) / 2 : 0;
+	g_ypos = ((int) height < screen_height) ? (screen_height - (int) height) / 2 : 0;
+	g_main_window_use_position_hint = True;
+
+	logger(GUI, Debug, "xwin_center_initial_window(), initial window position +%d+%d",
+	       g_xpos, g_ypos);
+}
+
+static void
+xwin_apply_window_icon(Window wnd)
+{
+	uint32 width, height;
+	char *rgba_data;
+
+	if (g_window_icon_file == NULL)
+		return;
+
+#ifdef HAVE_LIBPNG
+	rgba_data = NULL;
+	if (!xwin_read_png_icon(g_window_icon_file, &width, &height, &rgba_data))
+		return;
+
+	ewmh_set_icon(wnd, width, height, rgba_data);
+	xfree(rgba_data);
+	logger(GUI, Debug, "Loaded window icon '%s' (%ux%u)", g_window_icon_file, width, height);
+#else
+	logger(GUI, Warning, "Custom window icons require libpng support");
+#endif
 }
 
 RD_BOOL
@@ -2207,6 +2827,8 @@ ui_create_window(uint32 width, uint32 height)
 	g_window_height = 0;
 
 	logger(GUI, Debug, "ui_create_window() width = %d, height = %d", width, height);
+
+	xwin_center_initial_window(width, height);
 
 	/* Handle -x-y portion of geometry string */
 	if (g_xpos < 0 || (g_xpos == 0 && (g_pos & 2)))
@@ -2242,6 +2864,7 @@ ui_create_window(uint32 width, uint32 height)
 
 	XStoreName(g_display, g_wnd, g_title);
 	ewmh_set_wm_name(g_wnd, g_title);
+	xwin_apply_window_icon(g_wnd);
 
 	if (g_hide_decorations)
 		mwm_hide_decorations(g_wnd);
@@ -2249,7 +2872,8 @@ ui_create_window(uint32 width, uint32 height)
 	classhints = XAllocClassHint();
 	if (classhints != NULL)
 	{
-		classhints->res_name = classhints->res_class = "rdesktop";
+		classhints->res_name = classhints->res_class =
+			g_wm_class[0] ? g_wm_class : "rdesktop";
 		XSetClassHint(g_display, g_wnd, classhints);
 		XFree(classhints);
 	}
@@ -2287,6 +2911,7 @@ ui_create_window(uint32 width, uint32 height)
 		request_wm_fullscreen(g_display, g_wnd);
 	}
 	XMapWindow(g_display, g_wnd);
+	g_main_window_use_position_hint = False;
 
 	/* wait for VisibilityNotify */
 	do
@@ -2390,6 +3015,26 @@ ui_destroy_window(void)
 		XFreePixmap(g_display, g_backstore);
 		g_backstore = 0;
 	}
+}
+
+void
+ui_release_keyboard(void)
+{
+	if (g_display == NULL)
+		return;
+
+	XUngrabKeyboard(g_display, CurrentTime);
+	XFlush(g_display);
+}
+
+void
+xwin_iconify_window(void)
+{
+	if (g_display == NULL)
+		return;
+
+	XIconifyWindow(g_display, g_wnd, DefaultScreen(g_display));
+	XFlush(g_display);
 }
 
 void
@@ -2580,12 +3225,16 @@ handle_button_event(XEvent xevent, RD_BOOL down)
 		}
 	}
 
-	/* Ignore mouse scroll button release event which will be handled as an additional
-	 * scrolldown event on the Windows side.
+	/*
+	 * Wheel events encode the wheel delta in the low bits and must not carry
+	 * the normal mouse-button DOWN flag.  Also ignore X11 wheel button-release
+	 * events, which would otherwise be sent as a second wheel movement.
 	 */
-	if (!down && (button == MOUSE_FLAG_BUTTON4 || button == MOUSE_FLAG_BUTTON5))
+	if (button == MOUSE_FLAG_BUTTON4 || button == MOUSE_FLAG_BUTTON5)
 	{
-		return;
+		if (!down)
+			return;
+		flags &= ~MOUSE_FLAG_DOWN;
 	}
 
 	if (xevent.xmotion.window == g_wnd)
@@ -2623,9 +3272,20 @@ xwin_process_events(void)
 			/* Ignore events between ui_destroy_window and ui_create_window */
 			continue;
 
-		/* Also ignore root window events except ConfigureNotify */
-		if (xevent.type != ConfigureNotify
-		    && xevent.xany.window == DefaultRootWindow(g_display))
+		if (xclip_handle_XFixesSelectionNotify(&xevent))
+			continue;
+
+		/*
+		 * Ignore root window events except those that rdesktop explicitly
+		 * subscribes to. The clipboard backend selects PropertyNotify on the
+		 * root window for _RDESKTOP_SELECTION_NOTIFY; dropping those events here
+		 * prevents clipboard state changes from being propagated after focus
+		 * changes, which is especially visible when keyboard grabbing is disabled
+		 * with -K.
+		 */
+		if (xevent.xany.window == DefaultRootWindow(g_display)
+		    && xevent.type != ConfigureNotify
+		    && xevent.type != PropertyNotify)
 			continue;
 
 		if ((g_IC != NULL) && (XFilterEvent(&xevent, None) == True))
@@ -2702,6 +3362,8 @@ xwin_process_events(void)
 
 				set_keypress_keysym(xevent.xkey.keycode, keysym);
 				ev_time = time(NULL);
+				if (handle_keyboard_ungrab(keysym, True))
+					break;
 				if (handle_special_keys(keysym, xevent.xkey.state, ev_time, True))
 					break;
 
@@ -2719,6 +3381,8 @@ xwin_process_events(void)
 
 				keysym = reset_keypress_keysym(xevent.xkey.keycode, keysym);
 				ev_time = time(NULL);
+				if (handle_keyboard_ungrab(keysym, False))
+					break;
 				if (handle_special_keys(keysym, xevent.xkey.state, ev_time, False))
 					break;
 
@@ -2727,6 +3391,12 @@ xwin_process_events(void)
 				break;
 
 			case ButtonPress:
+				if (g_keyboard_ungrabbed_by_hotkey && g_grab_keyboard && g_focused)
+				{
+					XGrabKeyboard(g_display, g_wnd, True,
+						      GrabModeAsync, GrabModeAsync, CurrentTime);
+					g_keyboard_ungrabbed_by_hotkey = False;
+				}
 				handle_button_event(xevent, True);
 				break;
 
@@ -2767,8 +3437,11 @@ xwin_process_events(void)
 				g_focused = True;
 				reset_modifier_keys();
 				if (g_grab_keyboard && g_mouse_in_wnd)
+				{
 					XGrabKeyboard(g_display, g_wnd, True,
 						      GrabModeAsync, GrabModeAsync, CurrentTime);
+					g_keyboard_ungrabbed_by_hotkey = False;
+				}
 
 				sw = sw_get_window_by_wnd(xevent.xfocus.window);
 				if (!sw)
@@ -2815,8 +3488,11 @@ xwin_process_events(void)
 					break;
 				}
 				if (g_focused)
+				{
 					XGrabKeyboard(g_display, g_wnd, True,
 						      GrabModeAsync, GrabModeAsync, CurrentTime);
+					g_keyboard_ungrabbed_by_hotkey = False;
+				}
 				break;
 
 			case LeaveNotify:
@@ -2914,12 +3590,14 @@ xwin_process_events(void)
 					XGetWindowAttributes(g_display, g_wnd, &attr);
 					g_window_width = attr.width;
 					g_window_height = attr.height;
+					xwin_update_main_window_position();
 
 					logger(GUI, Debug,
 					       "xwin_process_events(), Window mapped with size %dx%d",
 					       g_window_width, g_window_height);
 
 					is_g_wnd_mapped = True;
+					xwin_request_resize_if_session_mismatch("xwin_process_events(), MapNotify");
 				}
 
 				if (!g_seamless_active)
@@ -2977,40 +3655,16 @@ xwin_process_events(void)
 				}
 				else
 #endif
-				if (xevent.xconfigure.window == g_wnd && !g_seamless_rdp
-					    && is_g_wnd_mapped)
+				if (xevent.xconfigure.window == g_wnd && !g_seamless_rdp)
 				{
-
-					/* Update window size */
+					/* Update window geometry. Some WMs send ConfigureNotify before MapNotify. */
 					g_window_width = xevent.xconfigure.width;
 					g_window_height = xevent.xconfigure.height;
+					xwin_update_main_window_position();
 
-					uint32 w, h;
-					w = g_window_width;
-					h = g_window_height;
-
-					utils_apply_session_size_limitations(&w, &h);
-
-					logger(GUI, Debug,
-					       "xwin_process_events(), ConfigureNotify: session: %dx%d, new window: %dx%d (adj: %dx%d)",
-					       g_session_width, g_session_height, g_window_width,
-					       g_window_height, w, h);
-
-					if (g_session_width != w || g_session_height != h)
-					{
-						logger(GUI, Debug,
-						       "xwin_process_events(), ConfigureNotify: session: %dx%d, new window: %dx%d",
-						       g_session_width, g_session_height,
-						       g_window_width, g_window_height);
-
-						/* perform a resize */
-						gettimeofday(&g_resize_timer, NULL);
-						g_pending_resize = True;
-					}
-					else
-					{
-						g_pending_resize = False;
-					}
+					if (is_g_wnd_mapped)
+						xwin_request_resize_if_session_mismatch(
+							"xwin_process_events(), ConfigureNotify");
 				}
 
 				if (!g_seamless_active)
@@ -3069,6 +3723,7 @@ process_fds(int rdp_socket, int ms)
 	FD_SET(g_x_socket, &rfds);
 
 	/* default timeout */
+	ms = rdp_heartbeat_select_timeout(ms);
 	tv.tv_sec = ms / 1000;
 	tv.tv_usec = (ms - (tv.tv_sec * 1000)) * 1000;
 
@@ -3078,6 +3733,7 @@ process_fds(int rdp_socket, int ms)
 
 	/* add redirection handles */
 	rdpdr_add_fds(&n, &rfds, &wfds, &tv, &s_timeout);
+	addin_add_fds(&n, &rfds, &wfds);
 	seamless_select_timeout(&tv);
 
 	/* add ctrl slaves handles */
@@ -3086,6 +3742,7 @@ process_fds(int rdp_socket, int ms)
 	n++;
 
 	ret = select(n, &rfds, &wfds, NULL, &tv);
+	rdp_heartbeat_check_timeout();
 	if (ret <= 0)
 	{
 		if (ret == -1)
@@ -3096,9 +3753,13 @@ process_fds(int rdp_socket, int ms)
 		rdpsnd_check_fds(&rfds, &wfds);
 #endif
 
-		/* Abort serial read calls */
-		if (s_timeout)
-			rdpdr_check_fds(&rfds, &wfds, (RD_BOOL) True);
+		/*
+		 * On select timeout we still need to poll non-selectable rdpdr
+		 * requests such as serial wait-on-mask events.  s_timeout keeps its
+		 * old meaning: abort read calls that reached their real timeout.
+		 */
+		if (ret == 0 || s_timeout)
+			rdpdr_check_fds(&rfds, &wfds, s_timeout);
 		return False;
 	}
 
@@ -3107,6 +3768,7 @@ process_fds(int rdp_socket, int ms)
 #endif
 
 	rdpdr_check_fds(&rfds, &wfds, (RD_BOOL) False);
+	addin_check_fds(&rfds, &wfds);
 
 	ctrl_check_fds(&rfds, &wfds);
 
@@ -3294,11 +3956,10 @@ ui_move_pointer(int x, int y)
 	XWarpPointer(g_display, g_wnd, g_wnd, 0, 0, 0, 0, x, y);
 }
 
-RD_HBITMAP
-ui_create_bitmap(int width, int height, uint8 * data)
+static RD_BOOL
+ui_put_image_to_pixmap(Pixmap pixmap, int width, int height, uint8 * data)
 {
 	XImage *image;
-	Pixmap bitmap;
 	uint8 *tdata;
 	int bitmap_pad;
 
@@ -3315,16 +3976,46 @@ ui_create_bitmap(int width, int height, uint8 * data)
 	}
 
 	tdata = (g_owncolmap ? data : translate_image(width, height, data));
-	bitmap = XCreatePixmap(g_display, g_wnd, width, height, g_depth);
 	image = XCreateImage(g_display, g_visual, g_depth, ZPixmap, 0,
 			     (char *) tdata, width, height, bitmap_pad, 0);
 
-	XPutImage(g_display, bitmap, g_create_bitmap_gc, image, 0, 0, 0, 0, width, height);
+	if (!image)
+	{
+		if (tdata != data)
+			xfree(tdata);
+		return False;
+	}
+
+	XPutImage(g_display, pixmap, g_create_bitmap_gc, image, 0, 0, 0, 0, width, height);
 
 	XFree(image);
 	if (tdata != data)
 		xfree(tdata);
+	return True;
+}
+
+RD_HBITMAP
+ui_create_bitmap(int width, int height, uint8 * data)
+{
+	Pixmap bitmap;
+
+	bitmap = XCreatePixmap(g_display, g_wnd, width, height, g_depth);
+	if (!ui_put_image_to_pixmap(bitmap, width, height, data))
+	{
+		XFreePixmap(g_display, bitmap);
+		return NULL;
+	}
+
 	return (RD_HBITMAP) bitmap;
+}
+
+RD_BOOL
+ui_update_bitmap(RD_HBITMAP bmp, int width, int height, uint8 * data)
+{
+	if (!bmp)
+		return False;
+
+	return ui_put_image_to_pixmap((Pixmap) bmp, width, height, data);
 }
 
 void
@@ -3429,12 +4120,13 @@ get_pixel(uint32 idx, uint8 * andmask, uint8 * xormask, int bpp, uint8 * xor_fla
 			offs = idx;
 			argb = GET_BIT(xormask, idx);
 			alpha = GET_BIT(andmask, idx) ? 0x00 : 0xff;
-			if (!GET_BIT(andmask, idx) == 0x00 && argb)
+			if (GET_BIT(andmask, idx) && argb)
 			{
-				// If we have an xor bit is high and
-				// andmask bit is low, we should
-				// render a black pixel due to we can
-				// not xor blit in X11.
+				/*
+				 * AND=1/XOR=1 is an XOR cursor pixel.  Xcursor cannot
+				 * invert the framebuffer, so render an opaque black pixel
+				 * and request a white outline below.
+				 */
 				argb = 0xff000000;
 				*xor_flag = 1;
 			}
@@ -3448,6 +4140,11 @@ get_pixel(uint32 idx, uint8 * andmask, uint8 * xormask, int bpp, uint8 * xor_fla
 			SPLITCOLOUR16(*((uint16 *) pxor), pc);
 			alpha = GET_BIT(andmask, idx) ? 0x00 : 0xff;
 			argb = (alpha << 24) | (pc.red << 16) | (pc.green << 8) | pc.blue;
+			if (GET_BIT(andmask, idx) && (argb & 0x00ffffff))
+			{
+				argb = 0xff000000;
+				*xor_flag = 1;
+			}
 			break;
 
 		case 24:
@@ -3455,6 +4152,11 @@ get_pixel(uint32 idx, uint8 * andmask, uint8 * xormask, int bpp, uint8 * xor_fla
 			pxor = xormask + offs;
 			alpha = GET_BIT(andmask, idx) ? 0x00 : 0xff;
 			argb = (alpha << 24) | (pxor[2] << 16) | (pxor[1] << 8) | pxor[0];
+			if (GET_BIT(andmask, idx) && (argb & 0x00ffffff))
+			{
+				argb = 0xff000000;
+				*xor_flag = 1;
+			}
 			break;
 
 		case 32:
@@ -3893,9 +4595,26 @@ ui_screenblt(uint8 opcode,
 	SET_FUNCTION(opcode);
 	if (g_ownbackstore)
 	{
-		XCopyArea(g_display, g_Unobscured ? g_wnd : g_backstore,
-			  g_wnd, g_gc, srcx, srcy, cx, cy, x, y);
-		XCopyArea(g_display, g_backstore, g_backstore, g_gc, srcx, srcy, cx, cy, x, y);
+		/*
+		 * Keep the visible-window fast path for unobscured ScreenBlt
+		 * operations, but mirror the resulting destination back into our
+		 * private backstore.  Using the backstore as the source while the
+		 * window is unobscured can copy stale or uninitialised pixels on
+		 * composited/Xwayland desktops.  The old code updated the visible
+		 * window correctly but left the backstore stale; expose/repaint then
+		 * reintroduced old pixels.
+		 */
+		if (g_Unobscured)
+		{
+			XCopyArea(g_display, g_wnd, g_wnd, g_gc, srcx, srcy, cx, cy, x, y);
+			XCopyArea(g_display, g_wnd, g_backstore, g_gc, x, y, cx, cy, x, y);
+		}
+		else
+		{
+			XCopyArea(g_display, g_backstore, g_backstore, g_gc,
+				  srcx, srcy, cx, cy, x, y);
+			XCopyArea(g_display, g_backstore, g_wnd, g_gc, x, y, cx, cy, x, y);
+		}
 	}
 	else
 	{
@@ -4248,11 +4967,10 @@ ui_draw_text(uint8 font, uint8 flags, uint8 opcode, int mixmode, int x, int y,
 	     int boxx, int boxy, int boxcx, int boxcy, BRUSH * brush,
 	     uint32 bgcolour, uint32 fgcolour, uint8 * text, uint8 length)
 {
-	XWindowAttributes attr;
+	uint32 wnd_width = g_window_width ? g_window_width : g_session_width;
+
 	UNUSED(opcode);
 	UNUSED(brush);
-
-	XGetWindowAttributes(g_display, g_wnd, &attr);
 
 	/* TODO: use brush appropriately */
 
@@ -4265,8 +4983,8 @@ ui_draw_text(uint8 font, uint8 flags, uint8 opcode, int mixmode, int x, int y,
 	/* Sometimes, the boxcx value is something really large, like
 	   32691. This makes XCopyArea fail with Xvnc. The code below
 	   is a quick fix. */
-	if (boxx + boxcx > attr.width)
-		boxcx = attr.width - boxx;
+	if (wnd_width > 0 && boxx + boxcx > (int) wnd_width)
+		boxcx = wnd_width - boxx;
 
 	if (boxcx > 1)
 	{
@@ -4583,8 +5301,16 @@ ui_seamless_create_window(unsigned long id, unsigned long group, unsigned long p
 	classhints = XAllocClassHint();
 	if (classhints != NULL)
 	{
-		classhints->res_name = "rdesktop";
-		classhints->res_class = "SeamlessRDP";
+		if (g_wm_class[0])
+		{
+			classhints->res_name = g_wm_class;
+			classhints->res_class = g_wm_class;
+		}
+		else
+		{
+			classhints->res_name = "rdesktop";
+			classhints->res_class = "SeamlessRDP";
+		}
 		XSetClassHint(g_display, wnd, classhints);
 		XFree(classhints);
 	}

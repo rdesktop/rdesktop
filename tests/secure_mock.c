@@ -1,9 +1,9 @@
 #include <cgreen/mocks.h>
 #include "../rdesktop.h"
 
-STREAM sec_recv(uint8 * rdpver)
+STREAM sec_recv(RD_BOOL * is_fastpath)
 {
-  return (STREAM)mock(rdpver);
+  return (STREAM)mock(is_fastpath);
 }
 
 void sec_disconnect()

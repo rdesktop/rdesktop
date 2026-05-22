@@ -6,6 +6,7 @@
    Copyright 2006-2011 Pierre Ossman <ossman@cendio.se> for Cendio AB
    Copyright 2016 Alexander Zakharov <uglym8@gmail.com>
    Copyright 2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2026 Marco Fortina <marco_fortina@hotmail.it>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -23,6 +24,9 @@
 
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
+#ifdef HAVE_XFIXES
+#include <X11/extensions/Xfixes.h>
+#endif
 #include "rdesktop.h"
 
 /*
@@ -91,6 +95,10 @@ static Atom rdesktop_selection_notify_atom;
    selection owner. reprobe_selections indicate that the ownership changed in
    the middle of the current probe so it should be restarted. */
 static RD_BOOL probing_selections, reprobe_selections;
+#ifdef HAVE_XFIXES
+static RD_BOOL xfixes_available = False;
+static int xfixes_event_base = 0;
+#endif
 /* Atoms _RDESKTOP_PRIMARY_OWNER and _RDESKTOP_CLIPBOARD_OWNER. Used as properties
    on the root window to indicate which selections that are owned by rdesktop. */
 static Atom rdesktop_primary_owner_atom, rdesktop_clipboard_owner_atom;
@@ -913,6 +921,43 @@ xclip_handle_SelectionClear(void)
 	xclip_probe_selections();
 }
 
+RD_BOOL
+xclip_handle_XFixesSelectionNotify(XEvent * event)
+{
+#ifdef HAVE_XFIXES
+	XFixesSelectionNotifyEvent *selection_event;
+	char *selection_name;
+
+	if (!xfixes_available || event->type != xfixes_event_base + XFixesSelectionNotify)
+		return False;
+
+	selection_event = (XFixesSelectionNotifyEvent *) event;
+	if (selection_event->selection != clipboard_atom
+	    && (selection_event->selection != primary_atom || !auto_mode))
+		return True;
+
+	selection_name = XGetAtomName(g_display, selection_event->selection);
+	logger(Clipboard, Debug,
+	       "xclip_handle_XFixesSelectionNotify(), selection=%s owner=0x%08lx",
+	       selection_name ? selection_name : "<unknown>", selection_event->owner);
+	if (selection_name)
+		XFree(selection_name);
+
+	/*
+	 * Modern Windows servers cache RDP clipboard data and rely on the client to
+	 * announce new local formats when the X11 clipboard owner changes. Without
+	 * XFixes we only notice our own SelectionClear/root-property fallback, which
+	 * misses ordinary local clipboard owner changes from other X clients.
+	 */
+	xclip_notify_change();
+	xclip_probe_selections();
+	return True;
+#else
+	UNUSED(event);
+	return False;
+#endif
+}
+
 /* Called when any property changes in our window or the root window. */
 void
 xclip_handle_PropertyNotify(XPropertyEvent * event)
@@ -1223,6 +1268,40 @@ xclip_init(void)
 		XInternAtom(g_display, "_RDESKTOP_SELECTION_NOTIFY", False);
 	XSelectInput(g_display, DefaultRootWindow(g_display), PropertyChangeMask);
 	probing_selections = False;
+
+#ifdef HAVE_XFIXES
+	{
+		int error_base;
+		int major = 0;
+		int minor = 0;
+
+		if (XFixesQueryExtension(g_display, &xfixes_event_base, &error_base) &&
+		    XFixesQueryVersion(g_display, &major, &minor))
+		{
+			Window notify_window = DefaultRootWindow(g_display);
+
+			xfixes_available = True;
+			/*
+			 * xclip_init() runs before the rdesktop toplevel window is
+			 * guaranteed to exist. Use the root window as the stable event
+			 * target; the main event loop already lets XFixes events reach the
+			 * clipboard backend before root-window filtering.
+			 */
+			XFixesSelectSelectionInput(g_display, notify_window, clipboard_atom,
+						       XFixesSetSelectionOwnerNotifyMask |
+						       XFixesSelectionWindowDestroyNotifyMask |
+						       XFixesSelectionClientCloseNotifyMask);
+			if (auto_mode)
+				XFixesSelectSelectionInput(g_display, notify_window, primary_atom,
+							       XFixesSetSelectionOwnerNotifyMask |
+							       XFixesSelectionWindowDestroyNotifyMask |
+							       XFixesSelectionClientCloseNotifyMask);
+			logger(Clipboard, Debug,
+			       "xclip_init(), using XFixes %d.%d for clipboard owner tracking",
+			       major, minor);
+		}
+	}
+#endif
 
 	rdesktop_native_atom = XInternAtom(g_display, "_RDESKTOP_NATIVE", False);
 	rdesktop_clipboard_formats_atom =

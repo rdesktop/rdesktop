@@ -1,6 +1,7 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    Copyright (C) Matthew Chapman 1999-2008
+   Copyright 2026 Marco Fortina <marco_fortina@hotmail.it>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -37,7 +38,9 @@ void cache_rebuild_bmpcache_linked_list(uint8 id, sint16 * idx, int count);
 void cache_bump_bitmap(uint8 id, uint16 idx, int bump);
 void cache_evict_bitmap(uint8 id);
 RD_HBITMAP cache_get_bitmap(uint8 id, uint16 idx);
+RD_HBITMAP cache_get_bitmap_for_update(uint8 id, uint16 idx, int width, int height);
 void cache_put_bitmap(uint8 id, uint16 idx, RD_HBITMAP bitmap);
+void cache_put_bitmap_with_dimensions(uint8 id, uint16 idx, RD_HBITMAP bitmap, int width, int height);
 void cache_save_state(void);
 FONTGLYPH *cache_get_font(uint8 font, uint16 character);
 void cache_put_font(uint8 font, uint16 character, uint16 offset, uint16 baseline, uint16 width,
@@ -94,6 +97,10 @@ void iso_disconnect(void);
 void iso_reset_state(void);
 /* cssp.c */
 RD_BOOL cssp_connect(char *server, char *user, char *domain, char *password, STREAM s);
+RD_BOOL cssp_remote_guard_has_security_context(void);
+STREAM cssp_remote_guard_wrap(STREAM in);
+STREAM cssp_remote_guard_unwrap(STREAM in);
+STREAM rdpear_call_helper(const char *package_name, STREAM request);
 /* licence.c */
 void licence_process(STREAM s);
 /* mcs.c */
@@ -122,6 +129,7 @@ RD_BOOL pstcache_load_bitmap(uint8 cache_id, uint16 cache_idx);
 RD_BOOL pstcache_save_bitmap(uint8 cache_id, uint16 cache_idx, uint8 * key, uint8 width,
 			     uint8 height, uint16 length, uint8 * data);
 int pstcache_enumerate(uint8 id, HASH_KEY * keylist);
+void pstcache_set_namespace(const char *server, int port, const char *domain, const char *username);
 RD_BOOL pstcache_init(uint8 cache_id);
 /* rdesktop.c */
 int main(int argc, char *argv[]);
@@ -169,10 +177,21 @@ RD_BOOL rdp_loop(RD_BOOL * deactivated, uint32 * ext_disc_reason);
 RD_BOOL rdp_connect(char *server, uint32 flags, char *domain, char *password, char *command,
 		    char *directory, RD_BOOL reconnect);
 void rdp_reset_state(void);
+void rdp_heartbeat_reset_state(void);
+void rdp_process_heartbeat(uint8 period, uint8 count1, uint8 count2);
+void rdp_heartbeat_note_activity(void);
+int rdp_heartbeat_select_timeout(int timeout_ms);
+void rdp_heartbeat_check_timeout(void);
 void rdp_disconnect(void);
 #define rdp_protocol_error(m, s) _rdp_protocol_error(__FILE__, __LINE__, __func__, m, s)
 void _rdp_protocol_error(const char *file, int line, const char *func,
 			 const char *message, STREAM s) NORETURN;
+/* addin.c */
+RD_BOOL addin_parse_option(const char *optarg);
+RD_BOOL addin_init(void);
+void addin_add_fds(int *n, fd_set * rfds, fd_set * wfds);
+void addin_check_fds(fd_set * rfds, fd_set * wfds);
+void addin_deinit(void);
 /* rdpdr.c */
 int get_device_index(RD_NTHANDLE handle);
 void convert_to_unix_filename(char *filename);
@@ -186,6 +205,10 @@ void rdpdr_check_fds(fd_set * rfds, fd_set * wfds, RD_BOOL timed_out);
 RD_BOOL rdpdr_abort_io(uint32 fd, uint32 major, RD_NTSTATUS status);
 /* rdpsnd.c */
 void rdpsnd_record(const void *data, unsigned int size);
+void rdpsnd_input_init(void);
+void rdpsnd_input_record(const void *data, unsigned int size);
+void rdpsnd_input_reset_state(void);
+struct audio_driver *rdpsnd_select_driver(void);
 RD_BOOL rdpsnd_init(char *optarg);
 void rdpsnd_show_help(void);
 void rdpsnd_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv);
@@ -263,22 +286,35 @@ unsigned int read_keyboard_state(void);
 uint16 ui_get_numlock_state(unsigned int state);
 void reset_modifier_keys(void);
 void rdp_send_scancode(uint32 time, uint16 flags, uint8 scancode);
+/* xgui.c */
+int xgui_startup(int *argc, char ***argv);
+RD_BOOL xgui_choice_dialog(const char *title, const char *message, const char *accept_label,
+                           const char *reject_label);
+void xgui_message_dialog(const char *title, const char *message, const char *button_label);
+
 /* xwin.c */
 RD_BOOL get_key_state(unsigned int state, uint32 keysym);
 RD_BOOL ui_init(void);
 void ui_get_screen_size(uint32 * width, uint32 * height);
+RD_BOOL ui_get_monitor_layout(RDP_MONITOR_LAYOUT *monitors, uint32 max_monitors,
+                              uint32 *monitor_count, uint32 *desktop_width,
+                              uint32 *desktop_height);
 void ui_get_screen_size_from_percentage(uint32 pw, uint32 ph, uint32 * width, uint32 * height);
 void ui_get_workarea_size(uint32 * width, uint32 * height);
 void ui_deinit(void);
 RD_BOOL ui_create_window(uint32 width, uint32 height);
 void ui_resize_window(uint32 width, uint32 height);
 void ui_destroy_window(void);
+void ui_release_keyboard(void);
 void ui_update_window_sizehints(uint32 width, uint32 height);
 RD_BOOL ui_have_window(void);
+void xwin_iconify_window(void);
 void xwin_toggle_fullscreen(void);
+RD_BOOL xwin_parse_keyboard_ungrab_combo(const char *combo);
 void ui_select(int rdp_socket);
 void ui_move_pointer(int x, int y);
 RD_HBITMAP ui_create_bitmap(int width, int height, uint8 * data);
+RD_BOOL ui_update_bitmap(RD_HBITMAP bmp, int width, int height, uint8 * data);
 void ui_paint_bitmap(int x, int y, int cx, int cy, int width, int height, uint8 * data);
 void ui_destroy_bitmap(RD_HBITMAP bmp);
 RD_HGLYPH ui_create_glyph(int width, int height, uint8 * data);
@@ -349,6 +385,8 @@ RD_BOOL dvc_init(void);
 RD_BOOL dvc_channels_register(const char *name, dvc_channel_process_fn handler);
 RD_BOOL dvc_channels_is_available(const char *name);
 void dvc_send(const char *name, STREAM s);
+/* rdpear.c */
+RD_BOOL rdpear_init(void);
 /* seamless.c */
 RD_BOOL seamless_init(void);
 void seamless_reset_state(void);
@@ -367,6 +405,7 @@ unsigned int seamless_send_persistent(RD_BOOL);
 void scard_lock(int lock);
 void scard_unlock(int lock);
 int scard_enum_devices(uint32 * id, char *optarg);
+RD_BOOL scard_auto_select_reader(char **reader_name);
 void scardSetInfo(uint32 epoch, uint32 device, uint32 id, uint32 bytes_out);
 void scard_reset_state();
 void scard_release_all_contexts(void);

@@ -177,7 +177,8 @@ mod5        Scroll_Lock (0x4e)
 Updating / writing keymap files
 ===============================
 When writing new or updating keymap files, please use comments and
-blanks, to increase readability. The "sv" keymap is a good template. 
+blanks, to increase readability. The "sv" keymap is a good template.
+For a shorter checklist, see doc/keymap-creation.txt.
 
 When you need to add a translation to a keymap file, do:
 
@@ -198,7 +199,9 @@ Special keys
 ============
 
 * The combination Ctrl-Alt-Enter toggles between fullscreen and
-  non-fullscreen mode. 
+  non-fullscreen mode.
+
+* The combination Ctrl-Alt-Shift-Enter iconifies the rdesktop window.
 
 * Meta, Hyper and Super are treated as windows keys. RDP4 does not
   support the windows keys though, so if you are running RDP4, these

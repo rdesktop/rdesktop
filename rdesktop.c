@@ -5,6 +5,7 @@
    Copyright 2002-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
    Copyright 2010-2018 Henrik Andersson <hean01@cendio.se> for Cendio AB
    Copyright 2017-2018 Alexander Zakharov <uglym8@gmail.com>
+   Copyright 2026 Marco Fortina <marco_fortina@hotmail.it>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -60,6 +61,7 @@ uint8 g_static_rdesktop_salt_16[16] = {
 };
 
 char g_title[64] = "";
+char g_wm_class[64] = "";
 char *g_username;
 char g_password[64] = "";
 char g_hostname[16] = "";
@@ -100,12 +102,24 @@ RD_BOOL g_packet_encryption = True;
 RD_BOOL g_desktop_save = True;	/* desktop save order */
 RD_BOOL g_polygon_ellipse_orders = True;	/* polygon / ellipse orders */
 RD_BOOL g_fullscreen = False;
+RD_BOOL g_multimon = False;
+RD_BOOL g_use_gui_prompts = False;
+RD_BOOL g_gui_prompt_cancelled = False;
+static const char *g_launcher_program = NULL;
+static const char *g_last_disconnect_reason_text = "Unknown reason";
+RD_BOOL g_extended_client_data_supported = False;
 RD_BOOL g_grab_keyboard = True;
 RD_BOOL g_local_cursor = False;
 RD_BOOL g_hide_decorations = False;
 RDP_VERSION g_rdp_version = RDP_V5;	/* Default to version 5 */
 RD_BOOL g_rdpclip = True;
 RD_BOOL g_console_session = False;
+RD_BOOL g_shadow_session = False;
+RD_BOOL g_restricted_admin = False;
+RD_BOOL g_remote_guard = False;
+char *g_remote_guard_helper = NULL;
+char *g_remote_guard_server = NULL;
+char *g_window_icon_file = NULL;
 RD_BOOL g_numlock_sync = False;
 RD_BOOL g_lspci_enabled = False;
 RD_BOOL g_owncolmap = False;
@@ -134,12 +148,15 @@ uint8 *g_redirect_cookie;
 uint32 g_redirect_cookie_len;
 uint32 g_redirect_flags = 0;
 uint32 g_redirect_session_id = 0;
+uint32 g_shadow_session_id = 0;
 
 uint32 g_reconnect_logonid = 0;
 char g_reconnect_random[16];
 time_t g_reconnect_random_ts;
 RD_BOOL g_has_reconnect_random = False;
 RD_BOOL g_reconnect_loop = False;
+RD_BOOL g_reconnect_on_network_error = False;
+time_t g_reconnect_started_ts = 0;
 uint8 g_client_random[SEC_RANDOM_SIZE];
 RD_BOOL g_pending_resize = False;
 RD_BOOL g_pending_resize_defer = True;
@@ -170,6 +187,8 @@ usage(char *program)
 	fprintf(stderr, "See http://www.rdesktop.org/ for more information.\n\n");
 
 	fprintf(stderr, "Usage: %s [options] server[:port]\n", program);
+	fprintf(stderr, "       %s [options] file.rdp\n", program);
+	fprintf(stderr, "       %s without arguments opens the X11 connection launcher.\n", program);
 	fprintf(stderr, "   -u: user name\n");
 	fprintf(stderr, "   -d: domain\n");
 	fprintf(stderr, "   -s: shell / seamless application to start remotely\n");
@@ -182,6 +201,7 @@ usage(char *program)
 	fprintf(stderr, "   -i: enables smartcard authentication, password is used as pin\n");
 #endif
 	fprintf(stderr, "   -f: full-screen mode\n");
+	fprintf(stderr, "   --multimon: use local multi-monitor layout for fullscreen sessions\n");
 	fprintf(stderr, "   -b: force bitmap updates\n");
 	fprintf(stderr, "   -L: local codepage\n");
 	fprintf(stderr, "   -A: path to SeamlessRDP shell, this enables SeamlessRDP mode\n");
@@ -194,8 +214,11 @@ usage(char *program)
 	fprintf(stderr, "   -C: use private colour map\n");
 	fprintf(stderr, "   -D: hide window manager decorations\n");
 	fprintf(stderr, "   -K: keep window manager key bindings\n");
+	fprintf(stderr, "   -J: modifier combination to ungrab keyboard (example: ctrl_alt)\n");
 	fprintf(stderr, "   -S: caption button size (single application mode)\n");
 	fprintf(stderr, "   -T: window title\n");
+	fprintf(stderr, "   -w: WM_CLASS name\n");
+	fprintf(stderr, "   --window-icon: PNG file to use as the X11 window icon\n");
 	fprintf(stderr, "   -t: disable use of remote ctrl\n");
 	fprintf(stderr, "   -N: enable numlock synchronization\n");
 	fprintf(stderr, "   -X: embed into another window with a given id.\n");
@@ -203,6 +226,7 @@ usage(char *program)
 	fprintf(stderr, "   -z: enable rdp compression\n");
 	fprintf(stderr, "   -x: RDP5 experience (m[odem 28.8], b[roadband], l[an] or hex nr.)\n");
 	fprintf(stderr, "   -P: use persistent bitmap caching\n");
+	fprintf(stderr, "   -R: retry a fresh connection after network errors\n");
 	fprintf(stderr, "   -r: enable specified device redirection (this flag can be repeated)\n");
 	fprintf(stderr,
 		"         '-r comport:COM1=/dev/ttyS0': enable serial redirection of /dev/ttyS0 to COM1\n");
@@ -215,6 +239,8 @@ usage(char *program)
 	fprintf(stderr,
 		"         '-r lptport:LPT1=/dev/lp0': enable parallel redirection of /dev/lp0 to LPT1\n");
 	fprintf(stderr, "             or      LPT1=/dev/lp0,LPT2=/dev/lp1\n");
+	fprintf(stderr,
+		"         '-r addin:CH=command': bridge static virtual channel CH to command\n");
 	fprintf(stderr, "         '-r printer:mydeskjet': enable printer redirection\n");
 	fprintf(stderr,
 		"             or      mydeskjet=\"HP LaserJet IIIP\" to enter server driver as well\n");
@@ -247,7 +273,11 @@ usage(char *program)
 	fprintf(stderr,
 		"                   \"AKS\"              -> Device vendor name                 \n");
 #endif
-	fprintf(stderr, "   -0: attach to console\n");
+	fprintf(stderr, "   -0, --admin, /admin: attach to console/admin session\n");
+	fprintf(stderr, "       --shadow <id>, /shadow:<id>: shadow an existing session id\n");
+	fprintf(stderr, "   --restricted-admin, /restrictedAdmin: use Restricted Admin mode (implies -0)\n");
+	fprintf(stderr, "   --remote-guard, /remoteGuard: request Remote Credential Guard over CredSSP\n");
+	fprintf(stderr, "   --remote-guard-helper <cmd>: helper for RDPEAR package calls\n");
 	fprintf(stderr, "   -4: use RDP version 4\n");
 	fprintf(stderr, "   -5: use RDP version 5 (default)\n");
 #ifdef WITH_SCARD
@@ -488,7 +518,24 @@ handle_disconnect_reason(RD_BOOL deactivated, uint16 reason)
 		fprintf(stderr, "disconnect: %s.\n", text);
 	}
 
+	g_last_disconnect_reason_text = text;
 	return retval;
+}
+
+static int
+reopen_launcher_from_gui(const char *title, const char *message)
+{
+	char *launcher_argv[2];
+
+	if (message != NULL && *message != '\0')
+		xgui_message_dialog(title != NULL ? title : "rdesktop connection error", message, "OK");
+
+	logger(Core, Notice, "Reopening connection launcher.");
+	launcher_argv[0] = (char *) (g_launcher_program != NULL ? g_launcher_program : "rdesktop");
+	launcher_argv[1] = NULL;
+	execvp(launcher_argv[0], launcher_argv);
+	logger(Core, Error, "Failed to reopen connection launcher");
+	return EX_PROTOCOL;
 }
 
 static void
@@ -550,6 +597,496 @@ read_password(char *password, int size)
 	}
 
 	return ret;
+}
+
+
+static char *
+trim_rdp_value(char *value)
+{
+	char *end;
+
+	while (*value && isspace((unsigned char) *value))
+		value++;
+
+	end = value + strlen(value);
+	while (end > value && isspace((unsigned char) *(end - 1)))
+		*(--end) = '\0';
+
+	return value;
+}
+
+static RD_BOOL
+rdp_key_equals(const char *a, const char *b)
+{
+	while (*a && *b)
+	{
+		if (tolower((unsigned char) *a) != tolower((unsigned char) *b))
+			return False;
+		a++;
+		b++;
+	}
+
+	return *a == '\0' && *b == '\0';
+}
+
+static RD_BOOL
+rdp_file_line_value(char *line, char **key, char *type, char **value)
+{
+	char *first_colon, *second_colon;
+
+	/* Strip UTF-8 BOM from the first line if present. */
+	if ((uint8) line[0] == 0xef && (uint8) line[1] == 0xbb && (uint8) line[2] == 0xbf)
+		line += 3;
+
+	line = trim_rdp_value(line);
+	if (*line == '\0')
+		return False;
+
+	first_colon = strchr(line, ':');
+	if (first_colon == NULL || first_colon[1] == '\0' || first_colon[2] != ':')
+		return False;
+
+	second_colon = first_colon + 2;
+	*first_colon = '\0';
+	*second_colon = '\0';
+
+	*key = trim_rdp_value(line);
+	*type = first_colon[1];
+	*value = trim_rdp_value(second_colon + 1);
+
+	return True;
+}
+
+static RD_BOOL
+read_rdp_file_line(FILE *fp, RD_BOOL utf16_le, RD_BOOL utf16_be, char *line, size_t size);
+
+static RD_BOOL
+parse_rdp_file(const char *filename, char *server, size_t server_size, char *domain,
+	       size_t domain_size, char *shell, size_t shell_size, char *directory,
+	       size_t directory_size, RD_BOOL username_option, RD_BOOL password_option,
+	       RD_BOOL domain_option, RD_BOOL shell_option, RD_BOOL directory_option,
+	       RD_BOOL keymap_option, RD_BOOL geometry_option, RD_BOOL fullscreen_option,
+	       RD_BOOL depth_option)
+{
+	FILE *fp;
+	char line[1024];
+	RD_BOOL have_server = False;
+	RD_BOOL utf16_le = False, utf16_be = False;
+	int bom1, bom2;
+	RD_BOOL have_width = False, have_height = False;
+	uint32 width = 0, height = 0;
+
+	fp = fopen(filename, "rb");
+	if (fp == NULL)
+	{
+		logger(Core, Error, "failed to open RDP file '%s': %s", filename, strerror(errno));
+		return False;
+	}
+
+	bom1 = fgetc(fp);
+	bom2 = fgetc(fp);
+	if (bom1 == 0xff && bom2 == 0xfe)
+		utf16_le = True;
+	else if (bom1 == 0xfe && bom2 == 0xff)
+		utf16_be = True;
+	else
+	{
+		if (bom2 != EOF)
+			ungetc(bom2, fp);
+		if (bom1 != EOF)
+			ungetc(bom1, fp);
+	}
+
+	while (read_rdp_file_line(fp, utf16_le, utf16_be, line, sizeof(line)))
+	{
+		char *key, *value;
+		char type;
+		char *endptr;
+		long number;
+
+		if (!rdp_file_line_value(line, &key, &type, &value))
+			continue;
+
+		if (type == 's')
+		{
+			if (rdp_key_equals(key, "full address"))
+			{
+				STRNCPY(server, value, server_size);
+				have_server = server[0] != '\0';
+			}
+			else if (!username_option && rdp_key_equals(key, "username"))
+			{
+				xfree(g_username);
+				g_username = (char *) xmalloc(strlen(value) + 1);
+				strcpy(g_username, value);
+			}
+			else if (!domain_option && rdp_key_equals(key, "domain"))
+			{
+				STRNCPY(domain, value, domain_size);
+			}
+			else if (!shell_option && rdp_key_equals(key, "alternate shell"))
+			{
+				STRNCPY(shell, value, shell_size);
+			}
+			else if (!directory_option && rdp_key_equals(key, "shell working directory"))
+			{
+				STRNCPY(directory, value, directory_size);
+			}
+			else if (!keymap_option && rdp_key_equals(key, "keyboard layout"))
+			{
+				STRNCPY(g_keymapname, value, sizeof(g_keymapname));
+			}
+			else if (!password_option && rdp_key_equals(key, "password"))
+			{
+				STRNCPY(g_password, value, sizeof(g_password));
+			}
+		}
+		else if (type == 'i')
+		{
+			errno = 0;
+			number = strtol(value, &endptr, 10);
+			if (errno != 0 || endptr == value)
+				continue;
+
+			if (rdp_key_equals(key, "server port"))
+			{
+				if (number > 0 && number <= 65535)
+					g_tcp_port_rdp = number;
+			}
+			else if (!depth_option && rdp_key_equals(key, "session bpp"))
+			{
+				if (number == 8 || number == 15 || number == 16 || number == 24 || number == 32)
+					g_server_depth = number;
+			}
+			else if (!geometry_option && !fullscreen_option &&
+				 rdp_key_equals(key, "desktopwidth"))
+			{
+				if (number > 0)
+				{
+					width = number;
+					have_width = True;
+				}
+			}
+			else if (!geometry_option && !fullscreen_option &&
+				 rdp_key_equals(key, "desktopheight"))
+			{
+				if (number > 0)
+				{
+					height = number;
+					have_height = True;
+				}
+			}
+			else if (!fullscreen_option && !geometry_option &&
+				 rdp_key_equals(key, "screen mode id"))
+			{
+				if (number == 2)
+				{
+					g_window_size_type = Fullscreen;
+					g_fullscreen = True;
+				}
+			}
+			else if (rdp_key_equals(key, "redirectclipboard"))
+			{
+				g_rdpclip = number != 0;
+			}
+		}
+	}
+
+	if (ferror(fp))
+	{
+		logger(Core, Error, "failed to read RDP file '%s': %s", filename, strerror(errno));
+		fclose(fp);
+		return False;
+	}
+
+	fclose(fp);
+
+	if (!geometry_option && !fullscreen_option && !g_fullscreen && have_width && have_height)
+	{
+		g_requested_session_width = width;
+		g_requested_session_height = height;
+		g_window_size_type = Fixed;
+	}
+
+	if (!have_server)
+	{
+		logger(Core, Error, "RDP file '%s' does not contain 'full address'", filename);
+		return False;
+	}
+
+	return True;
+}
+
+static RD_BOOL
+filename_has_rdp_suffix(const char *filename)
+{
+	size_t len;
+	const char *suffix;
+
+	len = strlen(filename);
+	if (len < 4)
+		return False;
+
+	suffix = filename + len - 4;
+	return rdp_key_equals(suffix, ".rdp");
+}
+
+static RD_BOOL
+string_has_rdp_uri_scheme(const char *value)
+{
+	return value != NULL && str_startswith(value, "rdp://");
+}
+
+static RD_BOOL
+rdp_uri_hex_value(char ch, uint8 *value)
+{
+	if (ch >= '0' && ch <= '9')
+	{
+		*value = ch - '0';
+		return True;
+	}
+	if (ch >= 'a' && ch <= 'f')
+	{
+		*value = ch - 'a' + 10;
+		return True;
+	}
+	if (ch >= 'A' && ch <= 'F')
+	{
+		*value = ch - 'A' + 10;
+		return True;
+	}
+	return False;
+}
+
+static RD_BOOL
+rdp_uri_percent_decode(const char *src, char *dst, size_t dst_size)
+{
+	size_t di = 0;
+
+	if (dst_size == 0)
+		return False;
+
+	while (*src != '\0')
+	{
+		uint8 high, low;
+
+		if (di + 1 >= dst_size)
+			return False;
+
+		if (*src == '%' && src[1] != '\0' && src[2] != '\0' &&
+		    rdp_uri_hex_value(src[1], &high) && rdp_uri_hex_value(src[2], &low))
+		{
+			dst[di++] = (char) ((high << 4) | low);
+			src += 3;
+		}
+		else if (*src == '+')
+		{
+			dst[di++] = ' ';
+			src++;
+		}
+		else
+		{
+			dst[di++] = *src++;
+		}
+	}
+
+	dst[di] = '\0';
+	return True;
+}
+
+static void
+rdp_uri_apply_integer_setting(const char *key, long number, RD_BOOL geometry_option,
+                              RD_BOOL fullscreen_option, RD_BOOL depth_option,
+                              RD_BOOL *have_width, RD_BOOL *have_height,
+                              uint32 *width, uint32 *height)
+{
+	if (rdp_key_equals(key, "server port"))
+	{
+		if (number > 0 && number <= 65535)
+			g_tcp_port_rdp = number;
+	}
+	else if (!depth_option && rdp_key_equals(key, "session bpp"))
+	{
+		if (number == 8 || number == 15 || number == 16 || number == 24 || number == 32)
+			g_server_depth = number;
+	}
+	else if (!geometry_option && !fullscreen_option && rdp_key_equals(key, "desktopwidth"))
+	{
+		if (number > 0)
+		{
+			*width = number;
+			*have_width = True;
+		}
+	}
+	else if (!geometry_option && !fullscreen_option && rdp_key_equals(key, "desktopheight"))
+	{
+		if (number > 0)
+		{
+			*height = number;
+			*have_height = True;
+		}
+	}
+	else if (!fullscreen_option && !geometry_option && rdp_key_equals(key, "screen mode id"))
+	{
+		if (number == 2)
+		{
+			g_window_size_type = Fullscreen;
+			g_fullscreen = True;
+		}
+	}
+	else if (rdp_key_equals(key, "redirectclipboard"))
+	{
+		g_rdpclip = number != 0;
+	}
+}
+
+static RD_BOOL
+parse_rdp_uri(const char *uri, char *server, size_t server_size, char *domain,
+              size_t domain_size, char *shell, size_t shell_size, char *directory,
+              size_t directory_size, RD_BOOL username_option, RD_BOOL password_option,
+              RD_BOOL domain_option, RD_BOOL shell_option, RD_BOOL directory_option,
+              RD_BOOL keymap_option, RD_BOOL geometry_option, RD_BOOL fullscreen_option,
+              RD_BOOL depth_option)
+{
+	char uri_copy[4096];
+	char *cursor;
+	RD_BOOL have_server = False;
+	RD_BOOL have_width = False, have_height = False;
+	uint32 width = 0, height = 0;
+
+	if (!string_has_rdp_uri_scheme(uri))
+		return False;
+
+	if (!rdp_uri_percent_decode(uri + 6, uri_copy, sizeof(uri_copy)))
+	{
+		logger(Core, Error, "RDP URI is too long");
+		return False;
+	}
+
+	cursor = uri_copy;
+	while (cursor != NULL && *cursor != '\0')
+	{
+		char *next;
+		char *key, *value;
+		char type;
+		char *endptr;
+		long number;
+
+		next = strchr(cursor, '&');
+		if (next != NULL)
+			*next++ = '\0';
+
+		if (!rdp_file_line_value(cursor, &key, &type, &value))
+		{
+			cursor = next;
+			continue;
+		}
+
+		if (type == 's')
+		{
+			if (rdp_key_equals(key, "full address"))
+			{
+				STRNCPY(server, value, server_size);
+				have_server = server[0] != '\0';
+			}
+			else if (!username_option && rdp_key_equals(key, "username"))
+			{
+				xfree(g_username);
+				g_username = (char *) xmalloc(strlen(value) + 1);
+				strcpy(g_username, value);
+			}
+			else if (!domain_option && rdp_key_equals(key, "domain"))
+			{
+				STRNCPY(domain, value, domain_size);
+			}
+			else if (!shell_option && rdp_key_equals(key, "alternate shell"))
+			{
+				STRNCPY(shell, value, shell_size);
+			}
+			else if (!directory_option && rdp_key_equals(key, "shell working directory"))
+			{
+				STRNCPY(directory, value, directory_size);
+			}
+			else if (!keymap_option && rdp_key_equals(key, "keyboard layout"))
+			{
+				STRNCPY(g_keymapname, value, sizeof(g_keymapname));
+			}
+			else if (!password_option && rdp_key_equals(key, "password"))
+			{
+				STRNCPY(g_password, value, sizeof(g_password));
+			}
+		}
+		else if (type == 'i')
+		{
+			errno = 0;
+			number = strtol(value, &endptr, 10);
+			if (errno == 0 && endptr != value && *endptr == '\0')
+				rdp_uri_apply_integer_setting(key, number, geometry_option, fullscreen_option,
+				                              depth_option, &have_width, &have_height,
+				                              &width, &height);
+		}
+
+		cursor = next;
+	}
+
+	if (!geometry_option && !fullscreen_option && !g_fullscreen && have_width && have_height)
+	{
+		g_requested_session_width = width;
+		g_requested_session_height = height;
+		g_window_size_type = Fixed;
+	}
+
+	if (!have_server)
+	{
+		logger(Core, Error, "RDP URI does not contain 'full address'");
+		return False;
+	}
+
+	return True;
+}
+
+
+static RD_BOOL
+read_rdp_file_line(FILE *fp, RD_BOOL utf16_le, RD_BOOL utf16_be, char *line, size_t size)
+{
+	size_t pos = 0;
+	RD_BOOL got_data = False;
+
+	while (1)
+	{
+		int ch;
+
+		if (utf16_le || utf16_be)
+		{
+			int first = fgetc(fp);
+			int second;
+
+			if (first == EOF)
+				break;
+			second = fgetc(fp);
+			if (second == EOF)
+				break;
+
+			ch = utf16_le ? first : second;
+		}
+		else
+		{
+			ch = fgetc(fp);
+			if (ch == EOF)
+				break;
+		}
+
+		got_data = True;
+		if (ch == '\r')
+			continue;
+		if (ch == '\n')
+			break;
+		if (pos + 1 < size)
+			line[pos++] = ch;
+	}
+
+	line[pos] = '\0';
+	return got_data;
 }
 
 static void
@@ -780,13 +1317,23 @@ main(int argc, char *argv[])
 	struct passwd *pw;
 	uint32 flags, ext_disc_reason = 0;
 	char *p;
+	size_t title_len;
 	int c;
 	char *locale = NULL;
-	int username_option = 0;
+	RD_BOOL username_option = False;
+	RD_BOOL password_option = False;
+	RD_BOOL domain_option = False;
+	RD_BOOL shell_option = False;
+	RD_BOOL directory_option = False;
+	RD_BOOL keymap_option = False;
 	RD_BOOL geometry_option = False;
+	RD_BOOL fullscreen_option = False;
+	RD_BOOL depth_option = False;
 #ifdef WITH_RDPSND
 	char *rdpsnd_optarg = NULL;
 #endif
+
+	g_launcher_program = argv[0];
 
 	/* setup debug logging from environment */
 	logger_set_subjects(getenv("RDESKTOP_DEBUG"));
@@ -809,6 +1356,20 @@ main(int argc, char *argv[])
 	act.sa_flags = 0;
 	sigaction(SIGPIPE, &act, NULL);
 
+	if (argc == 1)
+	{
+		int gui_result = xgui_startup(&argc, &argv);
+
+		if (gui_result == 0)
+			return EX_OK;
+		if (gui_result < 0)
+		{
+			usage(argv[0]);
+			return EX_USAGE;
+		}
+		g_use_gui_prompts = True;
+	}
+
 	/* setup default flags for TS_INFO_PACKET */
 	flags = RDP_INFO_MOUSE | RDP_INFO_DISABLECTRLALTDEL
 		| RDP_INFO_UNICODE | RDP_INFO_MAXIMIZESHELL | RDP_INFO_ENABLEWINDOWSKEY;
@@ -819,8 +1380,110 @@ main(int argc, char *argv[])
 
 	g_num_devices = 0;
 
+	for (c = 1; c < argc; c++)
+	{
+		if (!strcmp(argv[c], "--admin") || !strcmp(argv[c], "/admin"))
+			argv[c] = "-0";
+		else if (!strcmp(argv[c], "--shadow"))
+		{
+			char *endptr;
+
+			if (c + 1 >= argc)
+			{
+				logger(Core, Error, "--shadow requires a session id");
+				return EX_USAGE;
+			}
+
+			g_shadow_session_id = strtoul(argv[c + 1], &endptr, 10);
+			if (*endptr != '\0' || g_shadow_session_id == 0)
+			{
+				logger(Core, Error, "invalid shadow session id '%s'", argv[c + 1]);
+				return EX_USAGE;
+			}
+
+			g_shadow_session = True;
+			g_redirect_session_id = g_shadow_session_id;
+			argv[c] = "-5";
+			argv[++c] = "-5";
+		}
+		else if (!strncmp(argv[c], "--shadow:", 9) || !strncmp(argv[c], "/shadow:", 8))
+		{
+			char *endptr;
+			char *value = argv[c] + (argv[c][1] == '-' ? 9 : 8);
+
+			g_shadow_session_id = strtoul(value, &endptr, 10);
+			if (*endptr != '\0' || g_shadow_session_id == 0)
+			{
+				logger(Core, Error, "invalid shadow session id '%s'", value);
+				return EX_USAGE;
+			}
+
+			g_shadow_session = True;
+			g_redirect_session_id = g_shadow_session_id;
+			argv[c] = "-5";
+		}
+		else if (!strcmp(argv[c], "--multimon") || !strcmp(argv[c], "/multimon"))
+		{
+			g_multimon = True;
+			g_fullscreen = True;
+			g_window_size_type = Fullscreen;
+			argv[c] = "-f";
+		}
+		else if (!strcmp(argv[c], "--window-icon"))
+		{
+			if (c + 1 >= argc)
+			{
+				logger(Core, Error, "--window-icon requires a PNG file");
+				return EX_USAGE;
+			}
+
+			g_window_icon_file = argv[c + 1];
+			argv[c] = "-5";
+			argv[++c] = "-5";
+		}
+		else if (!strncmp(argv[c], "--window-icon=", 14) || !strncmp(argv[c], "/icon:", 6))
+		{
+			char *value = argv[c] + (argv[c][1] == '-' ? 14 : 6);
+
+			if (*value == '\0')
+			{
+				logger(Core, Error, "--window-icon requires a PNG file");
+				return EX_USAGE;
+			}
+
+			g_window_icon_file = value;
+			argv[c] = "-5";
+		}
+		else if (!strcmp(argv[c], "--restricted-admin") ||
+		         !strcmp(argv[c], "/restrictedAdmin"))
+		{
+			g_restricted_admin = True;
+			g_console_session = True;
+			argv[c] = "-0";
+		}
+		else if (!strcmp(argv[c], "--remote-guard") ||
+		         !strcmp(argv[c], "/remoteGuard"))
+		{
+			g_remote_guard = True;
+			argv[c] = "-5";
+		}
+		else if (!strcmp(argv[c], "--remote-guard-helper"))
+		{
+			if (c + 1 >= argc)
+			{
+				logger(Core, Error, "--remote-guard-helper requires a command");
+				return EX_USAGE;
+			}
+
+			g_remote_guard = True;
+			g_remote_guard_helper = argv[c + 1];
+			argv[c] = "-5";
+			argv[++c] = "-5";
+		}
+	}
+
 	while ((c = getopt(argc, argv,
-			   "A:V:u:L:d:s:c:p:n:k:g:o:fbBeEitmMzCDKS:T:NX:a:x:Pr:045vh?")) != -1)
+			   "A:V:u:L:d:s:c:p:n:k:g:o:fbBeEitmMzCDKJ:S:T:w:NX:a:x:Pr:R045vh?")) != -1)
 	{
 		switch (c)
 		{
@@ -836,7 +1499,7 @@ main(int argc, char *argv[])
 			case 'u':
 				g_username = (char *) xmalloc(strlen(optarg) + 1);
 				strcpy(g_username, optarg);
-				username_option = 1;
+				username_option = True;
 				break;
 
 			case 'L':
@@ -845,15 +1508,18 @@ main(int argc, char *argv[])
 
 			case 'd':
 				STRNCPY(domain, optarg, sizeof(domain));
+				domain_option = True;
 				break;
 
 			case 's':
 				STRNCPY(shell, optarg, sizeof(shell));
+				shell_option = True;
 				g_seamless_persistent_mode = False;
 				break;
 
 			case 'c':
 				STRNCPY(directory, optarg, sizeof(directory));
+				directory_option = True;
 				break;
 
 			case 'p':
@@ -864,6 +1530,7 @@ main(int argc, char *argv[])
 				}
 
 				STRNCPY(g_password, optarg, sizeof(g_password));
+				password_option = True;
 				flags |= RDP_INFO_AUTOLOGON;
 
 				/* try to overwrite argument so it won't appear in ps */
@@ -887,6 +1554,7 @@ main(int argc, char *argv[])
 
 			case 'k':
 				STRNCPY(g_keymapname, optarg, sizeof(g_keymapname));
+				keymap_option = True;
 				break;
 
 			case 'g':
@@ -901,6 +1569,7 @@ main(int argc, char *argv[])
 			case 'f':
 				g_window_size_type = Fullscreen;
 				g_fullscreen = True;
+				fullscreen_option = True;
 				break;
 
 			case 'b':
@@ -936,6 +1605,14 @@ main(int argc, char *argv[])
 				g_grab_keyboard = False;
 				break;
 
+			case 'J':
+				if (!xwin_parse_keyboard_ungrab_combo(optarg))
+				{
+					logger(Core, Error, "invalid -J keyboard ungrab combination: %s", optarg);
+					return EX_USAGE;
+				}
+				break;
+
 			case 'S':
 				if (!strcmp(optarg, "standard"))
 				{
@@ -957,6 +1634,10 @@ main(int argc, char *argv[])
 				STRNCPY(g_title, optarg, sizeof(g_title));
 				break;
 
+			case 'w':
+				STRNCPY(g_wm_class, optarg, sizeof(g_wm_class));
+				break;
+
 			case 'N':
 				g_numlock_sync = True;
 				break;
@@ -967,6 +1648,7 @@ main(int argc, char *argv[])
 
 			case 'a':
 				g_server_depth = strtol(optarg, NULL, 10);
+				depth_option = True;
 				if (g_server_depth != 8 &&
 				    g_server_depth != 16 &&
 				    g_server_depth != 15 && g_server_depth != 24
@@ -1072,6 +1754,11 @@ main(int argc, char *argv[])
 				{
 					g_lspci_enabled = True;
 				}
+				else if (str_startswith(optarg, "addin"))
+				{
+					if (!addin_parse_option(optarg + 5))
+						return EX_USAGE;
+				}
 				else if (str_startswith(optarg, "lptport"))
 				{
 					parallel_enum_devices(&g_num_devices, optarg + 7);
@@ -1113,9 +1800,13 @@ main(int argc, char *argv[])
 				else
 				{
 					logger(Core, Warning,
-					       "Unknown -r argument '%s'. Possible arguments are: comport, disk, lptport, printer, sound, clipboard, scard",
+					       "Unknown -r argument '%s'. Possible arguments are: addin, comport, disk, lptport, printer, sound, clipboard, scard",
 					       optarg);
 				}
+				break;
+
+			case 'R':
+				g_reconnect_on_network_error = True;
 				break;
 
 			case '0':
@@ -1184,7 +1875,43 @@ main(int argc, char *argv[])
 	}
 
 	STRNCPY(server, argv[optind], sizeof(server));
+	if (string_has_rdp_uri_scheme(server))
+	{
+		if (!parse_rdp_uri(server, server, sizeof(server), domain, sizeof(domain), shell,
+				   sizeof(shell), directory, sizeof(directory), username_option,
+				   password_option, domain_option, shell_option, directory_option,
+				   keymap_option, geometry_option, fullscreen_option, depth_option))
+			return EX_USAGE;
+	}
+	else if (filename_has_rdp_suffix(server))
+	{
+		if (!parse_rdp_file(server, server, sizeof(server), domain, sizeof(domain), shell,
+				    sizeof(shell), directory, sizeof(directory), username_option,
+				    password_option, domain_option, shell_option, directory_option,
+				    keymap_option, geometry_option, fullscreen_option, depth_option))
+			return EX_USAGE;
+	}
 	parse_server_and_port(server);
+	if (g_password[0])
+		flags |= RDP_INFO_AUTOLOGON;
+
+	if (g_shadow_session && g_console_session)
+	{
+		logger(Core, Error, "Shadow session mode cannot be combined with console/admin session mode");
+		return EX_USAGE;
+	}
+
+	if (g_multimon && geometry_option)
+	{
+		logger(Core, Error, "You cannot use -g and --multimon at the same time");
+		return EX_USAGE;
+	}
+
+	if (g_multimon)
+	{
+		g_window_size_type = Fullscreen;
+		g_fullscreen = True;
+	}
 
 	if (g_seamless_rdp)
 	{
@@ -1301,9 +2028,41 @@ main(int argc, char *argv[])
 
 	if (g_title[0] == 0)
 	{
-		strcpy(g_title, "rdesktop - ");
-		strncat(g_title, server, sizeof(g_title) - sizeof("rdesktop - "));
+		static const char title_prefix[] = "rdesktop - ";
+
+		title_len = strlen(server);
+		if (title_len > sizeof(g_title) - sizeof(title_prefix))
+			title_len = sizeof(g_title) - sizeof(title_prefix);
+		memcpy(g_title, title_prefix, sizeof(title_prefix) - 1);
+		memcpy(g_title + sizeof(title_prefix) - 1, server, title_len);
+		g_title[sizeof(title_prefix) - 1 + title_len] = '\0';
 	}
+
+	if (g_restricted_admin && g_remote_guard)
+	{
+		logger(Core, Error, "Restricted Admin mode and Remote Credential Guard are mutually exclusive");
+		return EX_USAGE;
+	}
+
+	if (g_remote_guard && g_use_password_as_pin)
+	{
+		logger(Core, Error, "Remote Credential Guard cannot be used with smartcard PIN authentication");
+		return EX_USAGE;
+	}
+
+	if (g_remote_guard && (g_remote_guard_helper == NULL || g_remote_guard_helper[0] == 0))
+		g_remote_guard_helper = "rdesktop-rdpear-helper";
+
+#ifdef WITH_SCARD
+	if (g_restricted_admin && g_use_password_as_pin)
+	{
+		logger(Core, Error, "Restricted Admin mode cannot be used with smartcard PIN authentication");
+		return EX_USAGE;
+	}
+
+	if (g_use_password_as_pin && g_sc_reader_name == NULL)
+		scard_auto_select_reader(&g_sc_reader_name);
+#endif
 
 	/* Only startup ctrl functionality is seamless are used for now. */
 	if (g_use_ctrl && g_seamless_rdp)
@@ -1338,9 +2097,20 @@ main(int argc, char *argv[])
 	if (g_lspci_enabled)
 		lspci_init();
 
+	if (!addin_init())
+	{
+		addin_deinit();
+		return EX_OSERR;
+	}
+
 	rdpdr_init();
 
 	dvc_init();
+	if (!rdpear_init())
+		return EX_PROTOCOL;
+#ifdef WITH_RDPSND
+	rdpsnd_input_init();
+#endif
 	rdpedisp_init();
 
 	setup_user_requested_session_size();
@@ -1371,14 +2141,56 @@ main(int argc, char *argv[])
 		utils_apply_session_size_limitations(&g_requested_session_width,
 						     &g_requested_session_height);
 
+		if (g_remote_guard)
+		{
+			xfree(g_remote_guard_server);
+			g_remote_guard_server = xstrdup(server);
+		}
+
+		if (g_shadow_session)
+		{
+			g_redirect_session_id = g_shadow_session_id;
+			logger(Core, Notice, "Requesting shadow session %u.", g_shadow_session_id);
+		}
+
+		pstcache_set_namespace(server, g_tcp_port_rdp, domain, g_username);
+
+		g_gui_prompt_cancelled = False;
 		if (!rdp_connect
 		    (server, flags, domain, g_password, shell, directory, g_reconnect_loop))
 		{
+			char message[512];
 
 			g_network_error = False;
 
+			if (g_use_gui_prompts)
+			{
+				if (g_gui_prompt_cancelled)
+					return reopen_launcher_from_gui(NULL, NULL);
+
+				snprintf(message, sizeof(message),
+				         "Unable to establish the Remote Desktop connection.\n\n"
+				         "Check the computer name, user name, password and selected options, "
+				         "then try again.");
+				return reopen_launcher_from_gui("rdesktop connection failed", message);
+			}
+
 			if (g_reconnect_loop == False)
-				return EX_PROTOCOL;
+			{
+				if (!g_reconnect_on_network_error || g_reconnect_started_ts == 0)
+					return EX_PROTOCOL;
+
+				if (time(NULL) - g_reconnect_started_ts > RECONNECT_TIMEOUT)
+				{
+					logger(Core, Notice,
+					       "Tried to reconnect for %d minutes, giving up.",
+					       RECONNECT_TIMEOUT / 60);
+					return EX_PROTOCOL;
+				}
+
+				sleep(4);
+				continue;
+			}
 
 			/* check if auto reconnect cookie has timed out */
 			if (time(NULL) - g_reconnect_random_ts > RECONNECT_TIMEOUT)
@@ -1404,6 +2216,8 @@ main(int argc, char *argv[])
 		if (!g_packet_encryption)
 			g_encryption_initial = g_encryption = False;
 
+		g_reconnect_started_ts = 0;
+
 		logger(Core, Verbose, "Connection successful");
 
 		rd_create_ui();
@@ -1415,6 +2229,7 @@ main(int argc, char *argv[])
 		rdp_main_loop(&deactivated, &ext_disc_reason);
 
 		tcp_run_ui(False);
+		ui_release_keyboard();
 
 		logger(Core, Verbose, "Disconnecting...");
 		rdp_disconnect();
@@ -1452,21 +2267,35 @@ main(int argc, char *argv[])
 			{
 				if (g_reconnect_random_ts == 0)
 				{
-					/* If there is no auto reconnect cookie available
-					   for reconnect, do not enter reconnect loop. Windows
-					   2016 server does not send any for unknown reasons.
-					 */
-					logger(Core, Notice,
-					       "Disconnected due to network error, exiting...");
-					break;
-				}
+					/* If there is no auto reconnect cookie available,
+					   retrying means starting a fresh connection. Keep
+					   the historic default conservative unless the user
+					   explicitly requested retry-on-network-error. */
+					if (!g_reconnect_on_network_error)
+					{
+						logger(Core, Notice,
+						       "Disconnected due to network error, exiting...");
+						break;
+					}
 
-				/* handle network error and start autoreconnect */
-				logger(Core, Notice,
-				       "Disconnected due to network error, retrying to reconnect for %d minutes.",
-				       RECONNECT_TIMEOUT / 60);
-				g_network_error = False;
-				g_reconnect_loop = True;
+					if (g_reconnect_started_ts == 0)
+						g_reconnect_started_ts = time(NULL);
+
+					logger(Core, Notice,
+					       "Disconnected due to network error, retrying a fresh connection for %d minutes.",
+					       RECONNECT_TIMEOUT / 60);
+					g_network_error = False;
+					g_reconnect_loop = False;
+				}
+				else
+				{
+					/* handle network error and start autoreconnect */
+					logger(Core, Notice,
+					       "Disconnected due to network error, retrying to reconnect for %d minutes.",
+					       RECONNECT_TIMEOUT / 60);
+					g_network_error = False;
+					g_reconnect_loop = True;
+				}
 			}
 			else if (g_pending_resize)
 			{
@@ -1493,11 +2322,33 @@ main(int argc, char *argv[])
 
 	cache_save_state();
 	ui_deinit();
+	addin_deinit();
 
 	if (g_user_quit)
 		return EXRD_WINDOW_CLOSED;
 
-	return handle_disconnect_reason(deactivated, ext_disc_reason);
+	{
+		int retval;
+
+		retval = handle_disconnect_reason(deactivated, ext_disc_reason);
+		if (g_use_gui_prompts && retval != EX_OK && retval != EXRD_WINDOW_CLOSED &&
+		    ext_disc_reason != ERRINFO_LOGOFF_BYUSER &&
+		    ext_disc_reason != ERRINFO_RPC_INITIATED_DISCONNECT_BYUSER)
+		{
+			char message[512];
+
+			snprintf(message, sizeof(message),
+			         "The Remote Desktop connection ended with an error.\n\n"
+			         "%s.\n\n"
+			         "The connection launcher will reopen so you can update the "
+			         "server, credentials or connection options.",
+			         g_last_disconnect_reason_text != NULL ?
+			         g_last_disconnect_reason_text : "Unknown reason");
+			return reopen_launcher_from_gui("rdesktop connection error", message);
+		}
+
+		return retval;
+	}
 
 	if (g_redirect_username)
 		xfree(g_redirect_username);
@@ -1961,6 +2812,7 @@ save_licence(unsigned char *data, int length)
 {
 	uint8 ho[20], hi[16];
 	char *home, path[PATH_MAX], tmppath[PATH_MAX], hash[41];
+	size_t path_len;
 	int fd;
 
 	home = getenv("HOME");
@@ -1985,8 +2837,14 @@ save_licence(unsigned char *data, int length)
 	snprintf(path, PATH_MAX, "%s" RDESKTOP_LICENSE_STORE "/%s.cal", home, hash);
 	path[sizeof(path) - 1] = '\0';
 
-	snprintf(tmppath, PATH_MAX, "%s.new", path);
-	path[sizeof(path) - 1] = '\0';
+	path_len = strlen(path);
+	if (path_len + sizeof(".new") > sizeof(tmppath))
+	{
+		logger(Core, Error, "save_license(), license path is too long");
+		return;
+	}
+	memcpy(tmppath, path, path_len);
+	memcpy(tmppath + path_len, ".new", sizeof(".new"));
 
 	fd = open(tmppath, O_WRONLY | O_CREAT | O_TRUNC, 0600);
 	if (fd == -1)

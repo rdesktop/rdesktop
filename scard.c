@@ -7,6 +7,7 @@
    Copyright 2015 Rostislav Kondratenko <r.kondratenk@wwpass.com>
    Copyright 2017 Karl Mikaelsson <derfian@cendio.se> for Cendio AB
    Copyright 2016-2018 Alexander Zakharov <uglym8@gmail.com>
+   Copyright 2026 Marco Fortina <marco_fortina@hotmail.it>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -80,6 +81,7 @@ static PThreadListElement threadList = NULL;
 
 
 static PSCThreadData queueFirst = NULL, queueLast = NULL;
+static RD_BOOL scard_queue_initialized = False;
 static int threadCount = 0;
 
 static PSCHCardRec hcardFirst = NULL;
@@ -88,13 +90,30 @@ static void *queue_handler_function(void *data);
 
 /* code segment */
 
+static void
+scard_invalidate_state(void)
+{
+	if (scard_queue_initialized)
+		pthread_mutex_lock(&queueAccess);
+	curEpoch++;
+	curDevice = 0;
+	curId = 0;
+	curBytesOut = 0;
+	if (scard_queue_initialized)
+		pthread_mutex_unlock(&queueAccess);
+}
+
 void
 scardSetInfo(uint32 epoch, uint32 device, uint32 id, uint32 bytes_out)
 {
+	if (scard_queue_initialized)
+		pthread_mutex_lock(&queueAccess);
 	curDevice = device;
 	curId = id;
 	curBytesOut = bytes_out;
 	curEpoch = epoch;
+	if (scard_queue_initialized)
+		pthread_mutex_unlock(&queueAccess);
 }
 
 static RD_NTSTATUS
@@ -196,6 +215,7 @@ scard_enum_devices(uint32 * id, char *optarg)
 		       "scard_enum_devices(), can't create queue handling thread");
 		return 0;
 	}
+	scard_queue_initialized = True;
 
 	strncpy(g_rdpdr_device[*id].name, "SCARD\0\0\0", 8);
 	toupper_str(g_rdpdr_device[*id].name);
@@ -260,6 +280,67 @@ scard_enum_devices(uint32 * id, char *optarg)
 	}
 
 	return count;
+}
+
+RD_BOOL
+scard_auto_select_reader(char **reader_name)
+{
+#define autoReaderArraySize 1024
+	MYPCSC_DWORD rv;
+	SCARDCONTEXT hContext;
+	MYPCSC_DWORD cchReaders = autoReaderArraySize;
+	char readers[autoReaderArraySize];
+	char *cur;
+	char *selected = NULL;
+	int count = 0;
+
+	if (reader_name == NULL || *reader_name != NULL)
+		return True;
+
+	rv = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &hContext);
+	if (rv != SCARD_S_SUCCESS)
+	{
+		logger(SmartCard, Warning,
+		       "scard_auto_select_reader(), PCSC service not available: %s (0x%08x)",
+		       pcsc_stringify_error(rv), (unsigned int) rv);
+		return False;
+	}
+
+	memset(readers, 0, sizeof(readers));
+	rv = SCardListReaders(hContext, NULL, readers, &cchReaders);
+	SCardReleaseContext(hContext);
+
+	if (rv != SCARD_S_SUCCESS)
+	{
+		logger(SmartCard, Warning,
+		       "scard_auto_select_reader(), failed to list readers: %s (0x%08x)",
+		       pcsc_stringify_error(rv), (unsigned int) rv);
+		return False;
+	}
+
+	cur = readers;
+	while (*cur)
+	{
+		count++;
+		selected = cur;
+		cur += strlen(cur) + 1;
+	}
+
+	if (count == 1 && selected)
+	{
+		*reader_name = strdup(selected);
+		logger(SmartCard, Notice, "Auto-selected smartcard reader '%s'", *reader_name);
+		return *reader_name != NULL;
+	}
+
+	if (count == 0)
+		logger(SmartCard, Warning, "scard_auto_select_reader(), no smartcard reader found");
+	else
+		logger(SmartCard, Warning,
+		       "scard_auto_select_reader(), %d readers found; use -o sc-reader-name=<reader>",
+		       count);
+	return False;
+#undef autoReaderArraySize
 }
 
 typedef struct _scard_handle_list_t
@@ -485,17 +566,10 @@ getAlias(char *name)
 	return name;
 }
 
-static int
-hasAlias(char *name)
+static RD_BOOL
+scard_has_explicit_reader_filter(void)
 {
-	int i;
-	PSCNameMapRec tmpMap;
-	for (i = 0, tmpMap = nameMapList; i < nameMapCount; i++, tmpMap++)
-	{
-		if (strcmp(tmpMap->name, name) == 0)
-			return 1;
-	}
-	return 0;
+	return nameMapCount > 0;
 }
 
 static void
@@ -570,35 +644,53 @@ outForceAlignment(STREAM out, unsigned int seed)
 static unsigned int
 inString(PMEM_HANDLE * handle, STREAM in, char **destination, SERVER_DWORD dataLength, RD_BOOL wide)
 {
-	unsigned int Result = (wide) ? (2 * dataLength) : (dataLength);
 	PMEM_HANDLE lcHandle = NULL;
-	char *buffer = SC_xmalloc(&lcHandle, Result + 2);
+	char *buffer;
 	char *reader;
+	unsigned int chars;
+	unsigned int i;
 
-	/* code segment */
+	buffer = SC_xmalloc(&lcHandle, dataLength + 2);
+	if (!buffer)
+	{
+		*destination = NULL;
+		return 0;
+	}
+	memset(buffer, 0, dataLength + 2);
+
+	/* dataLength is the on-wire byte count. Do not double it for wide strings. */
+	in_uint8a(in, buffer, dataLength);
 
 	if (wide)
 	{
-		unsigned int i;
-		in_uint8a(in, buffer, 2 * dataLength);
-		for (i = 0; i < dataLength; i++)
-			if ((buffer[2 * i] < 0) || (buffer[2 * i + 1] != 0))
-				buffer[i] = '?';
-			else
-				buffer[i] = buffer[2 * i];
+		chars = dataLength / 2;
+		if (dataLength % 2)
+		{
+			logger(SmartCard, Warning,
+			       "inString(), ignoring odd trailing byte in wide reader name length %u",
+			       (unsigned) dataLength);
+		}
+
+		for (i = 0; i < chars; i++)
+		{
+			uint8 lo = (uint8) buffer[2 * i];
+			uint8 hi = (uint8) buffer[2 * i + 1];
+			buffer[i] = hi ? '?' : (char) lo;
+		}
+		buffer[chars] = '\0';
 	}
 	else
 	{
-		in_uint8a(in, buffer, dataLength);
+		buffer[dataLength] = '\0';
 	}
 
-	buffer[dataLength] = '\0';
 	reader = getName(buffer);
 	*destination = SC_xmalloc(handle, strlen(reader) + 1);
-	strcpy(*destination, reader);
+	if (*destination)
+		strcpy(*destination, reader);
 
 	SC_xfreeallmemory(&lcHandle);
-	return Result;
+	return dataLength;
 }
 
 static unsigned int
@@ -843,24 +935,31 @@ TS_SCardListReaders(STREAM in, STREAM out, RD_BOOL wide)
 
 		for (i = 0, tmpMap = nameMapList; i < nameMapCount; i++, tmpMap++)
 		{
+			logger(SmartCard, Debug, "TS_SCardListReaders(), configured '%s'",
+			       tmpMap->alias);
 			dataLength += outString(out, tmpMap->alias, wide);
 		}
 
-		int lenSC = strlen(cur);
-		if (lenSC == 0)
-			dataLength += outString(out, "\0", wide);
-		else
-			while (lenSC > 0)
-			{
-				if (!hasAlias(cur))
+		if (!scard_has_explicit_reader_filter())
+		{
+			int lenSC = strlen(cur);
+			if (lenSC == 0)
+				dataLength += outString(out, "\0", wide);
+			else
+				while (lenSC > 0)
 				{
 					logger(SmartCard, Debug, "TS_SCardListReaders(),    '%s'",
 					       cur);
 					dataLength += outString(out, cur, wide);
+					cur = (void *) ((unsigned char *) cur + lenSC + 1);
+					lenSC = strlen(cur);
 				}
-				cur = (void *) ((unsigned char *) cur + lenSC + 1);
-				lenSC = strlen(cur);
-			}
+		}
+		else
+		{
+			logger(SmartCard, Debug,
+			       "TS_SCardListReaders(), hiding unconfigured local readers");
+		}
 	}
 
 	dataLength += outString(out, "\0", wide);
@@ -2523,13 +2622,24 @@ SC_addToQueue(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 		return NULL;
 	else
 	{
+		uint32 device, id, epoch, bytes_out;
+
+		if (scard_queue_initialized)
+			pthread_mutex_lock(&queueAccess);
+		device = curDevice;
+		id = curId;
+		epoch = curEpoch;
+		bytes_out = curBytesOut;
+		if (scard_queue_initialized)
+			pthread_mutex_unlock(&queueAccess);
+
 		data->memHandle = lcHandle;
-		data->device = curDevice;
-		data->id = curId;
-		data->epoch = curEpoch;
+		data->device = device;
+		data->id = id;
+		data->epoch = epoch;
 		data->handle = handle;
 		data->request = request;
-		data->srv_buf_len = curBytesOut - 0x14;
+		data->srv_buf_len = bytes_out - 0x14;
 		data->in = duplicateStream(&(data->memHandle), in, 0, SC_TRUE);
 		if (data->in == NULL)
 		{
@@ -2537,7 +2647,7 @@ SC_addToQueue(RD_NTHANDLE handle, uint32 request, STREAM in, STREAM out)
 			return NULL;
 		}
 		data->out =
-			duplicateStream(&(data->memHandle), out, OUT_STREAM_SIZE + curBytesOut,
+			duplicateStream(&(data->memHandle), out, OUT_STREAM_SIZE + bytes_out,
 					SC_FALSE);
 		if (data->out == NULL)
 		{
@@ -2604,12 +2714,30 @@ SC_deviceControl(PSCThreadData data)
 	/* if iorequest belongs to another epoch, don't send response
 	   back to server due to it's considered as abandoned.
 	 */
-	if (data->epoch == curEpoch)
 	{
-		uint8 *buf;
-		s_seek(data->out, 0);
-		in_uint8p(data->out, buf, buffer_len);
-		rdpdr_send_completion(data->device, data->id, status, buffer_len, buf, buffer_len);
+		RD_BOOL current;
+		uint32 current_epoch;
+
+		if (scard_queue_initialized)
+			pthread_mutex_lock(&queueAccess);
+		current_epoch = curEpoch;
+		current = data->epoch == current_epoch;
+		if (scard_queue_initialized)
+			pthread_mutex_unlock(&queueAccess);
+
+		if (current)
+		{
+			uint8 *buf;
+			s_seek(data->out, 0);
+			in_uint8p(data->out, buf, buffer_len);
+			rdpdr_send_completion(data->device, data->id, status, buffer_len, buf, buffer_len);
+		}
+		else
+		{
+			logger(SmartCard, Debug,
+			       "SC_deviceControl(), dropping stale smart card response epoch=%u current=%u",
+			       data->epoch, current_epoch);
+		}
 	}
 
 	SC_destroyThreadData(data);
@@ -2760,11 +2888,13 @@ scard_unlock(int lock)
 void
 scard_reset_state()
 {
-	curDevice = 0;
-	curId = 0;
-	curBytesOut = 0;
-
-	queueFirst = queueLast = NULL;
+	/*
+	 * Outstanding smart card calls can complete after the RDP connection has
+	 * been reset.  Invalidate the current epoch instead of discarding the queue
+	 * so worker threads can drain stale requests without sending completions on
+	 * the wrong connection.
+	 */
+	scard_invalidate_state();
 }
 
 void
@@ -2772,6 +2902,7 @@ scard_release_all_contexts(void)
 {
 	_scard_handle_list_t *item, *next;
 
+	scard_invalidate_state();
 	item = g_scard_handle_list;
 
 	while (item)

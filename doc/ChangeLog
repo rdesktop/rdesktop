@@ -1,3 +1,20 @@
+rdesktop (1.9.1)
+  * Add a built-in X11 connection launcher for no-argument startup
+  * Add internal NTLMv2 CredSSP/NLA support for modern Windows/RDS login
+  * Add Restricted Admin mode and Remote Credential Guard support
+  * Improve certificate prompt handling and harden interactive prompts
+  * Add RDP connection file and RDP URI parsing
+  * Add shadow session support and connection health monitoring
+  * Add custom window icons and advertise multi-monitor layouts
+  * Add NineGrid drawing order support for improved XRDP compatibility
+  * Add audio input redirection and out-of-process virtual channel add-ins
+  * Improve smart-card, clipboard, serial, disk, and window refresh handling
+  * Improve keyboard, mouse wheel, cursor, and desktop integration behavior
+  * Improve logging, diagnostics, build documentation, and troubleshooting docs
+  * Many other compatibility fixes and small bug fixes
+
+  -- Marco Fortina <marco_fortina@hotmail.it> 2026-05-21
+
 rdesktop (1.9.0)
   * Use GnuTLS and nettle instead of OpenSSL
   * Improved certificate handling

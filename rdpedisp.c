@@ -27,6 +27,7 @@
 #define RDPEDISP_CHANNEL_NAME "Microsoft::Windows::RDS::DisplayControl"
 
 extern int g_dpi;
+extern RD_BOOL g_multimon;
 extern RD_BOOL g_pending_resize_defer;
 extern struct timeval g_pending_resize_defer_timer;
 
@@ -82,37 +83,72 @@ rdpedisp_process_pdu(STREAM s)
 }
 
 static void
+rdpedisp_write_monitor_layout(STREAM s, const RDP_MONITOR_LAYOUT *monitor,
+                              uint32 width, uint32 height)
+{
+	uint32 physwidth, physheight, desktopscale, devicescale;
+
+	out_uint32_le(s, monitor->flags & RDESKTOP_MONITOR_PRIMARY ?
+	              DISPLAYCONTROL_MONITOR_PRIMARY : 0);
+	out_uint32_le(s, (uint32) monitor->left);
+	out_uint32_le(s, (uint32) monitor->top);
+	out_uint32_le(s, width);
+	out_uint32_le(s, height);
+
+	utils_calculate_dpi_scale_factors(width, height, g_dpi,
+	                                  &physwidth, &physheight, &desktopscale, &devicescale);
+
+	out_uint32_le(s, physwidth);     /* physicalWidth */
+	out_uint32_le(s, physheight);    /* physicalHeight */
+	out_uint32_le(s, ORIENTATION_LANDSCAPE); /* orientation */
+	out_uint32_le(s, desktopscale);  /* desktopScaleFactor */
+	out_uint32_le(s, devicescale);   /* deviceScaleFactor */
+}
+
+static void
 rdpedisp_send_monitor_layout_pdu(uint32 width, uint32 height)
 {
 	struct stream s;
-	uint32 physwidth, physheight, desktopscale, devicescale;
+	RDP_MONITOR_LAYOUT monitors[RDESKTOP_MAX_MONITORS];
+	uint32 monitor_count = 1;
+	uint32 desktop_width = width;
+	uint32 desktop_height = height;
+	uint32 i;
 
 	memset(&s, 0, sizeof(s));
+	memset(monitors, 0, sizeof(monitors));
 
-	logger(Protocol, Debug, "rdpedisp_send_monitor_layout_pdu(), width = %d, height = %d",
-	       width, height);
+	if (!g_multimon ||
+	    !ui_get_monitor_layout(monitors, RDESKTOP_MAX_MONITORS, &monitor_count,
+	                           &desktop_width, &desktop_height))
+	{
+		monitors[0].left = 0;
+		monitors[0].top = 0;
+		monitors[0].right = width - 1;
+		monitors[0].bottom = height - 1;
+		monitors[0].flags = RDESKTOP_MONITOR_PRIMARY;
+		monitor_count = 1;
+	}
 
-	rdpedisp_init_packet(&s, DISPLAYCONTROL_PDU_TYPE_MONITOR_LAYOUT, 16 + 1 * 40);
+	logger(Protocol, Debug,
+	       "rdpedisp_send_monitor_layout_pdu(), monitors = %u, desktop = %ux%u",
+	       monitor_count, desktop_width, desktop_height);
 
-	out_uint32_le(&s, 40);	/* MonitorLayoutSize - spec mandates 40 */
-	out_uint32_le(&s, 1);	/* NumMonitors */
+	rdpedisp_init_packet(&s, DISPLAYCONTROL_PDU_TYPE_MONITOR_LAYOUT,
+	                    16 + monitor_count * 40);
 
-	out_uint32_le(&s, DISPLAYCONTROL_MONITOR_PRIMARY);	/* flags */
-	out_uint32_le(&s, 0);	/* left */
-	out_uint32_le(&s, 0);	/* top */
-	out_uint32_le(&s, width);	/* width */
-	out_uint32_le(&s, height);	/* height */
+	out_uint32_le(&s, 40);          /* MonitorLayoutSize - spec mandates 40 */
+	out_uint32_le(&s, monitor_count);       /* NumMonitors */
 
-	utils_calculate_dpi_scale_factors(width, height, g_dpi,
-					  &physwidth, &physheight, &desktopscale, &devicescale);
+	for (i = 0; i < monitor_count; i++)
+	{
+		uint32 monitor_width = monitors[i].right - monitors[i].left + 1;
+		uint32 monitor_height = monitors[i].bottom - monitors[i].top + 1;
 
-	out_uint32_le(&s, physwidth);	/* physicalwidth */
-	out_uint32_le(&s, physheight);	/* physicalheight */
-	out_uint32_le(&s, ORIENTATION_LANDSCAPE);	/* Orientation */
-	out_uint32_le(&s, desktopscale);	/* DesktopScaleFactor */
-	out_uint32_le(&s, devicescale);	/* DeviceScaleFactor */
+		rdpedisp_write_monitor_layout(&s, &monitors[i], monitor_width, monitor_height);
+	}
+
 	s_mark_end(&s);
-
 	rdpedisp_send(&s);
 }
 

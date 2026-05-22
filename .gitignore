@@ -1,9 +1,12 @@
 rdesktop
+rdesktop-rdpear-helper
 autom4te.cache
 /Makefile
 config.log
 config.status
 configure
+configure~
 rdesktop*.tar.gz
 aclocal.m4
+*.patch
 *.o
