@@ -1,0 +1,12 @@
+# Copyright (c) 2026 Marco Fortina
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# This file is part of Custodia.
+# Custodia is distributed under the GNU Affero General Public License v3.0.
+# See the accompanying LICENSE file for details.
+
+# GitHub displays these links in the repository Sponsor button.
+github: [marcofortina]
+custom:
+  - "https://paypal.me/marcofortina"
+  - "https://www.blockchain.com/explorer/addresses/btc/36jDV57roGb4o59TwK1CB7viPrXToQHGiP"

@@ -4,6 +4,7 @@
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2005-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
    Copyright 2012-2018 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2026 Marco Fortina <marco_fortina@hotmail.it>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -25,6 +26,9 @@ extern RD_BOOL g_encryption;
 extern RD_BOOL g_encryption_initial;
 extern RDP_VERSION g_rdp_version;
 extern RD_BOOL g_use_password_as_pin;
+extern RD_BOOL g_restricted_admin;
+extern RD_BOOL g_extended_client_data_supported;
+extern RD_BOOL g_remote_guard;
 
 static RD_BOOL g_negotiate_rdp_protocol = True;
 
@@ -62,6 +66,7 @@ static void
 iso_send_connection_request(char *username, uint32 neg_proto)
 {
 	STREAM s;
+	uint8 neg_flags = 0;
 	int length = 30 + strlen(username);
 
 	if (g_rdp_version >= RDP_V5 && g_negotiate_rdp_protocol)
@@ -88,8 +93,13 @@ iso_send_connection_request(char *username, uint32 neg_proto)
 	if (g_rdp_version >= RDP_V5 && g_negotiate_rdp_protocol)
 	{
 		/* optional RDP protocol negotiation request for RDPv5 */
+		if (g_restricted_admin)
+			neg_flags |= RESTRICTED_ADMIN_MODE_REQUIRED;
+		if (g_remote_guard)
+			neg_flags |= REDIRECTED_AUTHENTICATION_MODE_REQUIRED;
+
 		out_uint8(s, RDP_NEG_REQ);
-		out_uint8(s, 0);
+		out_uint8(s, neg_flags);
 		out_uint16(s, 8);
 		out_uint32(s, neg_proto);
 	}
@@ -240,18 +250,34 @@ iso_connect(char *server, char *username, char *domain, char *password,
 	RD_BOOL is_fastpath;
 	uint8 fastpath_hdr;
 
+	g_extended_client_data_supported = False;
 	g_negotiate_rdp_protocol = True;
 
 	neg_proto = PROTOCOL_SSL;
 
 #ifdef WITH_CREDSSP
-	if (!g_use_password_as_pin)
+	if (g_remote_guard)
+		neg_proto |= PROTOCOL_HYBRID | PROTOCOL_HYBRID_EX;
+	else if (g_restricted_admin)
+		neg_proto |= PROTOCOL_HYBRID;
+	else if (!g_use_password_as_pin)
 		neg_proto |= PROTOCOL_HYBRID;
 	else if (g_sc_csp_name || g_sc_reader_name || g_sc_card_name || g_sc_container_name)
 		neg_proto |= PROTOCOL_HYBRID;
 	else
 		logger(Core, Warning,
 		       "iso_connect(), missing smartcard information for SSO, disabling CredSSP");
+#else
+	if (g_remote_guard)
+	{
+		logger(Core, Error, "Remote Credential Guard requires CredSSP support");
+		return False;
+	}
+	if (g_restricted_admin)
+	{
+		logger(Core, Error, "Restricted Admin mode requires CredSSP support");
+		return False;
+	}
 #endif
 	if (neg_proto & PROTOCOL_HYBRID)
 		logger(Core, Verbose, "Connecting to server using NLA...");
@@ -271,6 +297,17 @@ iso_connect(char *server, char *username, char *domain, char *password,
 	if (s == NULL)
 		return False;
 
+	if (is_fastpath)
+	{
+		logger(Protocol, Error,
+		       "iso_connect(), expected ISO connection confirm, got non-TPKT/fast-path header 0x%x",
+		       fastpath_hdr);
+		logger(Protocol, Error,
+		       "iso_connect(), check that the target host and port are an RDP listener, not a gateway, proxy, or closed service");
+		tcp_disconnect();
+		return False;
+	}
+
 	if (code != ISO_PDU_CC)
 	{
 		logger(Protocol, Error, "iso_connect(), expected ISO_PDU_CC, got 0x%x", code);
@@ -284,10 +321,12 @@ iso_connect(char *server, char *username, char *domain, char *password,
 		const char *reason = NULL;
 
 		uint8 type = 0;
+		uint8 neg_flags = 0;
 		uint32 data = 0;
 
 		in_uint8(s, type);
-		in_uint8s(s, 1);	/* skip flags */
+		in_uint8(s, neg_flags);
+		g_extended_client_data_supported = (neg_flags & EXTENDED_CLIENT_DATA_SUPPORTED) != 0;
 		in_uint8s(s, 2);	/* skip length */
 		in_uint32(s, data);
 
@@ -349,6 +388,26 @@ iso_connect(char *server, char *username, char *domain, char *password,
 			return False;
 		}
 
+		if (g_restricted_admin &&
+		    ((neg_flags & RESTRICTED_ADMIN_MODE_SUPPORTED) == 0 ||
+		     (data != PROTOCOL_HYBRID && data != PROTOCOL_HYBRID_EX)))
+		{
+			tcp_disconnect();
+			logger(Core, Error,
+			       "Restricted Admin mode was requested, but the server did not negotiate compatible CredSSP support");
+			return False;
+		}
+
+		if (g_remote_guard &&
+		    ((neg_flags & REDIRECTED_AUTHENTICATION_MODE_SUPPORTED) == 0 ||
+		     (data != PROTOCOL_HYBRID && data != PROTOCOL_HYBRID_EX)))
+		{
+			tcp_disconnect();
+			logger(Core, Error,
+			       "Remote Credential Guard was requested, but the server did not negotiate redirected CredSSP support");
+			return False;
+		}
+
 		/* handle negotiation response */
 		if (data == PROTOCOL_SSL)
 		{
@@ -366,8 +425,9 @@ iso_connect(char *server, char *username, char *domain, char *password,
 			logger(Core, Notice, "Connection established using SSL.");
 		}
 #ifdef WITH_CREDSSP
-		else if (data == PROTOCOL_HYBRID)
+		else if (data == PROTOCOL_HYBRID || data == PROTOCOL_HYBRID_EX)
 		{
+			logger(Core, Debug, "iso_connect(), server selected CredSSP protocol 0x%x", data);
 			if (!cssp_connect(server, username, domain, password, s))
 			{
 				/* failed to connect using cssp, let retry with plain TLS */

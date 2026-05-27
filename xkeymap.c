@@ -5,6 +5,7 @@
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2003-2008 Peter Astrand <astrand@cendio.se> for Cendio AB
    Copyright 2014-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2026 Marco Fortina <marco_fortina@hotmail.it>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -37,7 +38,7 @@
 
 extern Display *g_display;
 extern Window g_wnd;
-extern char g_keymapname[16];
+extern char g_keymapname[PATH_MAX];
 extern unsigned int g_keylayout;
 extern int g_keyboard_type;
 extern int g_keyboard_subtype;
@@ -644,6 +645,14 @@ handle_special_keys(uint32 keysym, unsigned int state, uint32 ev_time, RD_BOOL p
 			    && (get_key_state(state, XK_Control_L)
 				|| get_key_state(state, XK_Control_R)))
 			{
+				/* Ctrl-Alt-Shift-Enter: iconify the window */
+				if (get_key_state(state, XK_Shift_L) || get_key_state(state, XK_Shift_R))
+				{
+					if (pressed)
+						xwin_iconify_window();
+					return True;
+				}
+
 				/* Ctrl-Alt-Enter: toggle full screen */
 				if (pressed)
 				{

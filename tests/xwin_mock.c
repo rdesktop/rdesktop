@@ -15,3 +15,9 @@ void ui_get_workarea_size(uint32 *width, uint32 *height)
 {
   mock(width, height);
 }
+
+RD_BOOL
+xwin_parse_keyboard_ungrab_combo(const char *combo)
+{
+	return mock(combo);
+}

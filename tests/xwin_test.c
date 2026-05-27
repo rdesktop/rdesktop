@@ -30,7 +30,10 @@ RD_BOOL g_fullscreen;
 RD_BOOL g_grab_keyboard;
 RD_BOOL g_hide_decorations;
 RD_BOOL g_pending_resize;
+RD_BOOL g_pending_resize_defer;
+struct timeval g_pending_resize_defer_timer;
 char g_title[64];
+char g_wm_class[64];
 char g_seamless_spawn_cmd[512];
 /* Color depth of the RDP session.
    As of RDP 5.1, it may be 8, 15, 16 or 24. */
@@ -47,10 +50,22 @@ RD_BOOL g_rdpsnd;
 RD_BOOL g_owncolmap;
 RD_BOOL g_local_cursor;
 char g_codepage[16];
+RD_BOOL g_use_gui_prompts;
+RD_BOOL g_gui_prompt_cancelled;
+char *g_window_icon_file;
 
 #include "../xwin.c"
+#define RDESKTOP_TEST_NO_CERTIFICATE_EXCEPTION
 #include "../utils.c"
+#undef RDESKTOP_TEST_NO_CERTIFICATE_EXCEPTION
 #include "../stream.c"
+
+RD_BOOL
+xgui_choice_dialog(const char *title, const char *message, const char *accept_label,
+                   const char *reject_label)
+{
+	return mock(title, message, accept_label, reject_label);
+}
 
 /* malloc; exit if out of memory */
 void *
@@ -123,13 +138,20 @@ int XResizeWindow(Display *display, Window wnd, unsigned int width, unsigned int
 Status
 XGetWindowAttributes(Display *display, Window wnd, XWindowAttributes *attr)
 {
+  if (attr != NULL)
+  {
+    /* Keep ui_resize_window() on the resize path under test. */
+    attr->width = 800;
+    attr->height = 600;
+  }
+
   return mock(display, wnd, attr);
 }
 
 void
-XSetWMSizeHints(Display *display, Window wnd, XSizeHints *hints, Atom property)
+XSetWMNormalHints(Display *display, Window wnd, XSizeHints *hints)
 {
-  mock(display, wnd, hints, property);
+  mock(display, wnd, hints);
 }
 
 int
@@ -154,7 +176,7 @@ Ensure(XWIN, UiResizeWindowCallsXResizeWindow) {
 
   /* stubs */
   expect(XGetWindowAttributes, will_return(True));
-  expect(XSetWMSizeHints);
+  expect(XSetWMNormalHints);
   expect(XSetClipRectangles);
 
   /* expects */

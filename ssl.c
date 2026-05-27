@@ -5,6 +5,7 @@
    Copyright (C) Jay Sorg <j@american-data.com> 2006-2008
    Copyright 2016-2017 Henrik Andersson <hean01@cendio.se> for Cendio AB
    Copyright 2017 Alexander Zakharov <uglym8@gmail.com>
+   Copyright 2026 Marco Fortina <marco_fortina@hotmail.it>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -41,7 +42,11 @@ rdssl_sha1_update(RDSSL_SHA1 * sha1, uint8 * data, uint32 len)
 void
 rdssl_sha1_final(RDSSL_SHA1 * sha1, uint8 * out_data)
 {
+#if NETTLE_VERSION_MAJOR >= 4
+	sha1_digest(sha1, out_data);
+#else
 	sha1_digest(sha1, SHA1_DIGEST_SIZE, out_data);
+#endif
 }
 
 void
@@ -59,7 +64,11 @@ rdssl_md5_update(RDSSL_MD5 * md5, uint8 * data, uint32 len)
 void
 rdssl_md5_final(RDSSL_MD5 * md5, uint8 * out_data)
 {
+#if NETTLE_VERSION_MAJOR >= 4
+	md5_digest(md5, out_data);
+#else
 	md5_digest(md5, MD5_DIGEST_SIZE, out_data);
+#endif
 }
 
 void
@@ -104,7 +113,7 @@ rdssl_rsa_encrypt(uint8 * out, uint8 * in, int len, uint32 modulus_size, uint8 *
 	mpz_clear(exp);
 	mpz_clear(mod);
 
-	if (outlen < (int) modulus_size)
+	if (outlen < (size_t) modulus_size)
 		memset(out + outlen, 0, modulus_size - outlen);
 }
 
@@ -175,14 +184,15 @@ rdssl_cert_to_rkey(RDSSL_CERT * cert, uint32 * key_len)
 	RDSSL_RKEY *pkey;
 	gnutls_datum_t m, e;
 
-	unsigned int algo, bits;
+	int algo;
+	unsigned int bits;
 	char oid[64];
 	size_t oid_size = sizeof(oid);
 
 	uint8_t data[2048];
 	size_t len;
 
-	algo = gnutls_x509_crt_get_pk_algorithm(*cert, &bits);
+	algo = (int) gnutls_x509_crt_get_pk_algorithm(*cert, &bits);
 
 	/* By some reason, Microsoft sets the OID of the Public RSA key to
 	   the oid for "MD5 with RSA Encryption" instead of "RSA Encryption"
@@ -360,5 +370,9 @@ rdssl_hmac_md5(const void *key, int key_len, const unsigned char *msg, int msg_l
 
 	hmac_md5_set_key(&ctx, key_len, key);
 	hmac_md5_update(&ctx, msg_len, msg);
+#if NETTLE_VERSION_MAJOR >= 4
+	hmac_md5_digest(&ctx, md);
+#else
 	hmac_md5_digest(&ctx, MD5_DIGEST_SIZE, md);
+#endif
 }

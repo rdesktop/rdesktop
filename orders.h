@@ -31,6 +31,8 @@ enum RDP_ORDER_TYPE
 	RDP_ORDER_DESTBLT = 0,
 	RDP_ORDER_PATBLT = 1,
 	RDP_ORDER_SCREENBLT = 2,
+	RDP_ORDER_DRAWNINEGRID = 7,
+	RDP_ORDER_MULTI_DRAWNINEGRID = 8,
 	RDP_ORDER_LINE = 9,
 	RDP_ORDER_RECT = 10,
 	RDP_ORDER_DESKSAVE = 11,
@@ -42,6 +44,15 @@ enum RDP_ORDER_TYPE
 	RDP_ORDER_ELLIPSE = 25,
 	RDP_ORDER_ELLIPSE2 = 26,
 	RDP_ORDER_TEXT2 = 27
+};
+
+enum RDP_ALTSEC_ORDER_TYPE
+{
+	RDP_ALTSEC_SWITCH_SURFACE = 0,
+	RDP_ALTSEC_CREATE_OFFSCREEN_BITMAP = 1,
+	RDP_ALTSEC_STREAM_BITMAP_FIRST = 2,
+	RDP_ALTSEC_STREAM_BITMAP_NEXT = 3,
+	RDP_ALTSEC_CREATE_NINEGRID_BITMAP = 4
 };
 
 enum RDP_SECONDARY_ORDER_TYPE
@@ -92,6 +103,34 @@ typedef struct _SCREENBLT_ORDER
 
 }
 SCREENBLT_ORDER;
+
+
+#define MAX_DATA 256
+
+typedef struct _DRAWNINEGRID_ORDER
+{
+	sint16 src_left;
+	sint16 src_top;
+	sint16 src_right;
+	sint16 src_bottom;
+	uint16 bitmap_id;
+
+}
+DRAWNINEGRID_ORDER;
+
+typedef struct _MULTI_DRAWNINEGRID_ORDER
+{
+	sint16 src_left;
+	sint16 src_top;
+	sint16 src_right;
+	sint16 src_bottom;
+	uint16 bitmap_id;
+	uint8 n_delta_entries;
+	uint16 datasize;
+	uint8 data[MAX_DATA];
+
+}
+MULTI_DRAWNINEGRID_ORDER;
 
 typedef struct _LINE_ORDER
 {
@@ -165,8 +204,6 @@ typedef struct _MEMBLT_ORDER
 
 }
 MEMBLT_ORDER;
-
-#define MAX_DATA 256
 
 typedef struct _POLYGON_ORDER
 {
@@ -274,6 +311,8 @@ typedef struct _RDP_ORDER_STATE
 	DESTBLT_ORDER destblt;
 	PATBLT_ORDER patblt;
 	SCREENBLT_ORDER screenblt;
+	DRAWNINEGRID_ORDER drawninegrid;
+	MULTI_DRAWNINEGRID_ORDER multidrawninegrid;
 	LINE_ORDER line;
 	RECT_ORDER rect;
 	DESKSAVE_ORDER desksave;

@@ -18,15 +18,16 @@ CC          = @CC@
 INSTALL     = @INSTALL@
 CFLAGS      = @CFLAGS@ @X_CFLAGS@ @DEFS@ -DKEYMAP_PATH=\"$(KEYMAP_PATH)\"
 LDFLAGS     = @LDFLAGS@ @LIBS@ @X_LIBS@ @X_EXTRA_LIBS@
+GSSAPI_LIBS  = @GSSAPI_LIBS@
 STRIP       = @STRIP@
 
-TARGETS     = rdesktop
+TARGETS     = rdesktop rdesktop-rdpear-helper
 SOUNDOBJ    = @SOUNDOBJ@
 SCARDOBJ    = @SCARDOBJ@
 CREDSSPOBJ  = @CREDSSPOBJ@
 
-RDPOBJ   = tcp.o asn.o iso.o mcs.o secure.o licence.o rdp.o orders.o bitmap.o cache.o rdp5.o channels.o rdpdr.o serial.o printer.o disk.o parallel.o printercache.o mppc.o pstcache.o lspci.o seamless.o ssl.o utils.o stream.o dvc.o rdpedisp.o
-X11OBJ   = rdesktop.o xwin.o xkeymap.o ewmhints.o xclip.o cliprdr.o ctrl.o
+RDPOBJ   = tcp.o asn.o iso.o mcs.o secure.o licence.o rdp.o orders.o bitmap.o cache.o rdp5.o channels.o rdpdr.o addin.o serial.o printer.o disk.o parallel.o printercache.o mppc.o pstcache.o lspci.o seamless.o ssl.o utils.o stream.o dvc.o rdpear.o rdpedisp.o
+X11OBJ   = rdesktop.o xgui.o xwin.o xkeymap.o ewmhints.o xclip.o cliprdr.o ctrl.o
 
 .PHONY: all
 all: $(TARGETS)
@@ -34,15 +35,21 @@ all: $(TARGETS)
 rdesktop: $(X11OBJ) $(SOUNDOBJ) $(RDPOBJ) $(SCARDOBJ) $(CREDSSPOBJ)
 	$(CC) $(CFLAGS) -o rdesktop $(X11OBJ) $(SOUNDOBJ) $(RDPOBJ) $(SCARDOBJ) $(CREDSSPOBJ) $(LDFLAGS) -lX11
 
+rdesktop-rdpear-helper: rdpear-helper.o
+	$(CC) $(CFLAGS) -o rdesktop-rdpear-helper rdpear-helper.o $(GSSAPI_LIBS)
+
 .PHONY: install
 install: installbin installkeymaps installman
 
 .PHONY: installbin
-installbin: rdesktop
+installbin: rdesktop rdesktop-rdpear-helper
 	mkdir -p $(DESTDIR)$(bindir)
 	$(INSTALL) rdesktop $(DESTDIR)$(bindir)
+	$(INSTALL) rdesktop-rdpear-helper $(DESTDIR)$(bindir)
 	$(STRIP) $(DESTDIR)$(bindir)/rdesktop
+	$(STRIP) $(DESTDIR)$(bindir)/rdesktop-rdpear-helper
 	chmod 755 $(DESTDIR)$(bindir)/rdesktop
+	chmod 755 $(DESTDIR)$(bindir)/rdesktop-rdpear-helper
 
 .PHONY: installman
 installman: doc/rdesktop.1
@@ -61,7 +68,7 @@ installkeymaps:
 
 .PHONY: clean
 clean:
-	rm -f *.o *~ rdesktop
+	rm -f *.o *~ rdesktop rdesktop-rdpear-helper
 
 .PHONY: distclean
 distclean: clean

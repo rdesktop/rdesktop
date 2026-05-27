@@ -6,6 +6,7 @@
    Copyright 2011-2018 Henrik Andersson <hean01@cendio.se> for Cendio AB
    Copyright 2016 Alexander Zakharov <uglym8gmail.com>
    Copyright 2017 Karl Mikaelsson <derfian@cendio.se> for Cendio AB
+   Copyright 2026 Marco Fortina <marco_fortina@hotmail.it>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -35,6 +36,8 @@
 extern uint16 g_mcs_userid;
 extern char *g_username;
 extern char g_password[64];
+extern RD_BOOL g_restricted_admin;
+extern RD_BOOL g_remote_guard;
 extern char g_codepage[16];
 extern RD_BOOL g_orders;
 extern RD_BOOL g_encryption;
@@ -98,6 +101,112 @@ uint16 g_session_height;
 
 static void rdp_out_unistr(STREAM s, char *string, int len);
 
+static RD_BOOL g_heartbeat_monitoring = False;
+static RD_BOOL g_heartbeat_warned = False;
+static time_t g_heartbeat_last = 0;
+static uint8 g_heartbeat_period = 0;
+static uint8 g_heartbeat_count1 = 0;
+static uint8 g_heartbeat_count2 = 0;
+
+void
+rdp_heartbeat_reset_state(void)
+{
+	g_heartbeat_monitoring = False;
+	g_heartbeat_warned = False;
+	g_heartbeat_last = 0;
+	g_heartbeat_period = 0;
+	g_heartbeat_count1 = 0;
+	g_heartbeat_count2 = 0;
+}
+
+void
+rdp_process_heartbeat(uint8 period, uint8 count1, uint8 count2)
+{
+	if (period == 0)
+	{
+		logger(Protocol, Debug, "Ignoring heartbeat PDU with zero period");
+		return;
+	}
+
+	g_heartbeat_period = period;
+	g_heartbeat_count1 = count1 ? count1 : 3;
+	g_heartbeat_count2 = count2 ? count2 : 3;
+	g_heartbeat_last = time(NULL);
+	g_heartbeat_warned = False;
+	g_heartbeat_monitoring = True;
+
+	logger(Protocol, Debug,
+	       "Received heartbeat period=%u count1=%u count2=%u",
+	       g_heartbeat_period, g_heartbeat_count1, g_heartbeat_count2);
+}
+
+void
+rdp_heartbeat_note_activity(void)
+{
+	if (g_heartbeat_monitoring == False)
+		return;
+
+	g_heartbeat_last = time(NULL);
+	g_heartbeat_warned = False;
+}
+
+int
+rdp_heartbeat_select_timeout(int timeout_ms)
+{
+	time_t now, deadline;
+	int heartbeat_ms;
+
+	if (g_heartbeat_monitoring == False || g_heartbeat_period == 0)
+		return timeout_ms;
+
+	now = time(NULL);
+	deadline = g_heartbeat_last + g_heartbeat_period;
+	if (deadline <= now)
+		heartbeat_ms = 0;
+	else
+		heartbeat_ms = (deadline - now) * 1000;
+
+	if (timeout_ms < 0 || heartbeat_ms < timeout_ms)
+		return heartbeat_ms;
+
+	return timeout_ms;
+}
+
+void
+rdp_heartbeat_check_timeout(void)
+{
+	time_t now;
+	unsigned int elapsed, warn_after, reconnect_after;
+
+	if (g_heartbeat_monitoring == False || g_heartbeat_period == 0)
+		return;
+
+	now = time(NULL);
+	if (now <= g_heartbeat_last)
+		return;
+
+	elapsed = now - g_heartbeat_last;
+	warn_after = g_heartbeat_period * g_heartbeat_count1;
+	reconnect_after = g_heartbeat_period * (g_heartbeat_count1 + g_heartbeat_count2);
+
+	if (reconnect_after > 0 && elapsed >= reconnect_after)
+	{
+		logger(Core, Error,
+		       "Server heartbeat timed out after %u seconds, treating connection as failed",
+		       elapsed);
+		g_network_error = True;
+		g_exit_mainloop = True;
+		return;
+	}
+
+	if (!g_heartbeat_warned && warn_after > 0 && elapsed >= warn_after)
+	{
+		logger(Core, Warning,
+		       "No server heartbeat received for %u seconds", elapsed);
+		g_heartbeat_warned = True;
+	}
+}
+
 /* reads a TS_SHARECONTROLHEADER from stream, returns True of there is
    a PDU available otherwise False */
 static RD_BOOL
@@ -160,6 +269,8 @@ rdp_recv(uint8 * type)
 			rdp_s = sec_recv(&is_fastpath);
 			if (rdp_s == NULL)
 				return NULL;
+
+			rdp_heartbeat_note_activity();
 
 			if (is_fastpath == True)
 			{
@@ -266,8 +377,8 @@ rdp_out_unistr(STREAM s, char *string, int len)
 	static iconv_t icv_local_to_utf16;
 	size_t ibl, obl;
 	char *pin;
-	unsigned char *pout;
-
+	char *pout;
+	unsigned char *outbuf;
 
 	if (string == NULL || len == 0)
 		return;
@@ -288,12 +399,16 @@ rdp_out_unistr(STREAM s, char *string, int len)
 	ibl = strlen(string);
 	obl = len + 2;
 	pin = string;
-	out_uint8p(s, pout, len + 2);
 
-	memset(pout, 0, len + 2);
+	/* Reserve the UTF-16 output field in the stream. out_uint8p()
+	 * initializes outbuf to the reserved stream area and advances s->p.
+	 * iconv() then advances the separate pout cursor while writing there.
+	 */
+	out_uint8p(s, outbuf, len + 2);
+	memset(outbuf, 0, len + 2);
+	pout = (char *) outbuf;
 
-
-	if (iconv(icv_local_to_utf16, (char **) &pin, &ibl, (char **)&pout, &obl) == (size_t) - 1)
+	if (iconv(icv_local_to_utf16, (char **) &pin, &ibl, &pout, &obl) == (size_t) - 1)
 	{
 		logger(Protocol, Error, "rdp_out_unistr(), iconv(2) fail, errno %d", errno);
 		abort();
@@ -393,16 +508,17 @@ rdp_send_client_info_pdu(uint32 flags, char *domain, char *user,
 			 char *password, char *program, char *directory)
 {
 	char *ipaddr = tcp_get_address();
+	char *client_info_password = password;
 	/* length of string in TS_INFO_PACKET excludes null terminator */
-	int len_domain = 2 * strlen(domain);
-	int len_user = 2 * strlen(user);
-	int len_password = 2 * strlen(password);
-	int len_program = 2 * strlen(program);
-	int len_directory = 2 * strlen(directory);
+	int len_domain;
+	int len_user;
+	int len_password;
+	int len_program;
+	int len_directory;
 
 	/* length of strings in TS_EXTENDED_PACKET includes null terminator */
-	int len_ip = 2 * strlen(ipaddr) + 2;
-	int len_dll = 2 * strlen("C:\\WINNT\\System32\\mstscax.dll") + 2;
+	int len_ip;
+	int len_dll;
 
 	int packetlen = 0;
 	uint32 sec_flags = g_encryption ? (SEC_INFO_PKT | SEC_ENCRYPT) : SEC_INFO_PKT;
@@ -410,6 +526,20 @@ rdp_send_client_info_pdu(uint32 flags, char *domain, char *user,
 	time_t t = time(NULL);
 	time_t tzone;
 	uint8 security_verifier[16];
+
+	if (g_restricted_admin || g_remote_guard)
+	{
+		flags &= ~RDP_INFO_AUTOLOGON;
+		client_info_password = "";
+	}
+
+	len_domain = 2 * strlen(domain);
+	len_user = 2 * strlen(user);
+	len_password = 2 * strlen(client_info_password);
+	len_program = 2 * strlen(program);
+	len_directory = 2 * strlen(directory);
+	len_ip = 2 * strlen(ipaddr) + 2;
+	len_dll = 2 * strlen("C:\\WINNT\\System32\\mstscax.dll") + 2;
 
 	if (g_rdp_version == RDP_V4 || 1 == g_server_rdp_version)
 	{
@@ -428,7 +558,7 @@ rdp_send_client_info_pdu(uint32 flags, char *domain, char *user,
 
 		rdp_out_unistr_mandatory_null(s, domain, len_domain);
 		rdp_out_unistr_mandatory_null(s, user, len_user);
-		rdp_out_unistr_mandatory_null(s, password, len_password);
+		rdp_out_unistr_mandatory_null(s, client_info_password, len_password);
 		rdp_out_unistr_mandatory_null(s, program, len_program);
 		rdp_out_unistr_mandatory_null(s, directory, len_directory);
 	}
@@ -506,7 +636,7 @@ rdp_send_client_info_pdu(uint32 flags, char *domain, char *user,
 		}
 		else
 		{
-			rdp_out_unistr_mandatory_null(s, password, len_password);
+			rdp_out_unistr_mandatory_null(s, client_info_password, len_password);
 		}
 
 
@@ -801,6 +931,7 @@ rdp_out_ts_order_capabilityset(STREAM s)
 	order_caps[TS_NEG_PATBLT_INDEX] = 1;
 	order_caps[TS_NEG_SCRBLT_INDEX] = 1;
 	order_caps[TS_NEG_LINETO_INDEX] = 1;
+	order_caps[TS_NEG_DRAWNINEGRID_INDEX] = 1;
 	order_caps[TS_NEG_MULTI_DRAWNINEGRID_INDEX] = 1;
 	order_caps[TS_NEG_POLYLINE_INDEX] = 1;
 	order_caps[TS_NEG_INDEX_INDEX] = 1;
@@ -1071,6 +1202,16 @@ rdp_out_ts_glyphcache_capabilityset(STREAM s)
 }
 
 static void
+rdp_out_ts_drawninegrid_cache_capabilityset(STREAM s)
+{
+	out_uint16_le(s, RDP_CAPSET_DRAWNINEGRIDCACHE);
+	out_uint16_le(s, RDP_CAPLEN_DRAWNINEGRIDCACHE);
+	out_uint32_le(s, DRAW_NINEGRID_SUPPORTED_REV2);
+	out_uint16_le(s, DRAW_NINEGRID_CACHE_SIZE);
+	out_uint16_le(s, DRAW_NINEGRID_CACHE_ENTRIES);
+}
+
+static void
 rdp_out_ts_multifragmentupdate_capabilityset(STREAM s)
 {
 	out_uint16_le(s, RDP_CAPSET_MULTIFRAGMENTUPDATE);
@@ -1108,6 +1249,7 @@ rdp_send_confirm_active(void)
 		RDP_CAPLEN_FONT +
 		RDP_CAPLEN_SOUND +
 		RDP_CAPLEN_GLYPHCACHE +
+		RDP_CAPLEN_DRAWNINEGRIDCACHE +
 		RDP_CAPLEN_MULTIFRAGMENTUPDATE +
 		RDP_CAPLEN_LARGE_POINTER +
 		RDP_CAPLEN_VC + 4 /* w2k fix, sessionid */ ;
@@ -1137,7 +1279,7 @@ rdp_send_confirm_active(void)
 	out_uint16_le(s, caplen);
 
 	out_uint8a(s, RDP_SOURCE, sizeof(RDP_SOURCE));
-	out_uint16_le(s, 17);	/* num_caps */
+	out_uint16_le(s, 18);	/* num_caps */
 	out_uint8s(s, 2);	/* pad */
 
 	rdp_out_ts_general_capabilityset(s);
@@ -1164,6 +1306,7 @@ rdp_send_confirm_active(void)
 	rdp_out_ts_sound_capabilityset(s);
 	rdp_out_ts_font_capabilityset(s);
 	rdp_out_ts_glyphcache_capabilityset(s);
+	rdp_out_ts_drawninegrid_cache_capabilityset(s);
 	rdp_out_ts_multifragmentupdate_capabilityset(s);
 	rdp_out_ts_large_pointer_capabilityset(s);
 
@@ -1712,6 +1855,58 @@ process_ts_logon_info_extended(STREAM s)
 	}
 }
 
+static void
+process_ts_logon_info(STREAM s)
+{
+	uint32 cb_domain, cb_user;
+
+	if (!s_check_rem(s, 576 + 4 + 4))
+	{
+		logger(Protocol, Warning,
+		       "process_ts_logon_info(), short Logon Info Version 1 payload");
+		return;
+	}
+
+	in_uint8s(s, 576);	/* Domain/UserName fixed fields are not used. */
+	in_uint32_le(s, cb_domain);
+	in_uint32_le(s, cb_user);
+
+	if (cb_domain && s_check_rem(s, cb_domain))
+		in_uint8s(s, cb_domain);
+	if (cb_user && s_check_rem(s, cb_user))
+		in_uint8s(s, cb_user);
+}
+
+static void
+process_ts_logon_info_version_2(STREAM s)
+{
+	uint16 version;
+	uint32 size, session_id, cb_domain, cb_user;
+
+	if (!s_check_rem(s, 2 + 4 + 4 + 4 + 4 + 558))
+	{
+		logger(Protocol, Warning,
+		       "process_ts_logon_info_version_2(), short Logon Info Version 2 payload");
+		return;
+	}
+
+	in_uint16_le(s, version);
+	in_uint32_le(s, size);
+	in_uint32_le(s, session_id);
+	in_uint32_le(s, cb_domain);
+	in_uint32_le(s, cb_user);
+	in_uint8s(s, 558);	/* Pad */
+
+	logger(Protocol, Debug,
+	       "process_ts_logon_info_version_2(), version=%u size=%u session=%u",
+	       version, size, session_id);
+
+	if (cb_domain && s_check_rem(s, cb_domain))
+		in_uint8s(s, cb_domain);
+	if (cb_user && s_check_rem(s, cb_user))
+		in_uint8s(s, cb_user);
+}
+
 /* Process TS_SAVE_SESSION_INFO_PDU_DATA data structure */
 void
 process_pdu_logon(STREAM s)
@@ -1721,6 +1916,18 @@ process_pdu_logon(STREAM s)
 
 	switch (infotype)
 	{
+		case INFOTYPE_LOGON:	/* TS_LOGON_INFO */
+			logger(Protocol, Debug,
+			       "process_pdu_logon(), Received TS_LOGON_INFO");
+			process_ts_logon_info(s);
+			break;
+
+		case INFOTYPE_LOGON_LONG:	/* TS_LOGON_INFO_VERSION_2 */
+			logger(Protocol, Debug,
+			       "process_pdu_logon(), Received TS_LOGON_INFO_VERSION_2");
+			process_ts_logon_info_version_2(s);
+			break;
+
 		case INFOTYPE_LOGON_PLAINNOTIFY:	/* TS_PLAIN_NOTIFY */
 			logger(Protocol, Debug,
 			       "process_pdu_logon(), Received TS_LOGIN_PLAIN_NOTIFY");
@@ -2133,6 +2340,7 @@ rdp_reset_state(void)
 	g_rdp_shareid = 0;
 	g_exit_mainloop = False;
 	g_first_bitmap_caps = True;
+	rdp_heartbeat_reset_state();
 	sec_reset_state();
 }
 

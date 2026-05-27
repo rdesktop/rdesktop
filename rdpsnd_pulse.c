@@ -886,6 +886,8 @@ pulse_stream_state_cb(pa_stream * p, void *userdata)
 static void
 pulse_read_cb(pa_stream * p, size_t nbytes, void *userdata)
 {
+	UNUSED(p);
+	UNUSED(nbytes);
 	assert(userdata != NULL);
 
 	pulse_send_msg(pulse_ctl[1], RDPSND_PULSE_IN_AVAIL);
@@ -894,6 +896,8 @@ pulse_read_cb(pa_stream * p, size_t nbytes, void *userdata)
 static void
 pulse_write_cb(pa_stream * p, size_t nbytes, void *userdata)
 {
+	UNUSED(p);
+	UNUSED(nbytes);
 	assert(userdata != NULL);
 
 	pulse_send_msg(pulse_ctl[1], RDPSND_PULSE_OUT_AVAIL);
@@ -928,6 +932,7 @@ pulse_cork_cb(pa_stream * p, int success, void *userdata)
 static void
 pulse_flush_cb(pa_stream * p, int success, void *userdata)
 {
+	UNUSED(p);
 	assert(userdata != NULL);
 
 	if (!success)
@@ -943,6 +948,7 @@ pulse_flush_cb(pa_stream * p, int success, void *userdata)
 static void
 pulse_update_timing_cb(pa_stream * p, int success, void *userdata)
 {
+	UNUSED(p);
 	assert(userdata != NULL);
 
 	if (!success)
@@ -959,6 +965,9 @@ pulse_update_timing_cb(pa_stream * p, int success, void *userdata)
 void
 pulse_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv)
 {
+	UNUSED(wfds);
+	UNUSED(tv);
+
 	if (pulse_ctl[0] != -1)
 	{
 		if (pulse_ctl[0] > *n)
@@ -974,6 +983,7 @@ pulse_check_fds(fd_set * rfds, fd_set * wfds)
 	char audio_cmd;
 	int n;
 
+	UNUSED(wfds);
 
 	if (pulse_ctl[0] == -1)
 		return;
@@ -1096,13 +1106,15 @@ pulse_format_supported(RD_WAVEFORMATEX * pwfx)
 RD_BOOL
 pulse_set_format_out(RD_WAVEFORMATEX * pwfx)
 {
+	int sample_rate = (int) pwfx->nSamplesPerSec;
+
 	if (playback_stream == NULL
 	    || playback_channels != pwfx->nChannels
-	    || playback_samplerate != pwfx->nSamplesPerSec
+	    || playback_samplerate != sample_rate
 	    || playback_samplewidth != pwfx->wBitsPerSample / 8)
 	{
 		playback_channels = pwfx->nChannels;
-		playback_samplerate = pwfx->nSamplesPerSec;
+		playback_samplerate = sample_rate;
 		playback_samplewidth = pwfx->wBitsPerSample / 8;
 
 		if (pulse_playback_set_audio
@@ -1285,13 +1297,15 @@ pulse_close_in(void)
 RD_BOOL
 pulse_set_format_in(RD_WAVEFORMATEX * pwfx)
 {
+	int sample_rate = (int) pwfx->nSamplesPerSec;
+
 	if (capture_stream == NULL
 	    || capture_channels != pwfx->nChannels
-	    || capture_samplerate != pwfx->nSamplesPerSec
+	    || capture_samplerate != sample_rate
 	    || capture_samplewidth != pwfx->wBitsPerSample / 8)
 	{
 		capture_channels = pwfx->nChannels;
-		capture_samplerate = pwfx->nSamplesPerSec;
+		capture_samplerate = sample_rate;
 		capture_samplewidth = pwfx->wBitsPerSample / 8;
 
 		if (pulse_capture_set_audio

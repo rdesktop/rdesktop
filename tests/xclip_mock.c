@@ -35,3 +35,9 @@ xclip_handle_PropertyNotify(XPropertyEvent * xev)
 {
   mock(xev);
 }
+
+RD_BOOL
+xclip_handle_XFixesSelectionNotify(XEvent *event)
+{
+	return mock(event);
+}

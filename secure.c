@@ -4,6 +4,7 @@
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
    Copyright 2005-2011 Peter Astrand <astrand@cendio.se> for Cendio AB
    Copyright 2017-2018 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2026 Marco Fortina <marco_fortina@hotmail.it>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -35,6 +36,9 @@ extern RD_BOOL g_licence_issued;
 extern RD_BOOL g_licence_error_result;
 extern RDP_VERSION g_rdp_version;
 extern RD_BOOL g_console_session;
+extern RD_BOOL g_shadow_session;
+extern RD_BOOL g_multimon;
+extern RD_BOOL g_extended_client_data_supported;
 extern uint32 g_redirect_session_id;
 extern int g_server_depth;
 extern VCHANNEL g_channels[];
@@ -401,9 +405,15 @@ sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 	int length = 162 + 76 + 12 + 4 + (g_dpi > 0 ? 18 : 0);
 	unsigned int i;
 	uint32 rdpversion = RDP_40;
-	uint16 capflags = RNS_UD_CS_SUPPORT_ERRINFO_PDU;
+	uint16 capflags = RNS_UD_CS_SUPPORT_ERRINFO_PDU | RNS_UD_CS_SUPPORT_STATUSINFO_PDU |
+		RNS_UD_CS_SUPPORT_HEARTBEAT_PDU;
 	uint16 colorsupport = RNS_UD_24BPP_SUPPORT | RNS_UD_16BPP_SUPPORT | RNS_UD_32BPP_SUPPORT;
 	uint32 physwidth, physheight, desktopscale, devicescale;
+	RDP_MONITOR_LAYOUT monitors[RDESKTOP_MAX_MONITORS];
+	uint32 monitor_count = 0;
+	uint32 monitor_desktop_width = 0;
+	uint32 monitor_desktop_height = 0;
+	RD_BOOL send_monitor_layout = False;
 
 	logger(Protocol, Debug, "%s()", __func__);
 
@@ -412,6 +422,26 @@ sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 
 	if (g_num_channels > 0)
 		length += g_num_channels * 12 + 8;
+
+	if (g_multimon)
+	{
+		capflags |= RNS_UD_CS_SUPPORT_MONITOR_LAYOUT_PDU;
+
+		if (g_extended_client_data_supported &&
+		    ui_get_monitor_layout(monitors, RDESKTOP_MAX_MONITORS, &monitor_count,
+		                          &monitor_desktop_width, &monitor_desktop_height))
+		{
+			send_monitor_layout = True;
+			g_requested_session_width = monitor_desktop_width;
+			g_requested_session_height = monitor_desktop_height;
+			length += 12 + monitor_count * 20;
+		}
+		else if (!g_extended_client_data_supported)
+		{
+			logger(Protocol, Warning,
+			       "Server did not advertise extended client data support; initial monitor layout will not be sent");
+		}
+	}
 
 	/* Generic Conference Control (T.124) ConferenceCreateRequest */
 	out_uint16_be(s, 5);
@@ -489,11 +519,30 @@ sec_out_mcs_connect_initial_pdu(STREAM s, uint32 selected_protocol)
 	cluster_flags |= SEC_CC_REDIRECTION_SUPPORTED;
 	cluster_flags |= (SEC_CC_REDIRECT_VERSION_4 << 2);
 
-	if (g_console_session || g_redirect_session_id != 0)
+	if (g_console_session || g_shadow_session || g_redirect_session_id != 0)
 		cluster_flags |= SEC_CC_REDIRECT_SESSIONID_FIELD_VALID;
 
 	out_uint32_le(s, cluster_flags);
 	out_uint32(s, g_redirect_session_id);
+
+	if (send_monitor_layout)
+	{
+		uint32 monitor_index;
+
+		out_uint16_le(s, CS_MONITOR);    /* header.type */
+		out_uint16_le(s, 12 + monitor_count * 20);  /* length */
+		out_uint32_le(s, 0);     /* flags */
+		out_uint32_le(s, monitor_count);
+
+		for (monitor_index = 0; monitor_index < monitor_count; monitor_index++)
+		{
+			out_uint32_le(s, (uint32) monitors[monitor_index].left);
+			out_uint32_le(s, (uint32) monitors[monitor_index].top);
+			out_uint32_le(s, (uint32) monitors[monitor_index].right);
+			out_uint32_le(s, (uint32) monitors[monitor_index].bottom);
+			out_uint32_le(s, monitors[monitor_index].flags);
+		}
+	}
 
 	/* Client encryption settings (TS_UD_CS_SEC) */
 	out_uint16_le(s, CS_SECURITY);	/* type */
@@ -588,6 +637,7 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 	uint32 cacert_len, cert_len, flags;
 	RDSSL_CERT *cacert, *server_cert;
 	RDSSL_RKEY *server_public_key;
+	RD_BOOL have_public_key = False;
 	uint16 tag, length;
 	size_t next_tag;
 
@@ -644,6 +694,7 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 						       "sec_parse_crypt_info(), invalid public key");
 						return False;
 					}
+					have_public_key = True;
 					logger(Protocol, Debug,
 					       "sec_parse_crypt_info(), got public key");
 
@@ -665,6 +716,13 @@ sec_parse_crypt_info(STREAM s, uint32 * rc4_key_size,
 			}
 
 			s_seek(s, next_tag);
+		}
+
+		if (!have_public_key)
+		{
+			logger(Protocol, Error,
+			       "sec_parse_crypt_info(), server did not send an RSA public key");
+			return False;
 		}
 	}
 	else
@@ -938,6 +996,22 @@ sec_recv(RD_BOOL * is_fastpath)
 					continue;
 				}
 
+				if (sec_flags & SEC_HEARTBEAT)
+				{
+					uint8 period, count1, count2;
+
+					s_seek(s, data_offset);
+					if (!s_check_rem(s, 4))
+						rdp_protocol_error("consume heartbeat PDU from stream would overrun", s);
+
+					in_uint8s(s, 1); /* reserved */
+					in_uint8(s, period);
+					in_uint8(s, count1);
+					in_uint8(s, count2);
+					rdp_process_heartbeat(period, count1, count2);
+					continue;
+				}
+
 				if (sec_flags & SEC_REDIRECTION_PKT)
 				{
 					uint8 swapbyte;
@@ -982,6 +1056,21 @@ sec_recv(RD_BOOL * is_fastpath)
 				if (sec_flags & SEC_LICENSE_PKT)
 				{
 					licence_process(s);
+					continue;
+				}
+
+				if (sec_flags & SEC_HEARTBEAT)
+				{
+					uint8 period, count1, count2;
+
+					if (!s_check_rem(s, 4))
+						rdp_protocol_error("consume heartbeat PDU from stream would overrun", s);
+
+					in_uint8s(s, 1); /* reserved */
+					in_uint8(s, period);
+					in_uint8(s, count1);
+					in_uint8(s, count2);
+					rdp_process_heartbeat(period, count1, count2);
 					continue;
 				}
 			}

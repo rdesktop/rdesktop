@@ -20,9 +20,9 @@ void iso_send(STREAM stream)
   mock(stream->data);
 }
 
-STREAM iso_recv(uint8 *rdpver)
+STREAM iso_recv(RD_BOOL * is_fastpath, uint8 * fastpath_hdr)
 {
-  return (STREAM)mock(rdpver);
+  return (STREAM)mock(is_fastpath, fastpath_hdr);
 }
 
 void

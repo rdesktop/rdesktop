@@ -37,3 +37,15 @@ rdp_reset_state()
 {
   mock();
 }
+
+int
+rdp_heartbeat_select_timeout(int timeout_ms)
+{
+	return mock(timeout_ms);
+}
+
+void
+rdp_heartbeat_check_timeout(void)
+{
+	mock();
+}

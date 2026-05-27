@@ -10,3 +10,12 @@ RD_BOOL pstcache_init(uint8 cache_id)
 {
   return mock(cache_id);
 }
+
+void
+pstcache_set_namespace(const char *server, int port, const char *domain, const char *username)
+{
+	(void) server;
+	(void) port;
+	(void) domain;
+	(void) username;
+}

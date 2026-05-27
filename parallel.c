@@ -1,6 +1,7 @@
 /* -*- c-basic-offset: 8 -*-
    rdesktop: A Remote Desktop Protocol client.
    Copyright (C) Matthew Chapman <matthewc.unsw.edu.au> 1999-2008
+   Copyright 2026 Marco Fortina <marco_fortina@hotmail.it>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -156,9 +157,9 @@ parallel_write(RD_NTHANDLE handle, uint8 * data, uint32 length, uint64 offset, u
 				break;
 		}
 #if defined(LPGETSTATUS)
-		if (ioctl(handle, LPGETSTATUS, &status) == 0)
+		if (ioctl(handle, LPGETSTATUS, &status) == -1)
 		{
-			logger(Core, Error, "parellel_write(), ioctl failed: %s", strerror(errno));
+			logger(Core, Error, "parallel_write(), ioctl failed: %s", strerror(errno));
 		}
 #endif
 	}

@@ -9,8 +9,21 @@ AfterEach(Utils) {};
 
 /* globals */
 char g_codepage[16];
+RD_BOOL g_use_gui_prompts;
+RD_BOOL g_gui_prompt_cancelled;
 
+#define RDESKTOP_TEST_NO_CERTIFICATE_EXCEPTION
+#define RDESKTOP_TEST_CERTIFICATE_HELPERS
 #include "../utils.c"
+#undef RDESKTOP_TEST_CERTIFICATE_HELPERS
+#undef RDESKTOP_TEST_NO_CERTIFICATE_EXCEPTION
+
+RD_BOOL
+xgui_choice_dialog(const char *title, const char *message, const char *accept_label,
+                   const char *reject_label)
+{
+	return mock(title, message, accept_label, reject_label);
+}
 
 /* malloc; exit if out of memory */
 void *
@@ -176,4 +189,28 @@ Ensure(Utils, ApplySessionSizeLimitationRoundsWidthToClosestSmallerEvenNumber)
 
   assert_that(width, is_equal_to(200));
   assert_that(height, is_equal_to(201));
+}
+
+Ensure(Utils, DataToHexWritesCompleteOutputWhenBufferFits)
+{
+  uint8 data[] = { 0x00, 0x0f, 0xa5 };
+  char out[7];
+  size_t needed;
+
+  needed = _utils_data_to_hex(data, sizeof(data), out, sizeof(out));
+
+  assert_that(needed, is_equal_to(6));
+  assert_that(out, is_equal_to_string("000fa5"));
+}
+
+Ensure(Utils, DataToHexTruncatesWhenBufferIsTooSmall)
+{
+  uint8 data[] = { 0xde, 0xad, 0xbe, 0xef };
+  char out[5];
+  size_t needed;
+
+  needed = _utils_data_to_hex(data, sizeof(data), out, sizeof(out));
+
+  assert_that(needed, is_equal_to(8));
+  assert_that(out, is_equal_to_string("dead"));
 }

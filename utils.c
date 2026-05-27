@@ -2,6 +2,7 @@
    rdesktop: A Remote Desktop Protocol client.
    Generic utility functions
    Copyright 2013-2019 Henrik Andersson <hean01@cendio.se> for Cendio AB
+   Copyright 2026 Marco Fortina <marco_fortina@hotmail.it>
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -23,13 +24,14 @@
 #include <errno.h>
 #include <iconv.h>
 #include <stdarg.h>
-#include <assert.h>
-
+#include <unistd.h>
 #include "rdesktop.h"
 
 #include "utils.h"
 
 extern char g_codepage[16];
+extern RD_BOOL g_use_gui_prompts;
+extern RD_BOOL g_gui_prompt_cancelled;
 
 static RD_BOOL g_iconv_works = True;
 
@@ -192,7 +194,7 @@ utils_mkdir_p(const char *path, int mask)
 int
 utils_locale_to_utf8(const char *src, size_t is, char *dest, size_t os)
 {
-	static iconv_t *iconv_h = (iconv_t) - 1;
+	static iconv_t iconv_h = (iconv_t) - 1;
 	if (strncmp(g_codepage, "UTF-8", strlen("UTF-8")) == 0)
 		goto pass_trough_as_is;
 
@@ -280,10 +282,22 @@ utils_apply_session_size_limitations(uint32 * width, uint32 * height)
 }
 
 #define MAX_CHOICES 10
+#define MAX_CHOICE_ATTEMPTS 3
+
+static void
+util_drain_stdin_line(void)
+{
+	int ch;
+
+	while ((ch = getchar()) != '\n' && ch != EOF)
+		;
+}
+
 const char *
 util_dialog_choice(const char *message, ...)
 {
 	int i;
+	int attempts = 0;
 	va_list ap;
 	char *p;
 	const char *choice;
@@ -297,14 +311,34 @@ util_dialog_choice(const char *message, ...)
 		choices[i] = va_arg(ap, const char *);
 		if (choices[i] == NULL)
 			break;
-    }
-    va_end(ap);
+	}
+	va_end(ap);
+
+	if (choices[0] == NULL)
+		return NULL;
+
+	if (!isatty(STDIN_FILENO))
+	{
+		logger(Core, Error, "Refusing interactive prompt on non-interactive stdin");
+		return choices[0];
+	}
+
+	if (g_use_gui_prompts && choices[0] != NULL && choices[1] != NULL && choices[2] != NULL &&
+	    (!strcmp(choices[0], "no") || !strcmp(choices[0], "n")) &&
+	    (!strcmp(choices[2], "yes") || !strcmp(choices[2], "y")))
+	{
+		if (xgui_choice_dialog("rdesktop certificate warning", message, "Trust", "Cancel"))
+			return choices[2];
+
+		g_gui_prompt_cancelled = True;
+		return choices[0];
+	}
 
 	choice = NULL;
-	while (choice == NULL)
+	while (choice == NULL && attempts < MAX_CHOICE_ATTEMPTS)
 	{
 		/* display message */
-		fprintf(stderr,"\n%s", message);
+		fprintf(stderr, "\n%s", message);
 
 		/* read input */
 		if (fgets(response, sizeof(response), stdin) != NULL)
@@ -312,7 +346,16 @@ util_dialog_choice(const char *message, ...)
 			/* strip final newline */
 			p = strchr(response, '\n');
 			if (p != NULL)
+			{
 				*p = 0;
+			}
+			else
+			{
+				logger(Core, Warning, "Ignoring overlong prompt response");
+				util_drain_stdin_line();
+				attempts++;
+				continue;
+			}
 
 			for (i = 0; i < MAX_CHOICES; i++)
 			{
@@ -325,12 +368,21 @@ util_dialog_choice(const char *message, ...)
 					break;
 				}
 			}
+
+			if (choice == NULL)
+				attempts++;
 		}
 		else
 		{
 			logger(Core, Error, "Failed to read response from stdin");
 			break;
 		}
+	}
+
+	if (choice == NULL)
+	{
+		logger(Core, Error, "No valid prompt response received, using default choice");
+		return choices[0];
 	}
 
 	return choice;
@@ -490,23 +542,34 @@ logger_set_subjects(char *subjects)
 	free(pcs);
 }
 
+#if !defined(RDESKTOP_TEST_NO_CERTIFICATE_EXCEPTION) || defined(RDESKTOP_TEST_CERTIFICATE_HELPERS)
 static size_t
 _utils_data_to_hex(uint8 *data, size_t len, char *out, size_t size)
 {
-	size_t i;
-	char hex[4];
+	size_t i, offset, needed;
 
-	assert((len * 2) < size);
+	needed = (len > (((size_t) -1) / 2)) ? ((size_t) -1) : len * 2;
+
+	if (size == 0)
+		return needed;
 
 	memset(out, 0, size);
+	offset = 0;
 	for (i = 0; i < len; i++)
 	{
-		snprintf(hex, sizeof(hex), "%.2x", data[i]);
-		strcat(out, hex);
+		if ((size - offset) < 3)
+			break;
+
+		snprintf(out + offset, size - offset, "%.2x", data[i]);
+		offset += 2;
 	}
 
-	return (len*2);
+	return needed;
 }
+#endif
+
+/* Certificate exception handling is not needed by unit tests that include utils.c directly. */
+#ifndef RDESKTOP_TEST_NO_CERTIFICATE_EXCEPTION
 
 static size_t
 _utils_oid_to_string(const char *oid, char *out, size_t size)
@@ -933,7 +996,7 @@ _utils_cert_store_get_filename(char *out, size_t size)
 	return 0;
 }
 
-#define TRUST_CERT_PROMPT_TEXT "Do you trust this certificate (yes/no)? "
+#define TRUST_CERT_PROMPT_TEXT "Do you trust this certificate (yes/no/y/n)? "
 #define REVIEW_CERT_TEXT \
 	"Review the following certificate info before you trust it to be added as an exception.\n" \
 	"If you do not trust the certificate the connection atempt will be aborted:"
@@ -1040,9 +1103,10 @@ utils_cert_handle_exception(gnutls_session_t session, unsigned int status,
 	}
 
 	/* show dialog */
-	response = util_dialog_choice(message, "no", "yes", NULL);
-	if (strcmp(response, "no") == 0 || response == NULL)
+	response = util_dialog_choice(message, "no", "n", "yes", "y", NULL);
+	if (response == NULL || strcmp(response, "no") == 0 || strcmp(response, "n") == 0)
 	{
+		gnutls_x509_crt_deinit(cert);
 		return 1;
 	}
 
@@ -1053,8 +1117,12 @@ utils_cert_handle_exception(gnutls_session_t session, unsigned int status,
 	if (rv != GNUTLS_E_SUCCESS)
 	{
 		logger(Core, Error, "%s(), failed to store certificate. error = 0x%x (%s)", __func__, rv, gnutls_strerror(rv));
+		gnutls_x509_crt_deinit(cert);
 		return 1;
 	}
 
+	gnutls_x509_crt_deinit(cert);
 	return 0;
 }
+
+#endif /* RDESKTOP_TEST_NO_CERTIFICATE_EXCEPTION */

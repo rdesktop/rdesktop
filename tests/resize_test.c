@@ -24,7 +24,10 @@ RD_BOOL g_fullscreen;
 RD_BOOL g_grab_keyboard;
 RD_BOOL g_hide_decorations;
 RD_BOOL g_pending_resize;
+RD_BOOL g_pending_resize_defer;
+struct timeval g_pending_resize_defer_timer;
 char g_title[] = "MyTitle";
+char g_wm_class[64];
 char g_seamless_spawn_cmd[] = "";
 int g_server_depth;
 int g_win_button_size;
@@ -39,9 +42,13 @@ RD_BOOL g_ownbackstore;
 RD_BOOL g_rdpsnd;
 RD_BOOL g_owncolmap;
 RD_BOOL g_local_cursor;
+char *g_window_icon_file;
 
 /* globals driven by utils.c */
 char g_codepage[16] = "";
+
+RD_BOOL g_use_gui_prompts;
+RD_BOOL g_gui_prompt_cancelled;
 
 /* global driven by rdp.c */
 uint16 g_mcs_userid;
@@ -62,6 +69,9 @@ RD_BOOL g_bitmap_cache;
 RD_BOOL g_bitmap_cache_persist_enable;
 RD_BOOL g_numlock_sync;
 RD_BOOL g_pending_resize;
+RD_BOOL g_pending_resize_defer;
+struct timeval g_pending_resize_defer_timer;
+RD_BOOL g_dynamic_session_resize;
 RD_BOOL g_network_error;
 time_t g_wait_for_deactivate_ts;
 RDPCOMP g_mppc_dict;
@@ -84,6 +94,9 @@ time_t g_reconnect_random_ts;
 RD_BOOL g_has_reconnect_random;
 uint8 g_client_random[SEC_RANDOM_SIZE];
 RD_BOOL g_local_cursor;
+RD_BOOL g_restricted_admin;
+RD_BOOL g_remote_guard;
+uint32 vc_chunk_size = 1600;
 
 /* globals from secure.c */
 char g_hostname[16];
@@ -99,6 +112,9 @@ RD_BOOL g_licence_issued;
 RD_BOOL g_licence_error_result;
 RDP_VERSION g_rdp_version;
 RD_BOOL g_console_session;
+RD_BOOL g_shadow_session;
+RD_BOOL g_multimon;
+RD_BOOL g_extended_client_data_supported;
 uint32 g_redirect_session_id;
 int g_server_depth;
 VCHANNEL g_channels[1];
@@ -117,10 +133,19 @@ int HeightOfScreen(Screen *x) { return mock(x); }
 
 
 #include "../xwin.c"
+#define RDESKTOP_TEST_NO_CERTIFICATE_EXCEPTION
 #include "../utils.c"
+#undef RDESKTOP_TEST_NO_CERTIFICATE_EXCEPTION
 #include "../rdp.c"
 #include "../stream.c"
 #include "../secure.c"
+
+RD_BOOL
+xgui_choice_dialog(const char *title, const char *message, const char *accept_label,
+                   const char *reject_label)
+{
+	return mock(title, message, accept_label, reject_label);
+}
 
 /* malloc; exit if out of memory */
 void *
@@ -226,7 +251,7 @@ bitmap_caps_packet(int width, int height)
 	out_uint16_le(&s, width);
 	out_uint16_le(&s, height);
 	s_mark_end(&s);
-	s_reset(&s);
+	s.p = s.data;
 
 	return s;
 }
@@ -255,6 +280,11 @@ void setup_user_initiated_resize(int width, int height, RD_BOOL use_rdpedisp, RD
 }
 
 struct stream setup_server_resize_response(int width, int height) {
+	/* This helper simulates a post-login resize response. The initial
+	   server bitmap capabilities were already processed in the real session. */
+	g_first_bitmap_caps = False;
+	g_dynamic_session_resize = True;
+
 	expect(XGetWindowAttributes);
 	expect(XSetClipRectangles);
 	expect(XAllocSizeHints,
@@ -420,8 +450,8 @@ void get_width_and_height_from_mcs_connect_initial(int *width, int *height)
 	s = s_alloc(4096);
 	sec_out_mcs_connect_initial_pdu(s, 0);
 
-	/* Rewind and extract the requested session size */
-	s_reset(s);
+	/* Rewind and extract the requested session size without discarding the marked end. */
+	s->p = s->data;
 	in_uint8s(s, 31);
 	in_uint16_le(s, *width);	/* desktopWidth */
 	in_uint16_le(s, *height);	/* desktopHeight */

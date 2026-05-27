@@ -1,0 +1,93 @@
+Creating an rdesktop keymap
+===========================
+
+This document is a short checklist for adding or fixing an rdesktop keymap.
+For the complete file format reference, see doc/keymapping.txt.
+
+1. Choose the keymap name
+-------------------------
+
+Keymap names follow the RFC1766-style names listed in doc/keymap-names.txt.
+Use the existing keymaps directory as the source of truth for names that are
+already implemented.
+
+Examples:
+
+    en-us    English (United States)
+    de       German
+    fr       French
+    sr       Serbian Latin
+
+2. Start from a close existing keymap
+-------------------------------------
+
+Most layouts should include the common map first and then override only the
+keys that differ from a close existing layout.
+
+For example, many Latin layouts start with:
+
+    include common
+    map 0x0409
+
+Replace the map value with the Windows keyboard layout identifier for the
+layout you are adding. The mapping table in doc/keymap-names.txt is useful
+when picking the layout id.
+
+3. Find the X11 keysym name
+---------------------------
+
+When rdesktop cannot translate a local key, it logs the missing X11 keysym.
+Use that keysym name in the keymap file.
+
+You can also inspect the key with X11 tools such as xev. The keymap file uses
+keysym names, not X11 keycodes.
+
+4. Find the RDP scancode
+------------------------
+
+Look up the physical key in doc/keynums.png and then find the matching
+SCANCODE_KEY_* entry in scancodes.h.
+
+For extended scancodes, OR the value with 0x80. For example, if scancodes.h
+contains 0x52 for an extended key, use:
+
+    python -c 'print(hex(0x80 | 0x52))'
+
+5. Add the translation line
+---------------------------
+
+The basic syntax is:
+
+    <keysym-name> <scancode> [flags...]
+
+Examples:
+
+    a 0x1e addupper
+    at 0x10 altgr
+    exclam 0x02 shift
+
+Useful flags are documented in doc/keymapping.txt. Common flags are:
+
+    shift       send the key with Shift
+    altgr       send the key with AltGr
+    addupper    also add the uppercase translation
+    inhibit     intentionally do not send this keysym
+    numlock     ensure remote NumLock is enabled for the key
+
+6. Test the keymap
+------------------
+
+Run rdesktop with the new map explicitly:
+
+    rdesktop -k <keymap-name> <server>
+
+At minimum, test the following in the remote session:
+
+    - letters, digits and punctuation specific to the layout;
+    - Shift combinations;
+    - AltGr combinations;
+    - dead keys and Compose/Multi_key behaviour when relevant;
+    - Ctrl shortcuts such as Ctrl+C, Ctrl+V and Ctrl+Alt+Enter.
+
+Keep the patch small: add the new keymap file, update doc/keymap-names.txt
+only when needed, and avoid changing unrelated layouts.

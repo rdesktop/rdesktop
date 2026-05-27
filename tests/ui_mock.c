@@ -9,6 +9,11 @@ void ui_resize_window(uint32 width, uint32 height)
   mock(width, height);
 }
 
+void ui_update_window_sizehints(uint32 width, uint32 height)
+{
+  mock(width, height);
+}
+
 void ui_set_cursor(RD_HCURSOR cursor)
 {
   mock(cursor);
@@ -117,4 +122,10 @@ void
 ui_seamless_end()
 {
   mock();
+}
+
+void
+ui_release_keyboard(void)
+{
+	mock();
 }

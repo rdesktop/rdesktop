@@ -5,13 +5,57 @@
 .SH SYNOPSIS
 .B rdesktop [options] server[:port]
 .br
+.B rdesktop [options] file.rdp
+.br
+.B rdesktop
+.br
+.B rdesktop [options] rdp://full%20address=s:server[:port][&option=type:value]
+.br
 .SH DESCRIPTION
 .I rdesktop
 is a client for Remote Desktop Protocol (RDP), used in a number of Microsoft products.
 It is known to work with Microsoft Windows server versions ranging from NT 4 terminal
 server to Windows Server 2012 R2.
+If no port is specified, rdesktop connects to the standard RDP TCP port 3389.
+As an alternative to specifying a server directly, rdesktop can read common
+connection settings from a Microsoft .rdp file. Command-line options override
+matching settings read from the file. When started without arguments on an X11 display,
+rdesktop opens a graphical connection launcher. The launcher maps its fields to the
+same command-line options documented below; starting rdesktop with any argument keeps
+the historical command-line behaviour.
 
 .SH OPTIONS
+.TP
+.B No arguments
+Open the X11 connection launcher. The launcher provides connection fields and
+an Options dialog grouping the command-line options into General, Display, Local
+resources, Performance, Security, and Advanced tabs. The launcher uses a
+built-in raster banner. When Xft is available at build time, launcher text is
+rendered out-of-the-box with fontconfig/Xft. The default fallback list tries
+Ubuntu Sans 11 pt, Adwaita Sans 11 pt, Google Noto Serif 11 pt, Cantarell
+11 pt, DejaVu Sans 11 pt, San Francisco 13 pt, and Segoe UI 9 pt before
+falling back to generic sans-serif fonts. This requires rdesktop to be built
+with Xft/fontconfig development headers available. Without Xft, the launcher
+still works but falls back to legacy X11 core fonts, which look noticeably less
+like a modern desktop UI. If the launcher text does not visually change after
+selecting modern fonts, install the Xft/fontconfig development package and
+common UI font packages, then rerun ./bootstrap and ./configure before
+rebuilding.
+
+The launcher also honours the optional X resources
+Brdesktop.launcher.fontR, Brdesktop.launcher.titleFontR, and
+Brdesktop.launcher.smallFontR for site or user overrides. They are not
+required for normal use.
+
+.TP
+.BR "rdp:// URI"
+rdesktop accepts Remote Desktop client URI settings in the form
+.BR "rdp://full%20address=s:server:3389&desktopwidth=i:1024" .
+The URI parser understands the same core setting names as the .rdp file parser,
+including full address, username, domain, password, alternate shell, shell
+working directory, keyboard layout, server port, session bpp, desktopwidth,
+desktopheight, screen mode id and redirectclipboard.
+.PP
 .TP
 .BR "-u <username>"
 Username for authentication on the server.
@@ -22,6 +66,12 @@ Domain for authentication.
 .BR "-s <shell>"
 Startup shell for the user - starts a specific application instead of Explore.
 If SeamlessRDP is enabled this is the application which is started in seamless mode.
+
+On modern Windows and RDS deployments, launching a single application may
+require RemoteApp/server-side policy configuration. If the server is not
+configured to allow that application, the option can result in a normal
+desktop session or a server-side access error instead of launching the
+requested command.
 .TP
 .BR "-c <directory>"
 The initial working directory for the user.  Often used in combination with -s
@@ -90,7 +140,14 @@ This feature also requires that smart card redirection is used using \f-r scard\
 .BR "-f"
 Enable fullscreen mode.  This overrides the window manager and causes the
 rdesktop window to fully cover the current screen.  Fullscreen mode can be
-toggled at any time using Ctrl-Alt-Enter.
+toggled at any time using Ctrl-Alt-Enter. The rdesktop window can be
+iconified using Ctrl-Alt-Shift-Enter.
+.TP
+.BR "--multimon" ", " "/multimon"
+Use the local XRandR monitor layout for fullscreen sessions and advertise it to
+the server as an RDP monitor layout. This prevents servers from treating a
+spanned desktop as one oversized monitor when multiple local monitors are used.
+It cannot be combined with B-gR.
 .TP
 .BR "-b"
 Force the server to send screen updates as bitmaps rather than using
@@ -153,6 +210,15 @@ Hide window manager decorations, by using MWM hints.
 Do not override window manager key bindings.  By default rdesktop attempts
 to grab all keyboard input when it is in focus.
 .TP
+.BR "-J <modifier combination>"
+Configure a modifier-only hotkey that releases the active keyboard grab when
+the modifiers are pressed and released.  This can be used to temporarily return
+keyboard shortcuts such as workspace switching to the local window manager
+without disabling normal keyboard grabbing with -K.  The combination uses
+underscore or plus separated modifiers, for example ctrl_alt, lctrl_ralt,
+super, or off.  After ungrabbing, click in the rdesktop window to grab the
+keyboard again.
+.TP
 .BR "-S <button size>"
 Enable single application mode. This option can be used when running a
 single, maximized application (via -s). When the minimize button of
@@ -163,6 +229,15 @@ size, in pixels. The special word "standard" means 18 pixels.
 .TP
 .BR "-T <title>"
 Sets the window title. The title must be specified using an UTF-8 string. 
+.TP
+.BR "-w <class>"
+Sets the X11 WM_CLASS name. This is useful for window manager rules, desktop
+launchers and distinguishing multiple rdesktop or SeamlessRDP applications.
+.TP
+.BR "--window-icon" " " "file.png" ", " "/icon:" "file.png"
+Load a PNG file and use it as the X11 window icon. This is useful when
+launching multiple rdesktop sessions from desktop files or scripts and assigning
+different window-manager icons to each connection.
 .TP
 .BR "-N"
 Enable numlock synchronization between the Xserver and the remote RDP
@@ -189,8 +264,13 @@ theming is enabled, and all other options are disabled (corresponding
 to modem (56 Kbps)). Setting experience to b[roadband] enables menu
 animations and full window dragging. Setting experience to l[an] will
 also enable the desktop wallpaper. Setting experience to m[odem]
-disables all (including themes). Experience can also be a hexadecimal
+requests that wallpaper, full window dragging, menu animations, theming
+and cursor shadows are disabled. Experience can also be a hexadecimal
 number containing the flags.
+
+These flags are sent as RDP performance hints. The server, server-side
+policy, Windows version or individual applications may still display
+animations or transitions even when rdesktop requests the modem profile.
 .TP
 .BR "-P"
 Enable caching of bitmaps to disk (persistent bitmap caching). This generally
@@ -198,6 +278,17 @@ improves performance (especially on low bandwidth connections) and reduces
 network traffic at the cost of slightly longer startup and some disk space.
 (10MB for 8-bit colour, 20MB for 15/16-bit colour, 30MB for 24-bit colour
 and 40MB for 32-bit colour sessions)
+.TP
+.BR "-R"
+Retry a fresh connection after network errors for the same timeout window used
+by automatic reconnect. By default, rdesktop only enters the reconnect loop when
+the server supplied an auto-reconnect cookie; this option also retries when no
+cookie is available, which can create a new session depending on server policy.
+rdesktop enables TCP keepalive on connected sockets and, where supported by the
+platform, uses conservative TCP keepalive/user-timeout values so broken network
+paths are detected instead of leaving the client apparently frozen indefinitely.
+When the server advertises RDP heartbeat PDUs, missed heartbeats are also
+treated as network errors and can trigger the same retry logic.
 .TP
 .BR "-r <device>"
 Enable redirection of the specified device on the client, such
@@ -229,8 +320,12 @@ it.
 Redirects a printer queue on the client to the server. The <printername>
 is the name of the queue in your local system. <driver> defaults to a
 simple PS-driver unless you specify one. Keep in mind that you need a
-100% match in the server environment, or the driver will fail. The first
-printer on the command line will be set as your default printer.
+100% match in the server environment, or the driver will fail. Printer
+redirection passes the server-generated printer data to the local queue; if
+the server-side driver emits data your local queue or printer does not
+understand, the printer can output unreadable pages. Install or select a
+server-side driver that matches the local print path. The first printer on
+the command line will be set as your default printer.
 .TP
 .BR "-r sound:[local|off|remote]"
 Redirects sound generated on the server to the client. "remote" only has
@@ -241,6 +336,14 @@ Windows XP or newer).
 Activates the lspci channel, which allows the server to enumerate the
 clients PCI devices. See the file lspci-channel.txt in the
 documentation for more information.
+.TP
+.BR "-r addin:<channel>=<command>"
+Bridge an out-of-process static virtual channel add-in. The channel name must
+be one to eight alphanumeric characters or underscores. Data received on the
+RDP static virtual channel is written to the command standard input; data read
+from the command standard output is sent back on the same channel. This is
+intended for legacy third-party virtual channel add-ins such as thin-client
+integrations.
 .TP
 .BR "-r scard[:<Scard Name>=<Alias Name>[;<Vendor Name>][,...]]"
 Enables redirection of one or more smart-cards. You can provide
@@ -255,8 +358,49 @@ Enable clipboard redirection. 'PRIMARYCLIPBOARD' looks at both PRIMARY and
 CLIPBOARD when sending data to server. 'CLIPBOARD' looks at only 'CLIPBOARD'.
 .TP
 .BR "-0"
-Attach to the console of the server (requires Windows Server 2003
-or newer).
+Attach to the console/admin session of the server (requires Windows Server
+2003 or newer). The aliases `--admin` and `/admin` are also accepted for
+users familiar with mstsc or FreeRDP syntax.
+.TP
+.BR "--shadow" " " "session-id" ", " "/shadow:" "session-id"
+Request attachment to an existing server-side session id. This uses the RDP
+client cluster session id field and is intended for Terminal Server shadowing
+workflows where the target server is configured to allow remote control or
+view-only shadow sessions. The session id must be obtained from the server, for
+example with Windows tools such as Bquery sessionR or BqwinstaR.
+.TP
+.BR "--restricted-admin" ", " "/restrictedAdmin"
+Request Restricted Admin mode over CredSSP. In this mode rdesktop authenticates
+to CredSSP locally but sends empty logon credentials to the remote host. This
+prevents forwarding the supplied domain credentials to the server and implies
+.BR -0 .
+.TP
+.BR "--remote-guard" ", " "/remoteGuard"
+Request Remote Credential Guard negotiation over CredSSP. This requires
+Kerberos/GSSAPI CredSSP support and a server that advertises redirected
+authentication support. rdesktop also registers the RDPEAR authentication
+redirection channel, handles Remote Guard protocol framing, obtains the initial
+Negotiate logon credential from the in-tree RDPEAR helper, and routes
+Kerberos/NTLM package calls through the helper. Without an explicit helper
+command, rdesktop uses the installed \fBrdesktop-rdpear-helper\fR from PATH.
+The default helper uses the local Kerberos credential cache to produce GSSAPI
+Remote Guard tokens for the target TERMSRV service.
+.TP
+.BR "--remote-guard-helper" " " "command"
+Use a specific helper command for RDPEAR Kerberos/NTLM package calls. The
+installed \fBrdesktop-rdpear-helper\fR command implements the helper transport
+contract, uses the local Kerberos credential cache by default, and still allows
+overriding the initial Remote Guard logon credential with
+\fBRDESKTOP_RDPEAR_LOGON_CRED_FILE\fR or
+\fBRDESKTOP_RDPEAR_LOGON_CRED_HEX\fR. It can also delegate package-specific calls
+to the command named by \fBRDESKTOP_RDPEAR_BACKEND\fR using the same binary
+transport contract. Built-in handling answers Kerberos/NTLM version negotiation
+and uses GSSAPI for Kerberos/Negotiate token generation before falling back to an
+explicit backend. The helper receives a little-endian binary request on stdin:
+32-bit package-name length, package-name bytes, 32-bit request length, request
+bytes. It must reply on stdout with 32-bit helper transport status, 32-bit
+response length, response bytes. Supplying this option implies
+.BR --remote-guard .
 .TP
 .BR "-4"
 Use RDP version 4.
@@ -268,6 +412,17 @@ Use RDP version 5 (default).
 Enable verbose output
 .PP
 
+.SH "CredSSP / NLA authentication"
+rdesktop supports CredSSP/NLA over TLS. Password-based NLA uses an internal
+NTLMv2/SPNEGO client and does not require a pre-existing Kerberos ticket.
+Kerberos-based CredSSP remains available when rdesktop is built with optional
+GSSAPI/Kerberos support and the user has a valid TGT.
+Sensitive NTLM/CredSSP byte previews are hidden by default. Set
+.BR RDESKTOP_CREDSSP_TRACE=1
+with
+.BR RDESKTOP_DEBUG=Core,Protocol
+only when collecting diagnostic logs.
+.PP
 .SH "CredSSP Smartcard options"
 .TP
 .BR "--sc-csp-name <name>"

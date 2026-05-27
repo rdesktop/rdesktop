@@ -13,6 +13,10 @@ uint16 g_mcs_userid;
 char *g_username;
 char g_password[64];
 char g_codepage[16];
+RD_BOOL g_use_gui_prompts;
+RD_BOOL g_gui_prompt_cancelled;
+RD_BOOL g_restricted_admin;
+RD_BOOL g_remote_guard;
 RD_BOOL g_orders;
 RD_BOOL g_encryption;
 RD_BOOL g_desktop_save;
@@ -21,12 +25,16 @@ RDP_VERSION g_rdp_version;
 uint16 g_server_rdp_version;
 uint32 g_rdp5_performanceflags;
 int g_server_depth;
+uint32 g_requested_session_width;
+uint32 g_requested_session_height;
 RD_BOOL g_bitmap_cache;
 RD_BOOL g_bitmap_cache_persist_enable;
 RD_BOOL g_numlock_sync;
 RD_BOOL g_pending_resize;
+RD_BOOL g_pending_resize_defer;
+struct timeval g_pending_resize_defer_timer;
+RD_BOOL g_dynamic_session_resize;
 RD_BOOL g_network_error;
-time_t g_wait_for_deactivate_ts;
 RDPCOMP g_mppc_dict;
 RD_BOOL g_redirect;
 char *g_redirect_server;
@@ -47,10 +55,21 @@ time_t g_reconnect_random_ts;
 RD_BOOL g_has_reconnect_random;
 uint8 g_client_random[SEC_RANDOM_SIZE];
 RD_BOOL g_local_cursor;
+RD_BOOL g_fullscreen;
+uint32 vc_chunk_size = 1600;
 
 #include "../rdp.c"
+#define RDESKTOP_TEST_NO_CERTIFICATE_EXCEPTION
 #include "../utils.c"
+#undef RDESKTOP_TEST_NO_CERTIFICATE_EXCEPTION
 #include "../stream.c"
+
+RD_BOOL
+xgui_choice_dialog(const char *title, const char *message, const char *accept_label,
+                   const char *reject_label)
+{
+	return mock(title, message, accept_label, reject_label);
+}
 
 /* malloc; exit if out of memory */
 void *
@@ -119,6 +138,9 @@ Ensure(RDP, ProcessBitmapCapsCallsUiResizeWindow) {
   struct stream s;
   memset(&s, 0, sizeof(struct stream));
 
+  g_first_bitmap_caps = False;
+  g_dynamic_session_resize = True;
+
   expect(ui_resize_window,
 	 when(width, is_equal_to(1024)),
 	 when(height, is_equal_to(768)));
@@ -131,7 +153,7 @@ Ensure(RDP, ProcessBitmapCapsCallsUiResizeWindow) {
   out_uint16_le(&s, 1024);
   out_uint16_le(&s, 768);
   s_mark_end(&s);
-  s_reset(&s);
+  s.p = s.data;
 
   rdp_process_bitmap_caps(&s);
 

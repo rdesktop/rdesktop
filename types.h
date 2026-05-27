@@ -48,6 +48,19 @@ typedef int64_t sint64;
 
 #define RD_UINT32_MAX (uint32)(-1)
 
+#define RDESKTOP_MAX_MONITORS 16
+#define RDESKTOP_MONITOR_PRIMARY 0x00000001
+
+typedef struct _RDP_MONITOR_LAYOUT
+{
+	sint32 left;
+	sint32 top;
+	sint32 right;
+	sint32 bottom;
+	uint32 flags;
+}
+RDP_MONITOR_LAYOUT;
+
 typedef void *RD_HBITMAP;
 typedef void *RD_HGLYPH;
 typedef void *RD_HCOLOURMAP;
