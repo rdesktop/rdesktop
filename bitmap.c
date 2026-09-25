@@ -25,16 +25,18 @@
 /* *INDENT-OFF* */
 
 #include "rdesktop.h"
+#include <limits.h>
 
-#define CVAL(p)   (*(p++))
+/* Keep failed reads inside the input span; the decoder propagates failure. */
+#define CVAL(p) ((p) < end ? *((p)++) : (input_error = True, 0))
 #ifdef NEED_ALIGN
 #ifdef L_ENDIAN
-#define CVAL2(p, v) { v = (*(p++)); v |= (*(p++)) << 8; }
+#define CVAL2(p, v) { if (end - (p) < 2) return False; v = (*(p++)); v |= (*(p++)) << 8; }
 #else
-#define CVAL2(p, v) { v = (*(p++)) << 8; v |= (*(p++)); }
+#define CVAL2(p, v) { if (end - (p) < 2) return False; v = (*(p++)) << 8; v |= (*(p++)); }
 #endif /* L_ENDIAN */
 #else
-#define CVAL2(p, v) { v = (*((uint16*)p)); p += 2; }
+#define CVAL2(p, v) { if (end - (p) < 2) return False; v = (*((uint16*)p)); p += 2; }
 #endif /* NEED_ALIGN */
 
 #define UNROLL8(exp) { exp exp exp exp exp exp exp exp }
@@ -66,6 +68,7 @@
 static RD_BOOL
 bitmap_decompress1(uint8 * output, int width, int height, uint8 * input, int size)
 {
+	RD_BOOL input_error = False;
 	uint8 *end = input + size;
 	uint8 *prevline = NULL, *line = NULL;
 	int opcode, count, offset, isfillormix, x = width;
@@ -156,6 +159,8 @@ bitmap_decompress1(uint8 * output, int width, int height, uint8 * input, int siz
 				fom_mask = 5;
 				break;
 		}
+		if (input_error)
+			return False;
 		lastopcode = opcode;
 		mixmask = 0;
 		/* Output body */
@@ -259,13 +264,14 @@ bitmap_decompress1(uint8 * output, int width, int height, uint8 * input, int siz
 			}
 		}
 	}
-	return True;
+	return !input_error && height == 0 && x == width;
 }
 
 /* 2 byte bitmap decompress */
 static RD_BOOL
 bitmap_decompress2(uint8 * output, int width, int height, uint8 * input, int size)
 {
+	RD_BOOL input_error = False;
 	uint8 *end = input + size;
 	uint16 *prevline = NULL, *line = NULL;
 	int opcode, count, offset, isfillormix, x = width;
@@ -356,6 +362,8 @@ bitmap_decompress2(uint8 * output, int width, int height, uint8 * input, int siz
 				fom_mask = 5;
 				break;
 		}
+		if (input_error)
+			return False;
 		lastopcode = opcode;
 		mixmask = 0;
 		/* Output body */
@@ -460,13 +468,14 @@ bitmap_decompress2(uint8 * output, int width, int height, uint8 * input, int siz
 			}
 		}
 	}
-	return True;
+	return !input_error && height == 0 && x == width;
 }
 
 /* 3 byte bitmap decompress */
 static RD_BOOL
 bitmap_decompress3(uint8 * output, int width, int height, uint8 * input, int size)
 {
+	RD_BOOL input_error = False;
 	uint8 *end = input + size;
 	uint8 *prevline = NULL, *line = NULL;
 	int opcode, count, offset, isfillormix, x = width;
@@ -566,6 +575,8 @@ bitmap_decompress3(uint8 * output, int width, int height, uint8 * input, int siz
 				fom_mask = 5;
 				break;
 		}
+		if (input_error)
+			return False;
 		lastopcode = opcode;
 		mixmask = 0;
 		/* Output body */
@@ -750,14 +761,14 @@ bitmap_decompress3(uint8 * output, int width, int height, uint8 * input, int siz
 			}
 		}
 	}
-	return True;
+	return !input_error && height == 0 && x == width;
 }
 
 /* decompress a colour plane */
 static int
 process_plane(uint8 * in, int width, int height, uint8 * out, int size)
 {
-	UNUSED(size);
+	uint8 *end;
 	int indexw;
 	int indexh;
 	int code;
@@ -771,13 +782,16 @@ process_plane(uint8 * in, int width, int height, uint8 * out, int size)
 	uint8 * org_in;
 	uint8 * org_out;
 
+	if (size < 0)
+		return -1;
+	end = in + size;
 	org_in = in;
 	org_out = out;
 	last_line = 0;
 	indexh = 0;
 	while (indexh < height)
 	{
-		out = (org_out + width * height * 4) - ((indexh + 1) * width * 4);
+		out = org_out + (height - indexh - 1) * width * 4;
 		color = 0;
 		this_line = out;
 		indexw = 0;
@@ -785,7 +799,11 @@ process_plane(uint8 * in, int width, int height, uint8 * out, int size)
 		{
 			while (indexw < width)
 			{
-				code = CVAL(in);
+				if (in == end)
+					return -1;
+				code = *in++;
+				if (code == 0)
+					return -1;
 				replen = code & 0xf;
 				collen = (code >> 4) & 0xf;
 				revcode = (replen << 4) | collen;
@@ -794,19 +812,23 @@ process_plane(uint8 * in, int width, int height, uint8 * out, int size)
 					replen = revcode;
 					collen = 0;
 				}
+				if (collen + replen > width - indexw || collen > end - in)
+					return -1;
 				while (indexw < width && collen > 0)
 				{
-					color = CVAL(in);
+					color = *in++;
 					*out = color;
-					out += 4;
 					indexw++;
+					if (indexw < width)
+						out += 4;
 					collen--;
 				}
 				while (indexw < width && replen > 0)
 				{
 					*out = color;
-					out += 4;
 					indexw++;
+					if (indexw < width)
+						out += 4;
 					replen--;
 				}
 			}
@@ -815,7 +837,11 @@ process_plane(uint8 * in, int width, int height, uint8 * out, int size)
 		{
 			while (indexw < width)
 			{
-				code = CVAL(in);
+				if (in == end)
+					return -1;
+				code = *in++;
+				if (code == 0)
+					return -1;
 				replen = code & 0xf;
 				collen = (code >> 4) & 0xf;
 				revcode = (replen << 4) | collen;
@@ -824,9 +850,11 @@ process_plane(uint8 * in, int width, int height, uint8 * out, int size)
 					replen = revcode;
 					collen = 0;
 				}
+				if (collen + replen > width - indexw || collen > end - in)
+					return -1;
 				while (indexw < width && collen > 0)
 				{
-					x = CVAL(in);
+					x = *in++;
 					if (x & 1)
 					{
 						x = x >> 1;
@@ -840,16 +868,18 @@ process_plane(uint8 * in, int width, int height, uint8 * out, int size)
 					}
 					x = last_line[indexw * 4] + color;
 					*out = x;
-					out += 4;
 					indexw++;
+					if (indexw < width)
+						out += 4;
 					collen--;
 				}
 				while (indexw < width && replen > 0)
 				{
 					x = last_line[indexw * 4] + color;
 					*out = x;
-					out += 4;
 					indexw++;
+					if (indexw < width)
+						out += 4;
 					replen--;
 				}
 			}
@@ -868,22 +898,32 @@ bitmap_decompress4(uint8 * output, int width, int height, uint8 * input, int siz
 	int bytes_pro;
 	int total_pro;
 
-	code = CVAL(input);
+	if (size < 1)
+		return False;
+	code = *input++;
 	if (code != 0x10)
 	{
 		return False;
 	}
 	total_pro = 1;
 	bytes_pro = process_plane(input, width, height, output + 3, size - total_pro);
+	if (bytes_pro < 0)
+		return False;
 	total_pro += bytes_pro;
 	input += bytes_pro;
 	bytes_pro = process_plane(input, width, height, output + 2, size - total_pro);
+	if (bytes_pro < 0)
+		return False;
 	total_pro += bytes_pro;
 	input += bytes_pro;
 	bytes_pro = process_plane(input, width, height, output + 1, size - total_pro);
+	if (bytes_pro < 0)
+		return False;
 	total_pro += bytes_pro;
 	input += bytes_pro;
 	bytes_pro = process_plane(input, width, height, output + 0, size - total_pro);
+	if (bytes_pro < 0)
+		return False;
 	total_pro += bytes_pro;
 	return size == total_pro;
 }
@@ -893,6 +933,11 @@ RD_BOOL
 bitmap_decompress(uint8 * output, int width, int height, uint8 * input, int size, int Bpp)
 {
 	RD_BOOL rv = False;
+
+	/* The decoders and xmalloc use signed int sizes and offsets. */
+	if (output == NULL || input == NULL || width <= 0 || height <= 0 ||
+	    size <= 0 || Bpp < 1 || Bpp > 4 || width > INT_MAX / Bpp / height)
+		return False;
 
 	switch (Bpp)
 	{

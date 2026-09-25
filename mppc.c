@@ -57,12 +57,14 @@ RDPCOMP g_mppc_dict;
 int
 mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen)
 {
-	int k, walker_len = 0, walker;
+	int k, walker_len = 0;
+	uint32 walker;
 	uint32 i = 0;
 	int next_offset, match_off;
 	int match_len;
 	int old_offset, match_bits;
 	RD_BOOL big = ctype & RDP_MPPC_BIG ? True : False;
+	int dict_size = big ? 65536 : 8192;
 
 	uint8 *dict = g_mppc_dict.hist;
 
@@ -72,6 +74,9 @@ mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen
 		*rlen = clen;
 		return 0;
 	}
+
+	if ((ctype & 0x0f) > 1)
+		return -1;
 
 	if ((ctype & RDP_MPPC_RESET) != 0)
 	{
@@ -87,6 +92,8 @@ mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen
 	*roff = 0;
 	*rlen = 0;
 
+	if (g_mppc_dict.roff > (uint32) dict_size)
+		return -1;
 	walker = g_mppc_dict.roff;
 
 	next_offset = walker;
@@ -102,10 +109,10 @@ mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen
 		{
 			if (i >= clen)
 				break;
-			walker = data[i++] << 24;
+			walker = (uint32) data[i++] << 24;
 			walker_len = 8;
 		}
-		if (walker >= 0)
+		if ((walker & 0x80000000U) == 0)
 		{
 			if (walker_len < 8)
 			{
@@ -115,10 +122,10 @@ mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen
 						return -1;
 					break;
 				}
-				walker |= (data[i++] & 0xff) << (24 - walker_len);
+				walker |= ((uint32) data[i++] & 0xff) << (24 - walker_len);
 				walker_len += 8;
 			}
-			if (next_offset >= RDP_MPPC_DICT_SIZE)
+			if (next_offset >= dict_size)
 				return -1;
 			dict[next_offset++] = (((uint32) walker) >> ((uint32) 24));
 			walker <<= 8;
@@ -131,20 +138,20 @@ mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen
 		{
 			if (i >= clen)
 				return -1;
-			walker = data[i++] << 24;
+			walker = (uint32) data[i++] << 24;
 			walker_len = 8;
 		}
 		/* literal decoding */
-		if (walker >= 0)
+		if ((walker & 0x80000000U) == 0)
 		{
 			if (walker_len < 8)
 			{
 				if (i >= clen)
 					return -1;
-				walker |= (data[i++] & 0xff) << (24 - walker_len);
+				walker |= ((uint32) data[i++] & 0xff) << (24 - walker_len);
 				walker_len += 8;
 			}
-			if (next_offset >= RDP_MPPC_DICT_SIZE)
+			if (next_offset >= dict_size)
 				return -1;
 			dict[next_offset++] = (uint8) (walker >> 24 | 0x80);
 			walker <<= 8;
@@ -159,7 +166,7 @@ mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen
 		{
 			if (i >= clen)
 				return -1;
-			walker |= (data[i++] & 0xff) << (24 - walker_len);
+			walker |= ((uint32) data[i++] & 0xff) << (24 - walker_len);
 			walker_len += 8;
 		}
 
@@ -178,7 +185,7 @@ mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen
 					{
 						if (i >= clen)
 							return -1;
-						walker |= (data[i++] & 0xff) << (24 - walker_len);
+						walker |= ((uint32) data[i++] & 0xff) << (24 - walker_len);
 					}
 					walker <<= 3;
 					match_off = ((uint32) walker) >> ((uint32) 26);
@@ -191,7 +198,7 @@ mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen
 					{
 						if (i >= clen)
 							return -1;
-						walker |= (data[i++] & 0xff) << (24 - walker_len);
+						walker |= ((uint32) data[i++] & 0xff) << (24 - walker_len);
 					}
 
 					walker <<= 3;
@@ -206,7 +213,7 @@ mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen
 					{
 						if (i >= clen)
 							return -1;
-						walker |= (data[i++] & 0xff) << (24 - walker_len);
+						walker |= ((uint32) data[i++] & 0xff) << (24 - walker_len);
 					}
 
 					walker <<= 2;
@@ -220,7 +227,7 @@ mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen
 					{
 						if (i >= clen)
 							return -1;
-						walker |= (data[i++] & 0xff) << (24 - walker_len);
+						walker |= ((uint32) data[i++] & 0xff) << (24 - walker_len);
 					}
 
 					walker <<= 1;
@@ -244,7 +251,7 @@ mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen
 					{
 						if (i >= clen)
 							return -1;
-						walker |= (data[i++] & 0xff) << (24 - walker_len);
+						walker |= ((uint32) data[i++] & 0xff) << (24 - walker_len);
 						walker_len += 8;
 					}
 					walker <<= 2;
@@ -258,7 +265,7 @@ mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen
 					{
 						if (i >= clen)
 							return -1;
-						walker |= (data[i++] & 0xff) << (24 - walker_len);
+						walker |= ((uint32) data[i++] & 0xff) << (24 - walker_len);
 					}
 
 					walker <<= 2;
@@ -272,7 +279,7 @@ mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen
 					{
 						if (i >= clen)
 							return -1;
-						walker |= (data[i++] & 0xff) << (24 - walker_len);
+						walker |= ((uint32) data[i++] & 0xff) << (24 - walker_len);
 					}
 
 					match_off = (walker >> 18) + 320;
@@ -285,13 +292,13 @@ mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen
 		{
 			if (i >= clen)
 				return -1;
-			walker = data[i++] << 24;
+			walker = (uint32) data[i++] << 24;
 			walker_len = 8;
 		}
 
 		/* decode length of match */
 		match_len = 0;
-		if (walker >= 0)
+		if ((walker & 0x80000000U) == 0)
 		{		/* special case - length of 3 is in bit 0 */
 			match_len = 3;
 			walker <<= 1;
@@ -323,10 +330,10 @@ mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen
 				{
 					if (i >= clen)
 						return -1;
-					walker = data[i++] << 24;
+					walker = (uint32) data[i++] << 24;
 					walker_len = 8;
 				}
-				if (walker >= 0)
+				if ((walker & 0x80000000U) == 0)
 					break;
 				if (--match_bits == 0)
 				{
@@ -344,7 +351,7 @@ mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen
 					{
 						return -1;
 					}
-					walker |= (data[i++] & 0xff) << (24 - walker_len);
+					walker |= ((uint32) data[i++] & 0xff) << (24 - walker_len);
 				}
 			}
 
@@ -355,12 +362,15 @@ mppc_expand(uint8 * data, uint32 clen, uint8 ctype, uint32 * roff, uint32 * rlen
 			walker <<= match_bits;
 			walker_len -= match_bits;
 		}
-		if (next_offset + match_len >= RDP_MPPC_DICT_SIZE)
+		if (match_len > dict_size - next_offset)
 		{
 			return -1;
 		}
 		/* memory areas can overlap - meaning we can't use memXXX functions */
-		k = (next_offset - match_off) & (big ? 65535 : 8191);
+		k = (next_offset - match_off) & (dict_size - 1);
+		/* Copy spans are linear; only the starting offset is masked. */
+		if (match_len > dict_size - k)
+			return -1;
 		do
 		{
 			dict[next_offset++] = dict[k++];

@@ -20,6 +20,7 @@
 #include <errno.h>
 #include <iconv.h>
 #include <stdlib.h>
+#include <stddef.h>
 
 #include "rdesktop.h"
 
@@ -54,20 +55,29 @@ void
 s_realloc(STREAM s, unsigned int size)
 {
 	unsigned char *data;
+	ptrdiff_t p, end, iso, mcs, sec, rdp, channel;
 
 	if (s->size >= size)
 		return;
 
 	data = s->data;
+	/* Save offsets before realloc ends the old allocation lifetime. */
+	p = s->p ? s->p - data : 0;
+	end = s->end ? s->end - data : 0;
+	iso = s->iso_hdr ? s->iso_hdr - data : -1;
+	mcs = s->mcs_hdr ? s->mcs_hdr - data : -1;
+	sec = s->sec_hdr ? s->sec_hdr - data : -1;
+	rdp = s->rdp_hdr ? s->rdp_hdr - data : -1;
+	channel = s->channel_hdr ? s->channel_hdr - data : -1;
 	s->size = size;
 	s->data = xrealloc(data, size);
-	s->p = s->data + (s->p - data);
-	s->end = s->data + (s->end - data);
-	s->iso_hdr = s->data + (s->iso_hdr - data);
-	s->mcs_hdr = s->data + (s->mcs_hdr - data);
-	s->sec_hdr = s->data + (s->sec_hdr - data);
-	s->rdp_hdr = s->data + (s->rdp_hdr - data);
-	s->channel_hdr = s->data + (s->channel_hdr - data);
+	s->p = s->data + p;
+	s->end = s->data + end;
+	s->iso_hdr = iso < 0 ? NULL : s->data + iso;
+	s->mcs_hdr = mcs < 0 ? NULL : s->data + mcs;
+	s->sec_hdr = sec < 0 ? NULL : s->data + sec;
+	s->rdp_hdr = rdp < 0 ? NULL : s->data + rdp;
+	s->channel_hdr = channel < 0 ? NULL : s->data + channel;
 }
 
 void

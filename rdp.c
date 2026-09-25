@@ -29,6 +29,7 @@
 #include <unistd.h>
 #endif
 #include "rdesktop.h"
+#include <limits.h>
 #include "ssl.h"
 
 
@@ -1489,7 +1490,7 @@ process_bitmap_data(STREAM s)
 {
 	uint16 left, top, right, bottom, width, height;
 	uint16 cx, cy, bpp, Bpp, flags, bufsize, size;
-	uint8 *data, *bmpdata;
+	uint8 *data, *bmpdata, *bitmap_end;
 	
 	logger(Protocol, Debug, "%s()", __func__);
 
@@ -1505,6 +1506,10 @@ process_bitmap_data(STREAM s)
 	Bpp = (bpp + 7) / 8;
 	in_uint16_le(s, flags); /* flags */
 	in_uint16_le(s, bufsize); /* bitmapLength */
+	/* bitmapLength includes the optional eight-byte TS_CD_HEADER. */
+	if (!s_check_rem(s, bufsize))
+		rdp_protocol_error("TS_BITMAP_DATA, truncated bitmap payload", &packet);
+	bitmap_end = s->p + bufsize;
 
 	cx = right - left + 1;
 	cy = bottom - top + 1;
@@ -1517,29 +1522,38 @@ process_bitmap_data(STREAM s)
 		Does this means that we can sanity check bpp with g_server_bpp ?
 	*/
 
-	if (Bpp == 0 || width == 0 || height == 0)
+	if (Bpp < 1 || Bpp > 4 || width == 0 || height == 0 ||
+	    Bpp != (g_server_depth + 7) / 8 || right < left || bottom < top ||
+	    cx > width || cy > height)
 	{
         logger(Protocol, Warning, "%s(), [%d,%d,%d,%d], [%d,%d], bpp=%d, flags=%x", __func__,
 				left, top, right, bottom, width, height, bpp, flags);
 		rdp_protocol_error("TS_BITMAP_DATA, unsafe size of bitmap data received from server", &packet);
 	}
 
-	if ((RD_UINT32_MAX / Bpp) <= (width * height))
+	if (width > INT_MAX / 4 / height)
 	{
 		logger(Protocol, Warning, "%s(), [%d,%d,%d,%d], [%d,%d], bpp=%d, flags=%x", __func__,
 				left, top, right, bottom, width, height, bpp, flags);
 		rdp_protocol_error("TS_BITMAP_DATA, unsafe size of bitmap data received from server", &packet);
 	}
  
-	if (flags == 0)
+	if (!(flags & BITMAP_COMPRESSION))
 	{
 		/* read uncompressed bitmap data */
 		int y;
+		int row_size = width * Bpp;
+		int stride = (row_size + 3) & ~3;
+		/* Wire rows are padded to four bytes; UI pixels are packed. */
+		if (stride > bufsize / height)
+			rdp_protocol_error("TS_BITMAP_DATA, short raw bitmap payload", &packet);
 		bmpdata = (uint8 *) xmalloc(width * height * Bpp);
 		for (y = 0; y < height; y++)
 		{
-			in_uint8a(s, &bmpdata[(height - y - 1) * (width * Bpp)], width * Bpp);
+			in_uint8a(s, &bmpdata[(height - y - 1) * row_size], row_size);
+			in_uint8s(s, stride - row_size);
 		}
+		s->p = bitmap_end;
 		
 		ui_paint_bitmap(left, top, cx, cy, width, height, bmpdata);
 		xfree(bmpdata);
@@ -1553,10 +1567,14 @@ process_bitmap_data(STREAM s)
 	else
 	{
 		/* Read TS_CD_HEADER */
+		if (bufsize < 8)
+			rdp_protocol_error("TS_BITMAP_DATA, short compression header", &packet);
 		in_uint8s(s, 2);        /* skip cbCompFirstRowSize (must be 0x0000) */
 		in_uint16_le(s, size);  /* cbCompMainBodySize */
 		in_uint8s(s, 2);        /* skip cbScanWidth */
 		in_uint8s(s, 2);        /* skip cbUncompressedSize */
+		if (size > bufsize - 8)
+			rdp_protocol_error("TS_BITMAP_DATA, short compressed payload", &packet);
 	}
 
 	/* read compressed bitmap data */
@@ -1565,6 +1583,8 @@ process_bitmap_data(STREAM s)
 		rdp_protocol_error("consume of bitmap data from stream would overrun", &packet);
 	}
 	in_uint8p(s, data, size);
+	/* Do not interpret any unused payload bytes as the next rectangle. */
+	s->p = bitmap_end;
 	bmpdata = (uint8 *) xmalloc(width * height * Bpp);
 	if (bitmap_decompress(bmpdata, width, height, data, size, Bpp))
 	{

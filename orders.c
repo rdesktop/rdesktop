@@ -23,6 +23,7 @@
 extern size_t g_next_packet;
 static RDP_ORDER_STATE g_order_state;
 extern RDP_VERSION g_rdp_version;
+extern int g_server_depth;
 
 /* Read field indicating which parameters are present */
 static void
@@ -916,6 +917,10 @@ process_raw_bmpcache(STREAM s)
 
 	logger(Graphics, Debug, "process_raw_bpmcache(), cx=%d, cy=%d, id=%d, idx=%d", width,
 	       height, cache_id, cache_idx);
+	if (width == 0 || height == 0 || Bpp < 1 || Bpp > 4 ||
+	    Bpp != (g_server_depth + 7) / 8 || width * height * Bpp > bufsize)
+		rdp_protocol_error("invalid raw bitmap cache dimensions or length", s);
+
 	inverted = (uint8 *) xmalloc(width * height * Bpp);
 	for (y = 0; y < height; y++)
 	{
@@ -970,6 +975,10 @@ process_bmpcache(STREAM s)
 	       "process_bmpcache(), cx=%d, cy=%d, id=%d, idx=%d, bpp=%d, size=%d, pad1=%d, bufsize=%d, pad2=%d, rs=%d, fs=%d",
 	       width, height, cache_id, cache_idx, bpp, size, pad1, bufsize, pad2, row_size,
 	       final_size);
+
+	if (width == 0 || height == 0 || Bpp < 1 || Bpp > 4 ||
+	    Bpp != (g_server_depth + 7) / 8)
+		rdp_protocol_error("invalid bitmap cache dimensions or depth", s);
 
 	bmpdata = (uint8 *) xmalloc(width * height * Bpp);
 
@@ -1032,6 +1041,10 @@ process_bmpcache2(STREAM s, uint16 flags, RD_BOOL compressed)
 	       "process_bmpcache2(), compr=%d, flags=%x, cx=%d, cy=%d, id=%d, idx=%d, Bpp=%d, bs=%d",
 	       compressed, flags, width, height, cache_id, cache_idx, Bpp, bufsize);
 
+	if (width == 0 || height == 0 || Bpp < 1 || Bpp > 4 ||
+	    Bpp != (g_server_depth + 7) / 8)
+		rdp_protocol_error("invalid bitmap cache dimensions or depth", s);
+
 	bmpdata = (uint8 *) xmalloc(width * height * Bpp);
 
 	if (compressed)
@@ -1046,6 +1059,11 @@ process_bmpcache2(STREAM s, uint16 flags, RD_BOOL compressed)
 	}
 	else
 	{
+		if (width * height * Bpp > bufsize)
+		{
+			xfree(bmpdata);
+			rdp_protocol_error("short raw bitmap cache payload", s);
+		}
 		for (y = 0; y < height; y++)
 			memcpy(&bmpdata[(height - y - 1) * (width * Bpp)],
 			       &data[y * (width * Bpp)], width * Bpp);
@@ -1253,6 +1271,7 @@ process_secondary_order(STREAM s)
 	uint16 flags;
 	uint8 type;
 	size_t next_order;
+	uint8 *saved_end = s->end;
 	struct stream packet = *s;
 
 	in_uint16_le(s, length);
@@ -1270,6 +1289,8 @@ process_secondary_order(STREAM s)
 	}
 
 	next_order = s_tell(s) + length;
+	/* Nested readers must not consume bytes from the following order. */
+	s->end = s->p + length;
 
 	switch (type)
 	{
@@ -1306,6 +1327,7 @@ process_secondary_order(STREAM s)
 			       "process_secondary_order(), unhandled secondary order %d", type);
 	}
 
+	s->end = saved_end;
 	s_seek(s, next_order);
 }
 
