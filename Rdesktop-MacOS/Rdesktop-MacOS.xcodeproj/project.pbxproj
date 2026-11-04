@@ -6,61 +6,65 @@
 	objectVersion = 56;
 	objects = {
 
+/* Begin PBXBuildFile section */
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A10000000000000000000001 /* rdesktop-mac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "rdesktop-mac.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
 /* Begin PBXGroup section */
 		E796D074302322D000C42E8A = {
 			isa = PBXGroup;
-			children = (
-			);
+			children = ( A10000000000000000000002 /* Sources */, A10000000000000000000003 /* Products */, );
 			sourceTree = "<group>";
 		};
+		A10000000000000000000002 /* Sources */ = { isa = PBXGroup; children = (); name = Sources; sourceTree = "<group>"; };
+		A10000000000000000000003 /* Products */ = { isa = PBXGroup; children = (A10000000000000000000001 /* rdesktop-mac.app */,); name = Products; sourceTree = "<group>"; };
 /* End PBXGroup section */
 
-/* Begin PBXLegacyTarget section */
-		E796D079302322D000C42E8A /* Rdesktop-MacOS */ = {
-			isa = PBXLegacyTarget;
-			buildArgumentsString = "-j$(sysctl -n hw.ncpu)";
-			buildConfigurationList = E796D07C302322D000C42E8A /* Build configuration list for PBXLegacyTarget "Rdesktop-MacOS" */;
-			buildPhases = (
-			);
-			buildToolPath = /usr/bin/make;
-			buildWorkingDirectory = "/Users/sedwards/source/rdesktop-mac";
-			dependencies = (
-			);
-			name = "Rdesktop-MacOS";
-			passBuildSettingsInEnvironment = 1;
-			productName = "Rdesktop-MacOS";
+/* Begin PBXNativeTarget section */
+		A10000000000000000000004 /* rdesktop-mac */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E796D07C302322D000C42E8A;
+			buildPhases = (A10000000000000000000005 /* Build app with Makefile */,);
+			buildRules = ();
+			dependencies = ();
+			name = "rdesktop-mac";
+			productName = "rdesktop-mac";
+			productReference = A10000000000000000000001 /* rdesktop-mac.app */;
+			productType = "com.apple.product-type.application";
 		};
-/* End PBXLegacyTarget section */
+/* End PBXNativeTarget section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		A10000000000000000000005 /* Build app with Makefile */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
+			inputPaths = ();
+			name = "Build app with Makefile";
+			outputPaths = ("$(TARGET_BUILD_DIR)/$(FULL_PRODUCT_NAME)/Contents/MacOS/rdesktop-mac",);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -eu\ncd \"$SRCROOT/..\"\nmake bundle\nmkdir -p \"$TARGET_BUILD_DIR/$FULL_PRODUCT_NAME/Contents\"\nditto rdesktop-mac.app/Contents \"$TARGET_BUILD_DIR/$FULL_PRODUCT_NAME/Contents\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXProject section */
 		E796D075302322D000C42E8A /* Project object */ = {
 			isa = PBXProject;
-			attributes = {
-				BuildIndependentTargetsInParallel = 1;
-				KnownAssetTags = (
-					New,
-				);
-				LastUpgradeCheck = 1400;
-				TargetAttributes = {
-					E796D079302322D000C42E8A = {
-						CreatedOnToolsVersion = 14.0.1;
-					};
-				};
-			};
-			buildConfigurationList = E796D078302322D000C42E8A /* Build configuration list for PBXProject "Rdesktop-MacOS" */;
+			attributes = { BuildIndependentTargetsInParallel = YES; LastUpgradeCheck = 1600; TargetAttributes = { A10000000000000000000004 = { CreatedOnToolsVersion = 16.0; }; }; };
+			buildConfigurationList = E796D078302322D000C42E8A;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
-			knownRegions = (
-				en,
-				Base,
-			);
+			knownRegions = (en, Base,);
 			mainGroup = E796D074302322D000C42E8A;
+			productRefGroup = A10000000000000000000003 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
-			targets = (
-				E796D079302322D000C42E8A /* Rdesktop-MacOS */,
-			);
+			targets = (A10000000000000000000004 /* rdesktop-mac */,);
 		};
 /* End PBXProject section */
 
@@ -170,35 +174,28 @@
 			};
 			name = Release;
 		};
-		E796D07D302322D000C42E8A /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				DEBUGGING_SYMBOLS = YES;
-				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = 798J6VKR27;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Debug;
-		};
-		E796D07E302322D000C42E8A /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = 798J6VKR27;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Release;
-		};
-/* End XCBuildConfiguration section */
-
+		E796D07D302322D000C42E8A /* Debug */ = { isa = XCBuildConfiguration; buildSettings = {
+			CODE_SIGN_STYLE = Automatic;
+			ENABLE_HARDENED_RUNTIME = YES;
+			GENERATE_INFOPLIST_FILE = YES;
+			INFOPLIST_KEY_CFBundleDisplayName = rdesktop-mac;
+			INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+			MACOSX_DEPLOYMENT_TARGET = 10.13;
+			PRODUCT_BUNDLE_IDENTIFIER = com.rdesktop.rdesktop-mac;
+			PRODUCT_NAME = "$(TARGET_NAME)";
+			SDKROOT = macosx;
+		}; name = Debug; };
+		E796D07E302322D000C42E8A /* Release */ = { isa = XCBuildConfiguration; buildSettings = {
+			CODE_SIGN_STYLE = Automatic;
+			ENABLE_HARDENED_RUNTIME = YES;
+			GENERATE_INFOPLIST_FILE = YES;
+			INFOPLIST_KEY_CFBundleDisplayName = rdesktop-mac;
+			INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+			MACOSX_DEPLOYMENT_TARGET = 10.13;
+			PRODUCT_BUNDLE_IDENTIFIER = com.rdesktop.rdesktop-mac;
+			PRODUCT_NAME = "$(TARGET_NAME)";
+			SDKROOT = macosx;
+		}; name = Release; };
 /* Begin XCConfigurationList section */
 		E796D078302322D000C42E8A /* Build configuration list for PBXProject "Rdesktop-MacOS" */ = {
 			isa = XCConfigurationList;
