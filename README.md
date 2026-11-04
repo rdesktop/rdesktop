@@ -74,6 +74,30 @@ the Mac used to build it, so create separate Intel and Apple Silicon archives
 if you need to support both processor families. The legacy Makefile build and
 `make bundle` remain available.
 
+### Scripted Developer ID release
+
+For a signed build from the command line, install your **Developer ID
+Application** certificate and private key in the login keychain, then run this
+from the repository root:
+
+```sh
+scripts/build-macos-release.sh \
+  --identity "Developer ID Application: Your Name (TEAMID)"
+```
+
+The script runs `configure`, builds with `make`, creates the app bundle, signs
+the executable and app with hardened runtime and a secure timestamp, and
+verifies the signature. It defaults to a macOS 11.0 deployment target for
+Apple Silicon and writes `dist/rdesktop-mac.app` plus a distributable zip.
+It cleans prior generated build outputs before rebuilding. Use
+`--deployment-target 10.13` for an Intel build that should run on older Intel
+macOS releases. Builds use the current machine's architecture.
+
+To notarize and staple the app as part of the script, first store notarization
+credentials with `xcrun notarytool store-credentials`, then pass the profile
+name with `--notary-profile PROFILE`. The script submits a zip, waits for
+Apple's result, staples the ticket to the app, and creates the final zip.
+
 ---- Update for rdesktop-mac port ---
 SVG Icon thanks to Remote Desktop SVG Vector
 https://www.svgrepo.com/svg/366419/remote-desktop
