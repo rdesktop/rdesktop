@@ -11,16 +11,25 @@ AC_PROG_INSTALL
 AC_CANONICAL_HOST
 case "$host_os" in
   darwin*)
+    PLATFORM=macos
+    WINPR_TIMEZONE_FILE=/var/db/zoneinfo
+    PLATFORM_DEFS="-D_DARWIN_C_SOURCE"
     SHLIB_EXT="dylib"
     SHLIB_FLAGS="-dynamiclib -Wl,-undefined,dynamic_lookup"
     LIBS="$LIBS -framework CoreFoundation -framework Carbon -framework Foundation"
     ;;
   *)
+    PLATFORM=linux
+    WINPR_TIMEZONE_FILE=/etc/timezone
+    PLATFORM_DEFS="-D_DEFAULT_SOURCE"
     SHLIB_EXT="so"
     SHLIB_FLAGS="-shared -fPIC"
     ;;
 esac
 
+AC_SUBST([PLATFORM])
+AC_SUBST([WINPR_TIMEZONE_FILE])
+AC_SUBST([PLATFORM_DEFS])
 AC_SUBST([SHLIB_EXT])
 AC_SUBST([SHLIB_FLAGS])
 
@@ -30,7 +39,7 @@ AC_MSG_CHECKING([for local static OpenSSL])
 if test -f "$srcdir/deps/openssl-3.0.15/libcrypto.a"; then
     AC_MSG_RESULT([yes])
     OPENSSL_CFLAGS="-I\$(srcdir)/deps/openssl-3.0.15/include"
-    OPENSSL_LIBS="\$(srcdir)/deps/openssl-3.0.15/libcrypto.a \$(srcdir)/deps/openssl-3.0.15/libssl.a"
+    OPENSSL_LIBS="\$(srcdir)/deps/openssl-3.0.15/libssl.a \$(srcdir)/deps/openssl-3.0.15/libcrypto.a"
     AC_DEFINE([WITH_OPENSSL], [1], [Define if OpenSSL is available])
 else
     AC_MSG_RESULT([no])

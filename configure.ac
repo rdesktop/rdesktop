@@ -40,14 +40,14 @@ case "$host_os" in
         TARGET=rdesktop
         FRONTENDOBJ="rdesktop.o xwin.o xkeymap.o xclip.o ewmhints.o"
         SSLOBJ=ssl.o
-        PLATFORM_CFLAGS="-DUSE_OPENSSL"
+        PLATFORM_CFLAGS="-DUSE_OPENSSL -I./deps/nla2/deps/openssl-3.0.15/include"
         AC_PATH_XTRA
         AS_IF([test "x$no_x" = xyes], [AC_MSG_ERROR([Linux requires X11 development headers and libraries])])
         PLATFORM_CFLAGS="$PLATFORM_CFLAGS $X_CFLAGS"
         PLATFORM_LIBS="$X_LIBS $X_PRE_LIBS -lX11 $X_EXTRA_LIBS"
-        PKG_CHECK_MODULES([OPENSSL], [openssl])
-        PLATFORM_CFLAGS="$PLATFORM_CFLAGS $OPENSSL_CFLAGS"
-        PLATFORM_LIBS="$PLATFORM_LIBS $OPENSSL_LIBS"
+        dnl NLA registers providers from our bundled static OpenSSL build.
+        PLATFORM_LIBS="$PLATFORM_LIBS ./deps/nla2/deps/openssl-3.0.15/libssl.a ./deps/nla2/deps/openssl-3.0.15/libcrypto.a -lpthread -ldl"
+        BUILD_DEPS="./deps/nla2/deps/openssl-3.0.15/libssl.a ./deps/nla2/deps/openssl-3.0.15/libcrypto.a"
         ;;
     *) AC_MSG_ERROR([Unsupported host OS: $host_os (expected Linux or macOS)]) ;;
 esac
@@ -122,7 +122,7 @@ AS_IF([test "x$enable_credssp" != "xno"], [
 
 	  if test x"$WITH_CREDSSP" = "x1"; then
 	      CREDSSPOBJ="cssp.o"
-              BUILD_DEPS="./deps/nla2/libnlav2.a"
+              BUILD_DEPS="$BUILD_DEPS ./deps/nla2/libnlav2.a"
               NLA_LIBS="./deps/nla2/libnlav2.a"
 	      CFLAGS="$CFLAGS $GSSAPI_CFLAGS"
 	      LIBS="$LIBS $GSSAPI_LIBS"

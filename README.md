@@ -21,21 +21,20 @@ and 5 protocols.
 | Platform | Executable | Frontend and libraries | Build guide |
 | --- | --- | --- | --- |
 | macOS | `rdesktop-mac` | Native macOS GUI, Apple frameworks, bundled OpenSSL | [macOS build instructions](BUILD_MAC.md) |
-| Linux | `rdesktop` | Command-line interface, X11 session window, system crypto libraries | [Linux build instructions](LINUX.md) |
+| Linux | `rdesktop` | Command-line interface, X11 session window, bundled NLA and OpenSSL | [Linux build instructions](LINUX.md) |
 
-Smart-card support defaults to disabled on Linux. The verified build also
-disables CredSSP:
+Smart-card support defaults to disabled on Linux. CredSSP/NLA is enabled by
+default and uses the bundled `libnlav2.a` authentication engine:
 
 ```sh
-./configure --disable-credssp
+./configure
 make
 sudo make install
 ```
 
 Linux still requires an X11 display to show the remote desktop; the command-line
-interface is not a headless frontend. The bundled NLA dependency needs further
-Linux portability work before a CredSSP-enabled build can be verified. Servers
-that require NLA cannot be used with the verified CredSSP-disabled build.
+interface is not a headless frontend. See the Linux build guide for dependencies
+and optional feature settings.
 
 On macOS, the Makefile build remains:
 

@@ -35,10 +35,17 @@ OBJECTS = $(FRONTENDOBJ) rdp.o cliprdr.o ctrl.o $(SOUNDOBJ) $(RDPOBJ) $(SCARDOBJ
 .PHONY: all
 all: $(TARGETS)
 
-./deps/nla2/libnlav2.a:
-	if [ ! -f deps/nla2/deps/openssl-3.0.15/libcrypto.a ]; then \
-		cd deps/nla2/deps/openssl-3.0.15 && ./Configure no-shared no-tests no-module enable-legacy && $(MAKE) clean && $(MAKE) build_libs; \
-	fi
+OPENSSL_DIR = ./deps/nla2/deps/openssl-3.0.15
+OPENSSL_LIBS = $(OPENSSL_DIR)/libssl.a $(OPENSSL_DIR)/libcrypto.a
+
+# One recipe builds both archives, including under parallel make.
+$(OPENSSL_DIR)/libssl.a: $(OPENSSL_DIR)/libcrypto.a
+	@test -f $@ || { cd $(OPENSSL_DIR) && $(MAKE) build_libs; }
+
+$(OPENSSL_DIR)/libcrypto.a:
+	cd $(OPENSSL_DIR) && ./Configure no-shared no-tests no-module enable-legacy && $(MAKE) clean && $(MAKE) build_libs
+
+./deps/nla2/libnlav2.a: $(OPENSSL_LIBS) deps/nla2/Makefile.in deps/nla2/Makefile.sources deps/nla2/configure deps/nla2/FreeRDP/winpr/include/winpr/config.h
 	cd deps/nla2 && ./configure --host=@host@ && $(MAKE) libnlav2.a
 
 $(OBJECTS): $(BUILD_DEPS) config.h rdesktop.h types.h proto.h macssl.h ssl.h utils.h asn.h

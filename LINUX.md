@@ -2,9 +2,9 @@
 
 This fork retains the Linux `rdesktop` command-line client alongside the native
 macOS application. `configure` selects Linux from the configured host OS, and
-`make` builds `rdesktop` using the X11 frontend and system OpenSSL, GnuTLS,
-Nettle, Hogweed, GMP, and libtasn1 libraries. Apple frameworks and Objective-C
-GUI objects are excluded from this build.
+`make` builds `rdesktop` using the X11 frontend, bundled NLA and static OpenSSL,
+and system GnuTLS, Nettle, Hogweed, GMP, and libtasn1 libraries. Apple frameworks
+and Objective-C GUI objects are excluded from this build.
 
 ## Dependencies
 
@@ -12,7 +12,7 @@ On Debian or Ubuntu, install the compiler, build tools, and development librarie
 
 ```sh
 sudo apt install build-essential pkg-config autoconf automake \
-  libx11-dev libxcursor-dev libxrandr-dev libssl-dev \
+  libx11-dev libxcursor-dev libxrandr-dev libkrb5-dev \
   libgnutls28-dev nettle-dev libgmp-dev libtasn1-6-dev
 ```
 
@@ -25,18 +25,18 @@ changes to `configure.ac`.
 From the repository root:
 
 ```sh
-./configure --disable-credssp
+./configure
 make
 sudo make install
 ```
 
 The executable is `./rdesktop`. Installation defaults to `/usr/local`; use
-`./configure --prefix=/your/prefix --disable-credssp` to
-choose another location. `make install` also installs the keymaps and manual page.
+`./configure --prefix=/your/prefix` to choose another location. `make install` also installs the keymaps and manual page.
 
 This configuration has been compiled on Linux and its command-line usage screen
-has been checked. A live RDP connection was not tested as part of that build
-verification.
+has been checked. The bundled client/server NLA integration test also passes,
+including the authenticated identity check. A live Windows RDP connection was
+not tested.
 
 ## Run
 
@@ -57,18 +57,28 @@ enable it explicitly; this requires PCSC-lite development files (for example,
 `libpcsclite-dev`) and has not been verified in this Linux build. The macOS
 default remains enabled.
 
-CredSSP is enabled by default in configure, so keep `--disable-credssp` for the
-verified Linux build. The bundled NLA dependency still needs Linux portability
-work. Installing Kerberos development dependencies alone does not resolve that
-work. For future CredSSP development, Debian/Ubuntu packages include:
+CredSSP/NLA is enabled by default. The build compiles the bundled FreeRDP/WinPR
+sources into `deps/nla2/libnlav2.a` and links that archive into `rdesktop`.
+Linux selects WinPR's portable Unicode conversion implementation and excludes
+Apple-only sources. OpenSSL is also built from the bundled sources and linked
+statically, including the legacy provider needed for NTLM authentication; no
+separate NLA library installation is required.
 
-```sh
-sudo apt install krb5-config libkrb5-dev
-```
-
-Servers that require Network Level Authentication (NLA) cannot be used with
-CredSSP disabled.
+To omit CredSSP, pass `--disable-credssp`. Servers requiring Network Level
+Authentication (NLA) cannot be used with CredSSP disabled.
 
 `make bundle` is a macOS-only target. Use separate checkouts for Linux and macOS
 builds: generated OpenSSL assembly, dependency configuration, and object files
 are platform-specific and should not be copied between them.
+
+## NLA integration test
+
+Build the existing test against the same static NLA and OpenSSL libraries:
+
+```sh
+make -C deps/nla2 test_nlav2
+(cd deps/nla2 && ./test_nlav2)
+```
+
+This runs a local client/server authentication exchange using test credentials;
+it does not require an RDP server.
