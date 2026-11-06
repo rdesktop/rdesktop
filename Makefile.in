@@ -16,41 +16,45 @@ KEYMAP_PATH = $(datadir)/rdesktop/keymaps/
 
 CC          = @CC@
 INSTALL     = @INSTALL@
-CFLAGS      = @CFLAGS@ @DEFS@ -DKEYMAP_PATH=\"$(KEYMAP_PATH)\" -DUSE_OPENSSL -I./deps/nla2/deps/openssl-3.0.15/include -I./deps/nla2
-LDFLAGS     = @LDFLAGS@ @LIBS@ ./deps/nla2/deps/openssl-3.0.15/libssl.a ./deps/nla2/deps/openssl-3.0.15/libcrypto.a ./deps/nla2/libnlav2.a -framework Foundation -framework CoreFoundation -lpthread -ldl
+CFLAGS      = @CFLAGS@ @DEFS@ -DKEYMAP_PATH=\"$(KEYMAP_PATH)\" @PLATFORM_CFLAGS@
+LDFLAGS     = @LDFLAGS@
+LDLIBS      = @NLA_LIBS@ @PLATFORM_LIBS@ @LIBS@
+PLATFORM    = @PLATFORM@
+BUILD_DEPS  = @BUILD_DEPS@
 STRIP       = @STRIP@
 
-TARGETS     = rdesktop-mac
+TARGETS     = @TARGET@
 SOUNDOBJ    = @SOUNDOBJ@
 SCARDOBJ    = @SCARDOBJ@
 CREDSSPOBJ  = @CREDSSPOBJ@
 
-RDPOBJ   = tcp.o asn.o iso.o mcs.o secure.o licence.o orders.o bitmap.o cache.o rdp5.o channels.o rdpdr.o serial.o printer.o disk.o parallel.o printercache.o mppc.o pstcache.o lspci.o seamless.o macssl.o utils.o stream.o dvc.o rdpedisp.o
-MACOBJ   = mac_gui_main.o rdesktop_main.o rdp.o macwin.o mackeymap.o macclip.o MacRDPConnectionGUI.o cliprdr.o ctrl.o
+RDPOBJ   = tcp.o asn.o iso.o mcs.o secure.o licence.o orders.o bitmap.o cache.o rdp5.o channels.o rdpdr.o serial.o printer.o disk.o parallel.o printercache.o mppc.o pstcache.o lspci.o seamless.o @SSLOBJ@ utils.o stream.o dvc.o rdpedisp.o
+FRONTENDOBJ = @FRONTENDOBJ@
+OBJECTS = $(FRONTENDOBJ) rdp.o cliprdr.o ctrl.o $(SOUNDOBJ) $(RDPOBJ) $(SCARDOBJ) $(CREDSSPOBJ)
 
 .PHONY: all
 all: $(TARGETS)
 
 ./deps/nla2/libnlav2.a:
 	if [ ! -f deps/nla2/deps/openssl-3.0.15/libcrypto.a ]; then \
-		cd deps/nla2/deps/openssl-3.0.15 && ./Configure no-shared no-tests no-module enable-legacy && $(MAKE) -j$$(sysctl -n hw.ncpu); \
+		cd deps/nla2/deps/openssl-3.0.15 && ./Configure no-shared no-tests no-module enable-legacy && $(MAKE) -B build_libs; \
 	fi
-	cd deps/nla2 && $(MAKE) libnlav2.a
+	cd deps/nla2 && ./configure --host=@host@ && $(MAKE) libnlav2.a
 
-$(MACOBJ) $(SOUNDOBJ) $(RDPOBJ) $(SCARDOBJ) $(CREDSSPOBJ): ./deps/nla2/libnlav2.a
+$(OBJECTS): $(BUILD_DEPS) config.h rdesktop.h types.h proto.h macssl.h ssl.h utils.h asn.h
 
-rdesktop-mac: ./deps/nla2/libnlav2.a $(MACOBJ) $(SOUNDOBJ) $(RDPOBJ) $(SCARDOBJ) $(CREDSSPOBJ)
-	$(CC) $(CFLAGS) -o rdesktop-mac $(MACOBJ) $(SOUNDOBJ) $(RDPOBJ) $(SCARDOBJ) $(CREDSSPOBJ) $(LDFLAGS) -framework Cocoa -framework CoreGraphics -framework Carbon -framework Security
+$(TARGETS): $(BUILD_DEPS) $(OBJECTS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS) $(LDLIBS)
 
 .PHONY: install
 install: installbin installkeymaps installman
 
 .PHONY: installbin
-installbin: rdesktop-mac
+installbin: $(TARGETS)
 	mkdir -p $(DESTDIR)$(bindir)
-	$(INSTALL) rdesktop-mac $(DESTDIR)$(bindir)
-	$(STRIP) $(DESTDIR)$(bindir)/rdesktop-mac
-	chmod 755 $(DESTDIR)$(bindir)/rdesktop-mac
+	$(INSTALL) $(TARGETS) $(DESTDIR)$(bindir)
+	$(STRIP) $(DESTDIR)$(bindir)/$(TARGETS)
+	chmod 755 $(DESTDIR)$(bindir)/$(TARGETS)
 
 .PHONY: installman
 installman: doc/rdesktop.1
@@ -71,9 +75,10 @@ installkeymaps:
 clean:
 	rm -f *.o *~ rdesktop-mac rdesktop
 	rm -rf 3rdparty/*.o 3rdparty/*/*.o 3rdparty/*/*.a 3rdparty/*/*.la rdesktop-mac.app
-	if [ -f deps/nla2/Makefile ]; then cd deps/nla2 && $(MAKE) clean; fi
+	if [ -n "$(BUILD_DEPS)" ] && [ -f deps/nla2/Makefile ]; then cd deps/nla2 && $(MAKE) clean; fi
 
 .PHONY: bundle
+ifeq ($(PLATFORM),macos)
 bundle: rdesktop-mac
 	rm -rf rdesktop-mac.app
 	mkdir -p rdesktop-mac.app/Contents/MacOS
@@ -117,6 +122,12 @@ bundle: rdesktop-mac
 	echo '    <true/>' >> rdesktop-mac.app/Contents/Info.plist
 	echo '</dict>' >> rdesktop-mac.app/Contents/Info.plist
 	echo '</plist>' >> rdesktop-mac.app/Contents/Info.plist
+
+else
+bundle:
+	@echo "Application bundles are only supported on macOS" >&2
+	@exit 1
+endif
 
 .PHONY: distclean
 distclean: clean
@@ -172,10 +183,13 @@ rdesktop.tar.gz: rdesktop-$(VERSION).tar.gz
 	rm -rf /tmp/rdesktop-make-dist-dir
 
 Makefile: Makefile.in configure
+	./config.status --recheck
 	./config.status
 
 configure: configure.ac
-	./bootstrap
+	aclocal -I m4
+	autoconf
+	autoheader
 
 .SUFFIXES:
 .SUFFIXES: .c .o .m

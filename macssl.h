@@ -7,6 +7,17 @@
 #ifndef _MACSSL_H
 #define _MACSSL_H
 
+#ifndef __APPLE__
+#include <stdio.h>
+#include <time.h>
+#include <dirent.h>
+#include "types.h"
+#include "ssl.h"
+#include <gnutls/gnutls.h>
+#include <gnutls/x509.h>
+#include <libtasn1.h>
+#else
+
 #include <Security/Security.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <dirent.h>  // Add for DIR type
@@ -185,5 +196,7 @@ RD_BOOL rdssl_certs_ok(SSL_CERT * server_cert, SSL_CERT * cacert);
 
 void rdssl_lib_init(void);
 void rdssl_lib_cleanup(void);
+
+#endif /* __APPLE__ */
 
 #endif /* _MACSSL_H */

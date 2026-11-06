@@ -20,7 +20,11 @@
 #ifndef _utils_h
 #define _utils_h
 
-// Native macOS SSL - no GNUTLS includes needed
+#ifdef __APPLE__
+#include "macssl.h"
+#else
+#include <gnutls/gnutls.h>
+#endif
 
 #include "types.h"
 
@@ -37,7 +41,7 @@ void utils_apply_session_size_limitations(uint32 * width, uint32 * height);
 
 const char* util_dialog_choice(const char *message, ...);
 
-int utils_cert_handle_exception(void* session, unsigned int status,
+int utils_cert_handle_exception(gnutls_session_t session, unsigned int status,
 							    RD_BOOL hostname_mismatch, const char *hostname);
 
 typedef enum log_level_t

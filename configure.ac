@@ -24,13 +24,41 @@ AC_CHECK_INCLUDES_DEFAULT
 AC_PROG_EGREP
 
 AC_C_BIGENDIAN([AC_DEFINE(B_ENDIAN, 1, [Define for big endian systems])], [AC_DEFINE(L_ENDIAN, 1, [Define for little endian systems])])
-dnl Disable X11 support for macOS build
-dnl AC_PATH_XTRA
-no_x=yes
-X_CFLAGS=""
-X_PRE_LIBS=""
-X_LIBS=""
-X_EXTRA_LIBS=""
+dnl Select the frontend from the configured host, including cross builds.
+case "$host_os" in
+    darwin*)
+        PLATFORM=macos
+        TARGET=rdesktop-mac
+        FRONTENDOBJ="mac_gui_main.o rdesktop_main.o macwin.o mackeymap.o macclip.o MacRDPConnectionGUI.o"
+        SSLOBJ=macssl.o
+        PLATFORM_CFLAGS="-DUSE_OPENSSL -I./deps/nla2/deps/openssl-3.0.15/include -I./deps/nla2"
+        PLATFORM_LIBS="./deps/nla2/deps/openssl-3.0.15/libssl.a ./deps/nla2/deps/openssl-3.0.15/libcrypto.a -framework Foundation -framework CoreFoundation -framework Cocoa -framework CoreGraphics -framework Carbon -framework Security -lpthread"
+        BUILD_DEPS="./deps/nla2/libnlav2.a"
+        ;;
+    linux*)
+        PLATFORM=linux
+        TARGET=rdesktop
+        FRONTENDOBJ="rdesktop.o xwin.o xkeymap.o xclip.o ewmhints.o"
+        SSLOBJ=ssl.o
+        PLATFORM_CFLAGS="-DUSE_OPENSSL"
+        AC_PATH_XTRA
+        AS_IF([test "x$no_x" = xyes], [AC_MSG_ERROR([Linux requires X11 development headers and libraries])])
+        PLATFORM_CFLAGS="$PLATFORM_CFLAGS $X_CFLAGS"
+        PLATFORM_LIBS="$X_LIBS $X_PRE_LIBS -lX11 $X_EXTRA_LIBS"
+        PKG_CHECK_MODULES([OPENSSL], [openssl])
+        PLATFORM_CFLAGS="$PLATFORM_CFLAGS $OPENSSL_CFLAGS"
+        PLATFORM_LIBS="$PLATFORM_LIBS $OPENSSL_LIBS"
+        ;;
+    *) AC_MSG_ERROR([Unsupported host OS: $host_os (expected Linux or macOS)]) ;;
+esac
+AC_SUBST(PLATFORM)
+AC_SUBST(TARGET)
+AC_SUBST(FRONTENDOBJ)
+AC_SUBST(SSLOBJ)
+AC_SUBST(PLATFORM_CFLAGS)
+AC_SUBST(PLATFORM_LIBS)
+AC_SUBST(BUILD_DEPS)
+AC_SUBST(NLA_LIBS)
 
 AC_PATH_TOOL(PKG_CONFIG, pkg-config)
 
@@ -87,28 +115,15 @@ AS_IF([test "x$enable_credssp" != "xno"], [
 		GSSAPI_LIBS="-framework GSS"
 		;;
 	     *)
-		#if 'OSTYPE' is not set use 'host' instead
-		if test x"$OSTYPE" = "x"; then
-			case "$host" in
-				*-*-freebsd*)
-				if test -n "$PKG_CONFIG"; then
-					PKG_CHECK_MODULES(GSSAPI, gss, [WITH_CREDSSP=1], [WITH_CREDSSP=0])
-				fi
-				;;
-			*)
-				;;
-			esac
-		else
-			if test -n "$PKG_CONFIG"; then
-				PKG_CHECK_MODULES(GSSAPI, krb5-gssapi, [WITH_CREDSSP=1], [WITH_CREDSSP=0])
-			fi
-		fi
+                PKG_CHECK_MODULES(GSSAPI, krb5-gssapi, [WITH_CREDSSP=1], [WITH_CREDSSP=0])
 		;;
 	esac
 
 
 	  if test x"$WITH_CREDSSP" = "x1"; then
 	      CREDSSPOBJ="cssp.o"
+              BUILD_DEPS="./deps/nla2/libnlav2.a"
+              NLA_LIBS="./deps/nla2/libnlav2.a"
 	      CFLAGS="$CFLAGS $GSSAPI_CFLAGS"
 	      LIBS="$LIBS $GSSAPI_LIBS"
 
@@ -123,13 +138,16 @@ AS_IF([test "x$enable_credssp" != "xno"], [
 ])
 AC_SUBST(CREDSSPOBJ)
 
-# xrandr - disabled for macOS
-dnl PKG_CHECK_MODULES(XRANDR, xrandr, [HAVE_XRANDR=1], [HAVE_XRANDR=0])
-HAVE_XRANDR=0
-
-# Xcursor - disabled for macOS
-dnl PKG_CHECK_MODULES(XCURSOR, xcursor, [HAVE_XCURSOR=1], [HAVE_XCURSOR=0])
-HAVE_XCURSOR=0
+AS_IF([test "$PLATFORM" = linux], [
+    PKG_CHECK_MODULES(XRANDR, xrandr, [
+        AC_DEFINE(HAVE_XRANDR, 1, [Define if Xrandr is available])
+        CFLAGS="$CFLAGS $XRANDR_CFLAGS"
+        LIBS="$LIBS $XRANDR_LIBS"
+    ], [:])
+    PKG_CHECK_MODULES(XCURSOR, xcursor)
+    CFLAGS="$CFLAGS $XCURSOR_CFLAGS"
+    LIBS="$LIBS $XCURSOR_LIBS"
+])
 
 # libtasn1
 case "$host" in
@@ -218,7 +236,7 @@ esac
 dnl Smartcard support
 AC_ARG_ENABLE(smartcard, AS_HELP_STRING([--disable-smartcard], [disable support for smartcard]))
 AS_IF([test "x$enable_smartcard" != "xno"], [
-	case "$OSTYPE" in
+	case "$host_os" in
 	     darwin*)
 		AC_CHECK_HEADER(PCSC/pcsclite.h, [WITH_SCARD=1], [WITH_SCARD=0])
 		PCSCLITE_CFLAGS=""
@@ -314,25 +332,23 @@ AC_ARG_ENABLE(static-libsamplerate,
     [static_libsamplerate=yes],
     [static_libsamplerate=no])
 
-dnl Disable audio support for macOS
-dnl if test -n "$PKG_CONFIG"; then
-dnl     PKG_CHECK_MODULES(LIBAO, ao, [HAVE_LIBAO=1], [HAVE_LIBAO=0])
-dnl     PKG_CHECK_MODULES(PULSE, libpulse, [HAVE_PULSE=1], [HAVE_PULSE=0])
-dnl     PKG_CHECK_MODULES(ALSA, alsa, [HAVE_ALSA=1], [HAVE_ALSA=0])
-dnl     PKG_CHECK_MODULES(LIBSAMPLERATE, samplerate, [HAVE_LIBSAMPLERATE=1], [HAVE_LIBSAMPLERATE=0])
-dnl     if test x"$HAVE_LIBSAMPLERATE" = "x1"; then
-dnl         AC_DEFINE(HAVE_LIBSAMPLERATE)
-dnl         if test x"$static_libsamplerate" = "xyes"; then
-dnl             _libsamplerate_libdir=`$PKG_CONFIG --errors-to-stdout --variable=libdir samplerate`
-dnl             LIBSAMPLERATE_LIBS="$_libsamplerate_libdir""/libsamplerate.a"
-dnl             LIBSAMPLERATE_LIBS="$LIBSAMPLERATE_LIBS -lm"
-dnl         fi
-dnl     fi
-dnl fi
 HAVE_LIBAO=0
 HAVE_PULSE=0
 HAVE_ALSA=0
 HAVE_LIBSAMPLERATE=0
+AS_IF([test "$PLATFORM" = linux], [
+    PKG_CHECK_MODULES(LIBAO, ao, [HAVE_LIBAO=1], [:])
+    PKG_CHECK_MODULES(PULSE, libpulse, [HAVE_PULSE=1], [:])
+    PKG_CHECK_MODULES(ALSA, alsa, [HAVE_ALSA=1], [:])
+    PKG_CHECK_MODULES(LIBSAMPLERATE, samplerate, [
+        HAVE_LIBSAMPLERATE=1
+        AC_DEFINE(HAVE_LIBSAMPLERATE, 1, [Define if libsamplerate is available])
+        AS_IF([test "$static_libsamplerate" = yes], [
+            _libsamplerate_libdir=`$PKG_CONFIG --variable=libdir samplerate`
+            LIBSAMPLERATE_LIBS="$_libsamplerate_libdir/libsamplerate.a -lm"
+        ])
+    ], [:])
+])
 
 if test "$sound" != "no"; then
     SOUNDOBJ="$SOUNDOBJ rdpsnd.o rdpsnd_dsp.o"
