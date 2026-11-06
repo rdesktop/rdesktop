@@ -2,6 +2,12 @@
 
 This document provides step-by-step instructions for building the native macOS port of `rdesktop` (`rdesktop-mac`) as a self-contained application bundle.
 
+Linux command-line build support is retained; see [LINUX.md](LINUX.md). The
+Makefile uses the host OS detected by `configure`: macOS builds `rdesktop-mac`
+with native GUI objects and Apple frameworks, while Linux builds `rdesktop`
+with X11 and system crypto libraries. `make bundle` is macOS-only. Use separate
+checkouts for each platform to avoid reusing generated dependency outputs.
+
 ---
 
 ## 1. TLS Engine Options

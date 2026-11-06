@@ -1,7 +1,7 @@
-# IMPORTANT: Linux rdesktop is no longer maintained
+# Upstream maintenance notice
 
-Please, beware that the parent project is no longer maintained and hadn't received
-a patch in many years. There are reported security vulnerabilities, yet those
+The upstream rdesktop project is no longer maintained. This fork retains both
+the native macOS application and the Linux command-line client. There are reported security vulnerabilities, yet those
 haven't been reviewed.
 
 Use with caution and use it at your own risk.
@@ -16,12 +16,37 @@ and 5 protocols.
 
 ## Installation
 
-rdesktop uses a GNU-style build procedure.  Typically all that is necessary
-to install rdesktop is the following:
+`configure` detects the host platform and selects the appropriate build:
 
-	% ./configure
-	% make
-	% make install
+| Platform | Executable | Frontend and libraries | Build guide |
+| --- | --- | --- | --- |
+| macOS | `rdesktop-mac` | Native macOS GUI, Apple frameworks, bundled OpenSSL | [macOS build instructions](BUILD_MAC.md) |
+| Linux | `rdesktop` | Command-line interface, X11 session window, system crypto libraries | [Linux build instructions](LINUX.md) |
+
+The verified Linux build currently disables smart-card and CredSSP support:
+
+```sh
+./configure --disable-smartcard --disable-credssp
+make
+sudo make install
+```
+
+Linux still requires an X11 display to show the remote desktop; the command-line
+interface is not a headless frontend. The bundled NLA dependency needs further
+Linux portability work before a CredSSP-enabled build can be verified. Servers
+that require NLA cannot be used with the verified CredSSP-disabled build.
+
+On macOS, the Makefile build remains:
+
+```sh
+./configure
+make
+make bundle
+```
+
+`make bundle` is available only on macOS. Use separate checkouts when building
+on different platforms to avoid reusing platform-specific objects and bundled
+dependency outputs.
 
 The default is to install under `/usr/local`.  This can be changed by adding
 `--prefix=<directory>` to the configure line.
@@ -30,7 +55,7 @@ The smart-card support module uses PCSC-lite. You should use PCSC-lite 1.2.9 or
 later. To enable smart-card support in the rdesktop add `--enable-smartcard` to
 the configure line.
 
-## Usage (command line)
+## Usage (Linux command line)
 
 Connect to an RDP server with:
 
