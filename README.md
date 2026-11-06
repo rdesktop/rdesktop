@@ -32,9 +32,10 @@ make
 sudo make install
 ```
 
-Linux still requires an X11 display to show the remote desktop; the command-line
-interface is not a headless frontend. See the Linux build guide for dependencies
-and optional feature settings.
+Linux supports X11 desktops and Wayland sessions through XWayland. The client
+can recover a missing `DISPLAY` or one incorrectly set to the Wayland socket
+name. See the [Linux build guide](LINUX.md#wayland-sessions) for display setup,
+dependencies, and optional feature settings.
 
 On macOS, the Makefile build remains:
 

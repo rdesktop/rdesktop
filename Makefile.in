@@ -50,6 +50,8 @@ $(OPENSSL_DIR)/libcrypto.a:
 
 $(OBJECTS): $(BUILD_DEPS) config.h rdesktop.h types.h proto.h macssl.h ssl.h utils.h asn.h
 
+xwin.o xdisplay.o: xdisplay.h
+
 $(TARGETS): $(BUILD_DEPS) $(OBJECTS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS) $(LDLIBS)
 

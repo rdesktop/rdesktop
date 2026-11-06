@@ -40,7 +40,7 @@ not tested.
 
 ## Run
 
-Run from an X11 desktop session, or an environment that provides an X11 display:
+Run from an X11 desktop session or a Wayland session with XWayland enabled:
 
 ```sh
 ./rdesktop -u username server:3389
@@ -48,7 +48,31 @@ Run from an X11 desktop session, or an environment that provides an X11 display:
 
 Run `./rdesktop -h` for command-line options, or `man rdesktop` after installation.
 The client takes connection options on the command line and displays the remote
-desktop in an X11 window; it is not a headless client.
+desktop in an X11 window. In a Wayland session, XWayland provides this window;
+the client does not yet have a native Wayland frontend.
+
+### Wayland sessions
+
+Install and enable XWayland in your desktop environment. On Debian/Ubuntu:
+
+```sh
+sudo apt install xwayland
+```
+
+`DISPLAY` identifies the X11/XWayland server (for example, `:0`), while
+`WAYLAND_DISPLAY` identifies the Wayland socket (for example, `wayland-0`).
+These variables should not be set to the same value. Normally your desktop
+session sets both correctly.
+
+The client first uses the configured X11 display. In a Wayland session, if
+`DISPLAY` is missing or incorrectly contains the Wayland socket name, it tries
+local X11 sockets owned by the current user and logs the selected display.
+X11 authentication remains required. An explicitly configured X11 display is
+preserved even if it fails, including SSH-forwarded displays.
+
+If no connection succeeds, check that XWayland is running and that `DISPLAY`
+and `XAUTHORITY` match your desktop session. The client does not start an
+XWayland server or change the desktop session's environment.
 
 ## Optional features and current limits
 

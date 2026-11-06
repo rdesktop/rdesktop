@@ -38,7 +38,7 @@ case "$host_os" in
     linux*)
         PLATFORM=linux
         TARGET=rdesktop
-        FRONTENDOBJ="rdesktop.o xwin.o xkeymap.o xclip.o ewmhints.o"
+        FRONTENDOBJ="rdesktop.o xwin.o xdisplay.o xkeymap.o xclip.o ewmhints.o"
         SSLOBJ=ssl.o
         PLATFORM_CFLAGS="-DUSE_OPENSSL -I./deps/nla2/deps/openssl-3.0.15/include"
         AC_PATH_XTRA

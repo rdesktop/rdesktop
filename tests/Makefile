@@ -10,11 +10,11 @@ RDP_MOCKS=ui_mock.o bitmap_mock.o secure_mock.o ssl_mock.o mppc_mock.o \
 	rdp5_mock.o xkeymap_mock.o tcp_mock.o
 
 XWIN_MOCKS=x11_mock.o cache_mock.o xclip_mock.o xkeymap_mock.o seamless_mock.o \
-	ctrl_mock.o rdpdr_mock.o ewmh_mock.o rdpedisp_mock.o rdp_mock.o
+	ctrl_mock.o rdpdr_mock.o ewmh_mock.o rdpedisp_mock.o rdp_mock.o xdisplay.o
 
 UTILS_MOCKS=
 
-RESIZE_MOCKS=x11_mock.o cache_mock.o xclip_mock.o xkeymap_mock.o seamless_mock.o \
+RESIZE_MOCKS=x11_mock.o xdisplay.o cache_mock.o xclip_mock.o xkeymap_mock.o seamless_mock.o \
 	ctrl_mock.o rdpdr_mock.o ewmh_mock.o rdpedisp_mock.o bitmap_mock.o \
 	ssl_mock.o mppc_mock.o pstcache_mock.o orders_mock.o rdesktop_mock.o rdp5_mock.o \
 	tcp_mock.o licence_mock.o mcs_mock.o channels_mock.o
@@ -30,7 +30,17 @@ ASN_MOCKS=utils_mock.o
 all: test
 
 .PHONY: test
-test: $(foreach test, $(TESTS), runtest.$(test))
+test: test-xdisplay $(foreach test, $(TESTS), runtest.$(test))
+
+.PHONY: test-xdisplay
+test-xdisplay: xdisplay_selection
+	./xdisplay_selection
+
+xdisplay_selection: xdisplay_selection.c ../xdisplay.c ../xdisplay.h
+	$(CC) $(CFLAGS) -o $@ $<
+
+xdisplay.o: ../xdisplay.c ../xdisplay.h
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 
 .PHONY: runtest.%
@@ -67,4 +77,4 @@ stream.o: ../stream.c
 
 .PHONY: clean
 clean:
-	rm -f $(TESTS) *_mock.o *_test.o
+	rm -f $(TESTS) xdisplay_selection xdisplay.o *_mock.o *_test.o

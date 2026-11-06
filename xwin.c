@@ -33,6 +33,7 @@
 #include <strings.h>
 #include "rdesktop.h"
 #include "xproto.h"
+#include "xdisplay.h"
 #include <X11/Xcursor/Xcursor.h>
 #ifdef HAVE_XRANDR
 #include <X11/extensions/Xrandr.h>
@@ -1966,13 +1967,19 @@ RD_BOOL
 ui_init(void)
 {
 	int screen_num;
+	int used_xwayland;
 
-	g_display = XOpenDisplay(NULL);
+	g_display = xdisplay_open(&used_xwayland);
 	if (g_display == NULL)
 	{
 		logger(GUI, Error, "ui_init(), failed to open X11 display: %s", XDisplayName(NULL));
+		if (xdisplay_is_wayland_session())
+			logger(GUI, Error,
+			       "Wayland sessions require XWayland. Enable XWayland and set DISPLAY to its X11 display; WAYLAND_DISPLAY names the Wayland socket.");
 		return False;
 	}
+	if (used_xwayland)
+		logger(GUI, Notice, "Using XWayland display %s", DisplayString(g_display));
 
 	{
 		uint16 endianness_test = 1;
