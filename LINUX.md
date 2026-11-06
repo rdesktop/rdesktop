@@ -25,13 +25,13 @@ changes to `configure.ac`.
 From the repository root:
 
 ```sh
-./configure --disable-smartcard --disable-credssp
+./configure --disable-credssp
 make
 sudo make install
 ```
 
 The executable is `./rdesktop`. Installation defaults to `/usr/local`; use
-`./configure --prefix=/your/prefix --disable-smartcard --disable-credssp` to
+`./configure --prefix=/your/prefix --disable-credssp` to
 choose another location. `make install` also installs the keymaps and manual page.
 
 This configuration has been compiled on Linux and its command-line usage screen
@@ -52,9 +52,10 @@ desktop in an X11 window; it is not a headless client.
 
 ## Optional features and current limits
 
-The verified build disables smart-card and CredSSP support. Smart-card support
-requires PCSC-lite development files (for example, `libpcsclite-dev`) and has not
-been verified in this Linux build.
+Smart-card support defaults to disabled on Linux. Pass `--enable-smartcard` to
+enable it explicitly; this requires PCSC-lite development files (for example,
+`libpcsclite-dev`) and has not been verified in this Linux build. The macOS
+default remains enabled.
 
 CredSSP is enabled by default in configure, so keep `--disable-credssp` for the
 verified Linux build. The bundled NLA dependency still needs Linux portability

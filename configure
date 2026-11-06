@@ -1489,7 +1489,8 @@ Optional Features:
                           enable AddressSanitizer support for detecting a wide
                           variety of memory allocation and deallocation errors
   --disable-credssp       disable support for CredSSP
-  --disable-smartcard     disable support for smartcard
+  --enable-smartcard      enable smartcard support (default: disabled on
+                          Linux, enabled on macOS)
   --enable-static-libsamplerate link libsamplerate statically
   --disable-largefile     omit support for large files
   --enable-year2038       support timestamps after 2038
@@ -15610,6 +15611,15 @@ esac
 if test ${enable_smartcard+y}
 then :
   enableval=$enable_smartcard;
+else case e in #(
+  e) if test "$PLATFORM" = linux
+then :
+  enable_smartcard=no
+else case e in #(
+  e) enable_smartcard=yes ;;
+esac
+fi ;;
+esac
 fi
 
 if test "x$enable_smartcard" != "xno"

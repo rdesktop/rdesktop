@@ -234,7 +234,10 @@ case "$host" in
 esac
 
 dnl Smartcard support
-AC_ARG_ENABLE(smartcard, AS_HELP_STRING([--disable-smartcard], [disable support for smartcard]))
+AC_ARG_ENABLE([smartcard],
+    AS_HELP_STRING([--enable-smartcard], [enable smartcard support (default: disabled on Linux, enabled on macOS)]),
+    [],
+    [AS_IF([test "$PLATFORM" = linux], [enable_smartcard=no], [enable_smartcard=yes])])
 AS_IF([test "x$enable_smartcard" != "xno"], [
 	case "$host_os" in
 	     darwin*)

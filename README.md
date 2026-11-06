@@ -23,10 +23,11 @@ and 5 protocols.
 | macOS | `rdesktop-mac` | Native macOS GUI, Apple frameworks, bundled OpenSSL | [macOS build instructions](BUILD_MAC.md) |
 | Linux | `rdesktop` | Command-line interface, X11 session window, system crypto libraries | [Linux build instructions](LINUX.md) |
 
-The verified Linux build currently disables smart-card and CredSSP support:
+Smart-card support defaults to disabled on Linux. The verified build also
+disables CredSSP:
 
 ```sh
-./configure --disable-smartcard --disable-credssp
+./configure --disable-credssp
 make
 sudo make install
 ```
