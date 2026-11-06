@@ -58,9 +58,30 @@ the configure line.
 
 ## Usage (Linux command line)
 
-Connect to an RDP server with:
+For newer Windows systems requiring Network Level Authentication (NLA), pass
+the Windows account username explicitly with `-u` and request a password
+prompt with `-p -`:
 
-	% rdesktop server
+```sh
+rdesktop -u username -p - server:3389
+```
+
+The bundled NLAv2 engine performs CredSSP authentication before the Windows
+desktop or login screen appears. Supply the account password, not a Windows
+Hello PIN. Omitting `-p` sends an empty password; the client does not prompt
+automatically. A bare `rdesktop server` is insufficient for these NLA logins.
+
+For a domain account, add `-d DOMAIN`. For a local Windows account, use the
+Windows computer name as the domain when needed:
+
+```sh
+rdesktop -u username -d WINDOWS_COMPUTER_NAME -p - server:3389
+```
+
+If the server reports `ERRCONNECT_LOGON_FAILURE`, check the username, domain,
+and password. When TLS has already completed and NLA tokens have been exchanged,
+the later suggestion to change TLS versions is misleading. See the
+[Linux authentication instructions](LINUX.md#authentication-with-newer-windows-systems).
 
 where `server` is the name of the Terminal Services machine. If you receive
 "Connection refused", this probably means that the server does not have

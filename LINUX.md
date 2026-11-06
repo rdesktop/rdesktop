@@ -35,21 +35,56 @@ The executable is `./rdesktop`. Installation defaults to `/usr/local`; use
 
 This configuration has been compiled on Linux and its command-line usage screen
 has been checked. The bundled client/server NLA integration test also passes,
-including the authenticated identity check. A live Windows RDP connection was
-not tested.
+including the authenticated identity check. A user has also confirmed a live
+Windows connection using an explicit username and prompted password.
 
 ## Run
 
 Run from an X11 desktop session or a Wayland session with XWayland enabled:
 
 ```sh
-./rdesktop -u username server:3389
+./rdesktop -u username -p - server:3389
 ```
 
 Run `./rdesktop -h` for command-line options, or `man rdesktop` after installation.
 The client takes connection options on the command line and displays the remote
 desktop in an X11 window. In a Wayland session, XWayland provides this window;
 the client does not yet have a native Wayland frontend.
+
+### Authentication with newer Windows systems
+
+Newer Windows systems commonly require Network Level Authentication (NLA).
+For these connections, explicitly pass the Windows account username with `-u`
+and use `-p -` to prompt for its password. The bundled NLAv2 engine handles
+CredSSP authentication before the remote desktop or Windows login screen is
+available; do not rely on entering credentials at that screen.
+
+```sh
+./rdesktop -u username -p - server:3389
+```
+
+Use the Windows account password, not its Windows Hello PIN. The client does
+not automatically prompt when `-p` is omitted: it sends an empty password,
+which can cause an NLA logon failure. Using `-p -` also keeps the password out
+of the command line and shell history.
+
+For a domain account, specify the domain with `-d DOMAIN`:
+
+```sh
+./rdesktop -u username -d DOMAIN -p - server:3389
+```
+
+For a local Windows account, use the Windows computer name with `-d` if needed:
+
+```sh
+./rdesktop -u username -d WINDOWS_COMPUTER_NAME -p - server:3389
+```
+
+`ERRCONNECT_LOGON_FAILURE` during the NLA exchange indicates an authentication
+failure. Check the account name, domain, password, and account's Remote Desktop
+access. If the log already shows a completed TLS connection and exchanged NLA
+tokens, the subsequent generic suggestion about old TLS versions does not
+describe that failure.
 
 ### Wayland sessions
 
