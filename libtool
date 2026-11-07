@@ -96,7 +96,7 @@ NM="/usr/bin/nm -B"
 LN_S="ln -s"
 
 # What is the maximum length of a command?
-max_cmd_len=786432
+max_cmd_len=
 
 # Object file suffix (normally "o").
 objext=o
