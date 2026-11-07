@@ -242,6 +242,13 @@ extern char g_keymapname[PATH_MAX];
     [self.addButton setTarget:self];
     [self.addButton setAction:@selector(addConnectionClicked:)];
     [contentView addSubview:self.addButton];
+
+    self.logButton = [[NSButton alloc] initWithFrame:NSMakeRect(margin, y, 100, 30)];
+    [self.logButton setTitle:@"Open Log"];
+    [self.logButton setTarget:self];
+    [self.logButton setAction:@selector(openLogFile:)];
+    [self.logButton setBezelStyle:NSBezelStyleRounded];
+    [contentView addSubview:self.logButton];
     
     self.advancedButton = [[NSButton alloc] initWithFrame:NSMakeRect(margin + labelWidth + 40, y, 80, 30)];
     [self.advancedButton setTitle:@"Advanced"];
@@ -519,6 +526,7 @@ extern char g_keymapname[PATH_MAX];
     self.verboseLoggingButton = [[NSButton alloc] initWithFrame:NSMakeRect(rightColumn, y, 220, fieldHeight)];
     [self.verboseLoggingButton setTitle:@"Verbose Logging"];
     [self.verboseLoggingButton setButtonType:NSButtonTypeSwitch];
+    [self.verboseLoggingButton setState:NSControlStateValueOn];
     [self.advancedView addSubview:self.verboseLoggingButton];
     y -= 22;
     
@@ -852,6 +860,26 @@ extern char g_keymapname[PATH_MAX];
         [self toggleAdvancedOptions];
     }
     [[self window] makeKeyAndOrderFront:nil];
+}
+
+- (IBAction)openLogFile:(id)sender {
+    extern const char *mac_gui_log_path(void);
+    NSString *path = [NSString stringWithUTF8String:mac_gui_log_path()];
+
+    if (!path || [path length] == 0) {
+        NSAlert *alert = [[NSAlert alloc] init];
+        [alert setMessageText:@"Log unavailable"];
+        [alert setInformativeText:@"The rdesktop log file could not be located."];
+        [alert runModal];
+        return;
+    }
+
+    if (![[NSWorkspace sharedWorkspace] openURL:[NSURL fileURLWithPath:path]]) {
+        NSAlert *alert = [[NSAlert alloc] init];
+        [alert setMessageText:@"Unable to open log file"];
+        [alert setInformativeText:[NSString stringWithFormat:@"Log file: %@", path]];
+        [alert runModal];
+    }
 }
 
 - (IBAction)disconnect:(id)sender {

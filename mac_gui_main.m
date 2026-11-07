@@ -7,9 +7,50 @@
 #import <Cocoa/Cocoa.h>
 #import "MacRDPConnectionGUI.h"
 #include "rdesktop.h"
+#include <fcntl.h>
+#include <limits.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 // External functions from rdesktop
 extern int rdesktop_main(int argc, char *argv[]);
+
+static char g_gui_log_path[PATH_MAX];
+
+static void
+setup_gui_logging(void)
+{
+    NSString *logDirectory;
+    NSString *logPath;
+    const char *path;
+    int fd;
+
+    logDirectory = [NSHomeDirectory() stringByAppendingPathComponent:
+                    @"Library/Logs/rdesktop-mac"];
+    [[NSFileManager defaultManager] createDirectoryAtPath:logDirectory
+                              withIntermediateDirectories:YES
+                                               attributes:nil
+                                                    error:nil];
+    logPath = [logDirectory stringByAppendingPathComponent:@"rdesktop-mac.log"];
+    path = [logPath fileSystemRepresentation];
+    strncpy(g_gui_log_path, path, sizeof(g_gui_log_path) - 1);
+    g_gui_log_path[sizeof(g_gui_log_path) - 1] = '\0';
+
+    fd = open(g_gui_log_path, O_WRONLY | O_CREAT | O_APPEND, 0600);
+    if (fd < 0)
+        return;
+
+    dup2(fd, STDOUT_FILENO);
+    dup2(fd, STDERR_FILENO);
+    close(fd);
+    setenv("RDESKTOP_DEBUG", "All", 1);
+    NSLog(@"[macOS GUI] Logging to %s", g_gui_log_path);
+}
+
+const char *mac_gui_log_path(void)
+{
+    return g_gui_log_path;
+}
 
 @interface MacRDPAppDelegate : NSObject <NSApplicationDelegate>
 @property (strong) MacRDPConnectionGUI *connectionGUI;
@@ -52,6 +93,11 @@ extern int rdesktop_main(int argc, char *argv[]);
                                                       keyEquivalent:@","];
     [settingsMenuItem setTarget:self.connectionGUI];
     [appMenu addItem:settingsMenuItem];
+    NSMenuItem *logMenuItem = [[NSMenuItem alloc] initWithTitle:@"Open Log File"
+                                                         action:@selector(openLogFile:)
+                                                  keyEquivalent:@""];
+    [logMenuItem setTarget:self.connectionGUI];
+    [appMenu addItem:logMenuItem];
     [appMenu addItem:[NSMenuItem separatorItem]];
     
     // Hide/Hide Others/Show All/Quit
@@ -80,6 +126,12 @@ extern int rdesktop_main(int argc, char *argv[]);
     NSMenuItem *disconnectItem = [[NSMenuItem alloc] initWithTitle:@"Disconnect" action:@selector(disconnect:) keyEquivalent:@"d"];
     [disconnectItem setTarget:self.connectionGUI];
     [connMenu addItem:disconnectItem];
+
+    NSMenuItem *connectionLogItem = [[NSMenuItem alloc] initWithTitle:@"Open Log File"
+                                                                action:@selector(openLogFile:)
+                                                         keyEquivalent:@""];
+    [connectionLogItem setTarget:self.connectionGUI];
+    [connMenu addItem:connectionLogItem];
     
     [connMenuItem setSubmenu:connMenu];
     
@@ -140,6 +192,7 @@ int main(int argc, char *argv[]) {
         }
         
         if (useGUI) {
+            setup_gui_logging();
             // Run macOS GUI application
             NSApplication *app = [NSApplication sharedApplication];
             [app setActivationPolicy:NSApplicationActivationPolicyRegular];
@@ -215,13 +268,6 @@ int launch_rdp_connection_from_gui(void) {
     if (strlen(g_keymapname) > 0) {
         fake_argv[fake_argc++] = "-k";
         fake_argv[fake_argc++] = g_keymapname;
-    }
-    
-    // Add port if not default
-    if (g_tcp_port_rdp != 3389) {
-        snprintf(port_buf, sizeof(port_buf), "%d", g_tcp_port_rdp);
-        fake_argv[fake_argc++] = "-P";
-        fake_argv[fake_argc++] = port_buf;
     }
     
     // Process advanced options if available
@@ -385,14 +431,23 @@ int launch_rdp_connection_from_gui(void) {
         }
     }
     
-    // Add hostname
-    fake_argv[fake_argc++] = g_hostname;
+    // Add hostname, including a non-default port in the positional server
+    // argument.  -P is persistent bitmap caching and does not take a port.
+    if (g_tcp_port_rdp != 3389) {
+        snprintf(port_buf, sizeof(port_buf), "%s:%d", g_hostname, g_tcp_port_rdp);
+        fake_argv[fake_argc++] = port_buf;
+    } else {
+        fake_argv[fake_argc++] = g_hostname;
+    }
     fake_argv[fake_argc] = NULL;
 
     // Log the constructed arguments for debugging
     NSLog(@"[macOS GUI] Constructed fake_argv (argc=%d):", fake_argc);
     for (int i = 0; i < fake_argc; i++) {
-        NSLog(@"  fake_argv[%d] = '%s'", i, fake_argv[i]);
+        if (i > 0 && strcmp(fake_argv[i - 1], "-p") == 0)
+            NSLog(@"  fake_argv[%d] = '<redacted>'", i);
+        else
+            NSLog(@"  fake_argv[%d] = '%s'", i, fake_argv[i]);
     }
     
     // Call the main RDP connection function

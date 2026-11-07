@@ -31,6 +31,7 @@
 @property (retain) IBOutlet NSPopUpButton *keymapPopup;
 @property (retain) IBOutlet NSButton *connectButton;
 @property (retain) IBOutlet NSButton *addButton;
+@property (retain) IBOutlet NSButton *logButton;
 @property (retain) IBOutlet NSButton *advancedButton;
 
 // Advanced options panel
@@ -92,6 +93,7 @@
 @property (assign) BOOL isConnecting;
 - (IBAction)showConnectionWindow:(id)sender;
 - (IBAction)showSettings:(id)sender;
+- (IBAction)openLogFile:(id)sender;
 - (IBAction)disconnect:(id)sender;
 - (void)toggleFullscreenSetting:(id)sender;
 - (void)toggleCompressionSetting:(id)sender;

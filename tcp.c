@@ -177,6 +177,22 @@ tcp_can_send(int sck, int millis)
 	return False;
 }
 
+/* Wait for data when the connection is being established off the UI thread. */
+static RD_BOOL
+tcp_can_recv(int sck, int millis)
+{
+	fd_set rfds;
+	struct timeval time;
+	int sel_count;
+
+	time.tv_sec = millis / 1000;
+	time.tv_usec = (millis * 1000) % 1000000;
+	FD_ZERO(&rfds);
+	FD_SET(sck, &rfds);
+	sel_count = select(sck + 1, &rfds, 0, 0, &time);
+	return (sel_count > 0 && FD_ISSET(sck, &rfds));
+}
+
 /* Initialise TCP transport data packet */
 STREAM
 tcp_init(uint32 maxlen)
@@ -325,6 +341,15 @@ tcp_recv(STREAM s, uint32 length)
 				return NULL;
 			}
 		}
+		else
+		{
+#if defined(__APPLE__) && !defined(USE_OPENSSL)
+			if (g_ssl_initialized && !g_run_ui)
+#else
+			if (g_ssl_initialized && !g_run_ui && SSL_pending(g_ssl) <= 0)
+#endif
+				tcp_can_recv(g_sock, 1000);
+		}
 
 		before = s_tell(s);
 		s_seek(s, s_length(s));
@@ -343,6 +368,9 @@ tcp_recv(STREAM s, uint32 length)
 				if (status == errSSLWouldBlock && rcvd == 0) {
 					if (g_run_ui) {
 						ui_select(g_sock);
+					}
+					else {
+						tcp_can_recv(g_sock, 1000);
 					}
 					if (g_exit_mainloop == True) {
 						logger(Core, Debug, "tcp_recv(): exiting due to g_exit_mainloop=True");
@@ -377,6 +405,10 @@ tcp_recv(STREAM s, uint32 length)
 //					logger(Core, Debug, "tcp_recv(): SSL_ERROR_WANT_READ/WRITE - processing UI events...");
 					if (g_run_ui) {
 						ui_select(g_sock);
+					}
+					else {
+						/* The macOS GUI performs connection setup on a worker thread. */
+						tcp_can_recv(g_sock, 1000);
 					}
 					rcvd = 0;  /* Retry the read */
 

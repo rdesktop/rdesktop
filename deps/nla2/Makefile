@@ -10,7 +10,7 @@ LDFLAGS =
 LIBS =  -framework CoreFoundation -framework Carbon -framework Foundation
 
 OPENSSL_CFLAGS = -I$(srcdir)/deps/openssl-3.0.15/include
-OPENSSL_LIBS = $(srcdir)/deps/openssl-3.0.15/libcrypto.a $(srcdir)/deps/openssl-3.0.15/libssl.a
+OPENSSL_LIBS = $(srcdir)/deps/openssl-3.0.15/libssl.a $(srcdir)/deps/openssl-3.0.15/libcrypto.a
 PTHREAD_LIBS = -lpthread
 DL_LIBS = -ldl
 
@@ -19,6 +19,12 @@ SHLIB_FLAGS = -dynamiclib -Wl,-undefined,dynamic_lookup
 
 # Include the source files lists
 include Makefile.sources
+
+PLATFORM = macos
+ifeq ($(PLATFORM),linux)
+WINPR_SOURCES := $(filter-out %.m,$(WINPR_SOURCES)) FreeRDP/winpr/libwinpr/crt/unicode_builtin.c
+FREERDP_SOURCES := $(filter-out %/keyboard_apple.c,$(FREERDP_SOURCES))
+endif
 
 # Derive the object files from the source files
 WINPR_OBJS_C = $(filter %.o,$(WINPR_SOURCES:.c=.o))
@@ -87,48 +93,31 @@ $(LIB_TARGET): $(ALL_OBJS)
 $(STATIC_TARGET): $(ALL_OBJS)
 	ar rcs $@ $(ALL_OBJS)
 
-$(TEST_TARGET): test_nlav2.o $(LIB_TARGET)
-	$(CC) $(LDFLAGS) -o $@ test_nlav2.o -L. -lnlav2 $(OPENSSL_LIBS) $(PTHREAD_LIBS) $(DL_LIBS) $(LIBS)
+$(TEST_TARGET): test_nlav2.o $(STATIC_TARGET)
+	$(CC) $(LDFLAGS) -o $@ test_nlav2.o $(STATIC_TARGET) $(OPENSSL_LIBS) $(PTHREAD_LIBS) $(DL_LIBS) $(LIBS)
 
-# Source-specific rules for SSE/AVX optimization flags
-FreeRDP/libfreerdp/primitives/sse/prim_colors_sse2.o: FreeRDP/libfreerdp/primitives/sse/prim_colors_sse2.c
-	$(CC) $(DEFS) $(INCLUDES) $(CPPFLAGS) $(CFLAGS)  -c -o $@ $<
+$(ALL_OBJS) test_nlav2.o: Makefile config.h FreeRDP/winpr/include/winpr/config.h
 
-FreeRDP/libfreerdp/primitives/sse/prim_set_sse2.o: FreeRDP/libfreerdp/primitives/sse/prim_set_sse2.c
-	$(CC) $(DEFS) $(INCLUDES) $(CPPFLAGS) $(CFLAGS)  -c -o $@ $<
+# SIMD intrinsics need the instruction set used by each source file.
+ifneq ($(filter x86_64 i%86,aarch64),)
+FreeRDP/libfreerdp/primitives/sse/prim_colors_sse2.o \
+FreeRDP/libfreerdp/primitives/sse/prim_set_sse2.o: CFLAGS += -msse3
 
-FreeRDP/libfreerdp/primitives/sse/prim_add_sse3.o: FreeRDP/libfreerdp/primitives/sse/prim_add_sse3.c
-	$(CC) $(DEFS) $(INCLUDES) $(CPPFLAGS) $(CFLAGS)  -c -o $@ $<
+FreeRDP/libfreerdp/primitives/sse/prim_add_sse3.o \
+FreeRDP/libfreerdp/primitives/sse/prim_alphaComp_sse3.o \
+FreeRDP/libfreerdp/primitives/sse/prim_andor_sse3.o \
+FreeRDP/libfreerdp/primitives/sse/prim_shift_sse3.o \
+FreeRDP/libfreerdp/codec/sse/rfx_sse2.o \
+FreeRDP/libfreerdp/codec/sse/nsc_sse2.o: CFLAGS += -msse3
 
-FreeRDP/libfreerdp/primitives/sse/prim_alphaComp_sse3.o: FreeRDP/libfreerdp/primitives/sse/prim_alphaComp_sse3.c
-	$(CC) $(DEFS) $(INCLUDES) $(CPPFLAGS) $(CFLAGS)  -c -o $@ $<
+FreeRDP/libfreerdp/primitives/sse/prim_sign_ssse3.o \
+FreeRDP/libfreerdp/primitives/sse/prim_YCoCg_ssse3.o: CFLAGS += -mssse3
 
-FreeRDP/libfreerdp/primitives/sse/prim_andor_sse3.o: FreeRDP/libfreerdp/primitives/sse/prim_andor_sse3.c
-	$(CC) $(DEFS) $(INCLUDES) $(CPPFLAGS) $(CFLAGS)  -c -o $@ $<
+FreeRDP/libfreerdp/primitives/sse/prim_copy_sse4_1.o \
+FreeRDP/libfreerdp/primitives/sse/prim_YUV_sse4.1.o: CFLAGS += -msse4.1
 
-FreeRDP/libfreerdp/primitives/sse/prim_shift_sse3.o: FreeRDP/libfreerdp/primitives/sse/prim_shift_sse3.c
-	$(CC) $(DEFS) $(INCLUDES) $(CPPFLAGS) $(CFLAGS)  -c -o $@ $<
-
-FreeRDP/libfreerdp/primitives/sse/prim_sign_ssse3.o: FreeRDP/libfreerdp/primitives/sse/prim_sign_ssse3.c
-	$(CC) $(DEFS) $(INCLUDES) $(CPPFLAGS) $(CFLAGS) -c -o $@ $<
-
-FreeRDP/libfreerdp/primitives/sse/prim_YCoCg_ssse3.o: FreeRDP/libfreerdp/primitives/sse/prim_YCoCg_ssse3.c
-	$(CC) $(DEFS) $(INCLUDES) $(CPPFLAGS) $(CFLAGS) -c -o $@ $<
-
-FreeRDP/libfreerdp/primitives/sse/prim_copy_sse4_1.o: FreeRDP/libfreerdp/primitives/sse/prim_copy_sse4_1.c
-	$(CC) $(DEFS) $(INCLUDES) $(CPPFLAGS) $(CFLAGS) -c -o $@ $<
-
-FreeRDP/libfreerdp/primitives/sse/prim_YUV_sse4.1.o: FreeRDP/libfreerdp/primitives/sse/prim_YUV_sse4.1.c
-	$(CC) $(DEFS) $(INCLUDES) $(CPPFLAGS) $(CFLAGS) -c -o $@ $<
-
-FreeRDP/libfreerdp/primitives/sse/prim_copy_avx2.o: FreeRDP/libfreerdp/primitives/sse/prim_copy_avx2.c
-	$(CC) $(DEFS) $(INCLUDES) $(CPPFLAGS) $(CFLAGS) -c -o $@ $<
-
-FreeRDP/libfreerdp/codec/sse/rfx_sse2.o: FreeRDP/libfreerdp/codec/sse/rfx_sse2.c
-	$(CC) $(DEFS) $(INCLUDES) $(CPPFLAGS) $(CFLAGS)  -c -o $@ $<
-
-FreeRDP/libfreerdp/codec/sse/nsc_sse2.o: FreeRDP/libfreerdp/codec/sse/nsc_sse2.c
-	$(CC) $(DEFS) $(INCLUDES) $(CPPFLAGS) $(CFLAGS)  -c -o $@ $<
+FreeRDP/libfreerdp/primitives/sse/prim_copy_avx2.o: CFLAGS += -mavx2
+endif
 
 %.o: %.c
 	$(CC) $(DEFS) $(INCLUDES) $(CPPFLAGS) $(CFLAGS) -c -o $@ $<

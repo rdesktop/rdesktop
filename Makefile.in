@@ -127,6 +127,8 @@ bundle: rdesktop-mac
 	echo '    <string>rdesktop-mac.icns</string>' >> rdesktop-mac.app/Contents/Info.plist
 	echo '    <key>NSPrincipalClass</key>' >> rdesktop-mac.app/Contents/Info.plist
 	echo '    <string>NSApplication</string>' >> rdesktop-mac.app/Contents/Info.plist
+	echo '    <key>NSLocalNetworkUsageDescription</key>' >> rdesktop-mac.app/Contents/Info.plist
+	echo '    <string>rdesktop needs access to your local network to connect to RDP servers.</string>' >> rdesktop-mac.app/Contents/Info.plist
 	echo '    <key>NSHighResolutionCapable</key>' >> rdesktop-mac.app/Contents/Info.plist
 	echo '    <true/>' >> rdesktop-mac.app/Contents/Info.plist
 	echo '</dict>' >> rdesktop-mac.app/Contents/Info.plist
