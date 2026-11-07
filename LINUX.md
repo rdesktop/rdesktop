@@ -45,6 +45,7 @@ prompts and completed them using the local domain, leaving the remaining fields
 blank. These are environment-specific settings; for a managed Kerberos domain,
 use the realm and server settings supplied by your administrator.
 
+=======
 To regenerate the client and bundled NLA Autotools files and configure on Linux:
 
 ```sh
@@ -56,7 +57,7 @@ The script forwards arguments to `configure` and respects compiler settings such
 as `CC`, `CFLAGS`, and `LDFLAGS` from the environment. Use
 `NOCONFIGURE=1 ./autogen-linux.sh` to regenerate files without configuring.
 Regeneration requires Libtool in addition to Autoconf, Automake, and pkg-config.
->>>>>>> ab3bdf6d ( - Work on updating the Linux code to something more modern eventually)
+=======
 
 ## Build and install
 
@@ -128,6 +129,11 @@ describe that failure.
 
 Install XWayland using the dependency command above and enable it in your
 desktop environment.
+
+On native Linux builds, `configure` automatically checks for `Xwayland` in
+`PATH`; no `--enable` option is needed. If it is missing, configuration warns
+and continues because XWayland is only needed at runtime for Wayland sessions.
+Cross builds skip this runtime check.
 
 On native Linux builds, `configure` automatically checks for `Xwayland` in
 `PATH`; no `--enable` option is needed. If it is missing, configuration warns
