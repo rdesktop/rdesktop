@@ -14,7 +14,8 @@ On Debian or Ubuntu, install the compiler, build tools, and development librarie
 sudo apt update
 sudo apt install build-essential pkg-config autoconf automake \
   libx11-dev libxcursor-dev libxrandr-dev libkrb5-dev \
-  libgnutls28-dev nettle-dev libgmp-dev libtasn1-6-dev zlib1g-dev xwayland
+  libgnutls28-dev nettle-dev libgmp-dev libtasn1-6-dev zlib1g-dev xwayland \
+  libtool
 ```
 
 This is the consolidated package list for building and running the client on
@@ -43,6 +44,19 @@ On another Ubuntu installation, the user also encountered Kerberos configuration
 prompts and completed them using the local domain, leaving the remaining fields
 blank. These are environment-specific settings; for a managed Kerberos domain,
 use the realm and server settings supplied by your administrator.
+
+To regenerate the client and bundled NLA Autotools files and configure on Linux:
+
+```sh
+./autogen-linux.sh --prefix=/your/prefix
+make
+```
+
+The script forwards arguments to `configure` and respects compiler settings such
+as `CC`, `CFLAGS`, and `LDFLAGS` from the environment. Use
+`NOCONFIGURE=1 ./autogen-linux.sh` to regenerate files without configuring.
+Regeneration requires Libtool in addition to Autoconf, Automake, and pkg-config.
+>>>>>>> ab3bdf6d ( - Work on updating the Linux code to something more modern eventually)
 
 ## Build and install
 
@@ -114,6 +128,11 @@ describe that failure.
 
 Install XWayland using the dependency command above and enable it in your
 desktop environment.
+
+On native Linux builds, `configure` automatically checks for `Xwayland` in
+`PATH`; no `--enable` option is needed. If it is missing, configuration warns
+and continues because XWayland is only needed at runtime for Wayland sessions.
+Cross builds skip this runtime check.
 
 `DISPLAY` identifies the X11/XWayland server (for example, `:0`), while
 `WAYLAND_DISPLAY` identifies the Wayland socket (for example, `wayland-0`).
