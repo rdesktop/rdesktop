@@ -30,6 +30,7 @@
 #include <openssl/rsa.h>
 #include <openssl/evp.h>
 #include <openssl/bn.h>
+#include <openssl/core_names.h>
 
 void
 rdssl_sha1_init(RDSSL_SHA1 * sha1)
@@ -109,7 +110,7 @@ rdssl_rsa_encrypt(uint8 * out, uint8 * in, int len, uint32 modulus_size, uint8 *
 	mpz_clear(exp);
 	mpz_clear(mod);
 
-	if (outlen < (int) modulus_size)
+	if (outlen < modulus_size)
 		memset(out + outlen, 0, modulus_size - outlen);
 }
 
@@ -156,91 +157,58 @@ RDSSL_RKEY *
 rdssl_cert_to_rkey(RDSSL_CERT * cert, uint32 * key_len)
 {
 	EVP_PKEY *pkey = NULL;
-	RSA *rsa = NULL;
-	const BIGNUM *n = NULL, *e = NULL;
+	BIGNUM *n = NULL, *e = NULL;
 	RDSSL_RKEY *rkey = NULL;
 	uint8_t *n_buf = NULL, *e_buf = NULL;
 	size_t n_len, e_len;
 
-	/* Extract public key from certificate */
 	pkey = X509_get_pubkey(cert);
-	if (!pkey) {
-		logger(RDP_Protocol, Error, "%s:%s:%d: Failed to get public key from certificate. OpenSSL error = %s\n",
-				__FILE__, __func__, __LINE__, ERR_error_string(ERR_get_error(), NULL));
-		return NULL;
+	if (!pkey || !EVP_PKEY_is_a(pkey, "RSA") ||
+	    !EVP_PKEY_get_bn_param(pkey, OSSL_PKEY_PARAM_RSA_N, &n) ||
+	    !EVP_PKEY_get_bn_param(pkey, OSSL_PKEY_PARAM_RSA_E, &e))
+	{
+		logger(RDP_Protocol, Error, "rdssl_cert_to_rkey(), failed to get RSA modulus/exponent: %s",
+		       ERR_error_string(ERR_get_error(), NULL));
+		goto out;
 	}
 
-	/* Get RSA key from EVP_PKEY */
-	rsa = EVP_PKEY_get1_RSA(pkey);
-	if (!rsa) {
-		logger(RDP_Protocol, Error, "%s:%s:%d: Failed to get RSA key from public key. OpenSSL error = %s\n",
-				__FILE__, __func__, __LINE__, ERR_error_string(ERR_get_error(), NULL));
-		EVP_PKEY_free(pkey);
-		return NULL;
-	}
+	n_len = BN_num_bytes(n);
+	e_len = BN_num_bytes(e);
+	if (n_len == 0 || e_len == 0)
+		goto out;
 
-	/* Get RSA modulus (n) and exponent (e) */
-	RSA_get0_key(rsa, &n, &e, NULL);
-	if (!n || !e) {
-		logger(RDP_Protocol, Error, "%s:%s:%d: Failed to get RSA modulus/exponent\n",
-				__FILE__, __func__, __LINE__);
-		RSA_free(rsa);
-		EVP_PKEY_free(pkey);
-		return NULL;
-	}
-
-	/* Allocate RDSSL_RKEY structure */
+	n_buf = malloc(n_len);
+	e_buf = malloc(e_len);
 	rkey = malloc(sizeof(*rkey));
-	if (!rkey) {
-		logger(RDP_Protocol, Error, "%s:%s:%d: Failed to allocate memory for RSA public key\n",
-				__FILE__, __func__, __LINE__);
-		RSA_free(rsa);
-		EVP_PKEY_free(pkey);
-		return NULL;
+	if (!n_buf || !e_buf || !rkey)
+	{
+		logger(RDP_Protocol, Error, "rdssl_cert_to_rkey(), failed to allocate RSA public key");
+		free(rkey);
+		rkey = NULL;
+		goto out;
 	}
 
 	rsa_public_key_init(rkey);
-
-	/* Convert BIGNUM to binary and import into GMP mpz_t */
-	n_len = BN_num_bytes(n);
-	n_buf = malloc(n_len);
-	if (!n_buf) {
-		logger(RDP_Protocol, Error, "%s:%s:%d: Failed to allocate buffer for modulus\n",
-				__FILE__, __func__, __LINE__);
-		rsa_public_key_clear(rkey);
-		free(rkey);
-		RSA_free(rsa);
-		EVP_PKEY_free(pkey);
-		return NULL;
-	}
 	BN_bn2bin(n, n_buf);
 	mpz_import(rkey->n, n_len, 1, 1, 0, 0, n_buf);
-
-	e_len = BN_num_bytes(e);
-	e_buf = malloc(e_len);
-	if (!e_buf) {
-		logger(RDP_Protocol, Error, "%s:%s:%d: Failed to allocate buffer for exponent\n",
-				__FILE__, __func__, __LINE__);
-		free(n_buf);
-		rsa_public_key_clear(rkey);
-		free(rkey);
-		RSA_free(rsa);
-		EVP_PKEY_free(pkey);
-		return NULL;
-	}
 	BN_bn2bin(e, e_buf);
 	mpz_import(rkey->e, e_len, 1, 1, 0, 0, e_buf);
 
-	free(n_buf);
-	free(e_buf);
-
-	rsa_public_key_prepare(rkey);
-
+	if (!rsa_public_key_prepare(rkey))
+	{
+		rsa_public_key_clear(rkey);
+		free(rkey);
+		rkey = NULL;
+		goto out;
+	}
 	*key_len = rkey->size;
 
-	RSA_free(rsa);
+out:
+	free(n_buf);
+	free(e_buf);
+	BN_free(n);
+	BN_free(e);
 	EVP_PKEY_free(pkey);
-
 	return rkey;
 }
 

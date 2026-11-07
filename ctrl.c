@@ -271,6 +271,12 @@ ctrl_init(const char *user, const char *domain, const char *host)
 	snprintf(ctrlsock_name, PATH_MAX, "%s" RDESKTOP_CTRLSOCK_STORE "/%s.ctl", home, hash);
 	ctrlsock_name[sizeof(ctrlsock_name) - 1] = '\0';
 
+	if (strlen(ctrlsock_name) >= sizeof(saun.sun_path))
+	{
+		logger(Core, Error, "ctrl_init(), control socket path is too long");
+		return -1;
+	}
+
 	/* make sure that ctrlsock store path exists */
 	snprintf(path, PATH_MAX, "%s" RDESKTOP_CTRLSOCK_STORE, home);
 	path[sizeof(path) - 1] = '\0';
@@ -305,7 +311,7 @@ ctrl_init(const char *user, const char *domain, const char *host)
 	/* bind and start listening on server socket */
 	memset(&saun, 0, sizeof(struct sockaddr_un));
 	saun.sun_family = AF_UNIX;
-	strncpy(saun.sun_path, ctrlsock_name, sizeof(saun.sun_path));
+	memcpy(saun.sun_path, ctrlsock_name, strlen(ctrlsock_name) + 1);
 	if (bind(ctrlsock, (struct sockaddr *) &saun, sizeof(struct sockaddr_un)) < 0)
 	{
 		logger(Core, Error, "ctrl_init(), bind() failed: %s", strerror(errno));

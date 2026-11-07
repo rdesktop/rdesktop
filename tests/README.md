@@ -30,6 +30,17 @@ Run this command from the repository root. It checks XWayland fallback,
 preservation of explicit X11 displays, and rejection of sockets owned by
 another user or connections rejected by Xlib authentication.
 
+On Linux, after building the client, run the standalone stream and public-key
+regression checks without Cgreen or an RDP server:
+
+```sh
+make -C tests test-crypto-keys
+```
+
+These check stream boundaries and resizing, RSA modulus/exponent extraction,
+rejection of invalid and non-RSA keys, and PKCS#1 public-key encoding through
+an in-memory TLS client/server connection.
+
 
 ## Cgreen documentation
 

@@ -523,7 +523,7 @@ disk_create(uint32 device_id, uint32 accessmask, uint32 sharemode, uint32 create
 	g_fileinfo[handle].device_id = device_id;
 	g_fileinfo[handle].flags_and_attributes = flags_and_attributes;
 	g_fileinfo[handle].accessmask = accessmask;
-	strncpy(g_fileinfo[handle].path, path, PATH_MAX - 1);
+	snprintf(g_fileinfo[handle].path, sizeof(g_fileinfo[handle].path), "%s", path);
 	g_fileinfo[handle].delete_on_close = False;
 
 	if (accessmask & GENERIC_ALL || accessmask & GENERIC_WRITE)
@@ -1098,18 +1098,22 @@ FsVolumeInfo(char *fpath)
 						 /*FAT*/
 					{
 						strcpy(info.type, "vfat");
-						read(fd, buf, sizeof(buf));
-						info.serial =
-							(buf[42] << 24) + (buf[41] << 16) +
-							(buf[40] << 8) + buf[39];
-						strncpy(info.label, (char *) buf + 43, 10);
-						info.label[10] = '\0';
+						if (read(fd, buf, sizeof(buf)) == (ssize_t) sizeof(buf))
+						{
+							info.serial =
+								(buf[42] << 24) + (buf[41] << 16) +
+								(buf[40] << 8) + buf[39];
+							strncpy(info.label, (char *) buf + 43, 10);
+							info.label[10] = '\0';
+						}
 					}
 					else if (lseek(fd, 32767, SEEK_SET) >= 0)	/* ISO9660 */
 					{
-						read(fd, buf, sizeof(buf));
-						strncpy(info.label, (char *) buf + 41, 32);
-						info.label[32] = '\0';
+						if (read(fd, buf, sizeof(buf)) == (ssize_t) sizeof(buf))
+						{
+							strncpy(info.label, (char *) buf + 41, 32);
+							info.label[32] = '\0';
+						}
 						/* info.Serial = (buf[128]<<24)+(buf[127]<<16)+(buf[126]<<8)+buf[125]; */
 					}
 					close(fd);

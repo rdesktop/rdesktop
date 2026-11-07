@@ -24,15 +24,15 @@
 /* enable AddressSanitizer */
 /* #undef HAVE_ADDRESS_SANITIZER */
 
-/* Define to 1 if you have the declaration of `dirfd', and to 0 if you don't.
+/* Define to 1 if you have the declaration of 'dirfd', and to 0 if you don't.
    */
 #define HAVE_DECL_DIRFD 1
 
-/* Define to 1 if you have the <dirent.h> header file, and it defines `DIR'.
+/* Define to 1 if you have the <dirent.h> header file, and it defines 'DIR'.
    */
 #define HAVE_DIRENT_H 1
 
-/* Define to 1 if you have the `dirfd' function. */
+/* Define to 1 if you have the 'dirfd' function. */
 #define HAVE_DIRFD 1
 
 /* Define to 1 if you have the <dlfcn.h> header file. */
@@ -50,17 +50,20 @@
 /* Define to 1 if you have langinfo.h */
 #define HAVE_LANGINFO_H 1
 
+/* Define if libsamplerate is available */
+/* #undef HAVE_LIBSAMPLERATE */
+
 /* Define to 1 if you have locale.h */
 #define HAVE_LOCALE_H 1
 
 /* Define to 1 if you have mntent.h */
-/* #undef HAVE_MNTENT_H */
+#define HAVE_MNTENT_H 1
 
-/* Define to 1 if you have the <ndir.h> header file, and it defines `DIR'. */
+/* Define to 1 if you have the <ndir.h> header file, and it defines 'DIR'. */
 /* #undef HAVE_NDIR_H */
 
-/* Define to 1 if you have the `setmntent' function. */
-/* #undef HAVE_SETMNTENT */
+/* Define to 1 if you have the 'setmntent' function. */
+#define HAVE_SETMNTENT 1
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #define HAVE_STDINT_H 1
@@ -77,27 +80,27 @@
 /* Define to 1 if you have the <string.h> header file. */
 #define HAVE_STRING_H 1
 
-/* Define to 1 if `f_namelen' is a member of `struct statfs'. */
-/* #undef HAVE_STRUCT_STATFS_F_NAMELEN */
+/* Define to 1 if 'f_namelen' is a member of 'struct statfs'. */
+#define HAVE_STRUCT_STATFS_F_NAMELEN 1
 
-/* Define to 1 if `f_namemax' is a member of `struct statfs'. */
+/* Define to 1 if 'f_namemax' is a member of 'struct statfs'. */
 /* #undef HAVE_STRUCT_STATFS_F_NAMEMAX */
 
-/* Define to 1 if `f_namelen' is a member of `struct statvfs'. */
+/* Define to 1 if 'f_namelen' is a member of 'struct statvfs'. */
 /* #undef HAVE_STRUCT_STATVFS_F_NAMELEN */
 
-/* Define to 1 if `f_namemax' is a member of `struct statvfs'. */
+/* Define to 1 if 'f_namemax' is a member of 'struct statvfs'. */
 #define HAVE_STRUCT_STATVFS_F_NAMEMAX 1
 
 /* Define to 1 if you have sysexits.h */
 #define HAVE_SYSEXITS_H 1
 
-/* Define to 1 if you have the <sys/dir.h> header file, and it defines `DIR'.
+/* Define to 1 if you have the <sys/dir.h> header file, and it defines 'DIR'.
    */
 /* #undef HAVE_SYS_DIR_H */
 
 /* Define to 1 if you have sys/filio.h */
-#define HAVE_SYS_FILIO_H 1
+/* #undef HAVE_SYS_FILIO_H */
 
 /* Define to 1 if you have sys/modem.h */
 /* #undef HAVE_SYS_MODEM_H */
@@ -105,7 +108,7 @@
 /* Define to 1 if you have the <sys/mount.h> header file. */
 #define HAVE_SYS_MOUNT_H 1
 
-/* Define to 1 if you have the <sys/ndir.h> header file, and it defines `DIR'.
+/* Define to 1 if you have the <sys/ndir.h> header file, and it defines 'DIR'.
    */
 /* #undef HAVE_SYS_NDIR_H */
 
@@ -116,7 +119,7 @@
 #define HAVE_SYS_SELECT_H 1
 
 /* Define to 1 if you have the <sys/statfs.h> header file. */
-/* #undef HAVE_SYS_STATFS_H */
+#define HAVE_SYS_STATFS_H 1
 
 /* Define to 1 if you have the <sys/statvfs.h> header file. */
 #define HAVE_SYS_STATVFS_H 1
@@ -131,10 +134,13 @@
 #define HAVE_SYS_TYPES_H 1
 
 /* Define to 1 if you have the <sys/vfs.h> header file. */
-/* #undef HAVE_SYS_VFS_H */
+#define HAVE_SYS_VFS_H 1
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #define HAVE_UNISTD_H 1
+
+/* Define if Xrandr is available */
+#define HAVE_XRANDR 1
 
 /* Define as const if the declaration of iconv() needs const. */
 #define ICONV_CONST 
@@ -206,7 +212,7 @@
 /* Whether statvfs64() is available */
 /* #undef STAT_STATVFS64 */
 
-/* Define to 1 if all of the C90 standard headers exist (not just the ones
+/* Define to 1 if all of the C89 standard headers exist (not just the ones
    required in a freestanding environment). This macro is provided for
    backward compatibility; new code need not use it. */
 #define STDC_HEADERS 1
@@ -218,13 +224,13 @@
 /* #undef WITH_PCSC120 */
 
 /* Define to 1 if PnP notifications are supported */
-#define WITH_PNP_NOTIFICATIONS 1
+/* #undef WITH_PNP_NOTIFICATIONS */
 
 /* Define to 1 if sound support is enabled */
 /* #undef WITH_RDPSND */
 
 /* Define to 1 if smartcard support is enabled */
-#define WITH_SCARD 1
+/* #undef WITH_SCARD */
 
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */
@@ -238,11 +244,20 @@
 # endif
 #endif
 
+/* Define to 1 if the X Window System is missing or not being used. */
+/* #undef X_DISPLAY_MISSING */
+
 /* Number of bits in a file offset, on hosts where this is settable. */
 /* #undef _FILE_OFFSET_BITS */
 
-/* Define for large files, on AIX-style hosts. */
+/* Define to 1 on platforms where this makes off_t a 64-bit type. */
 /* #undef _LARGE_FILES */
+
+/* Number of bits in time_t, on hosts where this is settable. */
+/* #undef _TIME_BITS */
+
+/* Define to 1 on platforms where this makes time_t a 64-bit type. */
+/* #undef __MINGW_USE_VC2005_COMPAT */
 
 /* type to use in place of socklen_t if not defined */
 /* #undef socklen_t */

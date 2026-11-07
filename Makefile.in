@@ -17,6 +17,8 @@ KEYMAP_PATH = $(datadir)/rdesktop/keymaps/
 CC          = @CC@
 INSTALL     = @INSTALL@
 CFLAGS      = @CFLAGS@ @DEFS@ -DKEYMAP_PATH=\"$(KEYMAP_PATH)\" @PLATFORM_CFLAGS@
+# Apply strict warnings only to this client's sources, never dependency builds.
+LOCAL_CFLAGS = -Werror
 LDFLAGS     = @LDFLAGS@
 LDLIBS      = @NLA_LIBS@ @PLATFORM_LIBS@ @LIBS@
 PLATFORM    = @PLATFORM@
@@ -206,10 +208,10 @@ configure: configure.ac
 .SUFFIXES: .c .o .m
 
 .c.o:
-	$(CC) $(CFLAGS) -o $@ -c $<
+	$(CC) $(CFLAGS) $(LOCAL_CFLAGS) -o $@ -c $<
 
 .m.o:
-	$(CC) $(CFLAGS) -o $@ -c $<
+	$(CC) $(CFLAGS) $(LOCAL_CFLAGS) -o $@ -c $<
 
 .PHONY: doc/AUTHORS
 doc/AUTHORS:

@@ -53,21 +53,27 @@ s_inherit(unsigned char *data, unsigned int size)
 void
 s_realloc(STREAM s, unsigned int size)
 {
-	unsigned char *data;
+	unsigned char **positions[] = {
+		&s->p, &s->end, &s->iso_hdr, &s->mcs_hdr,
+		&s->sec_hdr, &s->rdp_hdr, &s->channel_hdr
+	};
+	size_t offsets[sizeof(positions) / sizeof(positions[0])];
+	int present[sizeof(positions) / sizeof(positions[0])];
+	size_t i;
 
 	if (s->size >= size)
 		return;
 
-	data = s->data;
+	/* Save offsets before realloc invalidates pointers into the old buffer. */
+	for (i = 0; i < sizeof(positions) / sizeof(positions[0]); i++)
+	{
+		present[i] = i < 2 || *positions[i] != NULL;
+		offsets[i] = s->data && *positions[i] ? (size_t) (*positions[i] - s->data) : 0;
+	}
+	s->data = xrealloc(s->data, size);
 	s->size = size;
-	s->data = xrealloc(data, size);
-	s->p = s->data + (s->p - data);
-	s->end = s->data + (s->end - data);
-	s->iso_hdr = s->data + (s->iso_hdr - data);
-	s->mcs_hdr = s->data + (s->mcs_hdr - data);
-	s->sec_hdr = s->data + (s->sec_hdr - data);
-	s->rdp_hdr = s->data + (s->rdp_hdr - data);
-	s->channel_hdr = s->data + (s->channel_hdr - data);
+	for (i = 0; i < sizeof(positions) / sizeof(positions[0]); i++)
+		*positions[i] = present[i] ? s->data + offsets[i] : NULL;
 }
 
 void

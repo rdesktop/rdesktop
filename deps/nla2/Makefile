@@ -7,20 +7,20 @@ CC = gcc
 CFLAGS = -g -O2 -std=gnu11 -fPIC -fvisibility=hidden -fno-omit-frame-pointer -Wredundant-decls -fsigned-char -Wimplicit-function-declaration
 CPPFLAGS = 
 LDFLAGS = 
-LIBS =  -framework CoreFoundation -framework Carbon -framework Foundation
+LIBS = 
 
 OPENSSL_CFLAGS = -I$(srcdir)/deps/openssl-3.0.15/include
 OPENSSL_LIBS = $(srcdir)/deps/openssl-3.0.15/libssl.a $(srcdir)/deps/openssl-3.0.15/libcrypto.a
 PTHREAD_LIBS = -lpthread
 DL_LIBS = -ldl
 
-SHLIB_EXT = dylib
-SHLIB_FLAGS = -dynamiclib -Wl,-undefined,dynamic_lookup
+SHLIB_EXT = so
+SHLIB_FLAGS = -shared -fPIC
 
 # Include the source files lists
 include Makefile.sources
 
-PLATFORM = macos
+PLATFORM = linux
 ifeq ($(PLATFORM),linux)
 WINPR_SOURCES := $(filter-out %.m,$(WINPR_SOURCES)) FreeRDP/winpr/libwinpr/crt/unicode_builtin.c
 FREERDP_SOURCES := $(filter-out %/keyboard_apple.c,$(FREERDP_SOURCES))
@@ -64,14 +64,14 @@ DEFS = -DFREERDP_EXPORTS \
        -DWINPR_EXPORTS \
        -DWINPR_THREADPOOL_DEFAULT_MAX_COUNT=16 \
        -DWINPR_THREADPOOL_DEFAULT_MIN_COUNT=4 \
-       -DWINPR_TIMEZONE_FILE=\"/var/db/zoneinfo\" \
+       -DWINPR_TIMEZONE_FILE=\"/etc/timezone\" \
        -DWITH_OPENSSL \
        -DWITH_PKCS11 \
        -DWITH_SMARTCARD_EMULATE \
        -DWITH_SMARTCARD_PCSC \
        -DWITH_TIMEZONE_COMPILED \
        -DWITH_VERBOSE_WINPR_ASSERT \
-       -D_DARWIN_C_SOURCE \
+       -D_DEFAULT_SOURCE \
        -D_POSIX_C_SOURCE=200809L \
        -Dwinpr_EXPORTS \
        -Dfreerdp_EXPORTS \
@@ -99,7 +99,7 @@ $(TEST_TARGET): test_nlav2.o $(STATIC_TARGET)
 $(ALL_OBJS) test_nlav2.o: Makefile config.h FreeRDP/winpr/include/winpr/config.h
 
 # SIMD intrinsics need the instruction set used by each source file.
-ifneq ($(filter x86_64 i%86,aarch64),)
+ifneq ($(filter x86_64 i%86,x86_64),)
 FreeRDP/libfreerdp/primitives/sse/prim_colors_sse2.o \
 FreeRDP/libfreerdp/primitives/sse/prim_set_sse2.o: CFLAGS += -msse3
 
