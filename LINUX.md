@@ -6,19 +6,43 @@ macOS application. `configure` selects Linux from the configured host OS, and
 and system GnuTLS, Nettle, Hogweed, GMP, and libtasn1 libraries. Apple frameworks
 and Objective-C GUI objects are excluded from this build.
 
-## Dependencies
+## Ubuntu and Debian dependencies
 
 On Debian or Ubuntu, install the compiler, build tools, and development libraries:
 
 ```sh
+sudo apt update
 sudo apt install build-essential pkg-config autoconf automake \
   libx11-dev libxcursor-dev libxrandr-dev libkrb5-dev \
-  libgnutls28-dev nettle-dev libgmp-dev libtasn1-6-dev
+  libgnutls28-dev nettle-dev libgmp-dev libtasn1-6-dev zlib1g-dev xwayland
 ```
 
-Xrandr is optional; X11 and Xcursor are required. Autoconf and Automake provide
+This is the consolidated package list for building and running the client on
+a Wayland desktop. XWayland is needed for Wayland sessions; Xrandr is optional.
+X11 and Xcursor are required. `zlib1g-dev` supplies `zlib.h` for the bundled
+NLA engine; install it if compilation reports that header is missing. Autoconf and Automake provide
 `autoconf`, `autoheader`, and `aclocal` for regenerating configure files after
 changes to `configure.ac`.
+
+### Ubuntu GSSAPI and Kerberos setup
+
+`libkrb5-dev` supplies GSSAPI for the default CredSSP/NLA support. Kerberos
+setup prompts configure runtime authentication; completing them does not
+install the development files needed to build.
+
+If configure reports `checking for krb5-gssapi... no`, install the packages
+listed above and verify that `pkg-config` can find GSSAPI:
+
+```sh
+pkg-config --modversion krb5-gssapi
+```
+
+Then retry `./configure` and `make` as shown below.
+
+On another Ubuntu installation, the user also encountered Kerberos configuration
+prompts and completed them using the local domain, leaving the remaining fields
+blank. These are environment-specific settings; for a managed Kerberos domain,
+use the realm and server settings supplied by your administrator.
 
 ## Build and install
 
@@ -88,11 +112,8 @@ describe that failure.
 
 ### Wayland sessions
 
-Install and enable XWayland in your desktop environment. On Debian/Ubuntu:
-
-```sh
-sudo apt install xwayland
-```
+Install XWayland using the dependency command above and enable it in your
+desktop environment.
 
 `DISPLAY` identifies the X11/XWayland server (for example, `:0`), while
 `WAYLAND_DISPLAY` identifies the Wayland socket (for example, `wayland-0`).
@@ -108,6 +129,37 @@ preserved even if it fails, including SSH-forwarded displays.
 If no connection succeeds, check that XWayland is running and that `DISPLAY`
 and `XAUTHORITY` match your desktop session. The client does not start an
 XWayland server or change the desktop session's environment.
+
+If the client reports:
+
+```text
+UI(error): ui_init(), failed to open X11 display: wayland-0
+```
+
+`DISPLAY` contains a Wayland socket name instead of an X11 display. From a
+terminal inside your Ubuntu desktop session, check the display and local X11
+sockets:
+
+```sh
+echo "$DISPLAY"
+ls /tmp/.X11-unix/
+```
+
+If the listing includes `X0`, try the corresponding X11 display `:0`:
+
+```sh
+DISPLAY=:0 ./rdesktop -u username -p - server:3389
+```
+
+Include the equals sign in `DISPLAY=:0`; `DISPLAY:0` is not a shell variable
+assignment. Use `./rdesktop` to run the executable from this checkout rather
+than another installed version. Run it as your desktop user without `sudo`.
+
+Use `:1` for `X1`, and so on. The socket must belong to your desktop session,
+and X11 authentication must still succeed. If there are no X11 sockets, install
+XWayland using the dependency command above, then log out and back in and
+check again. The preceding `Autoselecting keyboard map 'en-us' from locale` message
+is normal and unrelated to the display failure.
 
 ## Optional features and current limits
 

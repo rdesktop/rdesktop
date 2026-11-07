@@ -32,10 +32,8 @@ make
 sudo make install
 ```
 
-Linux supports X11 desktops and Wayland sessions through XWayland. The client
-can recover a missing `DISPLAY` or one incorrectly set to the Wayland socket
-name. See the [Linux build guide](LINUX.md#wayland-sessions) for display setup,
-dependencies, and optional feature settings.
+See the [Linux build guide](LINUX.md) for Ubuntu dependencies, Kerberos
+configuration notes, X11/Wayland display setup, and optional feature settings.
 
 On macOS, the Makefile build remains:
 
@@ -154,4 +152,3 @@ Free Download Remote Desktop SVG vector file in monocolor and multicolor type fo
     COLLECTION: Puppylinux Interface Icons
     LICENSE: PD License
     AUTHOR: puppylinux
-
