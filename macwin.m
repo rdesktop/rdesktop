@@ -480,6 +480,18 @@ mac_fatal(char *format, ...)
 
 - (void)windowWillClose:(NSNotification *)notification {
     extern RD_BOOL g_exit_mainloop;
+    extern RD_BOOL g_user_quit;
+
+    (void)notification;
+
+    /* Closing this window ends only its current RDP session.  Do not
+     * terminate NSApplication; a future multi-session UI may have other RDP
+     * windows open at the same time.  The protocol thread observes these
+     * flags and performs the normal disconnect/cleanup sequence. */
+    if (g_exit_mainloop == True)
+        return;
+
+    g_user_quit = True;
     g_exit_mainloop = True;
 }
 
@@ -728,10 +740,15 @@ ui_destroy_window(void)
     }
 
     if (g_window) {
-        [g_window setDelegate:nil];
-        [g_window close];
+        RDPWindow *window = g_window;
+
+        /* Clear globals before closing to make this safe if AppKit emits a
+         * second close notification during teardown. */
         g_window = nil;
         g_view = nil;
+        [window setDelegate:nil];
+        if ([window isVisible])
+            [window close];
     }
 }
 

@@ -801,6 +801,9 @@ rdesktop_main(int argc, char *argv[])
 	/* Reset connection status flags for multiple connection attempts in GUI mode */
 	g_nla_failure = False;
 	g_connection_established = False;
+	g_exit_mainloop = False;
+	g_user_quit = False;
+	g_network_error = False;
 
 	/* Reset getopt internal state for multiple calls (especially in GUI mode) */
 #ifdef __APPLE__

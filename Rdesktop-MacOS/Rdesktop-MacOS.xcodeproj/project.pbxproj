@@ -98,7 +98,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -eu\ncd \"$SRCROOT/..\"\nmake bundle\nmkdir -p \"$TARGET_BUILD_DIR/$FULL_PRODUCT_NAME/Contents\"\nditto rdesktop-mac.app/Contents \"$TARGET_BUILD_DIR/$FULL_PRODUCT_NAME/Contents\"\n";
+			shellScript = "set -eu\ncd \"$SRCROOT/..\"\nif [ ! -f Makefile ]; then\n    ./configure\nfi\n# Do not let Make regenerate configure from configure.ac; Xcode's PATH may\n# not contain aclocal/autoconf, and the generated files are checked in.\nmake -o configure -o Makefile bundle\nmkdir -p \"$TARGET_BUILD_DIR/$FULL_PRODUCT_NAME/Contents\"\nditto rdesktop-mac.app/Contents \"$TARGET_BUILD_DIR/$FULL_PRODUCT_NAME/Contents\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

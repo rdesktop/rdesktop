@@ -6,6 +6,7 @@
 
 #import "MacRDPConnectionGUI.h"
 #include "rdesktop.h"
+#include <unistd.h>
 
 #if __has_include(<Network/Network.h>)
 #import <Network/Network.h>
@@ -25,9 +26,7 @@ extern char g_keymapname[PATH_MAX];
 
 @implementation MacRDPConnectionGUI
 
-/* Avoid repeatedly presenting a permission-settings alert for a real routing
- * failure. The native macOS prompt is shown by the first protected operation. */
-static BOOL g_local_network_prompt_shown = NO;
+#define RDESKTOP_PERMISSION_NOT_GRANTED (-2)
 
 #if RDESKTOP_HAS_NETWORK_FRAMEWORK
 /*
@@ -79,6 +78,44 @@ local_network_access_denied_for_host(const char *host, int port)
     nw_release(parameters);
     nw_release(endpoint);
     return denied;
+}
+#endif
+
+static BOOL
+request_local_network_access(void)
+{
+    NSAlert *alert = [[NSAlert alloc] init];
+    [alert setMessageText:@"Local Network Access Required"];
+    [alert setInformativeText:@"rdesktop-mac needs local network access to connect to this RDP server. Allow it under System Settings > Privacy & Security > Local Network. The connection will retry automatically after access is granted."];
+    [alert addButtonWithTitle:@"Open Network Settings"];
+    [alert addButtonWithTitle:@"Cancel"];
+    [alert setAlertStyle:NSAlertStyleWarning];
+
+    if ([alert runModal] != NSAlertFirstButtonReturn)
+        return NO;
+
+    NSURL *settingsURL = [NSURL URLWithString:
+        @"x-apple.systempreferences:com.apple.preference.security?Privacy_LocalNetwork"];
+    return [[NSWorkspace sharedWorkspace] openURL:settingsURL];
+}
+
+#if RDESKTOP_HAS_NETWORK_FRAMEWORK
+static BOOL
+wait_for_local_network_access(const char *host, int port)
+{
+    int attempt;
+
+    /* Settings changes are asynchronous. Keep the connection details and
+     * wait briefly for the authorization state to change instead of asking
+     * the user to press Connect a second time. */
+    for (attempt = 0; attempt < 120; attempt++)
+    {
+        usleep(500000);
+        if (!local_network_access_denied_for_host(host, port))
+            return YES;
+    }
+
+    return NO;
 }
 #endif
 
@@ -880,13 +917,30 @@ local_network_access_denied_for_host(const char *host, int port)
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         extern int launch_rdp_connection_from_gui(void);
         int result;
+        BOOL permission_wait_failed = NO;
+        BOOL permission_flow_cancelled = NO;
 
 #if RDESKTOP_HAS_NETWORK_FRAMEWORK
         extern RD_BOOL g_local_network_access_denied;
         if (local_network_access_denied_for_host(g_hostname, g_tcp_port_rdp)) {
             g_local_network_access_denied = True;
-            result = -1;
+            __block BOOL settings_opened = NO;
+            dispatch_sync(dispatch_get_main_queue(), ^{
+                [NSApp activateIgnoringOtherApps:YES];
+                settings_opened = request_local_network_access();
+            });
+
+            if (settings_opened &&
+                wait_for_local_network_access(g_hostname, g_tcp_port_rdp)) {
+                g_local_network_access_denied = False;
+                result = launch_rdp_connection_from_gui();
+            } else {
+                permission_flow_cancelled = !settings_opened;
+                permission_wait_failed = settings_opened;
+                result = RDESKTOP_PERMISSION_NOT_GRANTED;
+            }
         } else {
+            g_local_network_access_denied = False;
             result = launch_rdp_connection_from_gui();
         }
 #else
@@ -895,27 +949,27 @@ local_network_access_denied_for_host(const char *host, int port)
         
         dispatch_async(dispatch_get_main_queue(), ^{
             self.isConnecting = NO;
-            if (result != 0) {
+            extern RD_BOOL g_user_quit;
+            if (result != 0 && (g_user_quit || result == EXRD_WINDOW_CLOSED)) {
+                /* Closing the RDP window is a normal user action.  Restore
+                 * the connection dialog without presenting a failure alert. */
+                g_user_quit = False;
+                [self showConnectionWindow];
+            } else if (result != 0) {
                 // Force foreground focus
                 [NSApp activateIgnoringOtherApps:YES];
                 [[self window] makeKeyAndOrderFront:nil];
                 
                 extern RD_BOOL g_nla_failure;
                 extern RD_BOOL g_connection_established;
-                extern RD_BOOL g_local_network_access_denied;
-                if (g_local_network_access_denied && !g_connection_established &&
-                    !g_local_network_prompt_shown) {
-                    g_local_network_prompt_shown = YES;
+                if (permission_wait_failed) {
                     NSAlert *alert = [[NSAlert alloc] init];
-                    [alert setMessageText:@"Local Network Access Required"];
-                    [alert setInformativeText:@"macOS may be preventing rdesktop from connecting to this RDP server. Allow rdesktop-mac under System Settings > Privacy & Security > Local Network, then try again."];
-                    [alert addButtonWithTitle:@"Open Network Settings"];
-                    [alert addButtonWithTitle:@"OK"];
+                    [alert setMessageText:@"Local Network Access Not Granted"];
+                    [alert setInformativeText:@"The connection was not attempted because rdesktop-mac is still not authorized to access the local network. Grant access in System Settings and press Connect when ready."];
                     [alert setAlertStyle:NSAlertStyleWarning];
-                    if ([alert runModal] == NSAlertFirstButtonReturn) {
-                        NSURL *settingsURL = [NSURL URLWithString:@"x-apple.systempreferences:com.apple.preference.security?Privacy_LocalNetwork"];
-                        [[NSWorkspace sharedWorkspace] openURL:settingsURL];
-                    }
+                    [alert runModal];
+                } else if (permission_flow_cancelled) {
+                    NSLog(@"Local Network permission flow cancelled; connection was not attempted");
                 } else if (g_nla_failure && !g_connection_established) {
                     extern void show_nla_instructions_alert(void);
                     show_nla_instructions_alert();
@@ -932,10 +986,9 @@ local_network_access_denied_for_host(const char *host, int port)
 }
 
 - (void)windowWillClose:(NSNotification *)notification {
-    extern RD_BOOL g_connection_established;
-    if (!g_connection_established && !self.isConnecting) {
-        [NSApp terminate:self];
-    }
+    (void)notification;
+    /* Closing the connection dialog hides that session's UI only. Keep the
+     * application alive so another connection window can be added later. */
 }
 
 #pragma mark - Menu Actions
