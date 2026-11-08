@@ -2185,8 +2185,8 @@ rdp_loop(RD_BOOL * deactivated, uint32 * ext_disc_reason)
 				logger(RDP_Protocol, Warning,
 				       "rdp_loop(), unhandled PDU type %d received", type);
 		}
-		cont = g_next_packet < s_length(s);
-		logger(RDP_Protocol, Debug, "rdp_loop(): cont=%d, g_next_packet=%d, s_length=%d", cont, g_next_packet, s_length(s));
+		cont = g_next_packet < (size_t) s_length(s);
+		logger(RDP_Protocol, Debug, "rdp_loop(): cont=%d, g_next_packet=%zu, s_length=%td", cont, g_next_packet, s_length(s));
 	}
 	logger(RDP_Protocol, Debug, "rdp_loop() EXIT: returning True");
 	return True;

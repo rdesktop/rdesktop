@@ -1310,8 +1310,8 @@ rdesktop_main(int argc, char *argv[])
 
 	if (g_title[0] == 0)
 	{
-		strcpy(g_title, "rdesktop - ");
-		strncat(g_title, server, sizeof(g_title) - sizeof("rdesktop - "));
+		snprintf(g_title, sizeof(g_title), "rdesktop - %.*s",
+			 (int) (sizeof(g_title) - sizeof("rdesktop - ")), server);
 	}
 
 	/* Only startup ctrl functionality is seamless are used for now. */
@@ -1994,8 +1994,11 @@ save_licence(unsigned char *data, int length)
 	snprintf(path, PATH_MAX, "%s" RDESKTOP_LICENSE_STORE "/%s.cal", home, hash);
 	path[sizeof(path) - 1] = '\0';
 
-	snprintf(tmppath, PATH_MAX, "%s.new", path);
-	path[sizeof(path) - 1] = '\0';
+	if (snprintf(tmppath, sizeof(tmppath), "%s.new", path) >= (int) sizeof(tmppath))
+	{
+		logger(Core, Error, "save_license(), temporary licence path is too long");
+		return;
+	}
 
 	fd = open(tmppath, O_WRONLY | O_CREAT | O_TRUNC, 0600);
 	if (fd == -1)

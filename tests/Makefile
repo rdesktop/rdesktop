@@ -36,6 +36,20 @@ test: test-xdisplay $(foreach test, $(TESTS), runtest.$(test))
 test-xdisplay: xdisplay_selection
 	./xdisplay_selection
 
+# Linux standalone checks; build the client first for its static OpenSSL libs.
+CRYPTO_OPENSSL_DIR = ../deps/nla2/deps/openssl-3.0.15
+.PHONY: test-crypto-keys
+test-crypto-keys: crypto_keys
+	./crypto_keys
+
+crypto_keys: crypto_keys.c ../tcp.c ../ssl.c ../stream.c ../stream.h ../config.h \
+            $(CRYPTO_OPENSSL_DIR)/libssl.a $(CRYPTO_OPENSSL_DIR)/libcrypto.a
+	$(CC) $(CFLAGS) -O2 -Werror -DHAVE_CONFIG_H -DUSE_OPENSSL -I.. \
+		-I$(CRYPTO_OPENSSL_DIR)/include $(shell pkg-config --cflags nettle hogweed) \
+		-ffunction-sections -fdata-sections -o $@ $< -Wl,--gc-sections \
+		$(CRYPTO_OPENSSL_DIR)/libssl.a $(CRYPTO_OPENSSL_DIR)/libcrypto.a \
+		$(shell pkg-config --libs hogweed nettle) -lgmp -lpthread -ldl
+
 xdisplay_selection: xdisplay_selection.c ../xdisplay.c ../xdisplay.h
 	$(CC) $(CFLAGS) -o $@ $<
 
@@ -77,4 +91,4 @@ stream.o: ../stream.c
 
 .PHONY: clean
 clean:
-	rm -f $(TESTS) xdisplay_selection xdisplay.o *_mock.o *_test.o
+	rm -f $(TESTS) xdisplay_selection crypto_keys xdisplay.o *_mock.o *_test.o

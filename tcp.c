@@ -846,7 +846,6 @@ tcp_tls_get_server_pubkey()
 #else /* OpenSSL implementation */
 	X509 *cert = NULL;
 	EVP_PKEY *pkey = NULL;
-	RSA *rsa = NULL;
 	unsigned char *pk_data = NULL;
 	int pk_size;
 	STREAM s = NULL;
@@ -867,9 +866,8 @@ tcp_tls_get_server_pubkey()
 		goto out;
 	}
 
-	/* Get RSA key */
-	rsa = EVP_PKEY_get1_RSA(pkey);
-	if (!rsa) {
+	/* Preserve the RSA PKCS#1 encoding required by CredSSP. */
+	if (!EVP_PKEY_is_a(pkey, "RSA")) {
 		logger(Core, Error, "%s:%s:%d Certificate public key is not RSA. OpenSSL error: %s\n",
 				__FILE__, __func__, __LINE__, ERR_error_string(ERR_get_error(), NULL));
 		goto out;
@@ -877,9 +875,9 @@ tcp_tls_get_server_pubkey()
 
 	/*
 	 * Encode RSA public key to PKCS#1 DER format
-	 * OpenSSL's i2d_RSAPublicKey() directly produces PKCS#1 DER format
+	 * EVP's type-specific encoder produces PKCS#1 DER for RSA keys
 	 */
-	pk_size = i2d_RSAPublicKey(rsa, NULL);
+	pk_size = i2d_PublicKey(pkey, NULL);
 	if (pk_size <= 0) {
 		logger(Core, Error, "%s:%s:%d Failed to determine RSA public key size. OpenSSL error: %s\n",
 				__FILE__, __func__, __LINE__, ERR_error_string(ERR_get_error(), NULL));
@@ -894,7 +892,7 @@ tcp_tls_get_server_pubkey()
 	}
 
 	unsigned char *pk_ptr = pk_data;
-	if (i2d_RSAPublicKey(rsa, &pk_ptr) != pk_size) {
+	if (i2d_PublicKey(pkey, &pk_ptr) != pk_size) {
 		logger(Core, Error, "%s:%s:%d Failed to encode RSA public key to PKCS#1 DER. OpenSSL error: %s\n",
 				__FILE__, __func__, __LINE__, ERR_error_string(ERR_get_error(), NULL));
 		goto out;
@@ -909,8 +907,6 @@ tcp_tls_get_server_pubkey()
 out:
 	if (pk_data)
 		free(pk_data);
-	if (rsa)
-		RSA_free(rsa);
 	if (pkey)
 		EVP_PKEY_free(pkey);
 	if (cert)

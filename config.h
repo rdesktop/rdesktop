@@ -57,7 +57,7 @@
 #define HAVE_LOCALE_H 1
 
 /* Define to 1 if you have mntent.h */
-/* #undef HAVE_MNTENT_H */
+#define HAVE_MNTENT_H 1
 
 /* Define to 1 if you have the <ndir.h> header file, and it defines 'DIR'. */
 /* #undef HAVE_NDIR_H */
@@ -100,7 +100,7 @@
 /* #undef HAVE_SYS_DIR_H */
 
 /* Define to 1 if you have sys/filio.h */
-#define HAVE_SYS_FILIO_H 1
+/* #undef HAVE_SYS_FILIO_H */
 
 /* Define to 1 if you have sys/modem.h */
 /* #undef HAVE_SYS_MODEM_H */
@@ -119,7 +119,7 @@
 #define HAVE_SYS_SELECT_H 1
 
 /* Define to 1 if you have the <sys/statfs.h> header file. */
-/* #undef HAVE_SYS_STATFS_H */
+#define HAVE_SYS_STATFS_H 1
 
 /* Define to 1 if you have the <sys/statvfs.h> header file. */
 #define HAVE_SYS_STATVFS_H 1
@@ -134,7 +134,7 @@
 #define HAVE_SYS_TYPES_H 1
 
 /* Define to 1 if you have the <sys/vfs.h> header file. */
-/* #undef HAVE_SYS_VFS_H */
+#define HAVE_SYS_VFS_H 1
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #define HAVE_UNISTD_H 1
@@ -224,13 +224,13 @@
 /* #undef WITH_PCSC120 */
 
 /* Define to 1 if PnP notifications are supported */
-#define WITH_PNP_NOTIFICATIONS 1
+/* #undef WITH_PNP_NOTIFICATIONS */
 
 /* Define to 1 if sound support is enabled */
 /* #undef WITH_RDPSND */
 
 /* Define to 1 if smartcard support is enabled */
-#define WITH_SCARD 1
+/* #undef WITH_SCARD */
 
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */
