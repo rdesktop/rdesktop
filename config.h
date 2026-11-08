@@ -63,7 +63,7 @@
 /* #undef HAVE_NDIR_H */
 
 /* Define to 1 if you have the 'setmntent' function. */
-#define HAVE_SETMNTENT 1
+/* #undef HAVE_SETMNTENT */
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #define HAVE_STDINT_H 1
@@ -81,7 +81,7 @@
 #define HAVE_STRING_H 1
 
 /* Define to 1 if 'f_namelen' is a member of 'struct statfs'. */
-#define HAVE_STRUCT_STATFS_F_NAMELEN 1
+/* #undef HAVE_STRUCT_STATFS_F_NAMELEN */
 
 /* Define to 1 if 'f_namemax' is a member of 'struct statfs'. */
 /* #undef HAVE_STRUCT_STATFS_F_NAMEMAX */
@@ -140,7 +140,7 @@
 #define HAVE_UNISTD_H 1
 
 /* Define if Xrandr is available */
-#define HAVE_XRANDR 1
+/* #undef HAVE_XRANDR */
 
 /* Define as const if the declaration of iconv() needs const. */
 #define ICONV_CONST 
