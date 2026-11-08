@@ -103,11 +103,11 @@ s_check_rem(STREAM s, size_t n)
 #define in_uint32_le(s,v)	{ s_assert_r(s, 4); in_uint16_le(s,v) \
 				v += *((s)->p++) << 16; v += *((s)->p++) << 24; }
 #define in_uint64_le(s,v)	{ s_assert_r(s, 8); in_uint32_le(s,v) \
-				v += *((s)->p++) << 32; v += *((s)->p++) << 40; \
-				v += *((s)->p++) << 48; v += *((s)->p++) << 56; }
+				v += (uint64)(*((s)->p++)) << 32; v += (uint64)(*((s)->p++)) << 40; \
+				v += (uint64)(*((s)->p++)) << 48; v += (uint64)(*((s)->p++)) << 56; }
 #define out_uint16_le(s,v)	{ s_assert_w(s, 2); *((s)->p++) = (v) & 0xff; *((s)->p++) = ((v) >> 8) & 0xff; }
 #define out_uint32_le(s,v)	{ s_assert_w(s, 4); out_uint16_le(s, (v) & 0xffff); out_uint16_le(s, ((v) >> 16) & 0xffff); }
-#define out_uint64_le(s,v)	{ s_assert_w(s, 8); out_uint32_le(s, (v) & 0xffffffff); out_uint32_le(s, ((v) >> 32) & 0xffffffff); }
+#define out_uint64_le(s,v)	{ s_assert_w(s, 8); out_uint32_le(s, (uint64)(v) & 0xffffffff); out_uint32_le(s, ((uint64)(v) >> 32) & 0xffffffff); }
 #endif
 
 

@@ -934,8 +934,11 @@ void ui_reset_clip(void) {}
 void ui_bell(void) { NSBeep(); }
 
 /* Drawing operations - basic implementations */
-void ui_destblt(uint8 opcode, int x, int y, int cx, int cy) {}
+void ui_destblt(uint8 opcode, int x, int y, int cx, int cy) {
+    (void)opcode; (void)x; (void)y; (void)cx; (void)cy;
+}
 void ui_patblt(uint8 opcode, int x, int y, int cx, int cy, BRUSH * brush, uint32 bgcolor, uint32 fgcolor) {
+    (void)brush; (void)fgcolor;
     NSLog(@"[macOS DEBUG] ui_patblt: opcode=%d x=%d y=%d cx=%d cy=%d", opcode, x, y, cx, cy);
     if (!g_view || !g_view.backingStore) {
         NSLog(@"[macOS DEBUG] ui_patblt: g_view or backingStore is NULL, returning");
@@ -1105,9 +1108,17 @@ void ui_rect(int x, int y, int cx, int cy, uint32 colour) {
     g_view.needsRedraw = YES;
     [g_view.backingStoreLock unlock];
 }
-void ui_polygon(uint8 opcode, uint8 fillmode, RD_POINT * point, int npoints, BRUSH * brush, uint32 bgcolor, uint32 fgcolor) {}
-void ui_polyline(uint8 opcode, RD_POINT * points, int npoints, PEN * pen) {}
-void ui_ellipse(uint8 opcode, uint8 fillmode, int x, int y, int cx, int cy, BRUSH * brush, uint32 bgcolor, uint32 fgcolor) {}
+void ui_polygon(uint8 opcode, uint8 fillmode, RD_POINT * point, int npoints, BRUSH * brush, uint32 bgcolor, uint32 fgcolor) {
+    (void)opcode; (void)fillmode; (void)point; (void)npoints;
+    (void)brush; (void)bgcolor; (void)fgcolor;
+}
+void ui_polyline(uint8 opcode, RD_POINT * points, int npoints, PEN * pen) {
+    (void)opcode; (void)points; (void)npoints; (void)pen;
+}
+void ui_ellipse(uint8 opcode, uint8 fillmode, int x, int y, int cx, int cy, BRUSH * brush, uint32 bgcolor, uint32 fgcolor) {
+    (void)opcode; (void)fillmode; (void)x; (void)y; (void)cx; (void)cy;
+    (void)brush; (void)bgcolor; (void)fgcolor;
+}
 void ui_draw_glyph(int mixmode, int x, int y, int cx, int cy, RD_HGLYPH glyph, int srcx, int srcy, uint32 bgcolour, uint32 fgcolour) {
     (void)srcx; (void)srcy;  // These are always 0
 
@@ -1296,8 +1307,12 @@ void ui_draw_text(uint8 font, uint8 flags, uint8 opcode, int mixmode, int x, int
 
     [g_view.backingStoreLock unlock];
 }
-void ui_desktop_save(uint32 offset, int x, int y, int cx, int cy) {}
-void ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy) {}
+void ui_desktop_save(uint32 offset, int x, int y, int cx, int cy) {
+    (void)offset; (void)x; (void)y; (void)cx; (void)cy;
+}
+void ui_desktop_restore(uint32 offset, int x, int y, int cx, int cy) {
+    (void)offset; (void)x; (void)y; (void)cx; (void)cy;
+}
 
 
 void ui_begin_update(void) {
@@ -1312,22 +1327,36 @@ void ui_end_update(void) {
 }
 
 /* Seamless mode stubs */
-void ui_seamless_begin(RD_BOOL hidden) {}
+void ui_seamless_begin(RD_BOOL hidden) { (void)hidden; }
 void ui_seamless_end(void) {}
 void ui_seamless_hide_desktop(void) {}
 void ui_seamless_unhide_desktop(void) {}
 void ui_seamless_toggle(void) {}
-void ui_seamless_create_window(unsigned long id, unsigned long group, unsigned long parent, unsigned long flags) {}
-void ui_seamless_destroy_window(unsigned long id, unsigned long flags) {}
-void ui_seamless_destroy_group(unsigned long id, unsigned long flags) {}
-void ui_seamless_seticon(unsigned long id, const char *format, int width, int height, int chunk, const char *data, size_t chunk_len) {}
-void ui_seamless_delicon(unsigned long id, const char *format, int width, int height) {}
-void ui_seamless_move_window(unsigned long id, int x, int y, int width, int height, unsigned long flags) {}
-void ui_seamless_restack_window(unsigned long id, unsigned long behind, unsigned long flags) {}
-void ui_seamless_settitle(unsigned long id, const char *title, unsigned long flags) {}
-void ui_seamless_setstate(unsigned long id, unsigned int state, unsigned long flags) {}
-void ui_seamless_syncbegin(unsigned long flags) {}
-void ui_seamless_ack(unsigned int serial) {}
+void ui_seamless_create_window(unsigned long id, unsigned long group, unsigned long parent, unsigned long flags) {
+    (void)id; (void)group; (void)parent; (void)flags;
+}
+void ui_seamless_destroy_window(unsigned long id, unsigned long flags) { (void)id; (void)flags; }
+void ui_seamless_destroy_group(unsigned long id, unsigned long flags) { (void)id; (void)flags; }
+void ui_seamless_seticon(unsigned long id, const char *format, int width, int height, int chunk, const char *data, size_t chunk_len) {
+    (void)id; (void)format; (void)width; (void)height; (void)chunk; (void)data; (void)chunk_len;
+}
+void ui_seamless_delicon(unsigned long id, const char *format, int width, int height) {
+    (void)id; (void)format; (void)width; (void)height;
+}
+void ui_seamless_move_window(unsigned long id, int x, int y, int width, int height, unsigned long flags) {
+    (void)id; (void)x; (void)y; (void)width; (void)height; (void)flags;
+}
+void ui_seamless_restack_window(unsigned long id, unsigned long behind, unsigned long flags) {
+    (void)id; (void)behind; (void)flags;
+}
+void ui_seamless_settitle(unsigned long id, const char *title, unsigned long flags) {
+    (void)id; (void)title; (void)flags;
+}
+void ui_seamless_setstate(unsigned long id, unsigned int state, unsigned long flags) {
+    (void)id; (void)state; (void)flags;
+}
+void ui_seamless_syncbegin(unsigned long flags) { (void)flags; }
+void ui_seamless_ack(unsigned int serial) { (void)serial; }
 
 /* Global variables for dynamic session management */
 RD_BOOL g_dynamic_session_resize = False;

@@ -114,7 +114,7 @@ the Mac App Store. Notarization and stapling are required for the smoothest
 Gatekeeper experience on other Macs. Distribute the exported app in a zip or
 disk image; do not copy only the executable out of the bundle.
 
-The target's minimum macOS version is 10.13. The app uses the architecture of
+The target's minimum macOS version is 12.0. The app uses the architecture of
 the Mac used to build it, so create separate Intel and Apple Silicon archives
 if you need to support both processor families. The legacy Makefile build and
 `make bundle` remain available.
@@ -132,16 +132,23 @@ scripts/build-macos-release.sh \
 
 The script runs `configure`, builds with `make`, creates the app bundle, signs
 the executable and app with hardened runtime and a secure timestamp, and
-verifies the signature. It defaults to a macOS 11.0 deployment target for
+verifies the signature. It defaults to a macOS 12.0 deployment target for
 Apple Silicon and writes `dist/rdesktop-mac.app` plus a distributable zip.
-It cleans prior generated build outputs before rebuilding. Use
-`--deployment-target 10.13` for an Intel build that should run on older Intel
-macOS releases. Builds use the current machine's architecture.
+It cleans prior generated build outputs before rebuilding. Builds use the
+current machine's architecture.
 
 To notarize and staple the app as part of the script, first store notarization
 credentials with `xcrun notarytool store-credentials`, then pass the profile
 name with `--notary-profile PROFILE`. The script submits a zip, waits for
 Apple's result, staples the ticket to the app, and creates the final zip.
+
+The development build script also signs `rdesktop-mac.app`. It uses an
+ad-hoc signature by default; use an installed identity when testing the
+bundle's persistent macOS privacy permissions:
+
+```sh
+CODESIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" ./build_mac.sh
+```
 
 ---- Update for rdesktop-mac port ---
 SVG Icon thanks to Remote Desktop SVG Vector

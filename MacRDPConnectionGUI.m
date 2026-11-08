@@ -7,6 +7,13 @@
 #import "MacRDPConnectionGUI.h"
 #include "rdesktop.h"
 
+#if __has_include(<Network/Network.h>)
+#import <Network/Network.h>
+#define RDESKTOP_HAS_NETWORK_FRAMEWORK 1
+#else
+#define RDESKTOP_HAS_NETWORK_FRAMEWORK 0
+#endif
+
 // External variables from rdesktop
 extern char g_hostname[16];
 extern char *g_username;
@@ -17,6 +24,63 @@ extern uint32 g_requested_session_height;
 extern char g_keymapname[PATH_MAX];
 
 @implementation MacRDPConnectionGUI
+
+/* Avoid repeatedly presenting a permission-settings alert for a real routing
+ * failure. The native macOS prompt is shown by the first protected operation. */
+static BOOL g_local_network_prompt_shown = NO;
+
+#if RDESKTOP_HAS_NETWORK_FRAMEWORK
+/*
+ * Local Network privacy is evaluated for a destination.  Use Network.framework
+ * before starting rdesktop so macOS can present its permission prompt and so we
+ * can distinguish localNetworkDenied from an ordinary routing failure.
+ */
+static BOOL
+local_network_access_denied_for_host(const char *host, int port)
+{
+    char port_string[16];
+    nw_endpoint_t endpoint;
+    nw_parameters_t parameters;
+    nw_connection_t connection;
+    dispatch_semaphore_t done;
+    __block BOOL denied = NO;
+
+    snprintf(port_string, sizeof(port_string), "%d", port);
+    endpoint = nw_endpoint_create_host(host, port_string);
+    parameters = nw_parameters_create_secure_tcp(NW_PARAMETERS_DISABLE_PROTOCOL,
+                                                 NW_PARAMETERS_DEFAULT_CONFIGURATION);
+    connection = nw_connection_create(endpoint, parameters);
+    done = dispatch_semaphore_create(0);
+
+    nw_connection_set_state_changed_handler(connection,
+        ^(nw_connection_state_t state, nw_error_t error) {
+            nw_path_t path;
+
+            (void)error;
+            path = nw_connection_copy_current_path(connection);
+            if (path) {
+                denied = (nw_path_get_unsatisfied_reason(path) ==
+                          nw_path_unsatisfied_reason_local_network_denied);
+                nw_release(path);
+            }
+
+            if (denied || state == nw_connection_state_ready ||
+                state == nw_connection_state_failed ||
+                state == nw_connection_state_cancelled)
+                dispatch_semaphore_signal(done);
+        });
+
+    nw_connection_start(connection);
+    dispatch_semaphore_wait(done,
+                            dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC));
+    nw_connection_cancel(connection);
+    nw_release(done);
+    nw_release(connection);
+    nw_release(parameters);
+    nw_release(endpoint);
+    return denied;
+}
+#endif
 
 - (void)windowDidLoad {
     [super windowDidLoad];
@@ -815,7 +879,19 @@ extern char g_keymapname[PATH_MAX];
     // Launch the RDP connection in a separate thread to avoid blocking the GUI
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         extern int launch_rdp_connection_from_gui(void);
-        int result = launch_rdp_connection_from_gui();
+        int result;
+
+#if RDESKTOP_HAS_NETWORK_FRAMEWORK
+        extern RD_BOOL g_local_network_access_denied;
+        if (local_network_access_denied_for_host(g_hostname, g_tcp_port_rdp)) {
+            g_local_network_access_denied = True;
+            result = -1;
+        } else {
+            result = launch_rdp_connection_from_gui();
+        }
+#else
+        result = launch_rdp_connection_from_gui();
+#endif
         
         dispatch_async(dispatch_get_main_queue(), ^{
             self.isConnecting = NO;
@@ -826,7 +902,21 @@ extern char g_keymapname[PATH_MAX];
                 
                 extern RD_BOOL g_nla_failure;
                 extern RD_BOOL g_connection_established;
-                if (g_nla_failure && !g_connection_established) {
+                extern RD_BOOL g_local_network_access_denied;
+                if (g_local_network_access_denied && !g_connection_established &&
+                    !g_local_network_prompt_shown) {
+                    g_local_network_prompt_shown = YES;
+                    NSAlert *alert = [[NSAlert alloc] init];
+                    [alert setMessageText:@"Local Network Access Required"];
+                    [alert setInformativeText:@"macOS may be preventing rdesktop from connecting to this RDP server. Allow rdesktop-mac under System Settings > Privacy & Security > Local Network, then try again."];
+                    [alert addButtonWithTitle:@"Open Network Settings"];
+                    [alert addButtonWithTitle:@"OK"];
+                    [alert setAlertStyle:NSAlertStyleWarning];
+                    if ([alert runModal] == NSAlertFirstButtonReturn) {
+                        NSURL *settingsURL = [NSURL URLWithString:@"x-apple.systempreferences:com.apple.preference.security?Privacy_LocalNetwork"];
+                        [[NSWorkspace sharedWorkspace] openURL:settingsURL];
+                    }
+                } else if (g_nla_failure && !g_connection_established) {
                     extern void show_nla_instructions_alert(void);
                     show_nla_instructions_alert();
                 } else {

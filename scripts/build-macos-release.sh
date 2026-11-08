@@ -12,7 +12,7 @@ Required:
   --identity NAME       Exact codesign identity name or SHA-1 hash
 
 Options:
-  --deployment-target V Minimum macOS version (default: 11.0 for Apple Silicon)
+  --deployment-target V Minimum macOS version (default: 12.0)
   --output-dir DIR      Output directory (default: dist)
   --notary-profile NAME Keychain profile configured with notarytool store-credentials
   --jobs N              Parallel make jobs (default: detected CPU count)
@@ -28,7 +28,7 @@ USAGE
 fail() { printf 'error: %s\n' "$*" >&2; exit 2; }
 
 identity="${CODESIGN_IDENTITY:-}"
-deployment_target="${MACOSX_DEPLOYMENT_TARGET:-11.0}"
+deployment_target="${MACOSX_DEPLOYMENT_TARGET:-12.0}"
 output_dir="dist"
 notary_profile=""
 jobs=""

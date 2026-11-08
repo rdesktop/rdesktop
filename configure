@@ -13330,7 +13330,7 @@ case "$host_os" in
         FRONTENDOBJ="mac_gui_main.o rdesktop_main.o macwin.o mackeymap.o macclip.o MacRDPConnectionGUI.o"
         SSLOBJ=macssl.o
         PLATFORM_CFLAGS="-DUSE_OPENSSL -I./deps/nla2/deps/openssl-3.0.15/include -I./deps/nla2"
-        PLATFORM_LIBS="./deps/nla2/deps/openssl-3.0.15/libssl.a ./deps/nla2/deps/openssl-3.0.15/libcrypto.a -framework Foundation -framework CoreFoundation -framework Cocoa -framework CoreGraphics -framework Carbon -framework Security -lpthread"
+        PLATFORM_LIBS="./deps/nla2/deps/openssl-3.0.15/libssl.a ./deps/nla2/deps/openssl-3.0.15/libcrypto.a -framework Foundation -framework CoreFoundation -framework Cocoa -framework CoreGraphics -framework Carbon -framework Security -framework Network -lpthread"
         BUILD_DEPS="./deps/nla2/libnlav2.a"
         ;;
     linux*)

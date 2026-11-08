@@ -29,6 +29,7 @@ cliprdr_send_blah_format_announce(void)
 void
 cliprdr_register_server_formats(STREAM s)
 {
+    (void)s;
     // Register server formats
 }
 
@@ -59,12 +60,16 @@ cliprdr_handle_PropertyNotify(void)
 void
 ui_clip_format_announce(uint8 * data, uint32 length)
 {
+    (void)data;
+    (void)length;
     // UI clip format announce
 }
 
 void
 ui_clip_handle_data(uint8 * data, uint32 length)
 {
+    (void)data;
+    (void)length;
     // Handle clipboard data
 }
 
@@ -77,6 +82,7 @@ ui_clip_request_failed(void)
 void
 ui_clip_request_data(uint32 format)
 {
+    (void)format;
     // Request clipboard data
 }
 
@@ -89,5 +95,6 @@ ui_clip_sync(void)
 void
 ui_clip_set_mode(const char *optarg)
 {
+    (void)optarg;
     // Set UI clipboard mode
 }

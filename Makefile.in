@@ -97,9 +97,10 @@ bundle: rdesktop-mac
 	cp rdesktop-mac rdesktop-mac.app/Contents/MacOS/
 	mkdir -p rdesktop-mac.app/Contents/Resources/keymaps
 	cp -R keymaps/ rdesktop-mac.app/Contents/Resources/keymaps/
-	if [ -f Resources/rdesktop-mac.svg ]; then \
-		qlmanage -t -s 512 -o . Resources/rdesktop-mac.svg; \
-		clang -O2 -framework AppKit -framework Foundation make_icns.m -o make_icns; \
+	if [ -f Resources/rdesktop-mac.svg ] && command -v qlmanage >/dev/null 2>&1; then \
+		qlmanage -t -s 512 -o . Resources/rdesktop-mac.svg >/dev/null 2>&1 && \
+		[ -f rdesktop-mac.svg.png ] && \
+		clang -O2 -framework AppKit -framework Foundation make_icns.m -o make_icns && \
 		./make_icns rdesktop-mac.svg.png rdesktop-mac.app/Contents/Resources/rdesktop-mac.icns; \
 		rm -f make_icns rdesktop-mac.svg.png; \
 	fi

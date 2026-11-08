@@ -52,6 +52,20 @@ const char *mac_gui_log_path(void)
     return g_gui_log_path;
 }
 
+/*
+ * Xcode can append launch arguments to an application during development.
+ * Those arguments are useful for a command-line executable, but an app
+ * bundle must still start its GUI even when Xcode has stale arguments saved
+ * in a per-user scheme.  Keep direct ./rdesktop-mac invocations available
+ * for the traditional command-line client.
+ */
+static BOOL
+launched_from_application_bundle(void)
+{
+    NSString *bundlePath = [[NSBundle mainBundle] bundlePath];
+    return [bundlePath hasSuffix:@".app"];
+}
+
 @interface MacRDPAppDelegate : NSObject <NSApplicationDelegate>
 @property (strong) MacRDPConnectionGUI *connectionGUI;
 @property (assign) BOOL shouldShowGUI;
@@ -176,13 +190,15 @@ const char *mac_gui_log_path(void)
 
 int main(int argc, char *argv[]) {
     @autoreleasepool {
-        // Check if GUI mode is requested or if no arguments provided
-        BOOL useGUI = NO;
+        // An app bundle is always the GUI entry point.  Direct invocations of
+        // the executable retain the traditional command-line behavior.
+        BOOL useGUI = launched_from_application_bundle();
         
-        // Use GUI if no arguments or if --gui flag is present
+        // Also use the GUI when launched without arguments or explicitly
+        // requested with --gui.
         if (argc == 1) {
             useGUI = YES;
-        } else {
+        } else if (!useGUI) {
             for (int i = 1; i < argc; i++) {
                 if (strcmp(argv[i], "--gui") == 0) {
                     useGUI = YES;
@@ -247,9 +263,6 @@ int launch_rdp_connection_from_gui(void) {
     // Static buffers for arguments that need to persist
     static char geom_buf[32];
     static char port_buf[16];
-    static char depth_buf[16];
-    static char dpi_buf[16];
-    static char exp_buf[16];
     
     fake_argv[0] = "rdesktop-mac";
     

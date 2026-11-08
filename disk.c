@@ -1064,6 +1064,7 @@ NotifyInfo(RD_NTHANDLE handle, uint32 info_class, NOTIFY * p)
 static FsInfoType *
 FsVolumeInfo(char *fpath)
 {
+	(void)fpath;
 
 	static FsInfoType info;
 #ifdef USE_SETMNTENT

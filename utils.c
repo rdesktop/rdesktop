@@ -193,7 +193,7 @@ utils_mkdir_p(const char *path, int mask)
 int
 utils_locale_to_utf8(const char *src, size_t is, char *dest, size_t os)
 {
-	static iconv_t *iconv_h = (iconv_t) - 1;
+	static iconv_t iconv_h = (iconv_t) - 1;
 	if (strncmp(g_codepage, "UTF-8", strlen("UTF-8")) == 0)
 		goto pass_trough_as_is;
 
@@ -556,7 +556,7 @@ _utils_dn_to_string(gnutls_x509_dn_t dn, RD_BOOL exclude_oid,
 
 			if (exclude_oid)
 			{
-				snprintf(buf, sizeof(buf), "%.*s", ava.value.size, ava.value.data);
+				snprintf(buf, sizeof(buf), "%.*s", (int)ava.value.size, ava.value.data);
 				strncat(result, buf, left);
 				left -= strlen(buf);
 			}
@@ -564,7 +564,7 @@ _utils_dn_to_string(gnutls_x509_dn_t dn, RD_BOOL exclude_oid,
 			{
 				_utils_oid_to_string((char *)ava.oid.data, name, sizeof(name));
 				snprintf(buf, sizeof(buf), "%s%s=%.*s",
-						 (j > 0)?", ":"", name, ava.value.size, ava.value.data);
+								 (j > 0)?", ":"", name, (int)ava.value.size, ava.value.data);
 				strncat(result, buf, left);
 				left -= strlen(buf);
 			}

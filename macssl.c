@@ -226,6 +226,10 @@ rdssl_lib_cleanup(void)
 }
 
 /* GNUTLS compatibility function implementations */
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-parameter"
+#endif
 int gnutls_record_send(gnutls_session_t session, const void *data, size_t data_size) {
     // Stub implementation - would need proper TLS record layer 
     return (int)data_size; // Pretend we sent it all
@@ -494,3 +498,7 @@ int gnutls_store_pubkey(const char *db_name, const char *tdb_name, const char *h
     // Stub implementation - assume storage succeeds
     return GNUTLS_E_SUCCESS;
 }
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif

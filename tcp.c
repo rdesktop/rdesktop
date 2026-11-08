@@ -79,6 +79,10 @@ static RD_BOOL g_ssl_initialized = False;
 static int g_sock;
 static RD_BOOL g_run_ui = False;
 static struct stream g_in;
+/* Set by the macOS Network.framework preflight when access is denied. */
+#ifdef __APPLE__
+RD_BOOL g_local_network_access_denied = False;
+#endif
 int g_tcp_port_rdp = TCP_PORT_RDP;
 
 extern RD_BOOL g_exit_mainloop;
@@ -940,7 +944,6 @@ tcp_connect(char *server)
 	socklen_t option_len;
 	uint32 option_value;
 	char buf[NI_MAXHOST];
-
 #ifdef IPv6
 
 	int n;

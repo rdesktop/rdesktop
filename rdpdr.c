@@ -995,7 +995,7 @@ rdpdr_add_fds(int *n, fd_set * rfds, fd_set * wfds, struct timeval *tv, RD_BOOL 
 {
 	uint32 select_timeout = 0;	/* Timeout value to be used for select() (in milliseconds). */
 	struct async_iorequest *iorq;
-	char c;
+	char c = 0;
 
 	iorq = g_iorequest;
 	while (iorq != NULL)

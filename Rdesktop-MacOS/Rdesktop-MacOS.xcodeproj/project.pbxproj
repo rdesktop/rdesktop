@@ -6,30 +6,47 @@
 	objectVersion = 56;
 	objects = {
 
-/* Begin PBXBuildFile section */
-/* End PBXBuildFile section */
-
 /* Begin PBXFileReference section */
 		A10000000000000000000001 /* rdesktop-mac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "rdesktop-mac.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
-		E796D074302322D000C42E8A = {
+		A10000000000000000000002 /* Sources */ = {
 			isa = PBXGroup;
-			children = ( A10000000000000000000002 /* Sources */, A10000000000000000000003 /* Products */, );
+			children = (
+			);
+			name = Sources;
 			sourceTree = "<group>";
 		};
-		A10000000000000000000002 /* Sources */ = { isa = PBXGroup; children = (); name = Sources; sourceTree = "<group>"; };
-		A10000000000000000000003 /* Products */ = { isa = PBXGroup; children = (A10000000000000000000001 /* rdesktop-mac.app */,); name = Products; sourceTree = "<group>"; };
+		A10000000000000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000001 /* rdesktop-mac.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		E796D074302322D000C42E8A = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000002 /* Sources */,
+				A10000000000000000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
 		A10000000000000000000004 /* rdesktop-mac */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = E796D07C302322D000C42E8A;
-			buildPhases = (A10000000000000000000005 /* Build app with Makefile */,);
-			buildRules = ();
-			dependencies = ();
+			buildConfigurationList = E796D07C302322D000C42E8A /* Build configuration list for PBXNativeTarget "rdesktop-mac" */;
+			buildPhases = (
+				A10000000000000000000005 /* Build app with Makefile */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
 			name = "rdesktop-mac";
 			productName = "rdesktop-mac";
 			productReference = A10000000000000000000001 /* rdesktop-mac.app */;
@@ -37,36 +54,53 @@
 		};
 /* End PBXNativeTarget section */
 
+/* Begin PBXProject section */
+		E796D075302322D000C42E8A /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					A10000000000000000000004 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = E796D078302322D000C42E8A /* Build configuration list for PBXProject "Rdesktop-MacOS" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = E796D074302322D000C42E8A;
+			productRefGroup = A10000000000000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A10000000000000000000004 /* rdesktop-mac */,
+			);
+		};
+/* End PBXProject section */
+
 /* Begin PBXShellScriptBuildPhase section */
 		A10000000000000000000005 /* Build app with Makefile */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
-			files = ();
-			inputPaths = ();
+			files = (
+			);
+			inputPaths = (
+			);
 			name = "Build app with Makefile";
-			outputPaths = ("$(TARGET_BUILD_DIR)/$(FULL_PRODUCT_NAME)/Contents/MacOS/rdesktop-mac",);
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(FULL_PRODUCT_NAME)/Contents/MacOS/rdesktop-mac",
+			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "set -eu\ncd \"$SRCROOT/..\"\nmake bundle\nmkdir -p \"$TARGET_BUILD_DIR/$FULL_PRODUCT_NAME/Contents\"\nditto rdesktop-mac.app/Contents \"$TARGET_BUILD_DIR/$FULL_PRODUCT_NAME/Contents\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
-
-/* Begin PBXProject section */
-		E796D075302322D000C42E8A /* Project object */ = {
-			isa = PBXProject;
-			attributes = { BuildIndependentTargetsInParallel = YES; LastUpgradeCheck = 1600; TargetAttributes = { A10000000000000000000004 = { CreatedOnToolsVersion = 16.0; }; }; };
-			buildConfigurationList = E796D078302322D000C42E8A;
-			compatibilityVersion = "Xcode 14.0";
-			developmentRegion = en;
-			hasScannedForEncodings = 0;
-			knownRegions = (en, Base,);
-			mainGroup = E796D074302322D000C42E8A;
-			productRefGroup = A10000000000000000000003 /* Products */;
-			projectDirPath = "";
-			projectRoot = "";
-			targets = (A10000000000000000000004 /* rdesktop-mac */,);
-		};
-/* End PBXProject section */
 
 /* Begin XCBuildConfiguration section */
 		E796D07A302322D000C42E8A /* Debug */ = {
@@ -174,28 +208,44 @@
 			};
 			name = Release;
 		};
-		E796D07D302322D000C42E8A /* Debug */ = { isa = XCBuildConfiguration; buildSettings = {
-			CODE_SIGN_STYLE = Automatic;
-			ENABLE_HARDENED_RUNTIME = YES;
-			GENERATE_INFOPLIST_FILE = YES;
-			INFOPLIST_KEY_CFBundleDisplayName = rdesktop-mac;
-			INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-			MACOSX_DEPLOYMENT_TARGET = 10.13;
-			PRODUCT_BUNDLE_IDENTIFIER = com.rdesktop.rdesktop-mac;
-			PRODUCT_NAME = "$(TARGET_NAME)";
-			SDKROOT = macosx;
-		}; name = Debug; };
-		E796D07E302322D000C42E8A /* Release */ = { isa = XCBuildConfiguration; buildSettings = {
-			CODE_SIGN_STYLE = Automatic;
-			ENABLE_HARDENED_RUNTIME = YES;
-			GENERATE_INFOPLIST_FILE = YES;
-			INFOPLIST_KEY_CFBundleDisplayName = rdesktop-mac;
-			INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-			MACOSX_DEPLOYMENT_TARGET = 10.13;
-			PRODUCT_BUNDLE_IDENTIFIER = com.rdesktop.rdesktop-mac;
-			PRODUCT_NAME = "$(TARGET_NAME)";
-			SDKROOT = macosx;
-		}; name = Release; };
+		E796D07D302322D000C42E8A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 798J6VKR27;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "rdesktop-mac";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "rdesktop needs access to your local network to connect to RDP servers.";
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.rdesktop.rdesktop-mac";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		E796D07E302322D000C42E8A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 798J6VKR27;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "rdesktop-mac";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "rdesktop needs access to your local network to connect to RDP servers.";
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.rdesktop.rdesktop-mac";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
 /* Begin XCConfigurationList section */
 		E796D078302322D000C42E8A /* Build configuration list for PBXProject "Rdesktop-MacOS" */ = {
 			isa = XCConfigurationList;
@@ -206,7 +256,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		E796D07C302322D000C42E8A /* Build configuration list for PBXLegacyTarget "Rdesktop-MacOS" */ = {
+		E796D07C302322D000C42E8A /* Build configuration list for PBXNativeTarget "rdesktop-mac" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				E796D07D302322D000C42E8A /* Debug */,
