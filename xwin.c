@@ -2315,7 +2315,7 @@ ui_create_window(uint32 width, uint32 height)
 		g_kill_atom
 	};
 
-	XSetWMProtocols(g_display, g_wnd, supported, 2);
+	XSetWMRDP_Protocols(g_display, g_wnd, supported, 2);
 
 	/* create invisible 1x1 cursor to be used as null cursor */
 	if (g_null_cursor == NULL)
@@ -4652,7 +4652,7 @@ ui_seamless_create_window(unsigned long id, unsigned long group, unsigned long p
 		g_kill_atom
 	};
 
-	XSetWMProtocols(g_display, wnd, supported, 2);
+	XSetWMRDP_Protocols(g_display, wnd, supported, 2);
 
 	sw = xmalloc(sizeof(seamless_window));
 
